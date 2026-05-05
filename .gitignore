@@ -8,6 +8,12 @@ out/
 .vs/
 .vscode/
 
+# Local workflow files
+.rgignore
+AGENTS.md
+PLAN.md
+HISTORY.md
+
 # Local dependencies/environments
 vcpkg/
 envs/
