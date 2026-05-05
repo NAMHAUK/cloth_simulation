@@ -1,0 +1,31 @@
+# Build outputs
+build/
+simulation_app/build/
+cmake-build-*/
+out/
+
+# Local IDE/editor settings
+.vs/
+.vscode/
+
+# Local dependencies/environments
+vcpkg/
+envs/
+
+# Local datasets/cache
+data/
+
+# Generated binaries and debug files
+*.exe
+*.dll
+*.lib
+*.obj
+*.pdb
+*.ilk
+*.exp
+
+# Temp/log files
+*.log
+*.tmp
+.DS_Store
+Thumbs.db

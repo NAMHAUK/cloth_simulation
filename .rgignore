@@ -1,0 +1,6 @@
+vcpkg/
+envs/
+simulation_app/build/
+data/smpl/
+data/amass/
+data/cache/
