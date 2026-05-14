@@ -7,19 +7,27 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_AUTOMOC ON)
 
 find_package(Qt6 CONFIG REQUIRED COMPONENTS Widgets OpenGLWidgets)
+find_package(glm CONFIG REQUIRED)
 
 get_filename_component(REPO_ROOT "${CMAKE_CURRENT_SOURCE_DIR}/.." ABSOLUTE)
 
 add_executable(simulation_app
-    src/main.cpp
-    src/MainWindow.cpp
-    src/MainWindow.h
-    src/MotionBrowserPanel.cpp
-    src/MotionBrowserPanel.h
-    src/MotionCache.cpp
-    src/MotionCache.h
-    src/OpenGLViewerWidget.cpp
-    src/OpenGLViewerWidget.h
+    src/app/main.cpp
+    src/app/ProjectPaths.h
+    src/assets/MotionAsset.cpp
+    src/assets/MotionAsset.h
+    src/rendering/OpenGLViewerWidget.cpp
+    src/rendering/OpenGLViewerWidget.h
+    src/ui/MainWindow.cpp
+    src/ui/MainWindow.h
+    src/ui/MotionBrowserPanel.cpp
+    src/ui/MotionBrowserPanel.h
+    shaders/viewer.vert
+    shaders/viewer.frag
+)
+
+target_include_directories(simulation_app PRIVATE
+    src
 )
 
 target_compile_definitions(simulation_app PRIVATE
@@ -29,6 +37,7 @@ target_compile_definitions(simulation_app PRIVATE
 target_link_libraries(simulation_app PRIVATE
     Qt6::Widgets
     Qt6::OpenGLWidgets
+    glm::glm
     opengl32
 )
 
