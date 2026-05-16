@@ -1,12 +1,10 @@
 #pragma once
 
-#include "assets/MotionAsset.h"
-#include "character/CharacterGpuState.h"
+#include "character/CharacterInstance.h"
 #include "cloth/ClothInstance.h"
 #include "rendering/GridGpuState.h"
 #include "rendering/ViewerShaderProgram.h"
 
-#include <cstdint>
 #include <filesystem>
 #include <vector>
 
@@ -54,20 +52,16 @@ private:
     void reset_camera_to_character();
     bool update_current_frame_index();
 
-    CharacterMesh character_mesh_;
+    CharacterInstance character_;
     std::vector<ClothInstance> garments_;
     ViewerShaderProgram viewer_shader_;
-    CharacterGpuState character_gpu_state_;
     GridGpuState grid_gpu_state_;
 
     OrbitCamera camera_;
     
     bool gl_initialized_ = false;
-    bool character_loaded_ = false;
     bool is_playing_ = false;
 
-    std::uint32_t current_frame_ = 0;
-    std::uint32_t uploaded_frame_ = UINT32_MAX;
     QElapsedTimer playback_timer_;
     QTimer frame_timer_;
 };

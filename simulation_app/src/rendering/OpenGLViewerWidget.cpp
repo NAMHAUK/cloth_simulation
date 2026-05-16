@@ -3,6 +3,7 @@
 #include <algorithm>
 #include <cmath>
 #include <iostream>
+#include <limits>
 #include <utility>
 
 #include <QMouseEvent>
@@ -116,7 +117,7 @@ OpenGLViewerWidget::~OpenGLViewerWidget()
     for (ClothInstance& garment : garments_) {
         garment.gpu_state.release(*this);
     }
-    character_gpu_state_.release(*this);
+    character_.gpu_state.release(*this);
     grid_gpu_state_.release(*this);
     viewer_shader_.release(*this);
     doneCurrent();
@@ -141,10 +142,10 @@ void OpenGLViewerWidget::initializeGL()
     glEnable(GL_DEPTH_TEST);
 
     grid_gpu_state_.upload(*this);
-    if (character_loaded_) {
-        character_gpu_state_.upload_mesh(character_mesh_, *this);
-        character_gpu_state_.upload_frame(character_mesh_, 0, *this);
-        uploaded_frame_ = 0;
+    if (character_.loaded) {
+        character_.gpu_state.upload_mesh(character_.mesh, *this);
+        character_.gpu_state.upload_frame(character_.mesh, 0, *this);
+        character_.uploaded_frame = 0;
     }
     for (ClothInstance& garment : garments_) {
         garment.gpu_state.upload(garment.mesh, *this);
@@ -180,14 +181,14 @@ void OpenGLViewerWidget::paintGL()
     }
 
     // motion mesh rendering
-    if (character_loaded_ && character_gpu_state_.initialized()) {
-        if (uploaded_frame_ != current_frame_) {
-            character_gpu_state_.upload_frame(character_mesh_, current_frame_, *this);
-            uploaded_frame_ = current_frame_;
+    if (character_.loaded && character_.gpu_state.is_initialized()) {
+        if (character_.uploaded_frame != character_.current_frame) {
+            character_.gpu_state.upload_frame(character_.mesh, character_.current_frame, *this);
+            character_.uploaded_frame = character_.current_frame;
         }
 
         viewer_shader_.set_vertex_color_mode(*this);
-        character_gpu_state_.draw(*this);
+        character_.gpu_state.draw(*this);
     }
 
     draw_garment_meshes();
@@ -197,25 +198,25 @@ void OpenGLViewerWidget::paintGL()
 // Motion Playback //
 bool OpenGLViewerWidget::update_current_frame_index()
 {
-    if (!character_loaded_ || !is_playing_ || character_mesh_.frame_count == 0) {
+    if (!character_.loaded || !is_playing_ || character_.mesh.frame_count == 0) {
         return false;
     }
 
     const double elapsed_seconds = static_cast<double>(playback_timer_.elapsed()) / 1000.0;
     const std::uint32_t next_frame = static_cast<std::uint32_t>(
-        static_cast<std::uint64_t>(elapsed_seconds * character_mesh_.fps) % character_mesh_.frame_count
+        static_cast<std::uint64_t>(elapsed_seconds * character_.mesh.fps) % character_.mesh.frame_count
     );
 
-    if (next_frame == current_frame_) {
+    if (next_frame == character_.current_frame) {
         return false;
     }
 
-    current_frame_ = next_frame;
+    character_.current_frame = next_frame;
     return true;
 }
 
 
-// ?꾩옱 ?좏깮??motion???꾩껜 frame 罹먮┃??mesh vertex data瑜?RAM??upload (character_mesh_)
+// ?꾩옱 ?좏깮??motion???꾩껜 frame 罹먮┃??mesh vertex data瑜?RAM??upload (character_.mesh)
 bool OpenGLViewerWidget::load_motion_asset(const std::filesystem::path& motion_asset_path)
 {
     CharacterMesh next_character_mesh;
@@ -223,19 +224,19 @@ bool OpenGLViewerWidget::load_motion_asset(const std::filesystem::path& motion_a
         return false;
     }
 
-    character_mesh_ = std::move(next_character_mesh);
-    character_loaded_ = true;
+    character_.mesh = std::move(next_character_mesh);
+    character_.loaded = true;
     is_playing_ = true;
-    current_frame_ = 0;
-    uploaded_frame_ = UINT32_MAX;
+    character_.current_frame = 0;
+    character_.uploaded_frame = std::numeric_limits<std::uint32_t>::max();
     playback_timer_.restart();
     reset_camera_to_character();
 
     if (gl_initialized_) {
         makeCurrent();
-        character_gpu_state_.upload_mesh(character_mesh_, *this);
-        character_gpu_state_.upload_frame(character_mesh_, 0, *this);
-        uploaded_frame_ = 0;
+        character_.gpu_state.upload_mesh(character_.mesh, *this);
+        character_.gpu_state.upload_frame(character_.mesh, 0, *this);
+        character_.uploaded_frame = 0;
         doneCurrent();
     }
 
@@ -281,12 +282,12 @@ void OpenGLViewerWidget::draw_garment_meshes()
 // ?좊땲硫붿씠??以묒떖?먯쑝濡?移대찓??reset
 void OpenGLViewerWidget::reset_camera_to_character()
 {
-    camera_.target = character_mesh_.bounds_center;
+    camera_.target = character_.mesh.bounds_center;
     camera_.yaw_radians = character_camera_yaw;
     camera_.pitch_radians = character_camera_pitch;
-    camera_.distance = std::max(character_camera_distance_min, character_mesh_.bounds_radius * character_camera_distance_scale);
-    camera_.min_distance = std::max(character_camera_near_min, character_mesh_.bounds_radius * character_camera_near_scale);
-    camera_.max_distance = std::max(character_camera_far_min, character_mesh_.bounds_radius * character_camera_far_scale);
+    camera_.distance = std::max(character_camera_distance_min, character_.mesh.bounds_radius * character_camera_distance_scale);
+    camera_.min_distance = std::max(character_camera_near_min, character_.mesh.bounds_radius * character_camera_near_scale);
+    camera_.max_distance = std::max(character_camera_far_min, character_.mesh.bounds_radius * character_camera_far_scale);
     camera_.has_last_mouse = false;
 }
 

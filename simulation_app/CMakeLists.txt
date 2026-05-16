@@ -18,6 +18,7 @@ add_executable(simulation_app
     src/assets/GarmentAsset.h
     src/assets/MotionAsset.cpp
     src/assets/MotionAsset.h
+    src/character/CharacterInstance.h
     src/character/CharacterGpuState.cpp
     src/character/CharacterGpuState.h
     src/cloth/ClothGpuState.cpp
