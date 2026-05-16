@@ -113,7 +113,9 @@ OpenGLViewerWidget::OpenGLViewerWidget(QWidget* parent)
 OpenGLViewerWidget::~OpenGLViewerWidget()
 {
     makeCurrent();
-    cloth_gpu_state_.release(*this);
+    for (ClothInstance& garment : garments_) {
+        garment.gpu_state.release(*this);
+    }
     character_gpu_state_.release(*this);
     grid_gpu_state_.release(*this);
     viewer_shader_.release(*this);
@@ -144,9 +146,9 @@ void OpenGLViewerWidget::initializeGL()
         character_gpu_state_.upload_frame(character_mesh_, 0, *this);
         uploaded_frame_ = 0;
     }
-    if (garment_loaded_) {
-        cloth_gpu_state_.upload(garment_mesh_, *this);
-        cloth_gpu_state_.reset_positions(garment_mesh_, *this);
+    for (ClothInstance& garment : garments_) {
+        garment.gpu_state.upload(garment.mesh, *this);
+        garment.gpu_state.reset_states(garment.mesh, *this);
     }
 }
 
@@ -188,7 +190,7 @@ void OpenGLViewerWidget::paintGL()
         character_gpu_state_.draw(*this);
     }
 
-    draw_garment_mesh();
+    draw_garment_meshes();
 }
 
 
@@ -244,16 +246,18 @@ bool OpenGLViewerWidget::load_motion_asset(const std::filesystem::path& motion_a
 // Garment //
 bool OpenGLViewerWidget::load_garment_asset(const std::filesystem::path& garment_asset_path)
 {
-    if (!load_garment_mesh(garment_asset_path, garment_mesh_)) {
+    GarmentMesh next_garment_mesh;
+    if (!load_garment_mesh(garment_asset_path, next_garment_mesh)) {
         return false;
     }
 
-    garment_loaded_ = true;
+    ClothInstance& garment = garments_.emplace_back();
+    garment.mesh = std::move(next_garment_mesh);
 
     if (gl_initialized_) {
         makeCurrent();
-        cloth_gpu_state_.upload(garment_mesh_, *this);
-        cloth_gpu_state_.reset_positions(garment_mesh_, *this);
+        garment.gpu_state.upload(garment.mesh, *this);
+        garment.gpu_state.reset_states(garment.mesh, *this);
         doneCurrent();
     }
 
@@ -261,14 +265,16 @@ bool OpenGLViewerWidget::load_garment_asset(const std::filesystem::path& garment
     return true;
 }
 
-void OpenGLViewerWidget::draw_garment_mesh()
+void OpenGLViewerWidget::draw_garment_meshes()
 {
-    if (!garment_loaded_ || !cloth_gpu_state_.initialized()) {
-        return;
-    }
+    for (const ClothInstance& garment : garments_) {
+        if (!garment.visible || !garment.gpu_state.is_initialized()) {
+            continue;
+        }
 
-    viewer_shader_.set_solid_color(garment_mesh_.color, *this);
-    cloth_gpu_state_.draw(*this);
+        viewer_shader_.set_solid_color(garment.mesh.color, *this);
+        garment.gpu_state.draw(*this);
+    }
 }
 
 // Camera //

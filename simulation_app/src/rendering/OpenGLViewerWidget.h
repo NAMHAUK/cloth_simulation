@@ -1,14 +1,14 @@
 #pragma once
 
-#include "assets/GarmentAsset.h"
 #include "assets/MotionAsset.h"
 #include "character/CharacterGpuState.h"
-#include "cloth/ClothGpuState.h"
+#include "cloth/ClothInstance.h"
 #include "rendering/GridGpuState.h"
 #include "rendering/ViewerShaderProgram.h"
 
 #include <cstdint>
 #include <filesystem>
+#include <vector>
 
 #include <glm/mat4x4.hpp>
 #include <glm/vec3.hpp>
@@ -49,23 +49,21 @@ protected:
     void wheelEvent(QWheelEvent* event) override;
 
 private:
-    void draw_garment_mesh();
+    void draw_garment_meshes();
 
     void reset_camera_to_character();
     bool update_current_frame_index();
 
     CharacterMesh character_mesh_;
-    GarmentMesh garment_mesh_;
+    std::vector<ClothInstance> garments_;
     ViewerShaderProgram viewer_shader_;
     CharacterGpuState character_gpu_state_;
     GridGpuState grid_gpu_state_;
-    ClothGpuState cloth_gpu_state_;
 
     OrbitCamera camera_;
     
     bool gl_initialized_ = false;
     bool character_loaded_ = false;
-    bool garment_loaded_ = false;
     bool is_playing_ = false;
 
     std::uint32_t current_frame_ = 0;

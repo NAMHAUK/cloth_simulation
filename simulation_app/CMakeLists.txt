@@ -22,6 +22,7 @@ add_executable(simulation_app
     src/character/CharacterGpuState.h
     src/cloth/ClothGpuState.cpp
     src/cloth/ClothGpuState.h
+    src/cloth/ClothInstance.h
     src/rendering/GridGpuState.cpp
     src/rendering/GridGpuState.h
     src/rendering/OpenGLViewerWidget.cpp

@@ -7,17 +7,24 @@
 class ClothGpuState final {
 public:
     ClothGpuState() = default;
+
     ClothGpuState(const ClothGpuState&) = delete;
     ClothGpuState& operator=(const ClothGpuState&) = delete;
+    ClothGpuState(ClothGpuState&& other) noexcept;
+    ClothGpuState& operator=(ClothGpuState&& other) noexcept;
 
-    bool initialized() const;
+    bool is_initialized() const;
 
     void upload(const GarmentMesh& garment_mesh, QOpenGLFunctions_4_5_Core& gl);
-    void reset_positions(const GarmentMesh& garment_mesh, QOpenGLFunctions_4_5_Core& gl);
+    void reset_states(const GarmentMesh& garment_mesh, QOpenGLFunctions_4_5_Core& gl);
     void draw(QOpenGLFunctions_4_5_Core& gl) const;
     void release(QOpenGLFunctions_4_5_Core& gl);
 
 private:
+    void initialize_gpu_resources(QOpenGLFunctions_4_5_Core& gl);
+    void take_gpu_resources_from(ClothGpuState& other) noexcept;
+    void reset_resources() noexcept;
+
     GLuint vao_ = 0;
     GLuint rest_position_buffer_ = 0;
     GLuint current_position_buffer_ = 0;
