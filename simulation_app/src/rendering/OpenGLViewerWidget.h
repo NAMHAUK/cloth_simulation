@@ -1,6 +1,11 @@
 #pragma once
 
+#include "assets/GarmentAsset.h"
 #include "assets/MotionAsset.h"
+#include "character/CharacterGpuState.h"
+#include "cloth/ClothGpuState.h"
+#include "rendering/GridGpuState.h"
+#include "rendering/ViewerShaderProgram.h"
 
 #include <cstdint>
 #include <filesystem>
@@ -9,24 +14,10 @@
 #include <glm/vec3.hpp>
 
 #include <QElapsedTimer>
-#include <QOpenGLFunctions_3_3_Core>
+#include <QOpenGLFunctions_4_5_Core>
 #include <QOpenGLWidget>
 #include <QPoint>
 #include <QTimer>
-
-struct MeshGpu {
-    GLuint vao = 0;
-    GLuint vbo = 0;
-    GLuint ebo = 0;
-    bool initialized = false;
-};
-
-struct GridGpu {
-    GLuint vao = 0;
-    GLuint vbo = 0;
-    GLsizei vertex_count = 0;
-    bool initialized = false;
-};
 
 struct OrbitCamera {
     glm::vec3 target{};
@@ -39,12 +30,13 @@ struct OrbitCamera {
     bool has_last_mouse = false;
 };
 
-class OpenGLViewerWidget final : public QOpenGLWidget, protected QOpenGLFunctions_3_3_Core {
+class OpenGLViewerWidget final : public QOpenGLWidget, protected QOpenGLFunctions_4_5_Core {
 public:
     explicit OpenGLViewerWidget(QWidget* parent = nullptr);
     ~OpenGLViewerWidget() override;
 
     bool load_motion_asset(const std::filesystem::path& motion_asset_path);
+    bool load_garment_asset(const std::filesystem::path& garment_asset_path);
 
 protected:
     void initializeGL() override;
@@ -57,31 +49,23 @@ protected:
     void wheelEvent(QWheelEvent* event) override;
 
 private:
-    GLuint compile_shader(GLenum type, const char* source);
-    GLuint create_program();
-
-    void initialize_character_mesh_gpu();
-    void upload_character_frame_to_gpu(std::uint32_t frame_index);
-    void delete_character_mesh_gpu();
-
-    void upload_grid_to_gpu();
-    void delete_grid_gpu();
+    void draw_garment_mesh();
 
     void reset_camera_to_character();
     bool update_current_frame_index();
 
     CharacterMesh character_mesh_;
-    MeshGpu character_mesh_gpu_;
-    GridGpu grid_gpu_;
+    GarmentMesh garment_mesh_;
+    ViewerShaderProgram viewer_shader_;
+    CharacterGpuState character_gpu_state_;
+    GridGpuState grid_gpu_state_;
+    ClothGpuState cloth_gpu_state_;
 
     OrbitCamera camera_;
     
-    GLuint shader_program_ = 0;
-    GLint mvp_location_ = -1;
-    GLint solid_mode_location_ = -1;
-    GLint solid_color_location_ = -1;
     bool gl_initialized_ = false;
     bool character_loaded_ = false;
+    bool garment_loaded_ = false;
     bool is_playing_ = false;
 
     std::uint32_t current_frame_ = 0;

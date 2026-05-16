@@ -6,7 +6,7 @@ set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_AUTOMOC ON)
 
-find_package(Qt6 CONFIG REQUIRED COMPONENTS Widgets OpenGLWidgets)
+find_package(Qt6 CONFIG REQUIRED COMPONENTS Widgets OpenGLWidgets OpenGL)
 find_package(glm CONFIG REQUIRED)
 
 get_filename_component(REPO_ROOT "${CMAKE_CURRENT_SOURCE_DIR}/.." ABSOLUTE)
@@ -14,10 +14,20 @@ get_filename_component(REPO_ROOT "${CMAKE_CURRENT_SOURCE_DIR}/.." ABSOLUTE)
 add_executable(simulation_app
     src/app/main.cpp
     src/app/ProjectPaths.h
+    src/assets/GarmentAsset.cpp
+    src/assets/GarmentAsset.h
     src/assets/MotionAsset.cpp
     src/assets/MotionAsset.h
+    src/character/CharacterGpuState.cpp
+    src/character/CharacterGpuState.h
+    src/cloth/ClothGpuState.cpp
+    src/cloth/ClothGpuState.h
+    src/rendering/GridGpuState.cpp
+    src/rendering/GridGpuState.h
     src/rendering/OpenGLViewerWidget.cpp
     src/rendering/OpenGLViewerWidget.h
+    src/rendering/ViewerShaderProgram.cpp
+    src/rendering/ViewerShaderProgram.h
     src/ui/MainWindow.cpp
     src/ui/MainWindow.h
     src/ui/MotionBrowserPanel.cpp
@@ -37,6 +47,7 @@ target_compile_definitions(simulation_app PRIVATE
 target_link_libraries(simulation_app PRIVATE
     Qt6::Widgets
     Qt6::OpenGLWidgets
+    Qt6::OpenGL
     glm::glm
     opengl32
 )

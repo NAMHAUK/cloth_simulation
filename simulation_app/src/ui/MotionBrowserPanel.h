@@ -25,6 +25,7 @@ public:
 
     void set_conversion_active(bool active);
     void set_motion_import_button_callback(std::function<void()> callback);
+    void set_garment_button_callback(std::function<void()> callback);
     void set_expansion_changed_callback(std::function<void()> callback);
 
 private:
@@ -35,6 +36,7 @@ private:
     void select_motion_from_list(QListWidgetItem* item);
 
     QPushButton* toggle_button_ = nullptr;
+    QPushButton* garment_button_ = nullptr;
     QWidget* expanded_panel_ = nullptr;
     QLabel* title_label_ = nullptr;
     QListWidget* list_widget_ = nullptr;
@@ -43,5 +45,6 @@ private:
     std::vector<MotionAsset> motions_;
     std::function<void(const std::filesystem::path&)> motion_selected_callback_;
     std::function<void()> motion_import_button_callback_;
+    std::function<void()> garment_button_callback_;
     std::function<void()> expansion_changed_callback_;
 };

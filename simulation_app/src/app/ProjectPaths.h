@@ -9,6 +9,7 @@ struct ProjectPaths {
     std::filesystem::path smpl_model_dir;
     std::filesystem::path motion_asset_dir;
     std::filesystem::path amass_dir;
+    std::filesystem::path garment_asset_dir;
 };
 
 inline ProjectPaths make_project_paths(const std::filesystem::path& project_root)
@@ -20,5 +21,6 @@ inline ProjectPaths make_project_paths(const std::filesystem::path& project_root
         project_root / "data" / "smpl" / "models",
         project_root / "data" / "cache",
         project_root / "data" / "amass",
+        project_root / "data" / "garments",
     };
 }

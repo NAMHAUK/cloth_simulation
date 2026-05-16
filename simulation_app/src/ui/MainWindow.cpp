@@ -58,6 +58,9 @@ MainWindow::MainWindow(const std::filesystem::path& project_root, QWidget* paren
     browser_panel_->set_motion_import_button_callback([this]() {
         request_amass_conversion();
     });
+    browser_panel_->set_garment_button_callback([this]() {
+        request_garment_asset_selection();
+    });
     browser_panel_->set_expansion_changed_callback([this]() {
         update_motion_browser();
         browser_panel_->raise();
@@ -156,6 +159,29 @@ void MainWindow::load_motion_asset(const std::filesystem::path& motion_asset_pat
     }
 
     browser_panel_->set_current_motion_asset(motion_asset_path);
+}
+
+void MainWindow::request_garment_asset_selection()
+{
+    const QString selected_file = QFileDialog::getOpenFileName(
+        this,
+        "Select Garment",
+        to_q_string(project_paths_.garment_asset_dir),
+        "Garment OBJ (*.obj);;All Files (*)"
+    );
+
+    if (selected_file.isEmpty()) {
+        return;
+    }
+
+    const std::filesystem::path garment_asset_path = selected_file.toStdWString();
+    if (!viewer_widget_->load_garment_asset(garment_asset_path)) {
+        QMessageBox::warning(
+            this,
+            "Load Failed",
+            "Failed to load garment:\n" + to_q_string(garment_asset_path)
+        );
+    }
 }
 
 // AMASS conversion

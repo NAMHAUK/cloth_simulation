@@ -30,6 +30,7 @@ private:
     void update_motion_browser();
     void refresh_motion_list();
     void load_motion_asset(const std::filesystem::path& motion_asset_path);
+    void request_garment_asset_selection();
     void request_amass_conversion();
     std::optional<ConverterCommand> prepare_amass_conversion();
     void start_converter_process(const ConverterCommand& command);
