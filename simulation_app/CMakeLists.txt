@@ -18,18 +18,20 @@ add_executable(simulation_app
     src/assets/GarmentAsset.h
     src/assets/MotionAsset.cpp
     src/assets/MotionAsset.h
-    src/character/CharacterInstance.h
-    src/character/CharacterGpuState.cpp
-    src/character/CharacterGpuState.h
-    src/cloth/ClothGpuState.cpp
-    src/cloth/ClothGpuState.h
-    src/cloth/ClothInstance.h
-    src/rendering/GridGpuState.cpp
-    src/rendering/GridGpuState.h
-    src/rendering/OpenGLViewerWidget.cpp
-    src/rendering/OpenGLViewerWidget.h
+    src/gpu/CharacterGpuState.cpp
+    src/gpu/CharacterGpuState.h
+    src/gpu/ClothGpuState.cpp
+    src/gpu/ClothGpuState.h
+    src/gpu/GridGpuState.cpp
+    src/gpu/GridGpuState.h
+    src/gpu/SimulationGpuState.cpp
+    src/gpu/SimulationGpuState.h
+    src/rendering/SimulationViewport.cpp
+    src/rendering/SimulationViewport.h
     src/rendering/ViewerShaderProgram.cpp
     src/rendering/ViewerShaderProgram.h
+    src/simulation/SimulationScene.cpp
+    src/simulation/SimulationScene.h
     src/ui/MainWindow.cpp
     src/ui/MainWindow.h
     src/ui/MotionBrowserPanel.cpp

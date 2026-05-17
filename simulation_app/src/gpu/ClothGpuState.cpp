@@ -1,4 +1,4 @@
-#include "cloth/ClothGpuState.h"
+#include "gpu/ClothGpuState.h"
 
 #include <cstdint>
 

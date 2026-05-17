@@ -1,14 +1,10 @@
 #pragma once
 
-#include "character/CharacterInstance.h"
-#include "cloth/ClothInstance.h"
-#include "rendering/GridGpuState.h"
-#include "rendering/ViewerShaderProgram.h"
+#include "assets/GarmentAsset.h"
+#include "assets/MotionAsset.h"
+#include "gpu/SimulationGpuState.h"
+#include "simulation/SimulationScene.h"
 
-#include <filesystem>
-#include <vector>
-
-#include <glm/mat4x4.hpp>
 #include <glm/vec3.hpp>
 
 #include <QElapsedTimer>
@@ -28,13 +24,13 @@ struct OrbitCamera {
     bool has_last_mouse = false;
 };
 
-class OpenGLViewerWidget final : public QOpenGLWidget, protected QOpenGLFunctions_4_5_Core {
+class SimulationViewport final : public QOpenGLWidget, protected QOpenGLFunctions_4_5_Core {
 public:
-    explicit OpenGLViewerWidget(QWidget* parent = nullptr);
-    ~OpenGLViewerWidget() override;
+    explicit SimulationViewport(QWidget* parent = nullptr);
+    ~SimulationViewport() override;
 
-    bool load_motion_asset(const std::filesystem::path& motion_asset_path);
-    bool load_garment_asset(const std::filesystem::path& garment_asset_path);
+    void set_character_mesh(CharacterMesh mesh);
+    void add_garment_mesh(GarmentMesh mesh);
 
 protected:
     void initializeGL() override;
@@ -47,20 +43,13 @@ protected:
     void wheelEvent(QWheelEvent* event) override;
 
 private:
-    void draw_garment_meshes();
-
     void reset_camera_to_character();
-    bool update_current_frame_index();
 
-    CharacterInstance character_;
-    std::vector<ClothInstance> garments_;
-    ViewerShaderProgram viewer_shader_;
-    GridGpuState grid_gpu_state_;
-
+    SimulationScene scene_;
+    SimulationGpuState gpu_state_;
     OrbitCamera camera_;
-    
+
     bool gl_initialized_ = false;
-    bool is_playing_ = false;
 
     QElapsedTimer playback_timer_;
     QTimer frame_timer_;

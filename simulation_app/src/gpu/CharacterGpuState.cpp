@@ -1,4 +1,4 @@
-#include "character/CharacterGpuState.h"
+#include "gpu/CharacterGpuState.h"
 
 #include <cstddef>
 

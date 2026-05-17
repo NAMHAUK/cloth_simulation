@@ -1,4 +1,4 @@
-#include "rendering/GridGpuState.h"
+#include "gpu/GridGpuState.h"
 
 #include <cstddef>
 #include <vector>

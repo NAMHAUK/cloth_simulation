@@ -1,10 +1,12 @@
 #include "ui/MainWindow.h"
 
-#include "rendering/OpenGLViewerWidget.h"
+#include "assets/GarmentAsset.h"
+#include "rendering/SimulationViewport.h"
 #include "ui/MotionBrowserPanel.h"
 
 #include <algorithm>
 #include <iostream>
+#include <utility>
 
 #include <QEvent>
 #include <QFileDialog>
@@ -44,7 +46,7 @@ MainWindow::MainWindow(const std::filesystem::path& project_root, QWidget* paren
     resize(1440, 900);
 
     viewer_container_ = new QWidget(this);
-    viewer_widget_ = new OpenGLViewerWidget(viewer_container_);
+    simulation_viewport_ = new SimulationViewport(viewer_container_);
     browser_panel_ = new MotionBrowserPanel(viewer_container_);
 
     setCentralWidget(viewer_container_);
@@ -102,12 +104,12 @@ void MainWindow::resizeEvent(QResizeEvent* event)
 
 void MainWindow::update_motion_browser()
 {
-    if (!viewer_container_ || !viewer_widget_ || !browser_panel_) {
+    if (!viewer_container_ || !simulation_viewport_ || !browser_panel_) {
         return;
     }
 
     const QSize container_size = viewer_container_->size();
-    viewer_widget_->setGeometry(QRect(QPoint(0, 0), container_size));
+    simulation_viewport_->setGeometry(QRect(QPoint(0, 0), container_size));
 
     constexpr int margin = 12;
     constexpr int expanded_width = 340;
@@ -149,7 +151,8 @@ void MainWindow::refresh_motion_list()
 
 void MainWindow::load_motion_asset(const std::filesystem::path& motion_asset_path)
 {
-    if (!viewer_widget_->load_motion_asset(motion_asset_path)) {
+    CharacterMesh character_mesh;
+    if (!load_character_mesh(motion_asset_path, character_mesh)) {
         QMessageBox::warning(
             this,
             "Load Failed",
@@ -158,6 +161,7 @@ void MainWindow::load_motion_asset(const std::filesystem::path& motion_asset_pat
         return;
     }
 
+    simulation_viewport_->set_character_mesh(std::move(character_mesh));
     browser_panel_->set_current_motion_asset(motion_asset_path);
 }
 
@@ -175,13 +179,17 @@ void MainWindow::request_garment_asset_selection()
     }
 
     const std::filesystem::path garment_asset_path = selected_file.toStdWString();
-    if (!viewer_widget_->load_garment_asset(garment_asset_path)) {
+    GarmentMesh garment_mesh;
+    if (!load_garment_mesh(garment_asset_path, garment_mesh)) {
         QMessageBox::warning(
             this,
             "Load Failed",
             "Failed to load garment:\n" + to_q_string(garment_asset_path)
         );
+        return;
     }
+
+    simulation_viewport_->add_garment_mesh(std::move(garment_mesh));
 }
 
 // AMASS conversion

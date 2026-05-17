@@ -12,7 +12,7 @@
 
 class MotionBrowserPanel;
 class QObject;
-class OpenGLViewerWidget;
+class SimulationViewport;
 class QEvent;
 class QResizeEvent;
 class QWidget;
@@ -43,5 +43,5 @@ private:
     ConverterResult converter_result_;
     QWidget* viewer_container_ = nullptr;
     MotionBrowserPanel* browser_panel_ = nullptr;
-    OpenGLViewerWidget* viewer_widget_ = nullptr;
+    SimulationViewport* simulation_viewport_ = nullptr;
 };
