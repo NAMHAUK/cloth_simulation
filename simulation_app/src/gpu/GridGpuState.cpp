@@ -8,6 +8,11 @@ bool GridGpuState::initialized() const
     return vao_ != 0 && vertex_buffer_ != 0 && vertex_count_ > 0;
 }
 
+const glm::vec3& GridGpuState::color() const
+{
+    return color_;
+}
+
 void GridGpuState::upload(QOpenGLFunctions_4_5_Core& gl)
 {
     if (initialized()) {

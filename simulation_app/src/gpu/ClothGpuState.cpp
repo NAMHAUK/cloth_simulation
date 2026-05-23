@@ -50,11 +50,7 @@ bool ClothGpuState::is_initialized() const
 
 void ClothGpuState::initialize_gpu_resources(QOpenGLFunctions_4_5_Core& gl)
 {
-    if (vao_ != 0 &&
-        rest_position_buffer_ != 0 &&
-        current_position_buffer_ != 0 &&
-        previous_position_buffer_ != 0 &&
-        index_buffer_ != 0) {
+    if (is_initialized()) {
         return;
     }
 

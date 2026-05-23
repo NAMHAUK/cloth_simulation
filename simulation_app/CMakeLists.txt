@@ -28,8 +28,10 @@ add_executable(simulation_app
     src/gpu/SimulationGpuState.h
     src/rendering/SimulationViewport.cpp
     src/rendering/SimulationViewport.h
-    src/rendering/ViewerShaderProgram.cpp
-    src/rendering/ViewerShaderProgram.h
+    src/rendering/ViewerShader.cpp
+    src/rendering/ViewerShader.h
+    src/simulation/SimulationRuntime.cpp
+    src/simulation/SimulationRuntime.h
     src/simulation/SimulationScene.cpp
     src/simulation/SimulationScene.h
     src/ui/MainWindow.cpp

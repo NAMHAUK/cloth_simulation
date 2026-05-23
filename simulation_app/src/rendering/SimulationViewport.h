@@ -2,8 +2,7 @@
 
 #include "assets/GarmentAsset.h"
 #include "assets/MotionAsset.h"
-#include "gpu/SimulationGpuState.h"
-#include "simulation/SimulationScene.h"
+#include "simulation/SimulationRuntime.h"
 
 #include <glm/vec3.hpp>
 
@@ -45,8 +44,7 @@ protected:
 private:
     void reset_camera_to_character();
 
-    SimulationScene scene_;
-    SimulationGpuState gpu_state_;
+    SimulationRuntime runtime_;
     OrbitCamera camera_;
 
     bool gl_initialized_ = false;

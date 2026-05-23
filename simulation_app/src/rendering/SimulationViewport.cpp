@@ -107,7 +107,7 @@ SimulationViewport::SimulationViewport(QWidget* parent)
     frame_timer_.setInterval(playback_tick_ms);
     connect(&frame_timer_, &QTimer::timeout, this, [this]() {
         const double elapsed_seconds = static_cast<double>(playback_timer_.elapsed()) / 1000.0;
-        if (scene_.update_playback_frame(elapsed_seconds)) {
+        if (runtime_.update_playback_frame(elapsed_seconds)) {
             update();
         }
     });
@@ -117,33 +117,34 @@ SimulationViewport::SimulationViewport(QWidget* parent)
 SimulationViewport::~SimulationViewport()
 {
     makeCurrent();
-    gpu_state_.release(*this);
+    runtime_.release_gpu(*this);
     doneCurrent();
 }
 
 void SimulationViewport::set_character_mesh(CharacterMesh mesh)
 {
-    scene_.set_character_mesh(std::move(mesh));
-    playback_timer_.restart();
-    reset_camera_to_character();
-
     if (gl_initialized_) {
         makeCurrent();
-        gpu_state_.sync(scene_, *this);
+        runtime_.set_character_mesh(std::move(mesh), *this);
         doneCurrent();
+    } else {
+        runtime_.set_character_mesh(std::move(mesh));
     }
+
+    playback_timer_.restart();
+    reset_camera_to_character();
 
     update();
 }
 
 void SimulationViewport::add_garment_mesh(GarmentMesh mesh)
 {
-    scene_.add_garment_mesh(std::move(mesh));
-
     if (gl_initialized_) {
         makeCurrent();
-        gpu_state_.sync(scene_, *this);
+        runtime_.add_garment_mesh(std::move(mesh), *this);
         doneCurrent();
+    } else {
+        runtime_.add_garment_mesh(std::move(mesh));
     }
 
     update();
@@ -157,7 +158,7 @@ void SimulationViewport::initializeGL()
     std::cout << "OpenGL version: " << glGetString(GL_VERSION) << '\n';
     std::cout << "Renderer: " << glGetString(GL_RENDERER) << '\n';
 
-    if (!gpu_state_.initialize(shader_path("viewer.vert"), shader_path("viewer.frag"), *this)) {
+    if (!runtime_.initialize_gpu(shader_path("viewer.vert"), shader_path("viewer.frag"), *this)) {
         return;
     }
 
@@ -165,7 +166,6 @@ void SimulationViewport::initializeGL()
     glDisable(GL_CULL_FACE);
     glEnable(GL_DEPTH_TEST);
 
-    gpu_state_.sync(scene_, *this);
 }
 
 void SimulationViewport::resizeGL(int width, int height)
@@ -178,25 +178,26 @@ void SimulationViewport::paintGL()
     glClearColor(background_color.r, background_color.g, background_color.b, 1.0f);
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
-    if (!gpu_state_.is_initialized()) {
+    if (!runtime_.is_gpu_initialized()) {
         return;
     }
 
     // MVP 계산 -> shader uMVP로 전달
     const glm::mat4 mvp = make_mvp(camera_, width(), height());
-    gpu_state_.sync(scene_, *this);
-    gpu_state_.draw(scene_, mvp, *this);
+    runtime_.sync_gpu(*this);
+    runtime_.draw(mvp, *this);
 }
 
 // Camera //
 // 현재 모션의 캐릭터 bounding box 기준으로 카메라 초기화
 void SimulationViewport::reset_camera_to_character()
 {
-    if (!scene_.has_character()) {
+    const SimulationScene& scene = runtime_.scene();
+    if (!scene.has_character()) {
         return;
     }
 
-    const CharacterMesh& character_mesh = scene_.character_mesh();
+    const CharacterMesh& character_mesh = scene.character_mesh();
     camera_.target = character_mesh.bounds_center;
     camera_.yaw_radians = character_camera_yaw;
     camera_.pitch_radians = character_camera_pitch;
