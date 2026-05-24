@@ -1,6 +1,7 @@
 #pragma once
 
 #include <filesystem>
+#include <memory>
 #include <optional>
 #include <vector>
 
@@ -13,6 +14,7 @@ class AssetLoader;
 class MotionConverter;
 class MotionBrowserPanel;
 class QObject;
+class SimulationController;
 class SimulationViewport;
 class QEvent;
 class QWidget;
@@ -40,4 +42,5 @@ private:
     QWidget* viewer_container_ = nullptr;
     MotionBrowserPanel* browser_panel_ = nullptr;
     SimulationViewport* simulation_viewport_ = nullptr;
+    std::unique_ptr<SimulationController> simulation_controller_;
 };

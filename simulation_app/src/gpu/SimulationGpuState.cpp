@@ -9,25 +9,48 @@
 
 namespace {
 constexpr std::uint64_t unuploaded_revision = std::numeric_limits<std::uint64_t>::max();
-constexpr GLuint character_animation_position_binding = 0;
 }
 
 bool SimulationGpuState::is_initialized() const
 {
-    return viewer_shader_.is_initialized();
+    return initialized_;
 }
 
-bool SimulationGpuState::initialize(const std::filesystem::path& vertex_shader_path,
-                                    const std::filesystem::path& fragment_shader_path,
-                                    QOpenGLFunctions_4_5_Core& gl)
+bool SimulationGpuState::initialize(QOpenGLFunctions_4_5_Core&)
 {
-    if (!viewer_shader_.load(vertex_shader_path, fragment_shader_path, gl)) {
-        std::cerr << "Failed to create viewer shader program.\n";
-        return false;
+    initialized_ = true;
+    return true;
+}
+
+void SimulationGpuState::sync(const SimulationScene& scene, QOpenGLFunctions_4_5_Core&)
+{
+    if (!is_initialized()) {
+        return;
     }
 
-    grid_gpu_state_.upload(gl);
-    return true;
+    update_character_frame(scene);
+}
+
+void SimulationGpuState::release(QOpenGLFunctions_4_5_Core& gl)
+{
+    for (GarmentGpuSlot& slot : garment_gpu_slots_) {
+        slot.gpu_state.release(gl);
+    }
+    garment_gpu_slots_.clear();
+
+    character_gpu_state_.release(gl);
+
+    character_revision_ = 0;
+    current_character_frame_ = 0;
+    initialized_ = false;
+    character_uploaded_ = false;
+}
+
+// 캐릭터 // 
+
+const CharacterGpuState& SimulationGpuState::character_gpu_state() const
+{
+    return character_gpu_state_;
 }
 
 void SimulationGpuState::set_character_mesh(const SimulationScene& scene, QOpenGLFunctions_4_5_Core& gl)
@@ -48,6 +71,33 @@ void SimulationGpuState::set_character_mesh(const SimulationScene& scene, QOpenG
     character_uploaded_ = true;
 }
 
+void SimulationGpuState::update_character_frame(const SimulationScene& scene)
+{
+    if (!scene.has_character() || !character_uploaded_) {
+        return;
+    }
+
+    const std::uint32_t scene_frame = scene.current_character_frame();
+
+    // 캐릭터 frame 상태 갱신
+    if (current_character_frame_ != scene_frame) {
+        character_gpu_state_.set_current_frame(scene_frame);
+        current_character_frame_ = scene_frame;
+    }
+}
+
+// garment //
+
+const ClothGpuState* SimulationGpuState::garment_gpu_state(GarmentId garment_id) const
+{
+    const GarmentGpuSlot* slot = find_garment_gpu_slot(garment_id);
+    if (slot == nullptr) {
+        return nullptr;
+    }
+
+    return &slot->gpu_state;
+}
+
 void SimulationGpuState::set_garment_mesh(const GarmentSceneObject& garment, QOpenGLFunctions_4_5_Core& gl)
 {
     GarmentGpuSlot* slot = find_garment_gpu_slot(garment.id);
@@ -61,7 +111,6 @@ void SimulationGpuState::set_garment_mesh(const GarmentSceneObject& garment, QOp
     }
 
     slot->gpu_state.upload(garment.mesh, gl);
-    slot->gpu_state.reset_states(garment.mesh, gl);
     slot->uploaded_revision = garment.revision;
 }
 
@@ -96,84 +145,16 @@ SimulationGpuState::GarmentGpuSlot* SimulationGpuState::find_garment_gpu_slot(Ga
     return &(*iter);
 }
 
-void SimulationGpuState::sync(const SimulationScene& scene, QOpenGLFunctions_4_5_Core&)
+const SimulationGpuState::GarmentGpuSlot* SimulationGpuState::find_garment_gpu_slot(GarmentId garment_id) const
 {
-    if (!is_initialized()) {
-        return;
-    }
-
-    update_character_frame(scene);
-}
-
-void SimulationGpuState::update_character_frame(const SimulationScene& scene)
-{
-    if (!scene.has_character() || !character_uploaded_) {
-        return;
-    }
-
-    const std::uint32_t scene_frame = scene.current_character_frame();
-
-    // 캐릭터 frame 상태 갱신
-    if (current_character_frame_ != scene_frame) {
-        character_gpu_state_.set_current_frame(scene_frame);
-        current_character_frame_ = scene_frame;
-    }
-}
-
-void SimulationGpuState::draw(const SimulationScene& scene, const glm::mat4& mvp, QOpenGLFunctions_4_5_Core& gl)
-{
-    if (!is_initialized()) {
-        return;
-    }
-
-    // shader setting
-    viewer_shader_.bind(gl);
-    viewer_shader_.set_mvp(mvp, gl);
-    viewer_shader_.set_attribute_position_mode(gl);
-
-    // grid
-    if (grid_gpu_state_.initialized()) {
-        viewer_shader_.set_solid_color(grid_gpu_state_.color(), gl);
-
-        gl.glDepthMask(GL_FALSE);
-        grid_gpu_state_.draw(gl);
-        gl.glDepthMask(GL_TRUE);
-    }
-
-    // character
-    if (scene.has_character() && character_gpu_state_.is_initialized()) {
-        character_gpu_state_.bind_animation_positions(character_animation_position_binding, gl);
-        viewer_shader_.set_character_animation_mode(character_gpu_state_.current_frame_index(), character_gpu_state_.vertex_count(), gl);
-        viewer_shader_.set_vertex_color_mode(gl);
-        character_gpu_state_.draw(gl);
-    }
-
-    // garments
-    viewer_shader_.set_attribute_position_mode(gl);
-    const std::vector<GarmentSceneObject>& garments = scene.garments();
-    for (const GarmentSceneObject& garment : garments) {
-        const GarmentGpuSlot* slot = find_garment_gpu_slot(garment.id);
-        if (slot == nullptr || !garment.visible || !slot->gpu_state.is_initialized()) {
-            continue;
+    const auto iter = std::find_if(garment_gpu_slots_.begin(), garment_gpu_slots_.end(),
+        [garment_id](const GarmentGpuSlot& slot) {
+            return slot.id == garment_id;
         }
-
-        viewer_shader_.set_solid_color(garment.mesh.color, gl);
-        slot->gpu_state.draw(gl);
+    );
+    if (iter == garment_gpu_slots_.end()) {
+        return nullptr;
     }
-}
 
-void SimulationGpuState::release(QOpenGLFunctions_4_5_Core& gl)
-{
-    for (GarmentGpuSlot& slot : garment_gpu_slots_) {
-        slot.gpu_state.release(gl);
-    }
-    garment_gpu_slots_.clear();
-
-    character_gpu_state_.release(gl);
-    grid_gpu_state_.release(gl);
-    viewer_shader_.release(gl);
-
-    character_revision_ = 0;
-    current_character_frame_ = 0;
-    character_uploaded_ = false;
+    return &(*iter);
 }

@@ -1,10 +1,11 @@
 #include "rendering/SimulationViewport.h"
 
+#include "app/SimulationController.h"
+
 #include <algorithm>
 #include <cmath>
 #include <filesystem>
 #include <iostream>
-#include <utility>
 
 #include <QMouseEvent>
 #include <QWheelEvent>
@@ -15,7 +16,6 @@
 
 namespace {
 constexpr float pi = 3.14159265358979323846f;
-constexpr int playback_tick_ms = 16;
 
 // 카메라 parameters
 constexpr float default_camera_yaw = 0.75f * pi;
@@ -93,8 +93,7 @@ std::filesystem::path shader_path(const char* file_name)
 }
 }
 
-SimulationViewport::SimulationViewport(QWidget* parent)
-    : QOpenGLWidget(parent)
+SimulationViewport::SimulationViewport(QWidget* parent) : QOpenGLWidget(parent)
 {
     camera_.yaw_radians   = default_camera_yaw;
     camera_.pitch_radians = default_camera_pitch;
@@ -102,56 +101,27 @@ SimulationViewport::SimulationViewport(QWidget* parent)
 
     setFocusPolicy(Qt::StrongFocus);
     setMouseTracking(true);
-
-    // tick마다 frame update
-    frame_timer_.setInterval(playback_tick_ms);
-    connect(&frame_timer_, &QTimer::timeout, this, [this]() {
-        const double elapsed_seconds = static_cast<double>(playback_timer_.elapsed()) / 1000.0;
-        if (runtime_.update_playback_frame(elapsed_seconds)) {
-            update();
-        }
-    });
-    frame_timer_.start();
 }
 
-SimulationViewport::~SimulationViewport()
+SimulationViewport::~SimulationViewport() = default;
+
+// 접근 함수 //
+void SimulationViewport::set_controller(SimulationController* controller)
 {
-    makeCurrent();
-    runtime_.release_gpu(*this);
-    doneCurrent();
+    controller_ = controller;
 }
 
-void SimulationViewport::set_character_mesh(CharacterMesh mesh)
+bool SimulationViewport::is_gl_initialized() const
 {
-    if (!gl_initialized_) {
-        std::cerr << "Cannot set character mesh before OpenGL initialization.\n";
-        return;
-    }
-
-    makeCurrent();
-    runtime_.set_character_mesh(std::move(mesh), *this);
-    doneCurrent();
-
-    playback_timer_.restart();
-    reset_camera_to_character();
-
-    update();
+    return gl_initialized_;
 }
 
-void SimulationViewport::add_garment_mesh(GarmentMesh mesh)
+QOpenGLFunctions_4_5_Core& SimulationViewport::gl_functions()
 {
-    if (!gl_initialized_) {
-        std::cerr << "Cannot add garment mesh before OpenGL initialization.\n";
-        return;
-    }
-
-    makeCurrent();
-    runtime_.add_garment_mesh(std::move(mesh), *this);
-    doneCurrent();
-
-    update();
+    return *this;
 }
 
+// OpenGL //
 void SimulationViewport::initializeGL()
 {
     initializeOpenGLFunctions();
@@ -160,7 +130,12 @@ void SimulationViewport::initializeGL()
     std::cout << "OpenGL version: " << glGetString(GL_VERSION) << '\n';
     std::cout << "Renderer: " << glGetString(GL_RENDERER) << '\n';
 
-    if (!runtime_.initialize_gpu(shader_path("viewer.vert"), shader_path("viewer.frag"), *this)) {
+    if (controller_ == nullptr) {
+        std::cerr << "Simulation controller is not set before OpenGL initialization.\n";
+        return;
+    }
+
+    if (!controller_->initialize_gpu(shader_path("viewer.vert"), shader_path("viewer.frag"), gl_functions())) {
         return;
     }
 
@@ -180,26 +155,19 @@ void SimulationViewport::paintGL()
     glClearColor(background_color.r, background_color.g, background_color.b, 1.0f);
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
-    if (!runtime_.is_gpu_initialized()) {
+    if (controller_ == nullptr || !controller_->is_gpu_initialized()) {
         return;
     }
 
     // MVP 계산 -> shader uMVP로 전달
     const glm::mat4 mvp = make_mvp(camera_, width(), height());
-    runtime_.sync_gpu(*this);
-    runtime_.draw(mvp, *this);
+    controller_->draw(mvp, gl_functions());
 }
 
 // Camera //
 // 현재 모션의 캐릭터 bounding box 기준으로 카메라 초기화
-void SimulationViewport::reset_camera_to_character()
+void SimulationViewport::reset_camera_to_character(const CharacterMesh& character_mesh)
 {
-    const SimulationScene& scene = runtime_.scene();
-    if (!scene.has_character()) {
-        return;
-    }
-
-    const CharacterMesh& character_mesh = scene.character_mesh();
     camera_.target = character_mesh.bounds_center;
     camera_.yaw_radians = character_camera_yaw;
     camera_.pitch_radians = character_camera_pitch;

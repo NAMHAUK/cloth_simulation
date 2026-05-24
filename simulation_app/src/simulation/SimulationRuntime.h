@@ -3,6 +3,7 @@
 #include "assets/GarmentAsset.h"
 #include "assets/MotionAsset.h"
 #include "gpu/SimulationGpuState.h"
+#include "rendering/SimulationRenderer.h"
 #include "simulation/SimulationScene.h"
 
 #include <cstddef>
@@ -25,7 +26,8 @@ public:
     GarmentId add_garment_mesh(GarmentMesh mesh, QOpenGLFunctions_4_5_Core& gl);
 
     // Playback / simulation // 
-    bool update_playback_frame(double elapsed_seconds);
+    bool update_playback_frame(double playback_seconds);
+    bool simulation_step(QOpenGLFunctions_4_5_Core& gl);
     void set_playing(bool playing);
 
     // GPU / rendering //
@@ -41,6 +43,9 @@ private:
     // CPU-side scene state //
     SimulationScene scene_;
 
-    // GPU-side dynamic/render state //
+    // GPU-side dynamic simulation state //
     SimulationGpuState gpu_state_;
+
+    // Rendering orchestration //
+    SimulationRenderer renderer_;
 };

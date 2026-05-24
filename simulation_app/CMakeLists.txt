@@ -18,6 +18,8 @@ add_executable(simulation_app
     src/app/MotionConverter.cpp
     src/app/MotionConverter.h
     src/app/ProjectPaths.h
+    src/app/SimulationController.cpp
+    src/app/SimulationController.h
     src/assets/GarmentAsset.cpp
     src/assets/GarmentAsset.h
     src/assets/MotionAsset.cpp
@@ -30,6 +32,8 @@ add_executable(simulation_app
     src/gpu/GridGpuState.h
     src/gpu/SimulationGpuState.cpp
     src/gpu/SimulationGpuState.h
+    src/rendering/SimulationRenderer.cpp
+    src/rendering/SimulationRenderer.h
     src/rendering/SimulationViewport.cpp
     src/rendering/SimulationViewport.h
     src/rendering/ViewerShader.cpp

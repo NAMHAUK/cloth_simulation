@@ -1,16 +1,14 @@
 #pragma once
 
-#include "assets/GarmentAsset.h"
 #include "assets/MotionAsset.h"
-#include "simulation/SimulationRuntime.h"
 
 #include <glm/vec3.hpp>
 
-#include <QElapsedTimer>
 #include <QOpenGLFunctions_4_5_Core>
 #include <QOpenGLWidget>
 #include <QPoint>
-#include <QTimer>
+
+class SimulationController;
 
 struct OrbitCamera {
     glm::vec3 target{};
@@ -28,8 +26,10 @@ public:
     explicit SimulationViewport(QWidget* parent = nullptr);
     ~SimulationViewport() override;
 
-    void set_character_mesh(CharacterMesh mesh);
-    void add_garment_mesh(GarmentMesh mesh);
+    void set_controller(SimulationController* controller);
+    bool is_gl_initialized() const;
+    QOpenGLFunctions_4_5_Core& gl_functions();
+    void reset_camera_to_character(const CharacterMesh& character_mesh);
 
 protected:
     void initializeGL() override;
@@ -42,13 +42,8 @@ protected:
     void wheelEvent(QWheelEvent* event) override;
 
 private:
-    void reset_camera_to_character();
-
-    SimulationRuntime runtime_;
+    SimulationController* controller_ = nullptr;
     OrbitCamera camera_;
 
     bool gl_initialized_ = false;
-
-    QElapsedTimer playback_timer_;
-    QTimer frame_timer_;
 };

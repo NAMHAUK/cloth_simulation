@@ -2,12 +2,14 @@
 
 #include "app/AssetLoader.h"
 #include "app/MotionConverter.h"
+#include "app/SimulationController.h"
 #include "rendering/SimulationViewport.h"
 #include "support/QtHelpers.h"
 #include "ui/MotionBrowserPanel.h"
 
 #include <algorithm>
 #include <iostream>
+#include <memory>
 #include <utility>
 
 #include <QEvent>
@@ -44,6 +46,8 @@ MainWindow::MainWindow(const std::filesystem::path& project_root, QWidget* paren
 
     viewer_container_ = new QWidget(this);
     simulation_viewport_ = new SimulationViewport(viewer_container_);
+    simulation_controller_ = std::make_unique<SimulationController>(*simulation_viewport_);
+    simulation_viewport_->set_controller(simulation_controller_.get());
     browser_panel_ = new MotionBrowserPanel(viewer_container_);
     asset_loader_ = new AssetLoader(this);
     motion_converter_ = new MotionConverter(this);
@@ -59,7 +63,15 @@ MainWindow::MainWindow(const std::filesystem::path& project_root, QWidget* paren
     update_viewer_layout();
 }
 
-MainWindow::~MainWindow() = default;
+MainWindow::~MainWindow()
+{
+    if (simulation_controller_) {
+        simulation_controller_->release_gpu();
+    }
+    if (simulation_viewport_) {
+        simulation_viewport_->set_controller(nullptr);
+    }
+}
 
 // Layout //
 
@@ -82,26 +94,18 @@ void MainWindow::setup_callbacks()
     // Asset loader callbacks
     asset_loader_->set_character_loaded_callback(
         [this](const std::filesystem::path& motion_asset_path, CharacterMesh mesh) {
-            simulation_viewport_->set_character_mesh(std::move(mesh));
+            simulation_controller_->set_character_mesh(std::move(mesh));
             browser_panel_->set_current_motion_asset(motion_asset_path);
         }
     );
     asset_loader_->set_character_load_failed_callback([this](const std::filesystem::path& motion_asset_path) {
-        QMessageBox::warning(
-            this,
-            "Load Failed",
-            "Failed to load motion:\n" + to_q_string(motion_asset_path)
-        );
+        QMessageBox::warning(this, "Load Failed", "Failed to load motion:\n" + to_q_string(motion_asset_path));
     });
     asset_loader_->set_garment_loaded_callback([this](GarmentMesh mesh) {
-        simulation_viewport_->add_garment_mesh(std::move(mesh));
+        simulation_controller_->add_garment_mesh(std::move(mesh));
     });
     asset_loader_->set_garment_load_failed_callback([this](const std::filesystem::path& garment_asset_path) {
-        QMessageBox::warning(
-            this,
-            "Load Failed",
-            "Failed to load garment:\n" + to_q_string(garment_asset_path)
-        );
+        QMessageBox::warning(this, "Load Failed", "Failed to load garment:\n" + to_q_string(garment_asset_path));
     });
 
     // Motion converter callbacks

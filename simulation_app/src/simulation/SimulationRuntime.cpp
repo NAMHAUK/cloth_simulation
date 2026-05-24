@@ -28,9 +28,14 @@ GarmentId SimulationRuntime::add_garment_mesh(GarmentMesh mesh, QOpenGLFunctions
 }
 
 // Playback / simulation //
-bool SimulationRuntime::update_playback_frame(double elapsed_seconds)
+bool SimulationRuntime::update_playback_frame(double playback_seconds)
 {
-    return scene_.update_playback_frame(elapsed_seconds);
+    return scene_.update_playback_frame(playback_seconds);
+}
+
+bool SimulationRuntime::simulation_step(QOpenGLFunctions_4_5_Core&)
+{
+    return false;
 }
 
 void SimulationRuntime::set_playing(bool playing)
@@ -43,7 +48,12 @@ bool SimulationRuntime::initialize_gpu(const std::filesystem::path& vertex_shade
                                        const std::filesystem::path& fragment_shader_path,
                                        QOpenGLFunctions_4_5_Core& gl)
 {
-    if (!gpu_state_.initialize(vertex_shader_path, fragment_shader_path, gl)) {
+    if (!gpu_state_.initialize(gl)) {
+        return false;
+    }
+
+    if (!renderer_.initialize(vertex_shader_path, fragment_shader_path, gl)) {
+        gpu_state_.release(gl);
         return false;
     }
 
@@ -57,7 +67,7 @@ bool SimulationRuntime::initialize_gpu(const std::filesystem::path& vertex_shade
 
 bool SimulationRuntime::is_gpu_initialized() const
 {
-    return gpu_state_.is_initialized();
+    return gpu_state_.is_initialized() && renderer_.is_initialized();
 }
 
 void SimulationRuntime::sync_gpu(QOpenGLFunctions_4_5_Core& gl)
@@ -67,10 +77,11 @@ void SimulationRuntime::sync_gpu(QOpenGLFunctions_4_5_Core& gl)
 
 void SimulationRuntime::draw(const glm::mat4& mvp, QOpenGLFunctions_4_5_Core& gl)
 {
-    gpu_state_.draw(scene_, mvp, gl);
+    renderer_.draw(scene_, gpu_state_, mvp, gl);
 }
 
 void SimulationRuntime::release_gpu(QOpenGLFunctions_4_5_Core& gl)
 {
+    renderer_.release(gl);
     gpu_state_.release(gl);
 }

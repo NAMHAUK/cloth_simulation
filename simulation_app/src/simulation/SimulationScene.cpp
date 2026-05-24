@@ -55,14 +55,14 @@ std::uint64_t SimulationScene::garment_revision() const
 
 // Playback // 
 
-bool SimulationScene::update_playback_frame(double elapsed_seconds)
+bool SimulationScene::update_playback_frame(double playback_seconds)
 {
     if (!character_loaded_ || !is_playing_ || character_mesh_.frame_count == 0) {
         return false;
     }
 
     const std::uint32_t next_frame = static_cast<std::uint32_t>(
-        static_cast<std::uint64_t>(elapsed_seconds * character_mesh_.fps) % character_mesh_.frame_count
+        static_cast<std::uint64_t>(playback_seconds * character_mesh_.fps) % character_mesh_.frame_count
     );
 
     if (next_frame == current_character_frame_) {
