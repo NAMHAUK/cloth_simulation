@@ -1,10 +1,10 @@
-#include "simulation/SimulationScene.h"
+#include "scene/SceneState.h"
 
 #include <utility>
 
 // Character // 
 
-void SimulationScene::set_character_mesh(CharacterMesh mesh)
+void SceneState::set_character_mesh(CharacterMesh mesh)
 {
     character_mesh_ = std::move(mesh);
     character_loaded_ = true;
@@ -13,24 +13,24 @@ void SimulationScene::set_character_mesh(CharacterMesh mesh)
     ++character_revision_;
 }
 
-bool SimulationScene::has_character() const
+bool SceneState::has_character() const
 {
     return character_loaded_;
 }
 
-const CharacterMesh& SimulationScene::character_mesh() const
+const CharacterMesh& SceneState::character_mesh() const
 {
     return character_mesh_;
 }
 
-std::uint64_t SimulationScene::character_revision() const
+std::uint64_t SceneState::character_revision() const
 {
     return character_revision_;
 }
 
 // Garments //
 
-GarmentId SimulationScene::add_garment_mesh(GarmentMesh mesh)
+GarmentId SceneState::add_garment_mesh(GarmentMesh mesh)
 {
     const GarmentId garment_id = next_garment_id_++;
     ++garment_revision_;
@@ -43,19 +43,19 @@ GarmentId SimulationScene::add_garment_mesh(GarmentMesh mesh)
     return garment_id;
 }
 
-const std::vector<GarmentSceneObject>& SimulationScene::garments() const
+const std::vector<GarmentSceneObject>& SceneState::garments() const
 {
     return garments_;
 }
 
-std::uint64_t SimulationScene::garment_revision() const
+std::uint64_t SceneState::garment_revision() const
 {
     return garment_revision_;
 }
 
 // Playback // 
 
-bool SimulationScene::update_playback_frame(double playback_seconds)
+bool SceneState::update_playback_frame(double playback_seconds)
 {
     if (!character_loaded_ || !is_playing_ || character_mesh_.frame_count == 0) {
         return false;
@@ -73,17 +73,17 @@ bool SimulationScene::update_playback_frame(double playback_seconds)
     return true;
 }
 
-void SimulationScene::set_playing(bool playing)
+void SceneState::set_playing(bool playing)
 {
     is_playing_ = playing;
 }
 
-std::uint32_t SimulationScene::current_character_frame() const
+std::uint32_t SceneState::current_character_frame() const
 {
     return current_character_frame_;
 }
 
-bool SimulationScene::is_playing() const
+bool SceneState::is_playing() const
 {
     return is_playing_;
 }

@@ -1,10 +1,10 @@
 #pragma once
 
-#include "assets/GarmentAsset.h"
-#include "assets/MotionAsset.h"
-#include "gpu/SimulationGpuState.h"
-#include "rendering/SimulationRenderer.h"
-#include "simulation/SimulationScene.h"
+#include "io/GarmentAsset.h"
+#include "io/MotionAsset.h"
+#include "gpu/scene/SceneGpuResources.h"
+#include "rendering/SceneRenderer.h"
+#include "scene/SceneState.h"
 
 #include <cstddef>
 #include <filesystem>
@@ -13,13 +13,13 @@
 
 #include <QOpenGLFunctions_4_5_Core>
 
-class SimulationRuntime final {
+class SimulationEngine final {
 public:
-    SimulationRuntime() = default;
-    SimulationRuntime(const SimulationRuntime&) = delete;
-    SimulationRuntime& operator=(const SimulationRuntime&) = delete;
+    SimulationEngine() = default;
+    SimulationEngine(const SimulationEngine&) = delete;
+    SimulationEngine& operator=(const SimulationEngine&) = delete;
 
-    const SimulationScene& scene() const;
+    const SceneState& scene() const;
 
     // Scene editing //
     void set_character_mesh(CharacterMesh mesh, QOpenGLFunctions_4_5_Core& gl);
@@ -41,11 +41,11 @@ public:
 
 private:
     // CPU-side scene state //
-    SimulationScene scene_;
+    SceneState scene_;
 
     // GPU-side dynamic simulation state //
-    SimulationGpuState gpu_state_;
+    SceneGpuResources gpu_state_;
 
     // Rendering orchestration //
-    SimulationRenderer renderer_;
+    SceneRenderer renderer_;
 };

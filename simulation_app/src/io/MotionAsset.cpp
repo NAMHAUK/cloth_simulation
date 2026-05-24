@@ -1,4 +1,4 @@
-#include "assets/MotionAsset.h"
+﻿#include "io/MotionAsset.h"
 
 #include "support/QtHelpers.h"
 
@@ -81,7 +81,7 @@ bool load_character_mesh(const std::filesystem::path& motion_asset_path, Charact
         return false;
     }
 
-    // header 읽고 올바른 형식인지 check
+    // header를 읽고 올바른 형식인지 확인
     std::uint32_t version = 0;
     if (!read_value(input, version) ||
         !read_value(input, character_mesh.fps) ||
@@ -103,7 +103,7 @@ bool load_character_mesh(const std::filesystem::path& motion_asset_path, Charact
         return false;
     }
 
-    // asset을 읽어서 값 저장
+    // asset에서 payload 읽기
     character_mesh.indices.resize(character_mesh.index_count);
     character_mesh.vertices.resize(
         static_cast<std::size_t>(character_mesh.frame_count) *

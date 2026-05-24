@@ -1,7 +1,7 @@
 #pragma once
 
-#include "assets/GarmentAsset.h"
-#include "assets/MotionAsset.h"
+#include "io/GarmentAsset.h"
+#include "io/MotionAsset.h"
 
 #include <deque>
 #include <filesystem>

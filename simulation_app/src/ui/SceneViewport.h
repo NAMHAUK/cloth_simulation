@@ -1,6 +1,6 @@
 #pragma once
 
-#include "assets/MotionAsset.h"
+#include "io/MotionAsset.h"
 
 #include <glm/vec3.hpp>
 
@@ -8,7 +8,9 @@
 #include <QOpenGLWidget>
 #include <QPoint>
 
-class SimulationController;
+class AppController;
+class QMouseEvent;
+class QWheelEvent;
 
 struct OrbitCamera {
     glm::vec3 target{};
@@ -21,12 +23,12 @@ struct OrbitCamera {
     bool has_last_mouse = false;
 };
 
-class SimulationViewport final : public QOpenGLWidget, protected QOpenGLFunctions_4_5_Core {
+class SceneViewport final : public QOpenGLWidget, protected QOpenGLFunctions_4_5_Core {
 public:
-    explicit SimulationViewport(QWidget* parent = nullptr);
-    ~SimulationViewport() override;
+    explicit SceneViewport(QWidget* parent = nullptr);
+    ~SceneViewport() override;
 
-    void set_controller(SimulationController* controller);
+    void set_controller(AppController* controller);
     bool is_gl_initialized() const;
     QOpenGLFunctions_4_5_Core& gl_functions();
     void reset_camera_to_character(const CharacterMesh& character_mesh);
@@ -42,7 +44,7 @@ protected:
     void wheelEvent(QWheelEvent* event) override;
 
 private:
-    SimulationController* controller_ = nullptr;
+    AppController* controller_ = nullptr;
     OrbitCamera camera_;
 
     bool gl_initialized_ = false;

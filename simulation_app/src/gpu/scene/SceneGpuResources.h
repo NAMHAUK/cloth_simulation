@@ -1,29 +1,29 @@
 #pragma once
 
-#include "gpu/CharacterGpuState.h"
-#include "gpu/ClothGpuState.h"
-#include "simulation/SimulationScene.h"
+#include "gpu/body/CharacterGpuResources.h"
+#include "gpu/cloth/ClothGpuResources.h"
+#include "scene/SceneState.h"
 
 #include <cstdint>
 #include <vector>
 
 #include <QOpenGLFunctions_4_5_Core>
 
-class SimulationGpuState final {
+class SceneGpuResources final {
 public:
-    SimulationGpuState() = default;
-    SimulationGpuState(const SimulationGpuState&) = delete;
-    SimulationGpuState& operator=(const SimulationGpuState&) = delete;
+    SceneGpuResources() = default;
+    SceneGpuResources(const SceneGpuResources&) = delete;
+    SceneGpuResources& operator=(const SceneGpuResources&) = delete;
 
     bool is_initialized() const;
     bool initialize(QOpenGLFunctions_4_5_Core& gl);
-    void sync(const SimulationScene& scene, QOpenGLFunctions_4_5_Core& gl);
+    void sync(const SceneState& scene, QOpenGLFunctions_4_5_Core& gl);
     void release(QOpenGLFunctions_4_5_Core& gl);
 
-    const CharacterGpuState& character_gpu_state() const;
-    void set_character_mesh(const SimulationScene& scene, QOpenGLFunctions_4_5_Core& gl);
+    const CharacterGpuResources& character_gpu_state() const;
+    void set_character_mesh(const SceneState& scene, QOpenGLFunctions_4_5_Core& gl);
 
-    const ClothGpuState* garment_gpu_state(GarmentId garment_id) const;
+    const ClothGpuResources* garment_gpu_state(GarmentId garment_id) const;
     void set_garment_mesh(const GarmentSceneObject& garment, QOpenGLFunctions_4_5_Core& gl);
     void add_garment_gpu_state(GarmentId garment_id);
     void remove_garment_gpu_state(GarmentId garment_id, QOpenGLFunctions_4_5_Core& gl);
@@ -31,15 +31,15 @@ public:
 private:
     struct GarmentGpuSlot {
         GarmentId id = 0;
-        ClothGpuState gpu_state;
+        ClothGpuResources gpu_state;
         std::uint64_t uploaded_revision = 0;
     };
 
-    void update_character_frame(const SimulationScene& scene);
+    void update_character_frame(const SceneState& scene);
     GarmentGpuSlot* find_garment_gpu_slot(GarmentId garment_id);
     const GarmentGpuSlot* find_garment_gpu_slot(GarmentId garment_id) const;
 
-    CharacterGpuState character_gpu_state_;
+    CharacterGpuResources character_gpu_state_;
     std::vector<GarmentGpuSlot> garment_gpu_slots_;
 
     std::uint64_t character_revision_ = 0;

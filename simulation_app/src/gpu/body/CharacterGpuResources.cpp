@@ -1,8 +1,8 @@
-#include "gpu/CharacterGpuState.h"
+﻿#include "gpu/body/CharacterGpuResources.h"
 
 #include <cstddef>
 
-bool CharacterGpuState::is_initialized() const
+bool CharacterGpuResources::is_initialized() const
 {
     return vao_ != 0 &&
         all_frame_vertex_buffer_ != 0 &&
@@ -13,7 +13,7 @@ bool CharacterGpuState::is_initialized() const
         index_count_ > 0;
 }
 
-void CharacterGpuState::initialize_gpu_resources(QOpenGLFunctions_4_5_Core& gl)
+void CharacterGpuResources::initialize_gpu_resources(QOpenGLFunctions_4_5_Core& gl)
 {
     if (vao_ != 0 && all_frame_vertex_buffer_ != 0 && index_buffer_ != 0) {
         return;
@@ -21,7 +21,7 @@ void CharacterGpuState::initialize_gpu_resources(QOpenGLFunctions_4_5_Core& gl)
 
     release(gl);
 
-    // buffer 생성 & 값 연결 설정
+    // buffer 생성 및 연결 설정
     gl.glCreateVertexArrays(1, &vao_);
     gl.glCreateBuffers(1, &all_frame_vertex_buffer_);
     gl.glCreateBuffers(1, &index_buffer_);
@@ -29,7 +29,7 @@ void CharacterGpuState::initialize_gpu_resources(QOpenGLFunctions_4_5_Core& gl)
     gl.glVertexArrayElementBuffer(vao_, index_buffer_);
 }
 
-void CharacterGpuState::upload_mesh(const CharacterMesh& character_mesh, QOpenGLFunctions_4_5_Core& gl)
+void CharacterGpuResources::upload_mesh(const CharacterMesh& character_mesh, QOpenGLFunctions_4_5_Core& gl)
 {
     if (character_mesh.frame_count == 0 ||
         character_mesh.vertex_count == 0 ||
@@ -50,7 +50,7 @@ void CharacterGpuState::upload_mesh(const CharacterMesh& character_mesh, QOpenGL
 
     initialize_gpu_resources(gl);
 
-    // buffer에 data upload
+    // buffer data upload
     all_frame_vertex_buffer_size_ = static_cast<GLsizeiptr>(expected_position_component_count * sizeof(float));
     index_buffer_size_ = static_cast<GLsizeiptr>(character_mesh.indices.size() * sizeof(std::uint32_t));
 
@@ -63,7 +63,7 @@ void CharacterGpuState::upload_mesh(const CharacterMesh& character_mesh, QOpenGL
     index_count_ = static_cast<GLsizei>(character_mesh.indices.size());
 }
 
-void CharacterGpuState::set_current_frame(std::uint32_t frame_index)
+void CharacterGpuResources::set_current_frame(std::uint32_t frame_index)
 {
     if (!is_initialized() || frame_index >= frame_count_) {
         return;
@@ -72,7 +72,7 @@ void CharacterGpuState::set_current_frame(std::uint32_t frame_index)
     current_frame_index_ = frame_index;
 }
 
-void CharacterGpuState::bind_animation_positions(GLuint binding_index, QOpenGLFunctions_4_5_Core& gl) const
+void CharacterGpuResources::bind_animation_positions(GLuint binding_index, QOpenGLFunctions_4_5_Core& gl) const
 {
     if (all_frame_vertex_buffer_ == 0) {
         return;
@@ -81,17 +81,17 @@ void CharacterGpuState::bind_animation_positions(GLuint binding_index, QOpenGLFu
     gl.glBindBufferBase(GL_SHADER_STORAGE_BUFFER, binding_index, all_frame_vertex_buffer_);
 }
 
-std::uint32_t CharacterGpuState::current_frame_index() const
+std::uint32_t CharacterGpuResources::current_frame_index() const
 {
     return current_frame_index_;
 }
 
-std::uint32_t CharacterGpuState::vertex_count() const
+std::uint32_t CharacterGpuResources::vertex_count() const
 {
     return vertex_count_;
 }
 
-void CharacterGpuState::draw(QOpenGLFunctions_4_5_Core& gl) const
+void CharacterGpuResources::draw(QOpenGLFunctions_4_5_Core& gl) const
 {
     if (!is_initialized()) {
         return;
@@ -101,7 +101,7 @@ void CharacterGpuState::draw(QOpenGLFunctions_4_5_Core& gl) const
     gl.glDrawElements(GL_TRIANGLES, index_count_, GL_UNSIGNED_INT, nullptr);
 }
 
-void CharacterGpuState::release(QOpenGLFunctions_4_5_Core& gl)
+void CharacterGpuResources::release(QOpenGLFunctions_4_5_Core& gl)
 {
     if (index_buffer_ != 0) {
         gl.glDeleteBuffers(1, &index_buffer_);
@@ -116,7 +116,7 @@ void CharacterGpuState::release(QOpenGLFunctions_4_5_Core& gl)
     reset_resources();
 }
 
-void CharacterGpuState::reset_resources() noexcept
+void CharacterGpuResources::reset_resources() noexcept
 {
     vao_ = 0;
     all_frame_vertex_buffer_ = 0;

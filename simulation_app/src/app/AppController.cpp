@@ -1,6 +1,6 @@
-#include "app/SimulationController.h"
+﻿#include "app/AppController.h"
 
-#include "rendering/SimulationViewport.h"
+#include "ui/SceneViewport.h"
 #include "support/QtHelpers.h"
 
 #include <iostream>
@@ -12,7 +12,7 @@ namespace {
 constexpr int playback_tick_ms = 16;
 }
 
-SimulationController::SimulationController(SimulationViewport& viewport) : viewport_(viewport)
+AppController::AppController(SceneViewport& viewport) : viewport_(viewport)
 {
     // tick마다 frame update 함수 설정
     QObject::connect(&frame_timer_, &QTimer::timeout, &frame_timer_, [this]() {
@@ -20,14 +20,14 @@ SimulationController::SimulationController(SimulationViewport& viewport) : viewp
     });
 }
 
-SimulationController::~SimulationController()
+AppController::~AppController()
 {
     release_gpu();
 }
 
 // GPU / rendering //
 
-bool SimulationController::initialize_gpu(const std::filesystem::path& vertex_shader_path,
+bool AppController::initialize_gpu(const std::filesystem::path& vertex_shader_path,
                                           const std::filesystem::path& fragment_shader_path,
                                           QOpenGLFunctions_4_5_Core& gl)
 {
@@ -42,13 +42,13 @@ bool SimulationController::initialize_gpu(const std::filesystem::path& vertex_sh
     return initialized;
 }
 
-void SimulationController::draw(const glm::mat4& mvp, QOpenGLFunctions_4_5_Core& gl)
+void AppController::draw(const glm::mat4& mvp, QOpenGLFunctions_4_5_Core& gl)
 {
     runtime_.draw(mvp, gl);
 }
 
-// 한 frame마다 실행되는 함수
-void SimulationController::tick_frame()
+// frame마다 실행되는 함수
+void AppController::tick_frame()
 {
     const double playback_seconds = static_cast<double>(playback_timer_.elapsed()) / 1000.0;
     runtime_.update_playback_frame(playback_seconds);
@@ -66,7 +66,7 @@ void SimulationController::tick_frame()
     viewport_.update();
 }
 
-void SimulationController::release_gpu()
+void AppController::release_gpu()
 {
     if (gpu_released_ || !viewport_.is_gl_initialized()) {
         return;
@@ -78,7 +78,7 @@ void SimulationController::release_gpu()
     gpu_released_ = true;
 }
 
-bool SimulationController::is_gpu_initialized() const
+bool AppController::is_gpu_initialized() const
 {
     return runtime_.is_gpu_initialized();
 }
@@ -86,7 +86,7 @@ bool SimulationController::is_gpu_initialized() const
 
 // Scene editing //
 
-void SimulationController::set_character_mesh(CharacterMesh mesh)
+void AppController::set_character_mesh(CharacterMesh mesh)
 {
     if (!viewport_.is_gl_initialized()) {
         std::cerr << "Cannot set character mesh before OpenGL initialization.\n";
@@ -105,7 +105,7 @@ void SimulationController::set_character_mesh(CharacterMesh mesh)
     viewport_.update();
 }
 
-void SimulationController::add_garment_mesh(GarmentMesh mesh)
+void AppController::add_garment_mesh(GarmentMesh mesh)
 {
     if (!viewport_.is_gl_initialized()) {
         std::cerr << "Cannot add garment mesh before OpenGL initialization.\n";

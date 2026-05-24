@@ -1,13 +1,13 @@
-#include "gpu/ClothGpuState.h"
+﻿#include "gpu/cloth/ClothGpuResources.h"
 
 #include <cstdint>
 
-ClothGpuState::ClothGpuState(ClothGpuState&& other) noexcept
+ClothGpuResources::ClothGpuResources(ClothGpuResources&& other) noexcept
 {
     take_gpu_resources_from(other);
 }
 
-ClothGpuState& ClothGpuState::operator=(ClothGpuState&& other) noexcept
+ClothGpuResources& ClothGpuResources::operator=(ClothGpuResources&& other) noexcept
 {
     if (this != &other) {
         take_gpu_resources_from(other);
@@ -16,7 +16,7 @@ ClothGpuState& ClothGpuState::operator=(ClothGpuState&& other) noexcept
     return *this;
 }
 
-void ClothGpuState::take_gpu_resources_from(ClothGpuState& other) noexcept
+void ClothGpuResources::take_gpu_resources_from(ClothGpuResources& other) noexcept
 {
     vao_ = other.vao_;
     rest_position_buffer_ = other.rest_position_buffer_;
@@ -28,7 +28,7 @@ void ClothGpuState::take_gpu_resources_from(ClothGpuState& other) noexcept
     other.reset_resources();
 }
 
-void ClothGpuState::reset_resources() noexcept
+void ClothGpuResources::reset_resources() noexcept
 {
     vao_ = 0;
     rest_position_buffer_ = 0;
@@ -38,7 +38,7 @@ void ClothGpuState::reset_resources() noexcept
     index_count_ = 0;
 }
 
-bool ClothGpuState::is_initialized() const
+bool ClothGpuResources::is_initialized() const
 {
     return vao_ != 0 &&
            rest_position_buffer_ != 0 &&
@@ -48,7 +48,7 @@ bool ClothGpuState::is_initialized() const
            index_count_ > 0;
 }
 
-void ClothGpuState::initialize_gpu_resources(QOpenGLFunctions_4_5_Core& gl)
+void ClothGpuResources::initialize_gpu_resources(QOpenGLFunctions_4_5_Core& gl)
 {
     if (is_initialized()) {
         return;
@@ -56,7 +56,7 @@ void ClothGpuState::initialize_gpu_resources(QOpenGLFunctions_4_5_Core& gl)
 
     release(gl);
 
-    // buffer 생성 & 값 연결 설정
+    // buffer 생성 및 연결 설정
     gl.glCreateVertexArrays(1, &vao_);
     gl.glCreateBuffers(1, &rest_position_buffer_);
     gl.glCreateBuffers(1, &current_position_buffer_);
@@ -74,7 +74,7 @@ void ClothGpuState::initialize_gpu_resources(QOpenGLFunctions_4_5_Core& gl)
     gl.glVertexArrayElementBuffer(vao_, index_buffer_);
 }
 
-void ClothGpuState::upload(const GarmentMesh& garment_mesh, QOpenGLFunctions_4_5_Core& gl)
+void ClothGpuResources::upload(const GarmentMesh& garment_mesh, QOpenGLFunctions_4_5_Core& gl)
 {
     if (garment_mesh.vertices.empty() || garment_mesh.indices.empty()) {
         return;
@@ -82,7 +82,7 @@ void ClothGpuState::upload(const GarmentMesh& garment_mesh, QOpenGLFunctions_4_5
 
     initialize_gpu_resources(gl);
 
-    // buffer에 data upload
+    // buffer data upload
     const GLsizeiptr vertex_buffer_size = static_cast<GLsizeiptr>(garment_mesh.vertices.size() * sizeof(float));
     const GLsizeiptr index_buffer_size  = static_cast<GLsizeiptr>(garment_mesh.indices.size()  * sizeof(std::uint32_t));
 
@@ -94,7 +94,7 @@ void ClothGpuState::upload(const GarmentMesh& garment_mesh, QOpenGLFunctions_4_5
     index_count_ = static_cast<GLsizei>(garment_mesh.indices.size());
 }
 
-void ClothGpuState::reset_states(const GarmentMesh& garment_mesh, QOpenGLFunctions_4_5_Core& gl)
+void ClothGpuResources::reset_states(const GarmentMesh& garment_mesh, QOpenGLFunctions_4_5_Core& gl)
 {
     if (!is_initialized() || garment_mesh.vertices.empty()) {
         return;
@@ -106,7 +106,7 @@ void ClothGpuState::reset_states(const GarmentMesh& garment_mesh, QOpenGLFunctio
     gl.glNamedBufferSubData(previous_position_buffer_, 0, vertex_buffer_size, garment_mesh.vertices.data());
 }
 
-void ClothGpuState::draw(QOpenGLFunctions_4_5_Core& gl) const
+void ClothGpuResources::draw(QOpenGLFunctions_4_5_Core& gl) const
 {
     if (!is_initialized()) {
         return;
@@ -116,7 +116,7 @@ void ClothGpuState::draw(QOpenGLFunctions_4_5_Core& gl) const
     gl.glDrawElements(GL_TRIANGLES, index_count_, GL_UNSIGNED_INT, nullptr);
 }
 
-void ClothGpuState::release(QOpenGLFunctions_4_5_Core& gl)
+void ClothGpuResources::release(QOpenGLFunctions_4_5_Core& gl)
 {
     if (index_buffer_ != 0) {
         gl.glDeleteBuffers(1, &index_buffer_);

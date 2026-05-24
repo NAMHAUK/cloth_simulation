@@ -1,6 +1,6 @@
-#include "gpu/SimulationGpuState.h"
+﻿#include "gpu/scene/SceneGpuResources.h"
 
-#include "simulation/SimulationScene.h"
+#include "scene/SceneState.h"
 
 #include <algorithm>
 #include <cstddef>
@@ -11,18 +11,18 @@ namespace {
 constexpr std::uint64_t unuploaded_revision = std::numeric_limits<std::uint64_t>::max();
 }
 
-bool SimulationGpuState::is_initialized() const
+bool SceneGpuResources::is_initialized() const
 {
     return initialized_;
 }
 
-bool SimulationGpuState::initialize(QOpenGLFunctions_4_5_Core&)
+bool SceneGpuResources::initialize(QOpenGLFunctions_4_5_Core&)
 {
     initialized_ = true;
     return true;
 }
 
-void SimulationGpuState::sync(const SimulationScene& scene, QOpenGLFunctions_4_5_Core&)
+void SceneGpuResources::sync(const SceneState& scene, QOpenGLFunctions_4_5_Core&)
 {
     if (!is_initialized()) {
         return;
@@ -31,7 +31,7 @@ void SimulationGpuState::sync(const SimulationScene& scene, QOpenGLFunctions_4_5
     update_character_frame(scene);
 }
 
-void SimulationGpuState::release(QOpenGLFunctions_4_5_Core& gl)
+void SceneGpuResources::release(QOpenGLFunctions_4_5_Core& gl)
 {
     for (GarmentGpuSlot& slot : garment_gpu_slots_) {
         slot.gpu_state.release(gl);
@@ -46,14 +46,14 @@ void SimulationGpuState::release(QOpenGLFunctions_4_5_Core& gl)
     character_uploaded_ = false;
 }
 
-// 캐릭터 // 
+// Character //
 
-const CharacterGpuState& SimulationGpuState::character_gpu_state() const
+const CharacterGpuResources& SceneGpuResources::character_gpu_state() const
 {
     return character_gpu_state_;
 }
 
-void SimulationGpuState::set_character_mesh(const SimulationScene& scene, QOpenGLFunctions_4_5_Core& gl)
+void SceneGpuResources::set_character_mesh(const SceneState& scene, QOpenGLFunctions_4_5_Core& gl)
 {
     if (!scene.has_character()) {
         return;
@@ -62,7 +62,7 @@ void SimulationGpuState::set_character_mesh(const SimulationScene& scene, QOpenG
     const std::uint64_t scene_revision = scene.character_revision();
     const std::uint32_t scene_frame = scene.current_character_frame();
 
-    // 새 캐릭터 mesh가 들어옴 -> 전체 frame 캐릭터 mesh를 GPU에 올리고 frame 상태 설정
+    // 새 character mesh가 들어오면 전체 frame character mesh를 GPU에 올리고 frame 상태 설정
     const CharacterMesh& character_mesh = scene.character_mesh();
     character_gpu_state_.upload_mesh(character_mesh, gl);
     character_gpu_state_.set_current_frame(scene_frame);
@@ -71,7 +71,7 @@ void SimulationGpuState::set_character_mesh(const SimulationScene& scene, QOpenG
     character_uploaded_ = true;
 }
 
-void SimulationGpuState::update_character_frame(const SimulationScene& scene)
+void SceneGpuResources::update_character_frame(const SceneState& scene)
 {
     if (!scene.has_character() || !character_uploaded_) {
         return;
@@ -79,7 +79,7 @@ void SimulationGpuState::update_character_frame(const SimulationScene& scene)
 
     const std::uint32_t scene_frame = scene.current_character_frame();
 
-    // 캐릭터 frame 상태 갱신
+    // character frame 상태 갱신
     if (current_character_frame_ != scene_frame) {
         character_gpu_state_.set_current_frame(scene_frame);
         current_character_frame_ = scene_frame;
@@ -88,7 +88,7 @@ void SimulationGpuState::update_character_frame(const SimulationScene& scene)
 
 // garment //
 
-const ClothGpuState* SimulationGpuState::garment_gpu_state(GarmentId garment_id) const
+const ClothGpuResources* SceneGpuResources::garment_gpu_state(GarmentId garment_id) const
 {
     const GarmentGpuSlot* slot = find_garment_gpu_slot(garment_id);
     if (slot == nullptr) {
@@ -98,7 +98,7 @@ const ClothGpuState* SimulationGpuState::garment_gpu_state(GarmentId garment_id)
     return &slot->gpu_state;
 }
 
-void SimulationGpuState::set_garment_mesh(const GarmentSceneObject& garment, QOpenGLFunctions_4_5_Core& gl)
+void SceneGpuResources::set_garment_mesh(const GarmentSceneObject& garment, QOpenGLFunctions_4_5_Core& gl)
 {
     GarmentGpuSlot* slot = find_garment_gpu_slot(garment.id);
     if (slot == nullptr) {
@@ -115,7 +115,7 @@ void SimulationGpuState::set_garment_mesh(const GarmentSceneObject& garment, QOp
 }
 
 // 새로운 garment GPU state 추가
-void SimulationGpuState::add_garment_gpu_state(GarmentId garment_id)
+void SceneGpuResources::add_garment_gpu_state(GarmentId garment_id)
 {
     if (find_garment_gpu_slot(garment_id) != nullptr) {
         return;
@@ -126,12 +126,12 @@ void SimulationGpuState::add_garment_gpu_state(GarmentId garment_id)
     new_slot.uploaded_revision = unuploaded_revision;
 }
 
-void SimulationGpuState::remove_garment_gpu_state(GarmentId garment_id, QOpenGLFunctions_4_5_Core& gl)
+void SceneGpuResources::remove_garment_gpu_state(GarmentId garment_id, QOpenGLFunctions_4_5_Core& gl)
 {
 }
 
-// id에 해당하는 garment의 위치 찾기
-SimulationGpuState::GarmentGpuSlot* SimulationGpuState::find_garment_gpu_slot(GarmentId garment_id)
+// id에 해당하는 garment 위치 찾기
+SceneGpuResources::GarmentGpuSlot* SceneGpuResources::find_garment_gpu_slot(GarmentId garment_id)
 {
     const auto iter = std::find_if(garment_gpu_slots_.begin(), garment_gpu_slots_.end(),
         [garment_id](const GarmentGpuSlot& slot) {
@@ -145,7 +145,7 @@ SimulationGpuState::GarmentGpuSlot* SimulationGpuState::find_garment_gpu_slot(Ga
     return &(*iter);
 }
 
-const SimulationGpuState::GarmentGpuSlot* SimulationGpuState::find_garment_gpu_slot(GarmentId garment_id) const
+const SceneGpuResources::GarmentGpuSlot* SceneGpuResources::find_garment_gpu_slot(GarmentId garment_id) const
 {
     const auto iter = std::find_if(garment_gpu_slots_.begin(), garment_gpu_slots_.end(),
         [garment_id](const GarmentGpuSlot& slot) {

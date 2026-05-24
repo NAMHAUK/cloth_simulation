@@ -1,7 +1,7 @@
-#include "rendering/SimulationRenderer.h"
+#include "rendering/SceneRenderer.h"
 
-#include "gpu/SimulationGpuState.h"
-#include "simulation/SimulationScene.h"
+#include "gpu/scene/SceneGpuResources.h"
+#include "scene/SceneState.h"
 
 #include <iostream>
 
@@ -9,12 +9,12 @@ namespace {
 constexpr GLuint character_animation_position_binding = 0;
 }
 
-bool SimulationRenderer::is_initialized() const
+bool SceneRenderer::is_initialized() const
 {
     return viewer_shader_.is_initialized();
 }
 
-bool SimulationRenderer::initialize(const std::filesystem::path& vertex_shader_path,
+bool SceneRenderer::initialize(const std::filesystem::path& vertex_shader_path,
                                     const std::filesystem::path& fragment_shader_path,
                                     QOpenGLFunctions_4_5_Core& gl)
 {
@@ -27,8 +27,8 @@ bool SimulationRenderer::initialize(const std::filesystem::path& vertex_shader_p
     return true;
 }
 
-void SimulationRenderer::draw(const SimulationScene& scene,
-                              const SimulationGpuState& gpu_state,
+void SceneRenderer::draw(const SceneState& scene,
+                              const SceneGpuResources& gpu_state,
                               const glm::mat4& mvp,
                               QOpenGLFunctions_4_5_Core& gl)
 {
@@ -51,7 +51,7 @@ void SimulationRenderer::draw(const SimulationScene& scene,
     }
 
     // character
-    const CharacterGpuState& character_gpu_state = gpu_state.character_gpu_state();
+    const CharacterGpuResources& character_gpu_state = gpu_state.character_gpu_state();
     if (scene.has_character() && character_gpu_state.is_initialized()) {
         character_gpu_state.bind_animation_positions(character_animation_position_binding, gl);
         viewer_shader_.set_character_animation_mode(
@@ -67,7 +67,7 @@ void SimulationRenderer::draw(const SimulationScene& scene,
     viewer_shader_.set_attribute_position_mode(gl);
     const std::vector<GarmentSceneObject>& garments = scene.garments();
     for (const GarmentSceneObject& garment : garments) {
-        const ClothGpuState* cloth_gpu_state = gpu_state.garment_gpu_state(garment.id);
+        const ClothGpuResources* cloth_gpu_state = gpu_state.garment_gpu_state(garment.id);
         if (cloth_gpu_state == nullptr || !garment.visible || !cloth_gpu_state->is_initialized()) {
             continue;
         }
@@ -77,7 +77,7 @@ void SimulationRenderer::draw(const SimulationScene& scene,
     }
 }
 
-void SimulationRenderer::release(QOpenGLFunctions_4_5_Core& gl)
+void SceneRenderer::release(QOpenGLFunctions_4_5_Core& gl)
 {
     grid_gpu_state_.release(gl);
     viewer_shader_.release(gl);

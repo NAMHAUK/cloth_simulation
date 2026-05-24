@@ -1,9 +1,9 @@
-#include "ui/MainWindow.h"
+﻿#include "ui/MainWindow.h"
 
 #include "app/AssetLoader.h"
 #include "app/MotionConverter.h"
-#include "app/SimulationController.h"
-#include "rendering/SimulationViewport.h"
+#include "app/AppController.h"
+#include "ui/SceneViewport.h"
 #include "support/QtHelpers.h"
 #include "ui/MotionBrowserPanel.h"
 
@@ -45,8 +45,8 @@ MainWindow::MainWindow(const std::filesystem::path& project_root, QWidget* paren
     resize(1440, 900);
 
     viewer_container_ = new QWidget(this);
-    simulation_viewport_ = new SimulationViewport(viewer_container_);
-    simulation_controller_ = std::make_unique<SimulationController>(*simulation_viewport_);
+    simulation_viewport_ = new SceneViewport(viewer_container_);
+    simulation_controller_ = std::make_unique<AppController>(*simulation_viewport_);
     simulation_viewport_->set_controller(simulation_controller_.get());
     browser_panel_ = new MotionBrowserPanel(viewer_container_);
     asset_loader_ = new AssetLoader(this);
@@ -55,7 +55,7 @@ MainWindow::MainWindow(const std::filesystem::path& project_root, QWidget* paren
     setCentralWidget(viewer_container_);
     viewer_container_->installEventFilter(this);
     
-    // motion 선택 toggle 관련 event들의 callback 함수 설정
+    // motion 선택 toggle 관련 event callback 함수 설정
     browser_panel_->raise();
     setup_callbacks();
 
@@ -197,7 +197,7 @@ void MainWindow::request_garment_asset_selection()
 // AMASS motion 변환 요청
 void MainWindow::request_amass_conversion()
 {
-    // 중복 실행 방지: 현재 변환 작업 중-> 종료
+    // 중복 실행 방지: 현재 변환 작업 중이면 종료
     if (motion_converter_->is_running()) {
         return;
     }
@@ -215,7 +215,7 @@ void MainWindow::request_amass_conversion()
 
 std::optional<ConverterCommand> MainWindow::prepare_amass_conversion()
 {   
-    // 파일 선택 창 열고, motion 선택
+    // 파일 선택 창을 열고 motion 선택
     const std::filesystem::path default_dir = project_paths_.amass_dir;
     const QString selected_file = QFileDialog::getOpenFileName(
         this,
@@ -232,7 +232,7 @@ std::optional<ConverterCommand> MainWindow::prepare_amass_conversion()
     const std::filesystem::path motion_asset_path = make_motion_asset_path(project_paths_, amass_motion_path);
 
 
-    // 이미 변환된 motion -> 변환 없음
+    // 이미 변환된 motion이면 변환하지 않음
     if (std::filesystem::exists(motion_asset_path)) {
         refresh_motion_list();
         return std::nullopt;

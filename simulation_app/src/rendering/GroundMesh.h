@@ -4,11 +4,11 @@
 
 #include <glm/vec3.hpp>
 
-class GridGpuState final {
+class GroundMesh final {
 public:
-    GridGpuState() = default;
-    GridGpuState(const GridGpuState&) = delete;
-    GridGpuState& operator=(const GridGpuState&) = delete;
+    GroundMesh() = default;
+    GroundMesh(const GroundMesh&) = delete;
+    GroundMesh& operator=(const GroundMesh&) = delete;
 
     bool initialized() const;
     const glm::vec3& color() const;

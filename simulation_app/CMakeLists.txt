@@ -18,30 +18,30 @@ add_executable(simulation_app
     src/app/MotionConverter.cpp
     src/app/MotionConverter.h
     src/app/ProjectPaths.h
-    src/app/SimulationController.cpp
-    src/app/SimulationController.h
-    src/assets/GarmentAsset.cpp
-    src/assets/GarmentAsset.h
-    src/assets/MotionAsset.cpp
-    src/assets/MotionAsset.h
-    src/gpu/CharacterGpuState.cpp
-    src/gpu/CharacterGpuState.h
-    src/gpu/ClothGpuState.cpp
-    src/gpu/ClothGpuState.h
-    src/gpu/GridGpuState.cpp
-    src/gpu/GridGpuState.h
-    src/gpu/SimulationGpuState.cpp
-    src/gpu/SimulationGpuState.h
-    src/rendering/SimulationRenderer.cpp
-    src/rendering/SimulationRenderer.h
-    src/rendering/SimulationViewport.cpp
-    src/rendering/SimulationViewport.h
-    src/rendering/ViewerShader.cpp
-    src/rendering/ViewerShader.h
-    src/simulation/SimulationRuntime.cpp
-    src/simulation/SimulationRuntime.h
-    src/simulation/SimulationScene.cpp
-    src/simulation/SimulationScene.h
+    src/app/AppController.cpp
+    src/app/AppController.h
+    src/io/GarmentAsset.cpp
+    src/io/GarmentAsset.h
+    src/io/MotionAsset.cpp
+    src/io/MotionAsset.h
+    src/gpu/body/CharacterGpuResources.cpp
+    src/gpu/body/CharacterGpuResources.h
+    src/gpu/cloth/ClothGpuResources.cpp
+    src/gpu/cloth/ClothGpuResources.h
+    src/rendering/GroundMesh.cpp
+    src/rendering/GroundMesh.h
+    src/gpu/scene/SceneGpuResources.cpp
+    src/gpu/scene/SceneGpuResources.h
+    src/rendering/SceneRenderer.cpp
+    src/rendering/SceneRenderer.h
+    src/ui/SceneViewport.cpp
+    src/ui/SceneViewport.h
+    src/rendering/SceneRenderShader.cpp
+    src/rendering/SceneRenderShader.h
+    src/simulation/SimulationEngine.cpp
+    src/simulation/SimulationEngine.h
+    src/scene/SceneState.cpp
+    src/scene/SceneState.h
     src/support/QtHelpers.h
     src/ui/MainWindow.cpp
     src/ui/MainWindow.h

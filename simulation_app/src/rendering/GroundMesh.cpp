@@ -1,19 +1,19 @@
-#include "gpu/GridGpuState.h"
+#include "rendering/GroundMesh.h"
 
 #include <cstddef>
 #include <vector>
 
-bool GridGpuState::initialized() const
+bool GroundMesh::initialized() const
 {
     return vao_ != 0 && vertex_buffer_ != 0 && vertex_count_ > 0;
 }
 
-const glm::vec3& GridGpuState::color() const
+const glm::vec3& GroundMesh::color() const
 {
     return color_;
 }
 
-void GridGpuState::upload(QOpenGLFunctions_4_5_Core& gl)
+void GroundMesh::upload(QOpenGLFunctions_4_5_Core& gl)
 {
     if (initialized()) {
         return;
@@ -78,7 +78,7 @@ void GridGpuState::upload(QOpenGLFunctions_4_5_Core& gl)
     gl.glVertexArrayAttribBinding(vao_, position_attribute_location, position_binding_index);
 }
 
-void GridGpuState::draw(QOpenGLFunctions_4_5_Core& gl) const
+void GroundMesh::draw(QOpenGLFunctions_4_5_Core& gl) const
 {
     if (!initialized()) {
         return;
@@ -88,7 +88,7 @@ void GridGpuState::draw(QOpenGLFunctions_4_5_Core& gl) const
     gl.glDrawArrays(GL_LINES, 0, vertex_count_);
 }
 
-void GridGpuState::release(QOpenGLFunctions_4_5_Core& gl)
+void GroundMesh::release(QOpenGLFunctions_4_5_Core& gl)
 {
     if (vertex_buffer_ != 0) {
         gl.glDeleteBuffers(1, &vertex_buffer_);

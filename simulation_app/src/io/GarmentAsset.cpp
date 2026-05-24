@@ -1,4 +1,4 @@
-#include "assets/GarmentAsset.h"
+﻿#include "io/GarmentAsset.h"
 
 #include <algorithm>
 #include <array>
@@ -20,8 +20,8 @@
 namespace {
 constexpr float obj_to_world_scale = 0.01f;
 
-// TODO: Token 정보 모두 받기
-// OBJ 파일의 token 하나에서 vertex index만 얻는 함수
+// TODO: token 정보 모두 받기
+// OBJ 파일의 token 하나에서 vertex index만 읽는 함수
 // Ex) "1/2/3" -> 0
 bool parse_face_token(const std::string& token, std::uint32_t vertex_count, std::uint32_t& index)
 {   
@@ -32,7 +32,7 @@ bool parse_face_token(const std::string& token, std::uint32_t vertex_count, std:
         return false;
     }
 
-    // 숫자로 변환 & 유효성 검사
+    // 숫자로 변환하고 유효성 검사
     std::uint32_t parsed_index = 0;
     const char* text_begin = vertex_text.data();
     const char* text_end = text_begin + vertex_text.size();
@@ -135,7 +135,7 @@ bool load_garment_mesh(const std::filesystem::path& obj_path, GarmentMesh& garme
     std::uint32_t vertex_count = 0;
     std::uint32_t line_number = 0;
 
-    // OBJ 파일 한 줄씩 읽으며 parsing
+    // OBJ 파일을 한 줄씩 읽으며 parsing
     while (std::getline(input, line)) {
         ++line_number;
 
@@ -165,7 +165,7 @@ bool load_garment_mesh(const std::filesystem::path& obj_path, GarmentMesh& garme
         return false;
     }
 
-    // garment의 경계값 계산
+    // garment 경계값 계산
     assign_bounds(next_mesh, min_bounds, max_bounds);
     if (next_mesh.bounds_radius <= 0.0f) {
         std::cerr << "Invalid garment bounds: " << obj_path << '\n';

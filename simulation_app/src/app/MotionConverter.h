@@ -1,6 +1,6 @@
 #pragma once
 
-#include "assets/MotionAsset.h"
+#include "io/MotionAsset.h"
 
 #include <functional>
 #include <string>

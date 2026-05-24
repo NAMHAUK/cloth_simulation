@@ -1,16 +1,16 @@
 #pragma once
 
-#include "assets/MotionAsset.h"
+#include "io/MotionAsset.h"
 
 #include <cstdint>
 
 #include <QOpenGLFunctions_4_5_Core>
 
-class CharacterGpuState final {
+class CharacterGpuResources final {
 public:
-    CharacterGpuState() = default;
-    CharacterGpuState(const CharacterGpuState&) = delete;
-    CharacterGpuState& operator=(const CharacterGpuState&) = delete;
+    CharacterGpuResources() = default;
+    CharacterGpuResources(const CharacterGpuResources&) = delete;
+    CharacterGpuResources& operator=(const CharacterGpuResources&) = delete;
 
     bool is_initialized() const;
 

@@ -1,6 +1,6 @@
-#include "rendering/SimulationViewport.h"
+﻿#include "ui/SceneViewport.h"
 
-#include "app/SimulationController.h"
+#include "app/AppController.h"
 
 #include <algorithm>
 #include <cmath>
@@ -17,7 +17,7 @@
 namespace {
 constexpr float pi = 3.14159265358979323846f;
 
-// 카메라 parameters
+// Camera parameters
 constexpr float default_camera_yaw = 0.75f * pi;
 constexpr float default_camera_pitch = 15.0f * pi / 180.0f;
 constexpr float default_camera_distance = 4.0f;
@@ -34,7 +34,7 @@ constexpr float character_camera_near_scale = 0.15f;
 constexpr float character_camera_far_min = 10.0f;
 constexpr float character_camera_far_scale = 12.0f;
 
-// 카메라 control parameters
+// Camera control parameters
 constexpr float orbit_sensitivity    = 0.006f;
 constexpr float max_camera_pitch     = 85.0f * pi / 180.0f;
 constexpr float pan_distance_scale   = 0.0015f;
@@ -93,7 +93,7 @@ std::filesystem::path shader_path(const char* file_name)
 }
 }
 
-SimulationViewport::SimulationViewport(QWidget* parent) : QOpenGLWidget(parent)
+SceneViewport::SceneViewport(QWidget* parent) : QOpenGLWidget(parent)
 {
     camera_.yaw_radians   = default_camera_yaw;
     camera_.pitch_radians = default_camera_pitch;
@@ -103,26 +103,26 @@ SimulationViewport::SimulationViewport(QWidget* parent) : QOpenGLWidget(parent)
     setMouseTracking(true);
 }
 
-SimulationViewport::~SimulationViewport() = default;
+SceneViewport::~SceneViewport() = default;
 
-// 접근 함수 //
-void SimulationViewport::set_controller(SimulationController* controller)
+// Accessors //
+void SceneViewport::set_controller(AppController* controller)
 {
     controller_ = controller;
 }
 
-bool SimulationViewport::is_gl_initialized() const
+bool SceneViewport::is_gl_initialized() const
 {
     return gl_initialized_;
 }
 
-QOpenGLFunctions_4_5_Core& SimulationViewport::gl_functions()
+QOpenGLFunctions_4_5_Core& SceneViewport::gl_functions()
 {
     return *this;
 }
 
 // OpenGL //
-void SimulationViewport::initializeGL()
+void SceneViewport::initializeGL()
 {
     initializeOpenGLFunctions();
     gl_initialized_ = true;
@@ -139,18 +139,17 @@ void SimulationViewport::initializeGL()
         return;
     }
 
-    // render state 초기화
-    glDisable(GL_CULL_FACE);
+    // Render state initialization
     glEnable(GL_DEPTH_TEST);
 
 }
 
-void SimulationViewport::resizeGL(int width, int height)
+void SceneViewport::resizeGL(int width, int height)
 {
     glViewport(0, 0, std::max(1, width), std::max(1, height));
 }
 
-void SimulationViewport::paintGL()
+void SceneViewport::paintGL()
 {
     glClearColor(background_color.r, background_color.g, background_color.b, 1.0f);
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
@@ -165,8 +164,8 @@ void SimulationViewport::paintGL()
 }
 
 // Camera //
-// 현재 모션의 캐릭터 bounding box 기준으로 카메라 초기화
-void SimulationViewport::reset_camera_to_character(const CharacterMesh& character_mesh)
+// 현재 motion character bounds 기준으로 camera 초기화
+void SceneViewport::reset_camera_to_character(const CharacterMesh& character_mesh)
 {
     camera_.target = character_mesh.bounds_center;
     camera_.yaw_radians = character_camera_yaw;
@@ -178,14 +177,14 @@ void SimulationViewport::reset_camera_to_character(const CharacterMesh& characte
 }
 
 // Mouse Event //
-void SimulationViewport::mousePressEvent(QMouseEvent* event)
+void SceneViewport::mousePressEvent(QMouseEvent* event)
 {
     camera_.last_mouse_position = event->pos();
     camera_.has_last_mouse = true;
     event->accept();
 }
 
-void SimulationViewport::mouseMoveEvent(QMouseEvent* event)
+void SceneViewport::mouseMoveEvent(QMouseEvent* event)
 {
     if (!camera_.has_last_mouse) {
         event->ignore();
@@ -208,7 +207,7 @@ void SimulationViewport::mouseMoveEvent(QMouseEvent* event)
     event->accept();
 }
 
-void SimulationViewport::mouseReleaseEvent(QMouseEvent* event)
+void SceneViewport::mouseReleaseEvent(QMouseEvent* event)
 {
     if (event->buttons() == Qt::NoButton) {
         camera_.has_last_mouse = false;
@@ -216,7 +215,7 @@ void SimulationViewport::mouseReleaseEvent(QMouseEvent* event)
     event->accept();
 }
 
-void SimulationViewport::wheelEvent(QWheelEvent* event)
+void SceneViewport::wheelEvent(QWheelEvent* event)
 {
     const float wheel_steps = static_cast<float>(event->angleDelta().y()) / wheel_delta_per_step;
     if (std::abs(wheel_steps) > wheel_step_epsilon) {

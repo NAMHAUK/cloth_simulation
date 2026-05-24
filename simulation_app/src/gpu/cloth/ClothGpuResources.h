@@ -1,17 +1,17 @@
 #pragma once
 
-#include "assets/GarmentAsset.h"
+#include "io/GarmentAsset.h"
 
 #include <QOpenGLFunctions_4_5_Core>
 
-class ClothGpuState final {
+class ClothGpuResources final {
 public:
-    ClothGpuState() = default;
+    ClothGpuResources() = default;
 
-    ClothGpuState(const ClothGpuState&) = delete;
-    ClothGpuState& operator=(const ClothGpuState&) = delete;
-    ClothGpuState(ClothGpuState&& other) noexcept;
-    ClothGpuState& operator=(ClothGpuState&& other) noexcept;
+    ClothGpuResources(const ClothGpuResources&) = delete;
+    ClothGpuResources& operator=(const ClothGpuResources&) = delete;
+    ClothGpuResources(ClothGpuResources&& other) noexcept;
+    ClothGpuResources& operator=(ClothGpuResources&& other) noexcept;
 
     bool is_initialized() const;
 
@@ -22,7 +22,7 @@ public:
 
 private:
     void initialize_gpu_resources(QOpenGLFunctions_4_5_Core& gl);
-    void take_gpu_resources_from(ClothGpuState& other) noexcept;
+    void take_gpu_resources_from(ClothGpuResources& other) noexcept;
     void reset_resources() noexcept;
 
     GLuint vao_ = 0;

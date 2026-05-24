@@ -1,4 +1,4 @@
-#include "rendering/ViewerShader.h"
+#include "rendering/SceneRenderShader.h"
 
 #include <fstream>
 #include <iostream>
@@ -23,12 +23,12 @@ std::optional<std::string> read_text_file(const std::filesystem::path& path)
 }
 }
 
-bool ViewerShader::is_initialized() const
+bool SceneRenderShader::is_initialized() const
 {
     return program_ != 0;
 }
 
-bool ViewerShader::load(const std::filesystem::path& vertex_shader_path,
+bool SceneRenderShader::load(const std::filesystem::path& vertex_shader_path,
                         const std::filesystem::path& fragment_shader_path,
                         QOpenGLFunctions_4_5_Core& gl)
 {
@@ -80,12 +80,12 @@ bool ViewerShader::load(const std::filesystem::path& vertex_shader_path,
     return true;
 }
 
-void ViewerShader::bind(QOpenGLFunctions_4_5_Core& gl) const
+void SceneRenderShader::bind(QOpenGLFunctions_4_5_Core& gl) const
 {
     gl.glUseProgram(program_);
 }
 
-void ViewerShader::set_mvp(const glm::mat4& mvp, QOpenGLFunctions_4_5_Core& gl) const
+void SceneRenderShader::set_mvp(const glm::mat4& mvp, QOpenGLFunctions_4_5_Core& gl) const
 {
     if (!is_initialized() || mvp_location_ < 0) {
         return;
@@ -94,7 +94,7 @@ void ViewerShader::set_mvp(const glm::mat4& mvp, QOpenGLFunctions_4_5_Core& gl) 
     gl.glProgramUniformMatrix4fv(program_, mvp_location_, 1, GL_FALSE, glm::value_ptr(mvp));
 }
 
-void ViewerShader::set_attribute_position_mode(QOpenGLFunctions_4_5_Core& gl) const
+void SceneRenderShader::set_attribute_position_mode(QOpenGLFunctions_4_5_Core& gl) const
 {
     if (!is_initialized() || animation_mode_location_ < 0) {
         return;
@@ -103,7 +103,7 @@ void ViewerShader::set_attribute_position_mode(QOpenGLFunctions_4_5_Core& gl) co
     gl.glProgramUniform1i(program_, animation_mode_location_, 0);
 }
 
-void ViewerShader::set_character_animation_mode(std::uint32_t frame_index,
+void SceneRenderShader::set_character_animation_mode(std::uint32_t frame_index,
                                                 std::uint32_t vertex_count,
                                                 QOpenGLFunctions_4_5_Core& gl) const
 {
@@ -121,7 +121,7 @@ void ViewerShader::set_character_animation_mode(std::uint32_t frame_index,
     }
 }
 
-void ViewerShader::set_solid_color(const glm::vec3& color, QOpenGLFunctions_4_5_Core& gl) const
+void SceneRenderShader::set_solid_color(const glm::vec3& color, QOpenGLFunctions_4_5_Core& gl) const
 {
     if (!is_initialized()) {
         return;
@@ -134,7 +134,7 @@ void ViewerShader::set_solid_color(const glm::vec3& color, QOpenGLFunctions_4_5_
     }
 }
 
-void ViewerShader::set_vertex_color_mode(QOpenGLFunctions_4_5_Core& gl) const
+void SceneRenderShader::set_vertex_color_mode(QOpenGLFunctions_4_5_Core& gl) const
 {
     if (!is_initialized() || solid_mode_location_ < 0) {
         return;
@@ -143,7 +143,7 @@ void ViewerShader::set_vertex_color_mode(QOpenGLFunctions_4_5_Core& gl) const
     gl.glProgramUniform1i(program_, solid_mode_location_, 0);
 }
 
-void ViewerShader::release(QOpenGLFunctions_4_5_Core& gl)
+void SceneRenderShader::release(QOpenGLFunctions_4_5_Core& gl)
 {
     if (program_ != 0) {
         gl.glDeleteProgram(program_);
@@ -158,7 +158,7 @@ void ViewerShader::release(QOpenGLFunctions_4_5_Core& gl)
     animation_vertex_count_location_ = -1;
 }
 
-GLuint ViewerShader::compile_shader(GLenum type, const char* source, QOpenGLFunctions_4_5_Core& gl)
+GLuint SceneRenderShader::compile_shader(GLenum type, const char* source, QOpenGLFunctions_4_5_Core& gl)
 {
     const GLuint shader = gl.glCreateShader(type);
     gl.glShaderSource(shader, 1, &source, nullptr);

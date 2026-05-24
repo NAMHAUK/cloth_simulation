@@ -1,8 +1,8 @@
 #pragma once
 
-#include "assets/GarmentAsset.h"
-#include "assets/MotionAsset.h"
-#include "simulation/SimulationRuntime.h"
+#include "io/GarmentAsset.h"
+#include "io/MotionAsset.h"
+#include "simulation/SimulationEngine.h"
 
 #include <filesystem>
 
@@ -12,15 +12,15 @@
 #include <QTimer>
 
 class QOpenGLFunctions_4_5_Core;
-class SimulationViewport;
+class SceneViewport;
 
-class SimulationController final {
+class AppController final {
 public:
-    explicit SimulationController(SimulationViewport& viewport);
-    ~SimulationController();
+    explicit AppController(SceneViewport& viewport);
+    ~AppController();
 
-    SimulationController(const SimulationController&) = delete;
-    SimulationController& operator=(const SimulationController&) = delete;
+    AppController(const AppController&) = delete;
+    AppController& operator=(const AppController&) = delete;
 
     // Scene editing //
     void set_character_mesh(CharacterMesh mesh);
@@ -37,8 +37,8 @@ public:
 private:
     void tick_frame();
 
-    SimulationViewport& viewport_;
-    SimulationRuntime runtime_;
+    SceneViewport& viewport_;
+    SimulationEngine runtime_;
 
     QElapsedTimer playback_timer_;
     QTimer frame_timer_;

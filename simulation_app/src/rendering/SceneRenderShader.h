@@ -8,11 +8,11 @@
 
 #include <QOpenGLFunctions_4_5_Core>
 
-class ViewerShader final {
+class SceneRenderShader final {
 public:
-    ViewerShader() = default;
-    ViewerShader(const ViewerShader&) = delete;
-    ViewerShader& operator=(const ViewerShader&) = delete;
+    SceneRenderShader() = default;
+    SceneRenderShader(const SceneRenderShader&) = delete;
+    SceneRenderShader& operator=(const SceneRenderShader&) = delete;
 
     bool is_initialized() const;
 

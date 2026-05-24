@@ -1,7 +1,7 @@
 #pragma once
 
-#include "assets/GarmentAsset.h"
-#include "assets/MotionAsset.h"
+#include "io/GarmentAsset.h"
+#include "io/MotionAsset.h"
 
 #include <cstddef>
 #include <cstdint>
@@ -16,7 +16,7 @@ struct GarmentSceneObject {
     std::uint64_t revision = 0;
 };
 
-class SimulationScene final {
+class SceneState final {
 public:
     // Character
     void set_character_mesh(CharacterMesh mesh);
