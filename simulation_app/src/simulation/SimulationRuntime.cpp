@@ -8,20 +8,10 @@ const SimulationScene& SimulationRuntime::scene() const
 }
 
 // Scene editing // 
-void SimulationRuntime::set_character_mesh(CharacterMesh mesh)
-{
-    scene_.set_character_mesh(std::move(mesh));
-}
-
 void SimulationRuntime::set_character_mesh(CharacterMesh mesh, QOpenGLFunctions_4_5_Core& gl)
 {
     scene_.set_character_mesh(std::move(mesh));
     gpu_state_.set_character_mesh(scene_, gl);
-}
-
-GarmentId SimulationRuntime::add_garment_mesh(GarmentMesh mesh)
-{
-    return scene_.add_garment_mesh(std::move(mesh));
 }
 
 GarmentId SimulationRuntime::add_garment_mesh(GarmentMesh mesh, QOpenGLFunctions_4_5_Core& gl)

@@ -21,9 +21,7 @@ public:
     const SimulationScene& scene() const;
 
     // Scene editing //
-    void set_character_mesh(CharacterMesh mesh);
     void set_character_mesh(CharacterMesh mesh, QOpenGLFunctions_4_5_Core& gl);
-    GarmentId add_garment_mesh(GarmentMesh mesh);
     GarmentId add_garment_mesh(GarmentMesh mesh, QOpenGLFunctions_4_5_Core& gl);
 
     // Playback / simulation // 

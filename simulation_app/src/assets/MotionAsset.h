@@ -29,13 +29,13 @@ struct MotionAsset {
 };
 
 struct ConverterResult {
-    bool ok = false;
+    bool succeeded = false;
     int exit_code = -1;
     std::string error_message;
 };
 
 struct ConverterCommand {
-    bool ok = false;
+    bool is_valid = false;
     QString program;
     QStringList arguments;
     QString working_directory;

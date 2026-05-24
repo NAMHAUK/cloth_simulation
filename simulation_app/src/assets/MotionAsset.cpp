@@ -1,11 +1,12 @@
 #include "assets/MotionAsset.h"
 
+#include "support/QtHelpers.h"
+
 #include <algorithm>
 #include <array>
 #include <fstream>
 #include <iostream>
 
-#include <QString>
 #include <QStringList>
 
 namespace {
@@ -53,11 +54,6 @@ bool prepare_converter_paths(
 
     std::filesystem::create_directories(motion_asset_path.parent_path());
     return true;
-}
-
-QString to_q_string(const std::filesystem::path& path)
-{
-    return QString::fromStdWString(path.wstring());
 }
 
 bool is_path_inside(const std::filesystem::path& path, const std::filesystem::path& root)
@@ -165,7 +161,7 @@ ConverterCommand make_converter_command(
               << "  amass_motion=" << amass_motion_path << '\n'
               << "  motion_asset=" << motion_asset_path << '\n';
 
-    command.ok = true;
+    command.is_valid = true;
     return command;
 }
  

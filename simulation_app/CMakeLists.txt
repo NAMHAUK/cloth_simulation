@@ -6,13 +6,17 @@ set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_AUTOMOC ON)
 
-find_package(Qt6 CONFIG REQUIRED COMPONENTS Widgets OpenGLWidgets OpenGL)
+find_package(Qt6 CONFIG REQUIRED COMPONENTS Widgets OpenGLWidgets OpenGL Concurrent)
 find_package(glm CONFIG REQUIRED)
 
 get_filename_component(REPO_ROOT "${CMAKE_CURRENT_SOURCE_DIR}/.." ABSOLUTE)
 
 add_executable(simulation_app
     src/app/main.cpp
+    src/app/AssetLoader.cpp
+    src/app/AssetLoader.h
+    src/app/MotionConverter.cpp
+    src/app/MotionConverter.h
     src/app/ProjectPaths.h
     src/assets/GarmentAsset.cpp
     src/assets/GarmentAsset.h
@@ -34,6 +38,7 @@ add_executable(simulation_app
     src/simulation/SimulationRuntime.h
     src/simulation/SimulationScene.cpp
     src/simulation/SimulationScene.h
+    src/support/QtHelpers.h
     src/ui/MainWindow.cpp
     src/ui/MainWindow.h
     src/ui/MotionBrowserPanel.cpp
@@ -54,6 +59,7 @@ target_link_libraries(simulation_app PRIVATE
     Qt6::Widgets
     Qt6::OpenGLWidgets
     Qt6::OpenGL
+    Qt6::Concurrent
     glm::glm
     opengl32
 )

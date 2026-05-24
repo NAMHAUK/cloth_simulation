@@ -123,13 +123,14 @@ SimulationViewport::~SimulationViewport()
 
 void SimulationViewport::set_character_mesh(CharacterMesh mesh)
 {
-    if (gl_initialized_) {
-        makeCurrent();
-        runtime_.set_character_mesh(std::move(mesh), *this);
-        doneCurrent();
-    } else {
-        runtime_.set_character_mesh(std::move(mesh));
+    if (!gl_initialized_) {
+        std::cerr << "Cannot set character mesh before OpenGL initialization.\n";
+        return;
     }
+
+    makeCurrent();
+    runtime_.set_character_mesh(std::move(mesh), *this);
+    doneCurrent();
 
     playback_timer_.restart();
     reset_camera_to_character();
@@ -139,13 +140,14 @@ void SimulationViewport::set_character_mesh(CharacterMesh mesh)
 
 void SimulationViewport::add_garment_mesh(GarmentMesh mesh)
 {
-    if (gl_initialized_) {
-        makeCurrent();
-        runtime_.add_garment_mesh(std::move(mesh), *this);
-        doneCurrent();
-    } else {
-        runtime_.add_garment_mesh(std::move(mesh));
+    if (!gl_initialized_) {
+        std::cerr << "Cannot add garment mesh before OpenGL initialization.\n";
+        return;
     }
+
+    makeCurrent();
+    runtime_.add_garment_mesh(std::move(mesh), *this);
+    doneCurrent();
 
     update();
 }
