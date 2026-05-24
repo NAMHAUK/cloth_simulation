@@ -1,6 +1,7 @@
 #include "ui/MotionBrowserPanel.h"
 
 #include <QLabel>
+#include <QHBoxLayout>
 #include <QListWidget>
 #include <QPushButton>
 #include <QSizePolicy>
@@ -16,10 +17,15 @@ MotionBrowserPanel::MotionBrowserPanel(QWidget* parent)
     layout->setContentsMargins(0, 0, 0, 0);
     layout->setSpacing(6);
 
+    auto* button_layout = new QHBoxLayout();
+    button_layout->setContentsMargins(0, 0, 0, 0);
+    button_layout->setSpacing(6);
+
     // 토글 버튼 생성
     toggle_button_ = new QPushButton("Motions", this);
     toggle_button_->setCheckable(true);
     toggle_button_->setMinimumHeight(32);
+    toggle_button_->setMinimumWidth(86);
     toggle_button_->setSizePolicy(QSizePolicy::Fixed, QSizePolicy::Fixed);
     toggle_button_->setStyleSheet(
         "QPushButton {"
@@ -37,6 +43,12 @@ MotionBrowserPanel::MotionBrowserPanel(QWidget* parent)
         "  background-color: #4a4a4a;"
         "}"
     );
+
+    garment_button_ = new QPushButton("Garment", this);
+    garment_button_->setMinimumHeight(32);
+    garment_button_->setMinimumWidth(86);
+    garment_button_->setSizePolicy(QSizePolicy::Fixed, QSizePolicy::Fixed);
+    garment_button_->setStyleSheet(toggle_button_->styleSheet());
 
     // 토글 열었을 때 panel 생성
     expanded_panel_ = new QWidget(this);
@@ -79,7 +91,11 @@ MotionBrowserPanel::MotionBrowserPanel(QWidget* parent)
     import_button_ = new QPushButton("+", expanded_panel_);
     import_button_->setMinimumHeight(32);
 
-    layout->addWidget(toggle_button_, 0, Qt::AlignLeft);
+    button_layout->addWidget(toggle_button_);
+    button_layout->addWidget(garment_button_);
+    button_layout->addStretch(1);
+
+    layout->addLayout(button_layout);
     layout->addWidget(expanded_panel_, 1);
 
     panel_layout->addWidget(title_label_);
@@ -89,6 +105,12 @@ MotionBrowserPanel::MotionBrowserPanel(QWidget* parent)
     // 각 버튼 callback 설정
     connect(toggle_button_, &QPushButton::clicked, this, [this]() {
         set_expanded(!expanded_);
+    });
+
+    connect(garment_button_, &QPushButton::clicked, this, [this]() {
+        if (garment_button_callback_) {
+            garment_button_callback_();
+        }
     });
 
     connect(list_widget_, &QListWidget::itemClicked, this, [this](QListWidgetItem* item) {
@@ -196,4 +218,9 @@ void MotionBrowserPanel::set_motion_import_button_callback(std::function<void()>
 void MotionBrowserPanel::set_expansion_changed_callback(std::function<void()> callback)
 {
     expansion_changed_callback_ = std::move(callback);
+}
+
+void MotionBrowserPanel::set_garment_button_callback(std::function<void()> callback)
+{
+    garment_button_callback_ = std::move(callback);
 }

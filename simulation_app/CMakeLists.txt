@@ -6,18 +6,43 @@ set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_AUTOMOC ON)
 
-find_package(Qt6 CONFIG REQUIRED COMPONENTS Widgets OpenGLWidgets)
+find_package(Qt6 CONFIG REQUIRED COMPONENTS Widgets OpenGLWidgets OpenGL Concurrent)
 find_package(glm CONFIG REQUIRED)
 
 get_filename_component(REPO_ROOT "${CMAKE_CURRENT_SOURCE_DIR}/.." ABSOLUTE)
 
 add_executable(simulation_app
     src/app/main.cpp
+    src/app/AssetLoader.cpp
+    src/app/AssetLoader.h
+    src/app/MotionConverter.cpp
+    src/app/MotionConverter.h
     src/app/ProjectPaths.h
-    src/assets/MotionAsset.cpp
-    src/assets/MotionAsset.h
-    src/rendering/OpenGLViewerWidget.cpp
-    src/rendering/OpenGLViewerWidget.h
+    src/app/AppController.cpp
+    src/app/AppController.h
+    src/io/GarmentAsset.cpp
+    src/io/GarmentAsset.h
+    src/io/MotionAsset.cpp
+    src/io/MotionAsset.h
+    src/gpu/body/CharacterGpuResources.cpp
+    src/gpu/body/CharacterGpuResources.h
+    src/gpu/cloth/ClothGpuResources.cpp
+    src/gpu/cloth/ClothGpuResources.h
+    src/rendering/GroundMesh.cpp
+    src/rendering/GroundMesh.h
+    src/gpu/scene/SceneGpuResources.cpp
+    src/gpu/scene/SceneGpuResources.h
+    src/rendering/SceneRenderer.cpp
+    src/rendering/SceneRenderer.h
+    src/ui/SceneViewport.cpp
+    src/ui/SceneViewport.h
+    src/rendering/SceneRenderShader.cpp
+    src/rendering/SceneRenderShader.h
+    src/simulation/SimulationEngine.cpp
+    src/simulation/SimulationEngine.h
+    src/scene/SceneState.cpp
+    src/scene/SceneState.h
+    src/support/QtHelpers.h
     src/ui/MainWindow.cpp
     src/ui/MainWindow.h
     src/ui/MotionBrowserPanel.cpp
@@ -37,6 +62,8 @@ target_compile_definitions(simulation_app PRIVATE
 target_link_libraries(simulation_app PRIVATE
     Qt6::Widgets
     Qt6::OpenGLWidgets
+    Qt6::OpenGL
+    Qt6::Concurrent
     glm::glm
     opengl32
 )
