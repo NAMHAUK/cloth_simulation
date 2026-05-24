@@ -1,11 +1,12 @@
-#include "assets/MotionAsset.h"
+﻿#include "io/MotionAsset.h"
+
+#include "support/QtHelpers.h"
 
 #include <algorithm>
 #include <array>
 #include <fstream>
 #include <iostream>
 
-#include <QString>
 #include <QStringList>
 
 namespace {
@@ -55,11 +56,6 @@ bool prepare_converter_paths(
     return true;
 }
 
-QString to_q_string(const std::filesystem::path& path)
-{
-    return QString::fromStdWString(path.wstring());
-}
-
 bool is_path_inside(const std::filesystem::path& path, const std::filesystem::path& root)
 {
     std::error_code error;
@@ -85,7 +81,7 @@ bool load_character_mesh(const std::filesystem::path& motion_asset_path, Charact
         return false;
     }
 
-    // header 읽고 올바른 형식인지 check
+    // header를 읽고 올바른 형식인지 확인
     std::uint32_t version = 0;
     if (!read_value(input, version) ||
         !read_value(input, character_mesh.fps) ||
@@ -107,7 +103,7 @@ bool load_character_mesh(const std::filesystem::path& motion_asset_path, Charact
         return false;
     }
 
-    // asset을 읽어서 값 저장
+    // asset에서 payload 읽기
     character_mesh.indices.resize(character_mesh.index_count);
     character_mesh.vertices.resize(
         static_cast<std::size_t>(character_mesh.frame_count) *
@@ -165,7 +161,7 @@ ConverterCommand make_converter_command(
               << "  amass_motion=" << amass_motion_path << '\n'
               << "  motion_asset=" << motion_asset_path << '\n';
 
-    command.ok = true;
+    command.is_valid = true;
     return command;
 }
  

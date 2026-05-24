@@ -1,17 +1,22 @@
-#include "ui/MainWindow.h"
+﻿#include "ui/MainWindow.h"
 
-#include "rendering/OpenGLViewerWidget.h"
+#include "app/AssetLoader.h"
+#include "app/MotionConverter.h"
+#include "app/AppController.h"
+#include "ui/SceneViewport.h"
+#include "support/QtHelpers.h"
 #include "ui/MotionBrowserPanel.h"
 
 #include <algorithm>
 #include <iostream>
+#include <memory>
+#include <utility>
 
 #include <QEvent>
 #include <QFileDialog>
 #include <QMessageBox>
 #include <QPoint>
 #include <QRect>
-#include <QResizeEvent>
 #include <QSize>
 #include <QWidget>
 
@@ -19,11 +24,6 @@ namespace {
 int clamp_int(int value, int min_value, int max_value)
 {
     return std::max(min_value, std::min(value, max_value));
-}
-
-QString to_q_string(const std::filesystem::path& path)
-{
-    return QString::fromStdWString(path.wstring());
 }
 
 void show_conversion_failure(QWidget* parent)
@@ -34,6 +34,7 @@ void show_conversion_failure(QWidget* parent)
         "Failed to convert AMASS motion."
     );
 }
+
 }
 
 MainWindow::MainWindow(const std::filesystem::path& project_root, QWidget* parent)
@@ -44,67 +45,98 @@ MainWindow::MainWindow(const std::filesystem::path& project_root, QWidget* paren
     resize(1440, 900);
 
     viewer_container_ = new QWidget(this);
-    viewer_widget_ = new OpenGLViewerWidget(viewer_container_);
+    simulation_viewport_ = new SceneViewport(viewer_container_);
+    simulation_controller_ = std::make_unique<AppController>(*simulation_viewport_);
+    simulation_viewport_->set_controller(simulation_controller_.get());
     browser_panel_ = new MotionBrowserPanel(viewer_container_);
+    asset_loader_ = new AssetLoader(this);
+    motion_converter_ = new MotionConverter(this);
 
     setCentralWidget(viewer_container_);
     viewer_container_->installEventFilter(this);
     
-    // motion 선택 toggle 관련 event들의 callback 함수 설정
+    // motion 선택 toggle 관련 event callback 함수 설정
     browser_panel_->raise();
-    browser_panel_->set_motion_selected_callback([this](const std::filesystem::path& motion_asset_path) {
-        load_motion_asset(motion_asset_path);
-    });
-    browser_panel_->set_motion_import_button_callback([this]() {
-        request_amass_conversion();
-    });
-    browser_panel_->set_expansion_changed_callback([this]() {
-        update_motion_browser();
-        browser_panel_->raise();
-    });
+    setup_callbacks();
 
     refresh_motion_list();
-    update_motion_browser();
+    update_viewer_layout();
 }
 
 MainWindow::~MainWindow()
 {
-    if (!converter_process_) {
-        return;
+    if (simulation_controller_) {
+        simulation_controller_->release_gpu();
     }
-
-    converter_process_->terminate();
-    if (!converter_process_->waitForFinished(1000)) {
-        converter_process_->kill();
-        converter_process_->waitForFinished(1000);
+    if (simulation_viewport_) {
+        simulation_viewport_->set_controller(nullptr);
     }
 }
 
-// Layout
+// Layout //
+
+void MainWindow::setup_callbacks()
+{
+    // Browser panel callbacks
+    browser_panel_->set_motion_selected_callback([this](const std::filesystem::path& motion_asset_path) {
+        asset_loader_->load_character_mesh(motion_asset_path);
+    });
+    browser_panel_->set_motion_import_button_callback([this]() {
+        request_amass_conversion();
+    });
+    browser_panel_->set_garment_button_callback([this]() {
+        request_garment_asset_selection();
+    });
+    browser_panel_->set_expansion_changed_callback([this]() {
+        update_viewer_layout();
+    });
+
+    // Asset loader callbacks
+    asset_loader_->set_character_loaded_callback(
+        [this](const std::filesystem::path& motion_asset_path, CharacterMesh mesh) {
+            simulation_controller_->set_character_mesh(std::move(mesh));
+            browser_panel_->set_current_motion_asset(motion_asset_path);
+        }
+    );
+    asset_loader_->set_character_load_failed_callback([this](const std::filesystem::path& motion_asset_path) {
+        QMessageBox::warning(this, "Load Failed", "Failed to load motion:\n" + to_q_string(motion_asset_path));
+    });
+    asset_loader_->set_garment_loaded_callback([this](GarmentMesh mesh) {
+        simulation_controller_->add_garment_mesh(std::move(mesh));
+    });
+    asset_loader_->set_garment_load_failed_callback([this](const std::filesystem::path& garment_asset_path) {
+        QMessageBox::warning(this, "Load Failed", "Failed to load garment:\n" + to_q_string(garment_asset_path));
+    });
+
+    // Motion converter callbacks
+    motion_converter_->set_conversion_succeeded_callback([this]() {
+        browser_panel_->set_conversion_active(false);
+        refresh_motion_list();
+    });
+    motion_converter_->set_conversion_failed_callback([this](const std::string& error_message) {
+        browser_panel_->set_conversion_active(false);
+        std::cerr << error_message << '\n';
+        show_conversion_failure(this);
+    });
+}
 
 bool MainWindow::eventFilter(QObject* watched, QEvent* event)
 {
     if (watched == viewer_container_ && event->type() == QEvent::Resize) {
-        update_motion_browser();
+        update_viewer_layout();
     }
 
     return QMainWindow::eventFilter(watched, event);
 }
 
-void MainWindow::resizeEvent(QResizeEvent* event)
+void MainWindow::update_viewer_layout()
 {
-    QMainWindow::resizeEvent(event);
-    update_motion_browser();
-}
-
-void MainWindow::update_motion_browser()
-{
-    if (!viewer_container_ || !viewer_widget_ || !browser_panel_) {
+    if (!viewer_container_ || !simulation_viewport_ || !browser_panel_) {
         return;
     }
 
     const QSize container_size = viewer_container_->size();
-    viewer_widget_->setGeometry(QRect(QPoint(0, 0), container_size));
+    simulation_viewport_->setGeometry(QRect(QPoint(0, 0), container_size));
 
     constexpr int margin = 12;
     constexpr int expanded_width = 340;
@@ -144,27 +176,29 @@ void MainWindow::refresh_motion_list()
     browser_panel_->set_motion_list(motions_);
 }
 
-void MainWindow::load_motion_asset(const std::filesystem::path& motion_asset_path)
+void MainWindow::request_garment_asset_selection()
 {
-    if (!viewer_widget_->load_motion_asset(motion_asset_path)) {
-        QMessageBox::warning(
-            this,
-            "Load Failed",
-            "Failed to load motion:\n" + to_q_string(motion_asset_path)
-        );
+    const QString selected_file = QFileDialog::getOpenFileName(
+        this,
+        "Select Garment",
+        to_q_string(project_paths_.garment_asset_dir),
+        "Garment OBJ (*.obj);;All Files (*)"
+    );
+
+    if (selected_file.isEmpty()) {
         return;
     }
 
-    browser_panel_->set_current_motion_asset(motion_asset_path);
+    asset_loader_->queue_garment_mesh_load(selected_file.toStdWString());
 }
 
-// AMASS conversion
+// AMASS conversion //
 
 // AMASS motion 변환 요청
 void MainWindow::request_amass_conversion()
 {
-    // 중복 실행 방지: 현재 변환 작업 중-> 종료
-    if (converter_process_) {
+    // 중복 실행 방지: 현재 변환 작업 중이면 종료
+    if (motion_converter_->is_running()) {
         return;
     }
 
@@ -175,12 +209,13 @@ void MainWindow::request_amass_conversion()
     }
 
     // 변환 작업 시작
-    start_converter_process(*command);
+    browser_panel_->set_conversion_active(true);
+    motion_converter_->start_conversion(*command);
 }
 
 std::optional<ConverterCommand> MainWindow::prepare_amass_conversion()
 {   
-    // 파일 선택 창 열고, motion 선택
+    // 파일 선택 창을 열고 motion 선택
     const std::filesystem::path default_dir = project_paths_.amass_dir;
     const QString selected_file = QFileDialog::getOpenFileName(
         this,
@@ -197,7 +232,7 @@ std::optional<ConverterCommand> MainWindow::prepare_amass_conversion()
     const std::filesystem::path motion_asset_path = make_motion_asset_path(project_paths_, amass_motion_path);
 
 
-    // 이미 변환된 motion -> 변환 없음
+    // 이미 변환된 motion이면 변환하지 않음
     if (std::filesystem::exists(motion_asset_path)) {
         refresh_motion_list();
         return std::nullopt;
@@ -205,102 +240,11 @@ std::optional<ConverterCommand> MainWindow::prepare_amass_conversion()
 
     // python converter 실행에 필요한 command 준비
     const ConverterCommand command = make_converter_command(project_paths_, amass_motion_path, motion_asset_path);
-    if (!command.ok) {
+    if (!command.is_valid) {
         std::cerr << command.error_message << '\n';
         show_conversion_failure(this);
         return std::nullopt;
     }
 
     return command;
-}
-
-void MainWindow::start_converter_process(const ConverterCommand& command)
-{
-    converter_result_ = {};
-    converter_process_ = new QProcess(this);
-    converter_process_->setProgram(command.program);
-    converter_process_->setArguments(command.arguments);
-    converter_process_->setWorkingDirectory(command.working_directory);
-
-    setup_converter_callbacks();
-    browser_panel_->set_conversion_active(true);
-    converter_process_->start();
-}
-
-void MainWindow::setup_converter_callbacks()
-{   
-    connect(converter_process_, &QProcess::readyReadStandardOutput, this, [this]() {
-        if (!converter_process_) {
-            return;
-        }
-
-        std::cout << converter_process_->readAllStandardOutput().toStdString();
-    });
-
-    connect(converter_process_, &QProcess::readyReadStandardError, this, [this]() {
-        if (!converter_process_) {
-            return;
-        }
-
-        std::cerr << converter_process_->readAllStandardError().toStdString();
-    });
-
-    // 변환 process 종료 시 callback: 변환 결과 저장
-    connect(
-        converter_process_,
-        qOverload<int, QProcess::ExitStatus>(&QProcess::finished),
-        this,
-        [this](int exit_code, QProcess::ExitStatus exit_status) {
-            finish_converter_process(exit_code, exit_status);
-        }
-    );
-
-    // 변환 process 실패 시 callback: 에러 메시지 저장
-    connect(converter_process_, &QProcess::errorOccurred, this, [this](QProcess::ProcessError error) {
-        if (!converter_process_) {
-            return;
-        }
-
-        converter_result_.error_message = converter_process_->errorString().toStdString();
-        if (error == QProcess::FailedToStart) {
-            finish_converter_process(-1, QProcess::CrashExit);
-        }
-    });
-}
-
-void MainWindow::finish_converter_process(int exit_code, QProcess::ExitStatus exit_status)
-{
-    if (!converter_process_) {
-        return;
-    }
-
-    converter_result_.exit_code = exit_code;
-
-    std::cout << converter_process_->readAllStandardOutput().toStdString();
-    std::cerr << converter_process_->readAllStandardError().toStdString();
-
-    // 성공/실패 판정
-    converter_result_.ok = exit_status == QProcess::NormalExit && exit_code == 0;
-    if (!converter_result_.ok && converter_result_.error_message.empty()) {
-        converter_result_.error_message = exit_status == QProcess::NormalExit
-            ? "Converter failed with exit code: " + std::to_string(exit_code)
-            : "Converter process crashed.";
-    }
-
-    // process 객체 정리
-    QProcess* finished_process = converter_process_;
-    converter_process_ = nullptr;
-    finished_process->deleteLater();
-
-    // 변환 버튼 다시 활성화 & 변환 모션 추가된 UI로 update
-    browser_panel_->set_conversion_active(false);
-
-    if (converter_result_.ok) {
-        refresh_motion_list();
-    } else {
-        std::cerr << converter_result_.error_message << '\n';
-        show_conversion_failure(this);
-    }
-
-    converter_result_ = {};
 }
