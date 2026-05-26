@@ -1,8 +1,8 @@
 ﻿#include "ui/MainWindow.h"
 
-#include "app/AssetLoader.h"
-#include "app/MotionConverter.h"
-#include "app/AppController.h"
+#include "asset/AssetLoader.h"
+#include "asset/MotionConverter.h"
+#include "simulation/SimulationController.h"
 #include "ui/SceneViewport.h"
 #include "support/QtHelpers.h"
 #include "ui/MotionBrowserPanel.h"
@@ -46,7 +46,7 @@ MainWindow::MainWindow(const std::filesystem::path& project_root, QWidget* paren
 
     viewer_container_ = new QWidget(this);
     simulation_viewport_ = new SceneViewport(viewer_container_);
-    simulation_controller_ = std::make_unique<AppController>(*simulation_viewport_);
+    simulation_controller_ = std::make_unique<SimulationController>(*simulation_viewport_);
     simulation_viewport_->set_controller(simulation_controller_.get());
     browser_panel_ = new MotionBrowserPanel(viewer_container_);
     asset_loader_ = new AssetLoader(this);

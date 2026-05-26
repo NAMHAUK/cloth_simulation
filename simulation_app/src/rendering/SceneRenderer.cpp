@@ -5,8 +5,15 @@
 
 #include <iostream>
 
+#include <glm/geometric.hpp>
+
 namespace {
 constexpr GLuint character_animation_position_binding = 0;
+constexpr GLuint vertex_normal_binding = 1;
+
+const glm::vec3 light_direction_world = glm::normalize(glm::vec3{-0.4f, 0.8f, 0.3f});
+constexpr float ambient_strength = 0.35f;
+constexpr float diffuse_strength = 0.65f;
 }
 
 bool SceneRenderer::is_initialized() const
@@ -22,8 +29,12 @@ bool SceneRenderer::initialize(const std::filesystem::path& vertex_shader_path,
         std::cerr << "Failed to create viewer shader program.\n";
         return false;
     }
+    if (!background_gradient_.initialize(gl)) {
+        std::cerr << "Failed to create background gradient.\n";
+        return false;
+    }
 
-    grid_gpu_state_.upload(gl);
+    ground_grid_.upload(gl);
     return true;
 }
 
@@ -36,17 +47,26 @@ void SceneRenderer::draw(const SceneState& scene,
         return;
     }
 
+    if (background_gradient_.is_initialized()) {
+        gl.glDepthMask(GL_FALSE);
+        gl.glDisable(GL_DEPTH_TEST);
+        background_gradient_.draw(gl);
+        gl.glEnable(GL_DEPTH_TEST);
+        gl.glDepthMask(GL_TRUE);
+    }
+
     // shader setting
     viewer_shader_.bind(gl);
     viewer_shader_.set_mvp(mvp, gl);
+    viewer_shader_.set_lighting(light_direction_world, ambient_strength, diffuse_strength, gl);
     viewer_shader_.set_attribute_position_mode(gl);
 
-    // grid
-    if (grid_gpu_state_.initialized()) {
-        viewer_shader_.set_solid_color(grid_gpu_state_.color(), gl);
-
+    // ground grid
+    if (ground_grid_.initialized()) {
+        viewer_shader_.set_normal_lighting_enabled(false, gl);
+        viewer_shader_.set_solid_color(ground_grid_.color(), gl);
         gl.glDepthMask(GL_FALSE);
-        grid_gpu_state_.draw(gl);
+        ground_grid_.draw(gl);
         gl.glDepthMask(GL_TRUE);
     }
 
@@ -54,17 +74,20 @@ void SceneRenderer::draw(const SceneState& scene,
     const CharacterGpuResources& character_gpu_state = gpu_state.character_gpu_state();
     if (scene.has_character() && character_gpu_state.is_initialized()) {
         character_gpu_state.bind_animation_positions(character_animation_position_binding, gl);
+        character_gpu_state.bind_vertex_normals(vertex_normal_binding, gl);
         viewer_shader_.set_character_animation_mode(
             character_gpu_state.current_frame_index(),
             character_gpu_state.vertex_count(),
             gl
         );
         viewer_shader_.set_vertex_color_mode(gl);
+        viewer_shader_.set_normal_lighting_enabled(true, gl);
         character_gpu_state.draw(gl);
     }
 
     // garments
     viewer_shader_.set_attribute_position_mode(gl);
+    viewer_shader_.set_normal_lighting_enabled(true, gl);
     const std::vector<GarmentSceneObject>& garments = scene.garments();
     for (const GarmentSceneObject& garment : garments) {
         const ClothGpuResources* cloth_gpu_state = gpu_state.garment_gpu_state(garment.id);
@@ -72,6 +95,7 @@ void SceneRenderer::draw(const SceneState& scene,
             continue;
         }
 
+        cloth_gpu_state->bind_vertex_normals(vertex_normal_binding, gl);
         viewer_shader_.set_solid_color(garment.mesh.color, gl);
         cloth_gpu_state->draw(gl);
     }
@@ -79,6 +103,7 @@ void SceneRenderer::draw(const SceneState& scene,
 
 void SceneRenderer::release(QOpenGLFunctions_4_5_Core& gl)
 {
-    grid_gpu_state_.release(gl);
+    ground_grid_.release(gl);
+    background_gradient_.release(gl);
     viewer_shader_.release(gl);
 }

@@ -1,7 +1,7 @@
 #pragma once
 
-#include "io/GarmentAsset.h"
-#include "io/MotionAsset.h"
+#include "asset/GarmentAsset.h"
+#include "asset/MotionAsset.h"
 
 #include <cstddef>
 #include <cstdint>

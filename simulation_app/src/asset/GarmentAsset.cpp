@@ -1,4 +1,4 @@
-﻿#include "io/GarmentAsset.h"
+﻿#include "asset/GarmentAsset.h"
 
 #include <algorithm>
 #include <array>
@@ -20,7 +20,6 @@
 namespace {
 constexpr float obj_to_world_scale = 0.01f;
 
-// TODO: token 정보 모두 받기
 // OBJ 파일의 token 하나에서 vertex index만 읽는 함수
 // Ex) "1/2/3" -> 0
 bool parse_face_token(const std::string& token, std::uint32_t vertex_count, std::uint32_t& index)

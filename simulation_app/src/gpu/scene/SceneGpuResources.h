@@ -2,6 +2,7 @@
 
 #include "gpu/body/CharacterGpuResources.h"
 #include "gpu/cloth/ClothGpuResources.h"
+#include "gpu/scene/NormalUpdater.h"
 #include "scene/SceneState.h"
 
 #include <cstdint>
@@ -40,6 +41,7 @@ private:
     const GarmentGpuSlot* find_garment_gpu_slot(GarmentId garment_id) const;
 
     CharacterGpuResources character_gpu_state_;
+    NormalUpdater normal_updater_;
     std::vector<GarmentGpuSlot> garment_gpu_slots_;
 
     std::uint64_t character_revision_ = 0;

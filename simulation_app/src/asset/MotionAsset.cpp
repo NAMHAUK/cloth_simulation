@@ -1,4 +1,4 @@
-﻿#include "io/MotionAsset.h"
+﻿#include "asset/MotionAsset.h"
 
 #include "support/QtHelpers.h"
 

@@ -1,6 +1,6 @@
 #pragma once
 
-#include "io/MotionAsset.h"
+#include "asset/MotionAsset.h"
 
 #include <glm/vec3.hpp>
 
@@ -8,7 +8,7 @@
 #include <QOpenGLWidget>
 #include <QPoint>
 
-class AppController;
+class SimulationController;
 class QMouseEvent;
 class QWheelEvent;
 
@@ -28,7 +28,7 @@ public:
     explicit SceneViewport(QWidget* parent = nullptr);
     ~SceneViewport() override;
 
-    void set_controller(AppController* controller);
+    void set_controller(SimulationController* controller);
     bool is_gl_initialized() const;
     QOpenGLFunctions_4_5_Core& gl_functions();
     void reset_camera_to_character(const CharacterMesh& character_mesh);
@@ -44,7 +44,7 @@ protected:
     void wheelEvent(QWheelEvent* event) override;
 
 private:
-    AppController* controller_ = nullptr;
+    SimulationController* controller_ = nullptr;
     OrbitCamera camera_;
 
     bool gl_initialized_ = false;

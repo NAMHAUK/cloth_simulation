@@ -1,8 +1,10 @@
 #pragma once
 
-#include "io/GarmentAsset.h"
+#include "asset/GarmentAsset.h"
 
 #include <QOpenGLFunctions_4_5_Core>
+
+struct NormalUpdateInputs;
 
 class ClothGpuResources final {
 public:
@@ -17,6 +19,8 @@ public:
 
     void upload(const GarmentMesh& garment_mesh, QOpenGLFunctions_4_5_Core& gl);
     void reset_states(const GarmentMesh& garment_mesh, QOpenGLFunctions_4_5_Core& gl);
+    NormalUpdateInputs normal_update_inputs() const;
+    void bind_vertex_normals(GLuint binding_index, QOpenGLFunctions_4_5_Core& gl) const;
     void draw(QOpenGLFunctions_4_5_Core& gl) const;
     void release(QOpenGLFunctions_4_5_Core& gl);
 
@@ -30,5 +34,11 @@ private:
     GLuint current_position_buffer_ = 0;
     GLuint previous_position_buffer_ = 0;
     GLuint index_buffer_ = 0;
+    GLuint adjacency_offset_buffer_ = 0;
+    GLuint adjacency_triangle_buffer_ = 0;
+    GLuint triangle_normal_buffer_ = 0;
+    GLuint vertex_normal_buffer_ = 0;
+    std::uint32_t vertex_count_ = 0;
+    std::uint32_t triangle_count_ = 0;
     GLsizei index_count_ = 0;
 };

@@ -1,6 +1,6 @@
 ﻿#include "ui/SceneViewport.h"
 
-#include "app/AppController.h"
+#include "simulation/SimulationController.h"
 
 #include <algorithm>
 #include <cmath>
@@ -106,7 +106,7 @@ SceneViewport::SceneViewport(QWidget* parent) : QOpenGLWidget(parent)
 SceneViewport::~SceneViewport() = default;
 
 // Accessors //
-void SceneViewport::set_controller(AppController* controller)
+void SceneViewport::set_controller(SimulationController* controller)
 {
     controller_ = controller;
 }

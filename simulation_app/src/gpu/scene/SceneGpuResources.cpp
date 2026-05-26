@@ -16,19 +16,28 @@ bool SceneGpuResources::is_initialized() const
     return initialized_;
 }
 
-bool SceneGpuResources::initialize(QOpenGLFunctions_4_5_Core&)
+bool SceneGpuResources::initialize(QOpenGLFunctions_4_5_Core& gl)
 {
+    if (!normal_updater_.initialize(gl)) {
+        return false;
+    }
+
     initialized_ = true;
     return true;
 }
 
-void SceneGpuResources::sync(const SceneState& scene, QOpenGLFunctions_4_5_Core&)
+void SceneGpuResources::sync(const SceneState& scene, QOpenGLFunctions_4_5_Core& gl)
 {
     if (!is_initialized()) {
         return;
     }
 
     update_character_frame(scene);
+    normal_updater_.update_normals(character_gpu_state_.normal_update_inputs(), gl);
+
+    for (GarmentGpuSlot& slot : garment_gpu_slots_) {
+        normal_updater_.update_normals(slot.gpu_state.normal_update_inputs(), gl);
+    }
 }
 
 void SceneGpuResources::release(QOpenGLFunctions_4_5_Core& gl)
@@ -39,6 +48,7 @@ void SceneGpuResources::release(QOpenGLFunctions_4_5_Core& gl)
     garment_gpu_slots_.clear();
 
     character_gpu_state_.release(gl);
+    normal_updater_.release(gl);
 
     character_revision_ = 0;
     current_character_frame_ = 0;
@@ -69,6 +79,7 @@ void SceneGpuResources::set_character_mesh(const SceneState& scene, QOpenGLFunct
     character_revision_ = scene_revision;
     current_character_frame_ = scene_frame;
     character_uploaded_ = true;
+    normal_updater_.update_normals(character_gpu_state_.normal_update_inputs(), gl);
 }
 
 void SceneGpuResources::update_character_frame(const SceneState& scene)
@@ -112,6 +123,7 @@ void SceneGpuResources::set_garment_mesh(const GarmentSceneObject& garment, QOpe
 
     slot->gpu_state.upload(garment.mesh, gl);
     slot->uploaded_revision = garment.revision;
+    normal_updater_.update_normals(slot->gpu_state.normal_update_inputs(), gl);
 }
 
 // 새로운 garment GPU state 추가
