@@ -2,13 +2,16 @@
 
 #include "asset/MotionAsset.h"
 
+#include <filesystem>
+#include <functional>
+
+#include <glm/mat4x4.hpp>
 #include <glm/vec3.hpp>
 
 #include <QOpenGLFunctions_4_5_Core>
 #include <QOpenGLWidget>
 #include <QPoint>
 
-class SimulationController;
 class QMouseEvent;
 class QWheelEvent;
 
@@ -25,10 +28,16 @@ struct OrbitCamera {
 
 class SceneViewport final : public QOpenGLWidget, protected QOpenGLFunctions_4_5_Core {
 public:
+    using InitializeCallback = std::function<bool(const std::filesystem::path&,
+                                                  const std::filesystem::path&,
+                                                  QOpenGLFunctions_4_5_Core&)>;
+    using SceneRenderCallback = std::function<void(const glm::mat4&, QOpenGLFunctions_4_5_Core&)>;
+
     explicit SceneViewport(QWidget* parent = nullptr);
     ~SceneViewport() override;
 
-    void set_controller(SimulationController* controller);
+    void set_initialize_callback(InitializeCallback callback);
+    void set_scene_render_callback(SceneRenderCallback callback);
     bool is_gl_initialized() const;
     QOpenGLFunctions_4_5_Core& gl_functions();
     void reset_camera_to_character(const CharacterMesh& character_mesh);
@@ -44,7 +53,8 @@ protected:
     void wheelEvent(QWheelEvent* event) override;
 
 private:
-    SimulationController* controller_ = nullptr;
+    InitializeCallback initialize_callback_;
+    SceneRenderCallback scene_render_callback_;
     OrbitCamera camera_;
 
     bool gl_initialized_ = false;

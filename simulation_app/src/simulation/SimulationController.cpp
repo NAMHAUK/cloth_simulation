@@ -1,8 +1,5 @@
 #include "simulation/SimulationController.h"
 
-#include "support/QtHelpers.h"
-#include "ui/SceneViewport.h"
-
 #include <iostream>
 #include <utility>
 
@@ -12,7 +9,7 @@ namespace {
 constexpr int playback_tick_ms = 16;
 }
 
-SimulationController::SimulationController(SceneViewport& viewport) : viewport_(viewport)
+SimulationController::SimulationController()
 {
     // tick마다 frame update 함수 설정
     QObject::connect(&frame_timer_, &QTimer::timeout, &frame_timer_, [this]() {
@@ -23,6 +20,11 @@ SimulationController::SimulationController(SceneViewport& viewport) : viewport_(
 SimulationController::~SimulationController()
 {
     release_gpu();
+}
+
+void SimulationController::set_viewport_callbacks(ViewportCallbacks callbacks)
+{
+    viewport_callbacks_ = std::move(callbacks);
 }
 
 // GPU / rendering //
@@ -46,7 +48,7 @@ bool SimulationController::initialize_gpu(const std::filesystem::path& vertex_sh
         return false;
     }
 
-    for (const GarmentSceneObject& garment : scene_.garments()) {
+    for (const GarmentObject& garment : scene_.garments()) {
         gpu_state_.add_garment_gpu_state(garment.id);
         gpu_state_.set_garment_mesh(garment, gl);
     }
@@ -71,27 +73,25 @@ void SimulationController::tick_frame()
     const double playback_seconds = static_cast<double>(playback_timer_.elapsed()) / 1000.0;
     scene_.update_playback_frame(playback_seconds);
 
-    if (!viewport_.is_gl_initialized() || !is_gpu_initialized()) {
+    if (!is_viewport_ready() || !is_gpu_initialized()) {
         return;
     }
 
-    run_with_gl_context(viewport_, [&] {
-        QOpenGLFunctions_4_5_Core& gl = viewport_.gl_functions();
+    viewport_callbacks_.with_gl_context([this](QOpenGLFunctions_4_5_Core& gl) {
         simulation_step(gl);
         sync_gpu(gl);
     });
 
-    viewport_.update();
+    viewport_callbacks_.request_redraw();
 }
 
 void SimulationController::release_gpu()
 {
-    if (gpu_released_ || !viewport_.is_gl_initialized()) {
+    if (gpu_released_ || !is_viewport_ready()) {
         return;
     }
 
-    run_with_gl_context(viewport_, [&] {
-        QOpenGLFunctions_4_5_Core& gl = viewport_.gl_functions();
+    viewport_callbacks_.with_gl_context([this](QOpenGLFunctions_4_5_Core& gl) {
         renderer_.release(gl);
         cloth_pipeline_.release(gl);
         gpu_state_.release(gl);
@@ -111,48 +111,57 @@ bool SimulationController::is_gpu_initialized() const
 
 void SimulationController::set_character_mesh(CharacterMesh mesh)
 {
-    if (!viewport_.is_gl_initialized()) {
+    if (!is_viewport_ready()) {
         std::cerr << "Cannot set character mesh before OpenGL initialization.\n";
         return;
     }
 
-    run_with_gl_context(viewport_, [&] {
+    viewport_callbacks_.with_gl_context([this, &mesh](QOpenGLFunctions_4_5_Core& gl) {
         scene_.set_character_mesh(std::move(mesh));
-        gpu_state_.set_character_mesh(scene_, viewport_.gl_functions());
+        gpu_state_.set_character_mesh(scene_, gl);
     });
 
     playback_timer_.restart();
     if (scene_.has_character()) {
-        viewport_.reset_camera_to_character(scene_.character_mesh());
+        viewport_callbacks_.reset_camera_to_character(scene_.character_mesh());
     }
 
-    viewport_.update();
+    viewport_callbacks_.request_redraw();
 }
 
 void SimulationController::add_garment_mesh(GarmentMesh mesh)
 {
-    if (!viewport_.is_gl_initialized()) {
+    if (!is_viewport_ready()) {
         std::cerr << "Cannot add garment mesh before OpenGL initialization.\n";
         return;
     }
 
-    run_with_gl_context(viewport_, [&] {
+    viewport_callbacks_.with_gl_context([this, &mesh](QOpenGLFunctions_4_5_Core& gl) {
         const GarmentId garment_id = scene_.add_garment_mesh(std::move(mesh));
         gpu_state_.add_garment_gpu_state(garment_id);
-        for (const GarmentSceneObject& garment : scene_.garments()) {
+        for (const GarmentObject& garment : scene_.garments()) {
             if (garment.id == garment_id) {
-                gpu_state_.set_garment_mesh(garment, viewport_.gl_functions());
+                gpu_state_.set_garment_mesh(garment, gl);
                 break;
             }
         }
     });
 
-    viewport_.update();
+    viewport_callbacks_.request_redraw();
 }
 
 void SimulationController::set_playing(bool playing)
 {
     scene_.set_playing(playing);
+}
+
+bool SimulationController::is_viewport_ready() const
+{
+    return viewport_callbacks_.is_ready &&
+           viewport_callbacks_.with_gl_context &&
+           viewport_callbacks_.request_redraw &&
+           viewport_callbacks_.reset_camera_to_character &&
+           viewport_callbacks_.is_ready();
 }
 
 bool SimulationController::simulation_step(QOpenGLFunctions_4_5_Core& gl)

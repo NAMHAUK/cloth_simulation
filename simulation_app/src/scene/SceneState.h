@@ -9,7 +9,7 @@
 
 using GarmentId = std::uint64_t;
 
-struct GarmentSceneObject {
+struct GarmentObject {
     GarmentId id = 0;
     GarmentMesh mesh;
     bool visible = true;
@@ -26,7 +26,7 @@ public:
 
     // Garments
     GarmentId add_garment_mesh(GarmentMesh mesh);
-    const std::vector<GarmentSceneObject>& garments() const;
+    const std::vector<GarmentObject>& garments() const;
     std::uint64_t garment_revision() const;
 
     // Playback
@@ -42,7 +42,7 @@ private:
     std::uint64_t character_revision_ = 0;
 
     // Garments
-    std::vector<GarmentSceneObject> garments_;
+    std::vector<GarmentObject> garments_;
     GarmentId next_garment_id_ = 1;
     std::uint64_t garment_revision_ = 0;
 

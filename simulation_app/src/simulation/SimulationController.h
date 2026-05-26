@@ -8,6 +8,7 @@
 #include "simulation/ClothSimulationPipeline.h"
 
 #include <filesystem>
+#include <functional>
 
 #include <glm/mat4x4.hpp>
 
@@ -15,15 +16,25 @@
 #include <QTimer>
 
 class QOpenGLFunctions_4_5_Core;
-class SceneViewport;
 
 class SimulationController final {
 public:
-    explicit SimulationController(SceneViewport& viewport);
+    using GlContextTask = std::function<void(QOpenGLFunctions_4_5_Core&)>;
+
+    struct ViewportCallbacks final {
+        std::function<bool()> is_ready;
+        std::function<void(GlContextTask)> with_gl_context;
+        std::function<void()> request_redraw;
+        std::function<void(const CharacterMesh&)> reset_camera_to_character;
+    };
+
+    SimulationController();
     ~SimulationController();
 
     SimulationController(const SimulationController&) = delete;
     SimulationController& operator=(const SimulationController&) = delete;
+
+    void set_viewport_callbacks(ViewportCallbacks callbacks);
 
     // Scene editing //
     void set_character_mesh(CharacterMesh mesh);
@@ -42,10 +53,9 @@ public:
 
 private:
     void tick_frame();
+    bool is_viewport_ready() const;
     bool simulation_step(QOpenGLFunctions_4_5_Core& gl);
     void sync_gpu(QOpenGLFunctions_4_5_Core& gl);
-
-    SceneViewport& viewport_;
 
     // CPU-side scene state //
     SceneState scene_;
@@ -62,5 +72,6 @@ private:
     QElapsedTimer playback_timer_;
     QTimer frame_timer_;
 
+    ViewportCallbacks viewport_callbacks_;
     bool gpu_released_ = false;
 };

@@ -88,8 +88,8 @@ void SceneRenderer::draw(const SceneState& scene,
     // garments
     viewer_shader_.set_attribute_position_mode(gl);
     viewer_shader_.set_normal_lighting_enabled(true, gl);
-    const std::vector<GarmentSceneObject>& garments = scene.garments();
-    for (const GarmentSceneObject& garment : garments) {
+    const std::vector<GarmentObject>& garments = scene.garments();
+    for (const GarmentObject& garment : garments) {
         const ClothGpuResources* cloth_gpu_state = gpu_state.garment_gpu_state(garment.id);
         if (cloth_gpu_state == nullptr || !garment.visible || !cloth_gpu_state->is_initialized()) {
             continue;

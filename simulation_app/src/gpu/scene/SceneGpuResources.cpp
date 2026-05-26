@@ -109,7 +109,7 @@ const ClothGpuResources* SceneGpuResources::garment_gpu_state(GarmentId garment_
     return &slot->gpu_state;
 }
 
-void SceneGpuResources::set_garment_mesh(const GarmentSceneObject& garment, QOpenGLFunctions_4_5_Core& gl)
+void SceneGpuResources::set_garment_mesh(const GarmentObject& garment, QOpenGLFunctions_4_5_Core& gl)
 {
     GarmentGpuSlot* slot = find_garment_gpu_slot(garment.id);
     if (slot == nullptr) {

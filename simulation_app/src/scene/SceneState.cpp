@@ -43,7 +43,7 @@ GarmentId SceneState::add_garment_mesh(GarmentMesh mesh)
     return garment_id;
 }
 
-const std::vector<GarmentSceneObject>& SceneState::garments() const
+const std::vector<GarmentObject>& SceneState::garments() const
 {
     return garments_;
 }

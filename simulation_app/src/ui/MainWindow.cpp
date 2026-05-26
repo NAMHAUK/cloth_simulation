@@ -46,8 +46,7 @@ MainWindow::MainWindow(const std::filesystem::path& project_root, QWidget* paren
 
     viewer_container_ = new QWidget(this);
     simulation_viewport_ = new SceneViewport(viewer_container_);
-    simulation_controller_ = std::make_unique<SimulationController>(*simulation_viewport_);
-    simulation_viewport_->set_controller(simulation_controller_.get());
+    simulation_controller_ = std::make_unique<SimulationController>();
     browser_panel_ = new MotionBrowserPanel(viewer_container_);
     asset_loader_ = new AssetLoader(this);
     motion_converter_ = new MotionConverter(this);
@@ -67,9 +66,11 @@ MainWindow::~MainWindow()
 {
     if (simulation_controller_) {
         simulation_controller_->release_gpu();
+        simulation_controller_->set_viewport_callbacks({});
     }
     if (simulation_viewport_) {
-        simulation_viewport_->set_controller(nullptr);
+        simulation_viewport_->set_initialize_callback({});
+        simulation_viewport_->set_scene_render_callback({});
     }
 }
 
@@ -77,6 +78,46 @@ MainWindow::~MainWindow()
 
 void MainWindow::setup_callbacks()
 {
+    // Simulation viewport callbacks
+    simulation_controller_->set_viewport_callbacks({
+        [this]() {
+            return simulation_viewport_ != nullptr && simulation_viewport_->is_gl_initialized();
+        },
+        [this](SimulationController::GlContextTask task) {
+            if (simulation_viewport_ == nullptr) {
+                return;
+            }
+
+            run_with_gl_context(*simulation_viewport_, [&] {
+                task(simulation_viewport_->gl_functions());
+            });
+        },
+        [this]() {
+            if (simulation_viewport_ != nullptr) {
+                simulation_viewport_->update();
+            }
+        },
+        [this](const CharacterMesh& character_mesh) {
+            if (simulation_viewport_ != nullptr) {
+                simulation_viewport_->reset_camera_to_character(character_mesh);
+            }
+        },
+    });
+    simulation_viewport_->set_initialize_callback(
+        [this](const std::filesystem::path& vertex_shader_path,
+               const std::filesystem::path& fragment_shader_path,
+               QOpenGLFunctions_4_5_Core& gl) {
+            return simulation_controller_->initialize_gpu(vertex_shader_path, fragment_shader_path, gl);
+        }
+    );
+    simulation_viewport_->set_scene_render_callback(
+        [this](const glm::mat4& mvp, QOpenGLFunctions_4_5_Core& gl) {
+            if (simulation_controller_ != nullptr && simulation_controller_->is_gpu_initialized()) {
+                simulation_controller_->draw(mvp, gl);
+            }
+        }
+    );
+
     // Browser panel callbacks
     browser_panel_->set_motion_selected_callback([this](const std::filesystem::path& motion_asset_path) {
         asset_loader_->load_character_mesh(motion_asset_path);
