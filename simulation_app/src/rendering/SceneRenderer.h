@@ -1,6 +1,7 @@
 #pragma once
 
-#include "rendering/GroundMesh.h"
+#include "rendering/BackgroundGradient.h"
+#include "rendering/GroundGridMesh.h"
 #include "rendering/SceneRenderShader.h"
 
 #include <filesystem>
@@ -30,6 +31,7 @@ public:
     void release(QOpenGLFunctions_4_5_Core& gl);
 
 private:
+    BackgroundGradient background_gradient_;
+    GroundGridMesh ground_grid_;
     SceneRenderShader viewer_shader_;
-    GroundMesh grid_gpu_state_;
 };

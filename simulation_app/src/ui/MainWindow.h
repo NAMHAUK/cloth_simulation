@@ -8,13 +8,13 @@
 #include <QMainWindow>
 
 #include "app/ProjectPaths.h"
-#include "io/MotionAsset.h"
+#include "asset/MotionAsset.h"
 
 class AssetLoader;
 class MotionConverter;
 class MotionBrowserPanel;
 class QObject;
-class AppController;
+class SimulationController;
 class SceneViewport;
 class QEvent;
 class QWidget;
@@ -42,5 +42,5 @@ private:
     QWidget* viewer_container_ = nullptr;
     MotionBrowserPanel* browser_panel_ = nullptr;
     SceneViewport* simulation_viewport_ = nullptr;
-    std::unique_ptr<AppController> simulation_controller_;
+    std::unique_ptr<SimulationController> simulation_controller_;
 };

@@ -1,27 +1,10 @@
 #include "rendering/SceneRenderShader.h"
 
-#include <fstream>
+#include "support/FileUtils.h"
+
 #include <iostream>
-#include <optional>
-#include <sstream>
-#include <string>
 
 #include <glm/gtc/type_ptr.hpp>
-
-namespace {
-std::optional<std::string> read_text_file(const std::filesystem::path& path)
-{
-    std::ifstream file(path, std::ios::binary);
-    if (!file) {
-        std::cerr << "Failed to open shader file: " << path << '\n';
-        return std::nullopt;
-    }
-
-    std::ostringstream contents;
-    contents << file.rdbuf();
-    return contents.str();
-}
-}
 
 bool SceneRenderShader::is_initialized() const
 {
@@ -77,6 +60,10 @@ bool SceneRenderShader::load(const std::filesystem::path& vertex_shader_path,
     animation_mode_location_ = gl.glGetUniformLocation(program_, "uUseAnimationBuffer");
     animation_frame_index_location_ = gl.glGetUniformLocation(program_, "uAnimationFrameIndex");
     animation_vertex_count_location_ = gl.glGetUniformLocation(program_, "uAnimationVertexCount");
+    normal_lighting_mode_location_ = gl.glGetUniformLocation(program_, "uUseNormalLighting");
+    light_direction_location_ = gl.glGetUniformLocation(program_, "uLightDirectionWorld");
+    ambient_strength_location_ = gl.glGetUniformLocation(program_, "uAmbientStrength");
+    diffuse_strength_location_ = gl.glGetUniformLocation(program_, "uDiffuseStrength");
     return true;
 }
 
@@ -143,6 +130,40 @@ void SceneRenderShader::set_vertex_color_mode(QOpenGLFunctions_4_5_Core& gl) con
     gl.glProgramUniform1i(program_, solid_mode_location_, 0);
 }
 
+void SceneRenderShader::set_lighting(const glm::vec3& light_direction_world,
+                                     float ambient_strength,
+                                     float diffuse_strength,
+                                     QOpenGLFunctions_4_5_Core& gl) const
+{
+    if (!is_initialized()) {
+        return;
+    }
+    if (light_direction_location_ >= 0) {
+        gl.glProgramUniform3f(
+            program_,
+            light_direction_location_,
+            light_direction_world.x,
+            light_direction_world.y,
+            light_direction_world.z
+        );
+    }
+    if (ambient_strength_location_ >= 0) {
+        gl.glProgramUniform1f(program_, ambient_strength_location_, ambient_strength);
+    }
+    if (diffuse_strength_location_ >= 0) {
+        gl.glProgramUniform1f(program_, diffuse_strength_location_, diffuse_strength);
+    }
+}
+
+void SceneRenderShader::set_normal_lighting_enabled(bool enabled, QOpenGLFunctions_4_5_Core& gl) const
+{
+    if (!is_initialized() || normal_lighting_mode_location_ < 0) {
+        return;
+    }
+
+    gl.glProgramUniform1i(program_, normal_lighting_mode_location_, enabled ? 1 : 0);
+}
+
 void SceneRenderShader::release(QOpenGLFunctions_4_5_Core& gl)
 {
     if (program_ != 0) {
@@ -156,6 +177,10 @@ void SceneRenderShader::release(QOpenGLFunctions_4_5_Core& gl)
     animation_mode_location_ = -1;
     animation_frame_index_location_ = -1;
     animation_vertex_count_location_ = -1;
+    normal_lighting_mode_location_ = -1;
+    light_direction_location_ = -1;
+    ambient_strength_location_ = -1;
+    diffuse_strength_location_ = -1;
 }
 
 GLuint SceneRenderShader::compile_shader(GLenum type, const char* source, QOpenGLFunctions_4_5_Core& gl)

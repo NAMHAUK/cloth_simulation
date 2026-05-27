@@ -1,25 +1,25 @@
-#include "rendering/GroundMesh.h"
+#include "rendering/GroundGridMesh.h"
 
 #include <cstddef>
 #include <vector>
 
-bool GroundMesh::initialized() const
+bool GroundGridMesh::initialized() const
 {
     return vao_ != 0 && vertex_buffer_ != 0 && vertex_count_ > 0;
 }
 
-const glm::vec3& GroundMesh::color() const
+const glm::vec3& GroundGridMesh::color() const
 {
     return color_;
 }
 
-void GroundMesh::upload(QOpenGLFunctions_4_5_Core& gl)
+void GroundGridMesh::upload(QOpenGLFunctions_4_5_Core& gl)
 {
     if (initialized()) {
         return;
     }
 
-    constexpr int half_line_count = 10;
+    constexpr int half_line_count = 40;
     constexpr float spacing = 0.5f;
     constexpr float half_size = static_cast<float>(half_line_count) * spacing;
 
@@ -45,7 +45,6 @@ void GroundMesh::upload(QOpenGLFunctions_4_5_Core& gl)
 
     gl.glCreateVertexArrays(1, &vao_);
     gl.glCreateBuffers(1, &vertex_buffer_);
-
     vertex_count_ = static_cast<GLsizei>(vertices.size() / 3);
 
     gl.glNamedBufferData(
@@ -78,7 +77,7 @@ void GroundMesh::upload(QOpenGLFunctions_4_5_Core& gl)
     gl.glVertexArrayAttribBinding(vao_, position_attribute_location, position_binding_index);
 }
 
-void GroundMesh::draw(QOpenGLFunctions_4_5_Core& gl) const
+void GroundGridMesh::draw(QOpenGLFunctions_4_5_Core& gl) const
 {
     if (!initialized()) {
         return;
@@ -88,7 +87,7 @@ void GroundMesh::draw(QOpenGLFunctions_4_5_Core& gl) const
     gl.glDrawArrays(GL_LINES, 0, vertex_count_);
 }
 
-void GroundMesh::release(QOpenGLFunctions_4_5_Core& gl)
+void GroundGridMesh::release(QOpenGLFunctions_4_5_Core& gl)
 {
     if (vertex_buffer_ != 0) {
         gl.glDeleteBuffers(1, &vertex_buffer_);

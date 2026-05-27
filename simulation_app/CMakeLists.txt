@@ -13,42 +13,56 @@ get_filename_component(REPO_ROOT "${CMAKE_CURRENT_SOURCE_DIR}/.." ABSOLUTE)
 
 add_executable(simulation_app
     src/app/main.cpp
-    src/app/AssetLoader.cpp
-    src/app/AssetLoader.h
-    src/app/MotionConverter.cpp
-    src/app/MotionConverter.h
+    src/asset/AssetLoader.cpp
+    src/asset/AssetLoader.h
+    src/asset/MotionConverter.cpp
+    src/asset/MotionConverter.h
     src/app/ProjectPaths.h
-    src/app/AppController.cpp
-    src/app/AppController.h
-    src/io/GarmentAsset.cpp
-    src/io/GarmentAsset.h
-    src/io/MotionAsset.cpp
-    src/io/MotionAsset.h
+    src/simulation/SimulationController.cpp
+    src/simulation/SimulationController.h
+    src/simulation/SimulationSettings.h
+    src/asset/GarmentAsset.cpp
+    src/asset/GarmentAsset.h
+    src/asset/MeshTopology.cpp
+    src/asset/MeshTopology.h
+    src/asset/MotionAsset.cpp
+    src/asset/MotionAsset.h
     src/gpu/body/CharacterGpuResources.cpp
     src/gpu/body/CharacterGpuResources.h
     src/gpu/cloth/ClothGpuResources.cpp
     src/gpu/cloth/ClothGpuResources.h
-    src/rendering/GroundMesh.cpp
-    src/rendering/GroundMesh.h
+    src/rendering/BackgroundGradient.cpp
+    src/rendering/BackgroundGradient.h
+    src/rendering/GroundGridMesh.cpp
+    src/rendering/GroundGridMesh.h
     src/gpu/scene/SceneGpuResources.cpp
     src/gpu/scene/SceneGpuResources.h
+    src/gpu/scene/NormalUpdater.cpp
+    src/gpu/scene/NormalUpdater.h
+    src/gpu/scene/MeshBufferResources.h
     src/rendering/SceneRenderer.cpp
     src/rendering/SceneRenderer.h
     src/ui/SceneViewport.cpp
     src/ui/SceneViewport.h
     src/rendering/SceneRenderShader.cpp
     src/rendering/SceneRenderShader.h
-    src/simulation/SimulationEngine.cpp
-    src/simulation/SimulationEngine.h
+    src/simulation/ClothSimulationPipeline.cpp
+    src/simulation/ClothSimulationPipeline.h
     src/scene/SceneState.cpp
     src/scene/SceneState.h
     src/support/QtHelpers.h
+    src/support/FileUtils.cpp
+    src/support/FileUtils.h
     src/ui/MainWindow.cpp
     src/ui/MainWindow.h
     src/ui/MotionBrowserPanel.cpp
     src/ui/MotionBrowserPanel.h
     shaders/viewer.vert
     shaders/viewer.frag
+    shaders/background.vert
+    shaders/background.frag
+    shaders/triangle_normal.comp
+    shaders/vertex_normal.comp
 )
 
 target_include_directories(simulation_app PRIVATE

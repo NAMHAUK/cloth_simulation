@@ -4,11 +4,11 @@
 
 #include <glm/vec3.hpp>
 
-class GroundMesh final {
+class GroundGridMesh final {
 public:
-    GroundMesh() = default;
-    GroundMesh(const GroundMesh&) = delete;
-    GroundMesh& operator=(const GroundMesh&) = delete;
+    GroundGridMesh() = default;
+    GroundGridMesh(const GroundGridMesh&) = delete;
+    GroundGridMesh& operator=(const GroundGridMesh&) = delete;
 
     bool initialized() const;
     const glm::vec3& color() const;
@@ -18,7 +18,7 @@ public:
     void release(QOpenGLFunctions_4_5_Core& gl);
 
 private:
-    glm::vec3 color_{0.25f, 0.29f, 0.34f};
+    glm::vec3 color_{0.62f, 0.64f, 0.68f};
     GLuint vao_ = 0;
     GLuint vertex_buffer_ = 0;
     GLsizei vertex_count_ = 0;
