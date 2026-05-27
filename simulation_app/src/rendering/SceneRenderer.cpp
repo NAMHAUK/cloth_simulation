@@ -51,6 +51,7 @@ void SceneRenderer::draw(const SceneState& scene,
         gl.glDepthMask(GL_FALSE);
         gl.glDisable(GL_DEPTH_TEST);
         background_gradient_.draw(gl);
+
         gl.glEnable(GL_DEPTH_TEST);
         gl.glDepthMask(GL_TRUE);
     }

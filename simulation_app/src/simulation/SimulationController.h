@@ -9,10 +9,10 @@
 
 #include <filesystem>
 #include <functional>
+#include <cstdint>
 
 #include <glm/mat4x4.hpp>
 
-#include <QElapsedTimer>
 #include <QTimer>
 
 class QOpenGLFunctions_4_5_Core;
@@ -69,7 +69,7 @@ private:
     // Rendering orchestration //
     SceneRenderer renderer_;
 
-    QElapsedTimer playback_timer_;
+    std::uint64_t simulation_step_count_ = 0;
     QTimer frame_timer_;
 
     ViewportCallbacks viewport_callbacks_;

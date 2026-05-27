@@ -1,5 +1,6 @@
 ﻿#include "asset/MotionAsset.h"
 
+#include "simulation/SimulationSettings.h"
 #include "support/QtHelpers.h"
 
 #include <algorithm>
@@ -151,7 +152,7 @@ ConverterCommand make_converter_command(
         "--input", to_q_string(amass_motion_path),
         "--model-dir", to_q_string(project_paths.smpl_model_dir),
         "--output", to_q_string(motion_asset_path),
-        "--target-fps", "30",
+        "--target-fps", QString::number(simulation_settings::character_motion_fps),
         "--batch-size", "64",
     };
     command.working_directory = to_q_string(project_paths.root);

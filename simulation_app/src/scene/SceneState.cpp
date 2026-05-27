@@ -55,22 +55,18 @@ std::uint64_t SceneState::garment_revision() const
 
 // Playback // 
 
-bool SceneState::update_playback_frame(double playback_seconds)
+void SceneState::update_character_frame(std::uint64_t simulation_step_count,
+                                        std::uint32_t character_frame_stride)
 {
     if (!character_loaded_ || !is_playing_ || character_mesh_.frame_count == 0) {
-        return false;
+        return;
     }
 
     const std::uint32_t next_frame = static_cast<std::uint32_t>(
-        static_cast<std::uint64_t>(playback_seconds * character_mesh_.fps) % character_mesh_.frame_count
+        (simulation_step_count / character_frame_stride) % character_mesh_.frame_count
     );
 
-    if (next_frame == current_character_frame_) {
-        return false;
-    }
-
     current_character_frame_ = next_frame;
-    return true;
 }
 
 void SceneState::set_playing(bool playing)

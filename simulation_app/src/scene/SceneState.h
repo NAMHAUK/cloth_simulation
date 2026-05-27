@@ -30,7 +30,8 @@ public:
     std::uint64_t garment_revision() const;
 
     // Playback
-    bool update_playback_frame(double playback_seconds);
+    void update_character_frame(std::uint64_t simulation_step_count,
+                                std::uint32_t character_frame_stride);
     void set_playing(bool playing);
     std::uint32_t current_character_frame() const;
     bool is_playing() const;

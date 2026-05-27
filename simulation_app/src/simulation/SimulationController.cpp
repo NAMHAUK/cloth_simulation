@@ -1,13 +1,11 @@
 #include "simulation/SimulationController.h"
 
+#include "simulation/SimulationSettings.h"
+
 #include <iostream>
 #include <utility>
 
 #include <QObject>
-
-namespace {
-constexpr int playback_tick_ms = 16;
-}
 
 SimulationController::SimulationController()
 {
@@ -56,8 +54,7 @@ bool SimulationController::initialize_gpu(const std::filesystem::path& vertex_sh
 
     gpu_released_ = false;
     if (!frame_timer_.isActive()) {
-        playback_timer_.restart();
-        frame_timer_.start(playback_tick_ms);
+        frame_timer_.start(simulation_settings::simulation_tick_ms);
     }
     return true;
 }
@@ -70,8 +67,7 @@ void SimulationController::draw(const glm::mat4& mvp, QOpenGLFunctions_4_5_Core&
 // frame마다 실행되는 함수
 void SimulationController::tick_frame()
 {
-    const double playback_seconds = static_cast<double>(playback_timer_.elapsed()) / 1000.0;
-    scene_.update_playback_frame(playback_seconds);
+    scene_.update_character_frame(simulation_step_count_, simulation_settings::character_frame_stride);
 
     if (!is_viewport_ready() || !is_gpu_initialized()) {
         return;
@@ -82,6 +78,7 @@ void SimulationController::tick_frame()
         sync_gpu(gl);
     });
 
+    ++simulation_step_count_;
     viewport_callbacks_.request_redraw();
 }
 
@@ -121,7 +118,7 @@ void SimulationController::set_character_mesh(CharacterMesh mesh)
         gpu_state_.set_character_mesh(scene_, gl);
     });
 
-    playback_timer_.restart();
+    simulation_step_count_ = 0;
     if (scene_.has_character()) {
         viewport_callbacks_.reset_camera_to_character(scene_.character_mesh());
     }

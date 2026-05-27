@@ -20,6 +20,7 @@ add_executable(simulation_app
     src/app/ProjectPaths.h
     src/simulation/SimulationController.cpp
     src/simulation/SimulationController.h
+    src/simulation/SimulationSettings.h
     src/asset/GarmentAsset.cpp
     src/asset/GarmentAsset.h
     src/asset/MotionAsset.cpp
