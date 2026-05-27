@@ -1,11 +1,10 @@
 ﻿#include "ui/SceneViewport.h"
 
-#include "app/AppController.h"
-
 #include <algorithm>
 #include <cmath>
 #include <filesystem>
 #include <iostream>
+#include <utility>
 
 #include <QMouseEvent>
 #include <QWheelEvent>
@@ -106,9 +105,14 @@ SceneViewport::SceneViewport(QWidget* parent) : QOpenGLWidget(parent)
 SceneViewport::~SceneViewport() = default;
 
 // Accessors //
-void SceneViewport::set_controller(AppController* controller)
+void SceneViewport::set_initialize_callback(InitializeCallback callback)
 {
-    controller_ = controller;
+    initialize_callback_ = std::move(callback);
+}
+
+void SceneViewport::set_scene_render_callback(SceneRenderCallback callback)
+{
+    scene_render_callback_ = std::move(callback);
 }
 
 bool SceneViewport::is_gl_initialized() const
@@ -130,12 +134,12 @@ void SceneViewport::initializeGL()
     std::cout << "OpenGL version: " << glGetString(GL_VERSION) << '\n';
     std::cout << "Renderer: " << glGetString(GL_RENDERER) << '\n';
 
-    if (controller_ == nullptr) {
-        std::cerr << "Simulation controller is not set before OpenGL initialization.\n";
+    if (!initialize_callback_) {
+        std::cerr << "Scene initialize callback is not set before OpenGL initialization.\n";
         return;
     }
 
-    if (!controller_->initialize_gpu(shader_path("viewer.vert"), shader_path("viewer.frag"), gl_functions())) {
+    if (!initialize_callback_(shader_path("viewer.vert"), shader_path("viewer.frag"), gl_functions())) {
         return;
     }
 
@@ -154,13 +158,13 @@ void SceneViewport::paintGL()
     glClearColor(background_color.r, background_color.g, background_color.b, 1.0f);
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
-    if (controller_ == nullptr || !controller_->is_gpu_initialized()) {
+    if (!scene_render_callback_) {
         return;
     }
 
     // MVP 계산 -> shader uMVP로 전달
     const glm::mat4 mvp = make_mvp(camera_, width(), height());
-    controller_->draw(mvp, gl_functions());
+    scene_render_callback_(mvp, gl_functions());
 }
 
 // Camera //

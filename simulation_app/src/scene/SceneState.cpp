@@ -1,5 +1,8 @@
 #include "scene/SceneState.h"
 
+#include "asset/MeshTopology.h"
+
+#include <iostream>
 #include <utility>
 
 // Character // 
@@ -32,6 +35,12 @@ std::uint64_t SceneState::character_revision() const
 
 GarmentId SceneState::add_garment_mesh(GarmentMesh mesh)
 {
+    const std::uint32_t vertex_count = static_cast<std::uint32_t>(mesh.vertices.size() / 3u);
+    if (!mesh.adjacency.is_valid(vertex_count) &&
+        !build_vertex_triangle_adjacency(vertex_count, mesh.indices, mesh.adjacency)) {
+        std::cerr << "Cannot add garment mesh with invalid topology.\n";
+    }
+
     const GarmentId garment_id = next_garment_id_++;
     ++garment_revision_;
     garments_.push_back({
@@ -43,7 +52,7 @@ GarmentId SceneState::add_garment_mesh(GarmentMesh mesh)
     return garment_id;
 }
 
-const std::vector<GarmentSceneObject>& SceneState::garments() const
+const std::vector<GarmentObject>& SceneState::garments() const
 {
     return garments_;
 }
@@ -55,22 +64,18 @@ std::uint64_t SceneState::garment_revision() const
 
 // Playback // 
 
-bool SceneState::update_playback_frame(double playback_seconds)
+void SceneState::update_character_frame(std::uint64_t simulation_step_count,
+                                        std::uint32_t character_frame_stride)
 {
     if (!character_loaded_ || !is_playing_ || character_mesh_.frame_count == 0) {
-        return false;
+        return;
     }
 
     const std::uint32_t next_frame = static_cast<std::uint32_t>(
-        static_cast<std::uint64_t>(playback_seconds * character_mesh_.fps) % character_mesh_.frame_count
+        (simulation_step_count / character_frame_stride) % character_mesh_.frame_count
     );
 
-    if (next_frame == current_character_frame_) {
-        return false;
-    }
-
     current_character_frame_ = next_frame;
-    return true;
 }
 
 void SceneState::set_playing(bool playing)

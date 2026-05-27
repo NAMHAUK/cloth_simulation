@@ -17,7 +17,7 @@ inline ProjectPaths make_project_paths(const std::filesystem::path& project_root
     return {
         project_root,
         project_root / "envs" / "cloth-sim" / "python.exe",
-        project_root / "tools" / "convert_amass_to_cache.py",
+        project_root / "simulation_app" / "tools" / "convert_amass_to_cache.py",
         project_root / "data" / "smpl" / "models",
         project_root / "data" / "cache",
         project_root / "data" / "amass",

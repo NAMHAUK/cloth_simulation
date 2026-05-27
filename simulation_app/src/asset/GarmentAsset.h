@@ -1,5 +1,7 @@
 #pragma once
 
+#include "asset/MeshTopology.h"
+
 #include <cstdint>
 #include <filesystem>
 #include <vector>
@@ -9,6 +11,7 @@
 struct GarmentMesh {
     std::vector<float> vertices;
     std::vector<std::uint32_t> indices;
+    VertexTriangleAdjacency adjacency;
     glm::vec3 color{0.95f, 0.42f, 0.18f};
     glm::vec3 bounds_center{};
     float bounds_radius = 1.0f;
