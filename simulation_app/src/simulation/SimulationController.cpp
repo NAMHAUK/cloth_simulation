@@ -46,10 +46,7 @@ bool SimulationController::initialize_gpu(const std::filesystem::path& vertex_sh
         return false;
     }
 
-    for (const GarmentObject& garment : scene_.garments()) {
-        gpu_state_.add_garment_gpu_state(garment.id);
-        gpu_state_.set_garment_mesh(garment, gl);
-    }
+    gpu_state_.set_garment_meshes(scene_, gl);
     gpu_state_.sync(scene_, gl);
 
     gpu_released_ = false;
@@ -73,7 +70,7 @@ void SimulationController::tick_frame()
         return;
     }
 
-    viewport_callbacks_.with_gl_context([this](QOpenGLFunctions_4_5_Core& gl) {
+    viewport_callbacks_.run_with_gl_context([this](QOpenGLFunctions_4_5_Core& gl) {
         simulation_step(gl);
         sync_gpu(gl);
     });
@@ -88,7 +85,7 @@ void SimulationController::release_gpu()
         return;
     }
 
-    viewport_callbacks_.with_gl_context([this](QOpenGLFunctions_4_5_Core& gl) {
+    viewport_callbacks_.run_with_gl_context([this](QOpenGLFunctions_4_5_Core& gl) {
         renderer_.release(gl);
         cloth_pipeline_.release(gl);
         gpu_state_.release(gl);
@@ -113,7 +110,7 @@ void SimulationController::set_character_mesh(CharacterMesh mesh)
         return;
     }
 
-    viewport_callbacks_.with_gl_context([this, &mesh](QOpenGLFunctions_4_5_Core& gl) {
+    viewport_callbacks_.run_with_gl_context([this, &mesh](QOpenGLFunctions_4_5_Core& gl) {
         scene_.set_character_mesh(std::move(mesh));
         gpu_state_.set_character_mesh(scene_, gl);
     });
@@ -133,15 +130,9 @@ void SimulationController::add_garment_mesh(GarmentMesh mesh)
         return;
     }
 
-    viewport_callbacks_.with_gl_context([this, &mesh](QOpenGLFunctions_4_5_Core& gl) {
-        const GarmentId garment_id = scene_.add_garment_mesh(std::move(mesh));
-        gpu_state_.add_garment_gpu_state(garment_id);
-        for (const GarmentObject& garment : scene_.garments()) {
-            if (garment.id == garment_id) {
-                gpu_state_.set_garment_mesh(garment, gl);
-                break;
-            }
-        }
+    viewport_callbacks_.run_with_gl_context([this, &mesh](QOpenGLFunctions_4_5_Core& gl) {
+        scene_.add_garment_mesh(std::move(mesh));
+        gpu_state_.set_garment_meshes(scene_, gl);
     });
 
     viewport_callbacks_.request_redraw();
@@ -155,7 +146,7 @@ void SimulationController::set_playing(bool playing)
 bool SimulationController::is_viewport_ready() const
 {
     return viewport_callbacks_.is_ready &&
-           viewport_callbacks_.with_gl_context &&
+           viewport_callbacks_.run_with_gl_context &&
            viewport_callbacks_.request_redraw &&
            viewport_callbacks_.reset_camera_to_character &&
            viewport_callbacks_.is_ready();

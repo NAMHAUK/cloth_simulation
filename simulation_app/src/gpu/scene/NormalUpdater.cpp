@@ -76,100 +76,47 @@ void NormalUpdater::release(QOpenGLFunctions_4_5_Core& gl)
     vertex_count_location_ = -1;
 }
 
-void NormalUpdater::update_normals(const NormalUpdateInputs& inputs, QOpenGLFunctions_4_5_Core& gl) const
+void NormalUpdater::update_normals(const MeshTopologyResources& topology,
+                                   const MeshNormalResources& normals,
+                                   QOpenGLFunctions_4_5_Core& gl) const
 {
     if (!is_initialized() ||
-        inputs.position_buffer == 0 ||
-        inputs.index_buffer == 0 ||
-        inputs.adjacency_offset_buffer == 0 ||
-        inputs.adjacency_triangle_buffer == 0 ||
-        inputs.triangle_normal_buffer == 0 ||
-        inputs.vertex_normal_buffer == 0 ||
-        inputs.vertex_count == 0 ||
-        inputs.triangle_count == 0) {
+        topology.position_buffer == 0 ||
+        topology.index_buffer == 0 ||
+        topology.adjacency_offset_buffer == 0 ||
+        topology.adjacency_triangle_buffer == 0 ||
+        normals.triangle_normal_buffer == 0 ||
+        normals.vertex_normal_buffer == 0 ||
+        topology.vertex_count == 0 ||
+        topology.triangle_count == 0) {
         return;
     }
 
     // triangle normal 계산
     gl.glUseProgram(triangle_program_);
-    gl.glBindBufferBase(GL_SHADER_STORAGE_BUFFER, positions_binding, inputs.position_buffer);
-    gl.glBindBufferBase(GL_SHADER_STORAGE_BUFFER, indices_binding, inputs.index_buffer);
-    gl.glBindBufferBase(GL_SHADER_STORAGE_BUFFER, triangle_normals_binding, inputs.triangle_normal_buffer);
+    gl.glBindBufferBase(GL_SHADER_STORAGE_BUFFER, positions_binding, topology.position_buffer);
+    gl.glBindBufferBase(GL_SHADER_STORAGE_BUFFER, indices_binding, topology.index_buffer);
+    gl.glBindBufferBase(GL_SHADER_STORAGE_BUFFER, triangle_normals_binding, normals.triangle_normal_buffer);
     if (triangle_count_location_ >= 0) {
-        gl.glProgramUniform1ui(triangle_program_, triangle_count_location_, inputs.triangle_count);
+        gl.glProgramUniform1ui(triangle_program_, triangle_count_location_, topology.triangle_count);
     }
     if (position_component_offset_location_ >= 0) {
-        gl.glProgramUniform1ui(triangle_program_, position_component_offset_location_, inputs.position_component_offset);
+        gl.glProgramUniform1ui(triangle_program_, position_component_offset_location_, topology.position_component_offset);
     }
-    gl.glDispatchCompute(normal_update_group_count(inputs.triangle_count), 1, 1);
+    gl.glDispatchCompute(normal_update_group_count(topology.triangle_count), 1, 1);
     gl.glMemoryBarrier(GL_SHADER_STORAGE_BARRIER_BIT);
 
     // vertex normal 계산
     gl.glUseProgram(vertex_program_);
-    gl.glBindBufferBase(GL_SHADER_STORAGE_BUFFER, vertex_pass_triangle_normals_binding, inputs.triangle_normal_buffer);
-    gl.glBindBufferBase(GL_SHADER_STORAGE_BUFFER, adjacency_offsets_binding, inputs.adjacency_offset_buffer);
-    gl.glBindBufferBase(GL_SHADER_STORAGE_BUFFER, adjacency_triangles_binding, inputs.adjacency_triangle_buffer);
-    gl.glBindBufferBase(GL_SHADER_STORAGE_BUFFER, vertex_normals_binding, inputs.vertex_normal_buffer);
+    gl.glBindBufferBase(GL_SHADER_STORAGE_BUFFER, vertex_pass_triangle_normals_binding, normals.triangle_normal_buffer);
+    gl.glBindBufferBase(GL_SHADER_STORAGE_BUFFER, adjacency_offsets_binding, topology.adjacency_offset_buffer);
+    gl.glBindBufferBase(GL_SHADER_STORAGE_BUFFER, adjacency_triangles_binding, topology.adjacency_triangle_buffer);
+    gl.glBindBufferBase(GL_SHADER_STORAGE_BUFFER, vertex_normals_binding, normals.vertex_normal_buffer);
     if (vertex_count_location_ >= 0) {
-        gl.glProgramUniform1ui(vertex_program_, vertex_count_location_, inputs.vertex_count);
+        gl.glProgramUniform1ui(vertex_program_, vertex_count_location_, topology.vertex_count);
     }
-    gl.glDispatchCompute(normal_update_group_count(inputs.vertex_count), 1, 1);
+    gl.glDispatchCompute(normal_update_group_count(topology.vertex_count), 1, 1);
     gl.glMemoryBarrier(GL_SHADER_STORAGE_BARRIER_BIT);
-}
-
-
-// adjacency data //
-bool VertexTriangleAdjacency::is_valid(std::uint32_t vertex_count) const
-{
-    return triangle_count > 0 &&
-           offsets.size() == static_cast<std::size_t>(vertex_count) + 1u &&
-           !triangles.empty();
-}
-
-// 각 vertex가 어떤 triangle에 속해 있는지 triangle index 목록 생성
-bool build_vertex_triangle_adjacency(std::uint32_t vertex_count,
-                                     const std::vector<std::uint32_t>& triangle_indices,
-                                     VertexTriangleAdjacency& adjacency)
-{
-    adjacency = {};
-
-    if (vertex_count == 0 || triangle_indices.empty() || triangle_indices.size() % 3u != 0u) {
-        return false;
-    }
-
-    const std::uint32_t triangle_count = static_cast<std::uint32_t>(triangle_indices.size() / 3u);
-    adjacency.offsets.resize(static_cast<std::size_t>(vertex_count) + 1u, 0);
-
-    // vertex별 연결된 triangle 개수 계산
-    for (std::uint32_t index : triangle_indices) {
-        if (index >= vertex_count) {
-            return false;
-        }
-        ++adjacency.offsets[static_cast<std::size_t>(index) + 1u];
-    }
-
-    // vertex별 triangle 수를 prefix sum으로 변환
-    for (std::uint32_t vertex_index = 0; vertex_index < vertex_count; ++vertex_index) {
-        const std::size_t offset_index = static_cast<std::size_t>(vertex_index);
-        const std::size_t next_offset_index = offset_index + 1u;
-        adjacency.offsets[next_offset_index] += adjacency.offsets[offset_index];
-    }
-
-    adjacency.triangles.resize(adjacency.offsets.back(), 0);
-    std::vector<std::uint32_t> write_offsets = adjacency.offsets;
-
-    // vertex별 triangle index 목록 작성
-    for (std::uint32_t triangle_index = 0; triangle_index < triangle_count; ++triangle_index) {
-        const std::size_t index_base = static_cast<std::size_t>(triangle_index) * 3u;
-        for (std::uint32_t corner = 0; corner < 3u; ++corner) {
-            const std::uint32_t vertex_index = triangle_indices[index_base + corner];
-            const std::uint32_t write_index = write_offsets[vertex_index]++;
-            adjacency.triangles[write_index] = triangle_index;
-        }
-    }
-
-    adjacency.triangle_count = triangle_count;
-    return adjacency.is_valid(vertex_count);
 }
 
 // shader loading //

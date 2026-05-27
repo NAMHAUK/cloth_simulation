@@ -1,6 +1,7 @@
 #include "gpu/body/CharacterGpuResources.h"
 
-#include "gpu/scene/NormalUpdater.h"
+#include "asset/MeshTopology.h"
+#include "gpu/scene/MeshBufferResources.h"
 
 #include <cstddef>
 
@@ -138,19 +139,25 @@ void CharacterGpuResources::draw(QOpenGLFunctions_4_5_Core& gl) const
     gl.glDrawElements(GL_TRIANGLES, index_count_, GL_UNSIGNED_INT, nullptr);
 }
 
-NormalUpdateInputs CharacterGpuResources::normal_update_inputs() const
+MeshTopologyResources CharacterGpuResources::mesh_topology_resources() const
 {
-    NormalUpdateInputs inputs;
-    inputs.position_buffer = all_frame_vertex_buffer_;
-    inputs.index_buffer = index_buffer_;
-    inputs.adjacency_offset_buffer = adjacency_offset_buffer_;
-    inputs.adjacency_triangle_buffer = adjacency_triangle_buffer_;
-    inputs.triangle_normal_buffer = triangle_normal_buffer_;
-    inputs.vertex_normal_buffer = vertex_normal_buffer_;
-    inputs.position_component_offset = current_frame_index_ * vertex_count_ * 3u;
-    inputs.vertex_count = vertex_count_;
-    inputs.triangle_count = triangle_count_;
-    return inputs;
+    MeshTopologyResources topology;
+    topology.position_buffer = all_frame_vertex_buffer_;
+    topology.index_buffer = index_buffer_;
+    topology.adjacency_offset_buffer = adjacency_offset_buffer_;
+    topology.adjacency_triangle_buffer = adjacency_triangle_buffer_;
+    topology.position_component_offset = current_frame_index_ * vertex_count_ * 3u;
+    topology.vertex_count = vertex_count_;
+    topology.triangle_count = triangle_count_;
+    return topology;
+}
+
+MeshNormalResources CharacterGpuResources::mesh_normal_resources() const
+{
+    MeshNormalResources normals;
+    normals.triangle_normal_buffer = triangle_normal_buffer_;
+    normals.vertex_normal_buffer = vertex_normal_buffer_;
+    return normals;
 }
 
 void CharacterGpuResources::release(QOpenGLFunctions_4_5_Core& gl)

@@ -6,7 +6,8 @@
 
 #include <QOpenGLFunctions_4_5_Core>
 
-struct NormalUpdateInputs;
+struct MeshNormalResources;
+struct MeshTopologyResources;
 
 class CharacterGpuResources final {
 public:
@@ -28,8 +29,9 @@ public:
     void bind_vertex_normals(GLuint binding_index, QOpenGLFunctions_4_5_Core& gl) const;
     void draw(QOpenGLFunctions_4_5_Core& gl) const;
 
-    // Normal update inputs
-    NormalUpdateInputs normal_update_inputs() const;
+    // Mesh buffer resources
+    MeshTopologyResources mesh_topology_resources() const;
+    MeshNormalResources mesh_normal_resources() const;
 
     // GPU resource lifetime
     void release(QOpenGLFunctions_4_5_Core& gl);

@@ -23,7 +23,7 @@ public:
 
     struct ViewportCallbacks final {
         std::function<bool()> is_ready;
-        std::function<void(GlContextTask)> with_gl_context;
+        std::function<void(GlContextTask)> run_with_gl_context;
         std::function<void()> request_redraw;
         std::function<void(const CharacterMesh&)> reset_camera_to_character;
     };

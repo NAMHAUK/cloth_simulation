@@ -23,6 +23,8 @@ add_executable(simulation_app
     src/simulation/SimulationSettings.h
     src/asset/GarmentAsset.cpp
     src/asset/GarmentAsset.h
+    src/asset/MeshTopology.cpp
+    src/asset/MeshTopology.h
     src/asset/MotionAsset.cpp
     src/asset/MotionAsset.h
     src/gpu/body/CharacterGpuResources.cpp
@@ -37,6 +39,7 @@ add_executable(simulation_app
     src/gpu/scene/SceneGpuResources.h
     src/gpu/scene/NormalUpdater.cpp
     src/gpu/scene/NormalUpdater.h
+    src/gpu/scene/MeshBufferResources.h
     src/rendering/SceneRenderer.cpp
     src/rendering/SceneRenderer.h
     src/ui/SceneViewport.cpp

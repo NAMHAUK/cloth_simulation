@@ -164,6 +164,11 @@ bool load_garment_mesh(const std::filesystem::path& obj_path, GarmentMesh& garme
         return false;
     }
 
+    if (!build_vertex_triangle_adjacency(vertex_count, next_mesh.indices, next_mesh.adjacency)) {
+        std::cerr << "Invalid garment topology: " << obj_path << '\n';
+        return false;
+    }
+
     // garment 경계값 계산
     assign_bounds(next_mesh, min_bounds, max_bounds);
     if (next_mesh.bounds_radius <= 0.0f) {
