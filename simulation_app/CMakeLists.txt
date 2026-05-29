@@ -35,19 +35,19 @@ add_executable(simulation_app
     src/rendering/BackgroundGradient.h
     src/rendering/GroundGridMesh.cpp
     src/rendering/GroundGridMesh.h
-    src/gpu/scene/SceneGpuResources.cpp
-    src/gpu/scene/SceneGpuResources.h
+    src/gpu/scene/SceneGpuState.cpp
+    src/gpu/scene/SceneGpuState.h
     src/gpu/scene/NormalUpdater.cpp
     src/gpu/scene/NormalUpdater.h
     src/gpu/scene/MeshBufferResources.h
-    src/rendering/SceneRenderer.cpp
-    src/rendering/SceneRenderer.h
+    src/rendering/RenderPipeline.cpp
+    src/rendering/RenderPipeline.h
     src/ui/SceneViewport.cpp
     src/ui/SceneViewport.h
     src/rendering/SceneRenderShader.cpp
     src/rendering/SceneRenderShader.h
-    src/simulation/ClothSimulationPipeline.cpp
-    src/simulation/ClothSimulationPipeline.h
+    src/simulation/SimulationPipeline.cpp
+    src/simulation/SimulationPipeline.h
     src/scene/SceneState.cpp
     src/scene/SceneState.h
     src/support/QtHelpers.h

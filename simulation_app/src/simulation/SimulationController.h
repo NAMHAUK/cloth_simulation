@@ -2,10 +2,10 @@
 
 #include "asset/GarmentAsset.h"
 #include "asset/MotionAsset.h"
-#include "gpu/scene/SceneGpuResources.h"
-#include "rendering/SceneRenderer.h"
+#include "gpu/scene/SceneGpuState.h"
+#include "rendering/RenderPipeline.h"
 #include "scene/SceneState.h"
-#include "simulation/ClothSimulationPipeline.h"
+#include "simulation/SimulationPipeline.h"
 
 #include <filesystem>
 #include <functional>
@@ -24,7 +24,7 @@ public:
     struct ViewportCallbacks final {
         std::function<bool()> is_ready;
         std::function<void(GlContextTask)> run_with_gl_context;
-        std::function<void()> request_redraw;
+        std::function<void()> request_update;
         std::function<void(const CharacterMesh&)> reset_camera_to_character;
     };
 
@@ -54,20 +54,18 @@ public:
 private:
     void tick_frame();
     bool is_viewport_ready() const;
-    bool simulation_step(QOpenGLFunctions_4_5_Core& gl);
-    void sync_gpu(QOpenGLFunctions_4_5_Core& gl);
 
     // CPU-side scene state //
     SceneState scene_;
 
     // GPU-side dynamic simulation state //
-    SceneGpuResources gpu_state_;
+    SceneGpuState gpu_state_;
 
-    // Future cloth solver / collision / constraint pass orchestration //
-    ClothSimulationPipeline cloth_pipeline_;
+    // Simulation pass orchestration //
+    SimulationPipeline simulation_pipeline_;
 
     // Rendering orchestration //
-    SceneRenderer renderer_;
+    RenderPipeline render_pipeline_;
 
     std::uint64_t simulation_step_count_ = 0;
     QTimer frame_timer_;

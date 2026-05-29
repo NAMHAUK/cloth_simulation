@@ -1,6 +1,6 @@
-#include "rendering/SceneRenderer.h"
+#include "rendering/RenderPipeline.h"
 
-#include "gpu/scene/SceneGpuResources.h"
+#include "gpu/scene/SceneGpuState.h"
 #include "scene/SceneState.h"
 
 #include <iostream>
@@ -16,12 +16,12 @@ constexpr float ambient_strength = 0.35f;
 constexpr float diffuse_strength = 0.65f;
 }
 
-bool SceneRenderer::is_initialized() const
+bool RenderPipeline::is_initialized() const
 {
     return viewer_shader_.is_initialized();
 }
 
-bool SceneRenderer::initialize(const std::filesystem::path& vertex_shader_path,
+bool RenderPipeline::initialize(const std::filesystem::path& vertex_shader_path,
                                     const std::filesystem::path& fragment_shader_path,
                                     QOpenGLFunctions_4_5_Core& gl)
 {
@@ -38,8 +38,8 @@ bool SceneRenderer::initialize(const std::filesystem::path& vertex_shader_path,
     return true;
 }
 
-void SceneRenderer::draw(const SceneState& scene,
-                              const SceneGpuResources& gpu_state,
+void RenderPipeline::draw(const SceneState& scene,
+                              const SceneGpuState& gpu_state,
                               const glm::mat4& mvp,
                               QOpenGLFunctions_4_5_Core& gl)
 {
@@ -104,7 +104,7 @@ void SceneRenderer::draw(const SceneState& scene,
     }
 }
 
-void SceneRenderer::release(QOpenGLFunctions_4_5_Core& gl)
+void RenderPipeline::release(QOpenGLFunctions_4_5_Core& gl)
 {
     ground_grid_.release(gl);
     background_gradient_.release(gl);
