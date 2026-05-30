@@ -1,32 +1,21 @@
 #include "rendering/BackgroundGradient.h"
 
-#include "support/FileUtils.h"
+#include "utils/FileUtils.h"
 
 #include <array>
-#include <filesystem>
 #include <iostream>
-
-namespace {
-const std::filesystem::path vertex_shader_path =
-    std::filesystem::path(PROJECT_ROOT_DIR) / "simulation_app" / "shaders" / "background.vert";
-
-const std::filesystem::path fragment_shader_path =
-    std::filesystem::path(PROJECT_ROOT_DIR) / "simulation_app" / "shaders" / "background.frag";
-}
 
 bool BackgroundGradient::is_initialized() const
 {
     return program_ != 0 && vao_ != 0 && vertex_buffer_ != 0;
 }
 
-bool BackgroundGradient::initialize(QOpenGLFunctions_4_5_Core& gl)
+bool BackgroundGradient::initialize(const std::filesystem::path& vertex_shader_path,
+                                    const std::filesystem::path& fragment_shader_path,
+                                    QOpenGLFunctions_4_5_Core& gl)
 {
-    if (is_initialized()) {
-        return true;
-    }
-
-    const GLuint next_program = load_program(gl);
-    if (next_program == 0) {
+    program_ = load_program(vertex_shader_path, fragment_shader_path, gl);
+    if (program_ == 0) {
         return false;
     }
 
@@ -36,8 +25,6 @@ bool BackgroundGradient::initialize(QOpenGLFunctions_4_5_Core& gl)
         -1.0f,  3.0f, 0.0f, 2.0f,
     };
 
-    release(gl);
-    program_ = next_program;
     top_color_location_ = gl.glGetUniformLocation(program_, "uTopColor");
     bottom_color_location_ = gl.glGetUniformLocation(program_, "uBottomColor");
 
@@ -118,7 +105,9 @@ void BackgroundGradient::release(QOpenGLFunctions_4_5_Core& gl)
     bottom_color_location_ = -1;
 }
 
-GLuint BackgroundGradient::load_program(QOpenGLFunctions_4_5_Core& gl) const
+GLuint BackgroundGradient::load_program(const std::filesystem::path& vertex_shader_path,
+                                        const std::filesystem::path& fragment_shader_path,
+                                        QOpenGLFunctions_4_5_Core& gl) const
 {
     const auto vertex_shader_source = read_text_file(vertex_shader_path);
     const auto fragment_shader_source = read_text_file(fragment_shader_path);

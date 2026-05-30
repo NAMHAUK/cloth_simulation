@@ -1,6 +1,7 @@
 #include "gpu/scene/NormalUpdater.h"
 
-#include "support/FileUtils.h"
+#include "utils/FileUtils.h"
+#include "utils/ShaderUtils.h"
 
 #include <iostream>
 
@@ -18,19 +19,6 @@ constexpr GLuint vertex_normals_binding = 3;
 
 // Dispatch constants
 constexpr std::uint32_t normal_update_local_size = 128;
-
-// Shader paths
-const std::filesystem::path triangle_normal_shader_path =
-    std::filesystem::path(PROJECT_ROOT_DIR) / "simulation_app" / "shaders" / "triangle_normal.comp";
-
-const std::filesystem::path vertex_normal_shader_path =
-    std::filesystem::path(PROJECT_ROOT_DIR) / "simulation_app" / "shaders" / "vertex_normal.comp";
-
-// Dispatch helpers
-GLuint normal_update_group_count(std::uint32_t item_count)
-{
-    return static_cast<GLuint>((item_count + normal_update_local_size - 1u) / normal_update_local_size);
-}
 }
 
 bool NormalUpdater::is_initialized() const
@@ -38,22 +26,22 @@ bool NormalUpdater::is_initialized() const
     return triangle_program_ != 0 && vertex_program_ != 0;
 }
 
-bool NormalUpdater::initialize(QOpenGLFunctions_4_5_Core& gl)
+bool NormalUpdater::initialize(const std::filesystem::path& triangle_normal_shader_path,
+                               const std::filesystem::path& vertex_normal_shader_path,
+                               QOpenGLFunctions_4_5_Core& gl)
 {
-    const GLuint next_triangle_program = load_compute_program(triangle_normal_shader_path, gl);
-    if (next_triangle_program == 0) {
+    triangle_program_ = load_compute_program(triangle_normal_shader_path, gl);
+    if (triangle_program_ == 0) {
         return false;
     }
 
-    const GLuint next_vertex_program = load_compute_program(vertex_normal_shader_path, gl);
-    if (next_vertex_program == 0) {
-        gl.glDeleteProgram(next_triangle_program);
+    vertex_program_ = load_compute_program(vertex_normal_shader_path, gl);
+    if (vertex_program_ == 0) {
+        gl.glDeleteProgram(triangle_program_);
+        triangle_program_ = 0;
         return false;
     }
 
-    release(gl);
-    triangle_program_ = next_triangle_program;
-    vertex_program_ = next_vertex_program;
     triangle_count_location_ = gl.glGetUniformLocation(triangle_program_, "uTriangleCount");
     position_component_offset_location_ = gl.glGetUniformLocation(triangle_program_, "uPositionComponentOffset");
     vertex_count_location_ = gl.glGetUniformLocation(vertex_program_, "uVertexCount");
@@ -103,7 +91,7 @@ void NormalUpdater::update_normals(const MeshTopologyResources& topology,
     if (position_component_offset_location_ >= 0) {
         gl.glProgramUniform1ui(triangle_program_, position_component_offset_location_, topology.position_component_offset);
     }
-    gl.glDispatchCompute(normal_update_group_count(topology.triangle_count), 1, 1);
+    gl.glDispatchCompute(compute_group_count(topology.triangle_count, normal_update_local_size), 1, 1);
     gl.glMemoryBarrier(GL_SHADER_STORAGE_BARRIER_BIT);
 
     // vertex normal 계산
@@ -115,7 +103,7 @@ void NormalUpdater::update_normals(const MeshTopologyResources& topology,
     if (vertex_count_location_ >= 0) {
         gl.glProgramUniform1ui(vertex_program_, vertex_count_location_, topology.vertex_count);
     }
-    gl.glDispatchCompute(normal_update_group_count(topology.vertex_count), 1, 1);
+    gl.glDispatchCompute(compute_group_count(topology.vertex_count, normal_update_local_size), 1, 1);
     gl.glMemoryBarrier(GL_SHADER_STORAGE_BARRIER_BIT);
 }
 

@@ -1,5 +1,6 @@
 #include "gpu/scene/SceneGpuState.h"
 
+#include "app/ProjectPaths.h"
 #include "scene/SceneState.h"
 
 bool SceneGpuState::is_initialized() const
@@ -7,9 +8,9 @@ bool SceneGpuState::is_initialized() const
     return initialized_;
 }
 
-bool SceneGpuState::initialize(QOpenGLFunctions_4_5_Core& gl)
+bool SceneGpuState::initialize(const ShaderPaths& shader_paths, QOpenGLFunctions_4_5_Core& gl)
 {
-    if (!normal_updater_.initialize(gl)) {
+    if (!normal_updater_.initialize(shader_paths.triangle_normal_compute, shader_paths.vertex_normal_compute, gl)) {
         return false;
     }
 

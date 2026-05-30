@@ -1,7 +1,9 @@
 #include "simulation/SimulationController.h"
 
+#include "app/ProjectPaths.h"
 #include "simulation/SimulationSettings.h"
 
+#include <cassert>
 #include <iostream>
 #include <utility>
 
@@ -27,31 +29,23 @@ void SimulationController::set_viewport_callbacks(ViewportCallbacks callbacks)
 
 // GPU / rendering //
 
-bool SimulationController::initialize_gpu(const std::filesystem::path& vertex_shader_path,
-                                          const std::filesystem::path& fragment_shader_path,
-                                          QOpenGLFunctions_4_5_Core& gl)
+bool SimulationController::initialize_gpu(const ShaderPaths& shader_paths, QOpenGLFunctions_4_5_Core& gl)
 {
-    if (!gpu_state_.initialize(gl)) {
+    assert(!is_gpu_initialized());
+    if (is_gpu_initialized()) {
         return false;
     }
 
-    if (!simulation_pipeline_.initialize(gl)) {
-        gpu_state_.release(gl);
-        return false;
-    }
+    if (!gpu_state_.initialize(shader_paths, gl) || !simulation_pipeline_.initialize(shader_paths, gl) || !render_pipeline_.initialize(shader_paths, gl)) {
 
-    if (!render_pipeline_.initialize(vertex_shader_path, fragment_shader_path, gl)) {
+        render_pipeline_.release(gl);
         simulation_pipeline_.release(gl);
         gpu_state_.release(gl);
         return false;
     }
 
-    gpu_state_.set_garment_meshes(scene_, gl);
-
     gpu_released_ = false;
-    if (!frame_timer_.isActive()) {
-        frame_timer_.start(simulation_settings::simulation_tick_ms);
-    }
+    frame_timer_.start(simulation_settings::simulation_tick_ms);
     return true;
 }
 
@@ -132,11 +126,6 @@ void SimulationController::add_garment_mesh(GarmentMesh mesh)
     });
 
     viewport_callbacks_.request_update();
-}
-
-void SimulationController::set_playing(bool playing)
-{
-    scene_.set_playing(playing);
 }
 
 bool SimulationController::is_viewport_ready() const

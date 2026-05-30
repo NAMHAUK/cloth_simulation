@@ -7,7 +7,6 @@
 #include "scene/SceneState.h"
 #include "simulation/SimulationPipeline.h"
 
-#include <filesystem>
 #include <functional>
 #include <cstdint>
 
@@ -16,6 +15,7 @@
 #include <QTimer>
 
 class QOpenGLFunctions_4_5_Core;
+struct ShaderPaths;
 
 class SimulationController final {
 public:
@@ -40,13 +40,8 @@ public:
     void set_character_mesh(CharacterMesh mesh);
     void add_garment_mesh(GarmentMesh mesh);
 
-    // Playback / simulation //
-    void set_playing(bool playing);
-
     // GPU / rendering //
-    bool initialize_gpu(const std::filesystem::path& vertex_shader_path,
-                        const std::filesystem::path& fragment_shader_path,
-                        QOpenGLFunctions_4_5_Core& gl);
+    bool initialize_gpu(const ShaderPaths& shader_paths, QOpenGLFunctions_4_5_Core& gl);
     bool is_gpu_initialized() const;
     void draw(const glm::mat4& mvp, QOpenGLFunctions_4_5_Core& gl);
     void release_gpu();

@@ -9,6 +9,8 @@
 
 #include <QOpenGLFunctions_4_5_Core>
 
+struct ShaderPaths;
+
 class SceneGpuState final {
 public:
     SceneGpuState() = default;
@@ -16,7 +18,7 @@ public:
     SceneGpuState& operator=(const SceneGpuState&) = delete;
 
     bool is_initialized() const;
-    bool initialize(QOpenGLFunctions_4_5_Core& gl);
+    bool initialize(const ShaderPaths& shader_paths, QOpenGLFunctions_4_5_Core& gl);
     void release(QOpenGLFunctions_4_5_Core& gl);
     void sync_character_frame(const SceneState& scene);
     void update_mesh_normals(QOpenGLFunctions_4_5_Core& gl);
