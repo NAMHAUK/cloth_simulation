@@ -71,6 +71,7 @@ MainWindow::~MainWindow()
     if (simulation_viewport_) {
         simulation_viewport_->set_initialize_callback({});
         simulation_viewport_->set_scene_render_callback({});
+        simulation_viewport_->set_sim_fps_callback({});
     }
 }
 
@@ -113,6 +114,11 @@ void MainWindow::setup_callbacks()
             if (simulation_controller_ != nullptr && simulation_controller_->is_gpu_initialized()) {
                 simulation_controller_->draw(mvp, gl);
             }
+        }
+    );
+    simulation_viewport_->set_sim_fps_callback(
+        [this]() {
+            return simulation_controller_ != nullptr ? simulation_controller_->sim_fps() : 0.0;
         }
     );
 

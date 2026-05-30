@@ -45,8 +45,16 @@ bool SimulationController::initialize_gpu(const ShaderPaths& shader_paths, QOpen
     }
 
     gpu_released_ = false;
+    sim_fps_ = 0.0;
+    sim_fps_step_count_ = 0;
+    sim_fps_timer_.restart();
     frame_timer_.start(simulation_settings::simulation_tick_ms);
     return true;
+}
+
+double SimulationController::sim_fps() const
+{
+    return sim_fps_;
 }
 
 void SimulationController::draw(const glm::mat4& mvp, QOpenGLFunctions_4_5_Core& gl)
@@ -61,12 +69,33 @@ void SimulationController::tick_frame()
         return;
     }
 
-    viewport_callbacks_.run_with_gl_context([this](QOpenGLFunctions_4_5_Core& gl) {
-        simulation_pipeline_.step(scene_, gpu_state_, simulation_step_count_, gl);
+    bool simulation_step_finished = false;
+    viewport_callbacks_.run_with_gl_context([this, &simulation_step_finished](QOpenGLFunctions_4_5_Core& gl) {
+        simulation_step_finished = simulation_pipeline_.step(scene_, gpu_state_, motion_step_count_, gl);
     });
 
+    if (!simulation_step_finished) {
+        return;
+    }
+
     ++simulation_step_count_;
+    ++motion_step_count_;
+    update_sim_fps();
     viewport_callbacks_.request_update();
+}
+
+void SimulationController::update_sim_fps()
+{
+    ++sim_fps_step_count_;
+
+    const qint64 elapsed_ms = sim_fps_timer_.elapsed();
+    if (elapsed_ms < simulation_settings::fps_update_interval_ms) {
+        return;
+    }
+
+    sim_fps_ = static_cast<double>(sim_fps_step_count_) * 1000.0 / static_cast<double>(elapsed_ms);
+    sim_fps_step_count_ = 0;
+    sim_fps_timer_.restart();
 }
 
 void SimulationController::release_gpu()
@@ -105,7 +134,7 @@ void SimulationController::set_character_mesh(CharacterMesh mesh)
         gpu_state_.set_character_mesh(scene_, gl);
     });
 
-    simulation_step_count_ = 0;
+    motion_step_count_ = 0;
     if (scene_.has_character()) {
         viewport_callbacks_.reset_camera_to_character(scene_.character_mesh());
     }

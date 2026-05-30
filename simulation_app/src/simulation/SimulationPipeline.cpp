@@ -24,7 +24,7 @@ bool SimulationPipeline::initialize(const ShaderPaths& shader_paths, QOpenGLFunc
 
 bool SimulationPipeline::step(SceneState& scene,
                               SceneGpuState& gpu_state,
-                              std::uint64_t simulation_step_count,
+                              std::uint64_t motion_step_count,
                               QOpenGLFunctions_4_5_Core& gl)
 {
     if (!initialized_) {
@@ -32,7 +32,7 @@ bool SimulationPipeline::step(SceneState& scene,
     }
 
     if (scene.has_character()) {
-        scene.update_character_frame(simulation_step_count, simulation_settings::character_frame_stride);
+        scene.update_character_frame(motion_step_count, simulation_settings::character_frame_stride);
         gpu_state.sync_character_frame(scene);
 
         const auto position_view = gpu_state.cloth_gpu_state().position_buffer_view();

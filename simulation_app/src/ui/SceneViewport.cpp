@@ -5,7 +5,11 @@
 #include <iostream>
 #include <utility>
 
+#include <QFontMetrics>
 #include <QMouseEvent>
+#include <QPainter>
+#include <QRect>
+#include <QString>
 #include <QWheelEvent>
 
 #include <glm/ext/matrix_clip_space.hpp>
@@ -43,6 +47,10 @@ constexpr float zoom_step_scale      = 0.88f;
 // scene parameters
 constexpr glm::vec3 background_color{0.07f, 0.09f, 0.12f};
 constexpr glm::vec3 world_up{0.0f, 1.0f, 0.0f};
+
+constexpr int fps_overlay_margin = 14;
+constexpr int fps_overlay_horizontal_padding = 8;
+constexpr int fps_overlay_vertical_padding = 4;
 
 void orbit_camera(OrbitCamera& camera, const QPoint& delta)
 {
@@ -110,6 +118,11 @@ void SceneViewport::set_scene_render_callback(SceneRenderCallback callback)
     scene_render_callback_ = std::move(callback);
 }
 
+void SceneViewport::set_sim_fps_callback(SimFpsCallback callback)
+{
+    sim_fps_callback_ = std::move(callback);
+}
+
 bool SceneViewport::is_gl_initialized() const
 {
     return gl_initialized_;
@@ -154,13 +167,45 @@ void SceneViewport::paintGL()
     glClearColor(background_color.r, background_color.g, background_color.b, 1.0f);
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
-    if (!scene_render_callback_) {
-        return;
+    if (scene_render_callback_) {
+        // MVP 계산 -> shader uMVP로 전달
+        const glm::mat4 mvp = make_mvp(camera_, width(), height());
+        scene_render_callback_(mvp, gl_functions());
     }
 
-    // MVP 계산 -> shader uMVP로 전달
-    const glm::mat4 mvp = make_mvp(camera_, width(), height());
-    scene_render_callback_(mvp, gl_functions());
+    draw_display_fps();
+}
+
+void SceneViewport::draw_display_fps()
+{
+    const double current_sim_fps = sim_fps_callback_ ? sim_fps_callback_() : 0.0;
+    const QString fps_text = QString("Sim FPS: %1").arg(current_sim_fps, 0, 'f', 1);
+
+    QPainter painter(this);
+    painter.setRenderHint(QPainter::Antialiasing);
+
+    const QFontMetrics metrics(painter.font());
+    const QRect text_bounds = metrics.boundingRect(fps_text);
+    QRect background_rect(
+        0,
+        0,
+        text_bounds.width() + fps_overlay_horizontal_padding * 2,
+        text_bounds.height() + fps_overlay_vertical_padding * 2
+    );
+    background_rect.moveBottomRight(QPoint(width() - fps_overlay_margin, height() - fps_overlay_margin));
+
+    painter.fillRect(background_rect, QColor(0, 0, 0, 150));
+    painter.setPen(QColor(235, 240, 245));
+    painter.drawText(
+        background_rect.adjusted(
+            fps_overlay_horizontal_padding,
+            fps_overlay_vertical_padding,
+            -fps_overlay_horizontal_padding,
+            -fps_overlay_vertical_padding
+        ),
+        Qt::AlignCenter,
+        fps_text
+    );
 }
 
 // Camera //
