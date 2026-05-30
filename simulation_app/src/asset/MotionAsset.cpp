@@ -1,7 +1,7 @@
 ﻿#include "asset/MotionAsset.h"
 
 #include "simulation/SimulationSettings.h"
-#include "support/QtHelpers.h"
+#include "utils/QtUtils.h"
 
 #include <algorithm>
 #include <array>

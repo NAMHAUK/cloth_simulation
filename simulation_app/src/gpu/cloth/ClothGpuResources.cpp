@@ -240,27 +240,6 @@ void ClothGpuResources::release(QOpenGLFunctions_4_5_Core& gl)
     reset_resources();
 }
 
-MeshTopologyResources ClothGpuResources::mesh_topology_resources() const
-{
-    MeshTopologyResources topology;
-    topology.position_buffer = buffers_.current_position;
-    topology.index_buffer = buffers_.index;
-    topology.adjacency_offset_buffer = buffers_.adjacency_offset;
-    topology.adjacency_triangle_buffer = buffers_.adjacency_triangle;
-    topology.position_component_offset = 0;
-    topology.vertex_count = used_elements_.vertex;
-    topology.triangle_count = used_elements_.triangle;
-    return topology;
-}
-
-MeshNormalResources ClothGpuResources::mesh_normal_resources() const
-{
-    MeshNormalResources normals;
-    normals.triangle_normal_buffer = buffers_.triangle_normal;
-    normals.vertex_normal_buffer = buffers_.vertex_normal;
-    return normals;
-}
-
 void ClothGpuResources::sync_garments(const std::vector<GarmentObject>& garments, QOpenGLFunctions_4_5_Core& gl)
 {
     if (garments.empty()) {
@@ -292,6 +271,39 @@ void ClothGpuResources::sync_garments(const std::vector<GarmentObject>& garments
             append_garment(garment, gl);
         }
     }
+}
+
+// getter //
+
+ClothPositionBufferView ClothGpuResources::position_buffer_view() const
+{
+    ClothPositionBufferView view;
+    view.rest_position_buffer = buffers_.rest_position;
+    view.current_position_buffer = buffers_.current_position;
+    view.previous_position_buffer = buffers_.previous_position;
+    view.vertex_count = used_elements_.vertex;
+    return view;
+}
+
+MeshTopologyResources ClothGpuResources::mesh_topology_resources() const
+{
+    MeshTopologyResources topology;
+    topology.position_buffer = buffers_.current_position;
+    topology.index_buffer = buffers_.index;
+    topology.adjacency_offset_buffer = buffers_.adjacency_offset;
+    topology.adjacency_triangle_buffer = buffers_.adjacency_triangle;
+    topology.position_component_offset = 0;
+    topology.vertex_count = used_elements_.vertex;
+    topology.triangle_count = used_elements_.triangle;
+    return topology;
+}
+
+MeshNormalResources ClothGpuResources::mesh_normal_resources() const
+{
+    MeshNormalResources normals;
+    normals.triangle_normal_buffer = buffers_.triangle_normal;
+    normals.vertex_normal_buffer = buffers_.vertex_normal;
+    return normals;
 }
 
 // GPU buffer 관리 //

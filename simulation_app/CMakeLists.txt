@@ -20,7 +20,11 @@ add_executable(simulation_app
     src/app/ProjectPaths.h
     src/simulation/SimulationController.cpp
     src/simulation/SimulationController.h
+    src/simulation/SimulationForceField.cpp
+    src/simulation/SimulationForceField.h
     src/simulation/SimulationSettings.h
+    src/simulation/cloth/ClothExternalForceSolver.cpp
+    src/simulation/cloth/ClothExternalForceSolver.h
     src/asset/GarmentAsset.cpp
     src/asset/GarmentAsset.h
     src/asset/MeshTopology.cpp
@@ -50,9 +54,10 @@ add_executable(simulation_app
     src/simulation/SimulationPipeline.h
     src/scene/SceneState.cpp
     src/scene/SceneState.h
-    src/support/QtHelpers.h
-    src/support/FileUtils.cpp
-    src/support/FileUtils.h
+    src/utils/QtUtils.h
+    src/utils/FileUtils.cpp
+    src/utils/FileUtils.h
+    src/utils/ShaderUtils.h
     src/ui/MainWindow.cpp
     src/ui/MainWindow.h
     src/ui/MotionBrowserPanel.cpp
@@ -63,6 +68,7 @@ add_executable(simulation_app
     shaders/background.frag
     shaders/triangle_normal.comp
     shaders/vertex_normal.comp
+    shaders/cloth_external_force.comp
 )
 
 target_include_directories(simulation_app PRIVATE

@@ -2,7 +2,6 @@
 
 #include <algorithm>
 #include <cmath>
-#include <filesystem>
 #include <iostream>
 #include <utility>
 
@@ -86,10 +85,6 @@ glm::mat4 make_mvp(const OrbitCamera& camera, int width, int height)
     return projection * view;
 }
 
-std::filesystem::path shader_path(const char* file_name)
-{
-    return std::filesystem::path(PROJECT_ROOT_DIR) / "simulation_app" / "shaders" / file_name;
-}
 }
 
 SceneViewport::SceneViewport(QWidget* parent) : QOpenGLWidget(parent)
@@ -139,7 +134,8 @@ void SceneViewport::initializeGL()
         return;
     }
 
-    if (!initialize_callback_(shader_path("viewer.vert"), shader_path("viewer.frag"), gl_functions())) {
+    // Simulation_Controller::initialize_gpu
+    if (!initialize_callback_(gl_functions())) {
         return;
     }
 

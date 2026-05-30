@@ -2,7 +2,6 @@
 
 #include "asset/MotionAsset.h"
 
-#include <filesystem>
 #include <functional>
 
 #include <glm/mat4x4.hpp>
@@ -28,9 +27,7 @@ struct OrbitCamera {
 
 class SceneViewport final : public QOpenGLWidget, protected QOpenGLFunctions_4_5_Core {
 public:
-    using InitializeCallback = std::function<bool(const std::filesystem::path&,
-                                                  const std::filesystem::path&,
-                                                  QOpenGLFunctions_4_5_Core&)>;
+    using InitializeCallback = std::function<bool(QOpenGLFunctions_4_5_Core&)>;
     using SceneRenderCallback = std::function<void(const glm::mat4&, QOpenGLFunctions_4_5_Core&)>;
 
     explicit SceneViewport(QWidget* parent = nullptr);

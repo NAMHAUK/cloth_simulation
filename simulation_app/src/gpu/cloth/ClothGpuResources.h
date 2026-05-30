@@ -29,6 +29,13 @@ struct ClothBufferElementCounts final {
     std::uint32_t adjacency_entry = 0;
 };
 
+struct ClothPositionBufferView final {
+    GLuint rest_position_buffer = 0;
+    GLuint current_position_buffer = 0;
+    GLuint previous_position_buffer = 0;
+    std::uint32_t vertex_count = 0;
+};
+
 struct GarmentGpuData final {
     GarmentId id = 0;
     std::uint32_t vertex_offset = 0;
@@ -54,6 +61,7 @@ public:
 
     void sync_garments(const std::vector<GarmentObject>& garments, QOpenGLFunctions_4_5_Core& gl);
     void rebuild_compact_buffers(const std::vector<GarmentObject>& garments, QOpenGLFunctions_4_5_Core& gl);
+    ClothPositionBufferView position_buffer_view() const;
     MeshTopologyResources mesh_topology_resources() const;
     MeshNormalResources mesh_normal_resources() const;
     void bind_vertex_normals(GLuint binding_index, QOpenGLFunctions_4_5_Core& gl) const;

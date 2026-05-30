@@ -2,8 +2,20 @@
 
 #include <filesystem>
 
+struct ShaderPaths {
+    std::filesystem::path shader_dir;
+    std::filesystem::path viewer_vertex;
+    std::filesystem::path viewer_fragment;
+    std::filesystem::path background_vertex;
+    std::filesystem::path background_fragment;
+    std::filesystem::path triangle_normal_compute;
+    std::filesystem::path vertex_normal_compute;
+    std::filesystem::path cloth_external_force_compute;
+};
+
 struct ProjectPaths {
     std::filesystem::path root;
+    ShaderPaths shaders;
     std::filesystem::path python;
     std::filesystem::path converter_script;
     std::filesystem::path smpl_model_dir;
@@ -12,10 +24,26 @@ struct ProjectPaths {
     std::filesystem::path garment_asset_dir;
 };
 
+inline ShaderPaths make_shader_paths(const std::filesystem::path& project_root)
+{
+    const std::filesystem::path shader_dir = project_root / "simulation_app" / "shaders";
+    return {
+        shader_dir,
+        shader_dir / "viewer.vert",
+        shader_dir / "viewer.frag",
+        shader_dir / "background.vert",
+        shader_dir / "background.frag",
+        shader_dir / "triangle_normal.comp",
+        shader_dir / "vertex_normal.comp",
+        shader_dir / "cloth_external_force.comp",
+    };
+}
+
 inline ProjectPaths make_project_paths(const std::filesystem::path& project_root)
 {
     return {
         project_root,
+        make_shader_paths(project_root),
         project_root / "envs" / "cloth-sim" / "python.exe",
         project_root / "simulation_app" / "tools" / "convert_amass_to_cache.py",
         project_root / "data" / "smpl" / "models",

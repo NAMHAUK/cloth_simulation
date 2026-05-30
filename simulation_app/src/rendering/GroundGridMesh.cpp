@@ -3,7 +3,7 @@
 #include <cstddef>
 #include <vector>
 
-bool GroundGridMesh::initialized() const
+bool GroundGridMesh::is_initialized() const
 {
     return vao_ != 0 && vertex_buffer_ != 0 && vertex_count_ > 0;
 }
@@ -15,10 +15,6 @@ const glm::vec3& GroundGridMesh::color() const
 
 void GroundGridMesh::upload(QOpenGLFunctions_4_5_Core& gl)
 {
-    if (initialized()) {
-        return;
-    }
-
     constexpr int half_line_count = 40;
     constexpr float spacing = 0.5f;
     constexpr float half_size = static_cast<float>(half_line_count) * spacing;
@@ -79,7 +75,7 @@ void GroundGridMesh::upload(QOpenGLFunctions_4_5_Core& gl)
 
 void GroundGridMesh::draw(QOpenGLFunctions_4_5_Core& gl) const
 {
-    if (!initialized()) {
+    if (!is_initialized()) {
         return;
     }
 
