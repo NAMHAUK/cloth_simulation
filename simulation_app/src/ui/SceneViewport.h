@@ -29,12 +29,14 @@ class SceneViewport final : public QOpenGLWidget, protected QOpenGLFunctions_4_5
 public:
     using InitializeCallback = std::function<bool(QOpenGLFunctions_4_5_Core&)>;
     using SceneRenderCallback = std::function<void(const glm::mat4&, QOpenGLFunctions_4_5_Core&)>;
+    using SimFpsCallback = std::function<double()>;
 
     explicit SceneViewport(QWidget* parent = nullptr);
     ~SceneViewport() override;
 
     void set_initialize_callback(InitializeCallback callback);
     void set_scene_render_callback(SceneRenderCallback callback);
+    void set_sim_fps_callback(SimFpsCallback callback);
     bool is_gl_initialized() const;
     QOpenGLFunctions_4_5_Core& gl_functions();
     void reset_camera_to_character(const CharacterMesh& character_mesh);
@@ -50,8 +52,11 @@ protected:
     void wheelEvent(QWheelEvent* event) override;
 
 private:
+    void draw_display_fps();
+
     InitializeCallback initialize_callback_;
     SceneRenderCallback scene_render_callback_;
+    SimFpsCallback sim_fps_callback_;
     OrbitCamera camera_;
 
     bool gl_initialized_ = false;

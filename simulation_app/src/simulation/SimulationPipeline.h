@@ -21,7 +21,7 @@ public:
     bool initialize(const ShaderPaths& shader_paths, QOpenGLFunctions_4_5_Core& gl);
     bool step(SceneState& scene,
               SceneGpuState& gpu_state,
-              std::uint64_t simulation_step_count,
+              std::uint64_t motion_step_count,
               QOpenGLFunctions_4_5_Core& gl);
     void release(QOpenGLFunctions_4_5_Core& gl);
 
