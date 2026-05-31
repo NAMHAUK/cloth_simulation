@@ -1,0 +1,37 @@
+#version 430 core
+
+layout(local_size_x = 128) in;
+
+layout(std430, binding = 0) buffer CurrentPositions {
+    float current_positions[];
+};
+
+layout(std430, binding = 1) buffer PreviousPositions {
+    float previous_positions[];
+};
+
+uniform uint uVertexCount;
+uniform float uFloorHeight;
+
+void main()
+{
+    uint vertex_index = gl_GlobalInvocationID.x;
+    if (vertex_index >= uVertexCount) {
+        return;
+    }
+
+    uint position_base = vertex_index * 3u;
+
+    float current_y = current_positions[position_base + 1u];
+    float previous_y = previous_positions[position_base + 1u];
+
+    if (current_y < uFloorHeight) {
+        current_positions[position_base + 1u] = uFloorHeight;
+        previous_positions[position_base + 1u] = uFloorHeight;
+        return;
+    }
+
+    if (previous_y < uFloorHeight) {
+        previous_positions[position_base + 1u] = uFloorHeight;
+    }
+}
