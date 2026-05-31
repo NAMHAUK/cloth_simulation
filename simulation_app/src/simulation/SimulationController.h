@@ -2,20 +2,21 @@
 
 #include "asset/GarmentAsset.h"
 #include "asset/MotionAsset.h"
-#include "gpu/scene/SceneGpuResources.h"
-#include "rendering/SceneRenderer.h"
+#include "gpu/scene/SceneGpuState.h"
+#include "rendering/RenderPipeline.h"
 #include "scene/SceneState.h"
-#include "simulation/ClothSimulationPipeline.h"
+#include "simulation/SimulationPipeline.h"
 
-#include <filesystem>
 #include <functional>
 #include <cstdint>
 
 #include <glm/mat4x4.hpp>
 
+#include <QElapsedTimer>
 #include <QTimer>
 
 class QOpenGLFunctions_4_5_Core;
+struct ShaderPaths;
 
 class SimulationController final {
 public:
@@ -24,7 +25,7 @@ public:
     struct ViewportCallbacks final {
         std::function<bool()> is_ready;
         std::function<void(GlContextTask)> run_with_gl_context;
-        std::function<void()> request_redraw;
+        std::function<void()> request_update;
         std::function<void(const CharacterMesh&)> reset_camera_to_character;
     };
 
@@ -40,36 +41,35 @@ public:
     void set_character_mesh(CharacterMesh mesh);
     void add_garment_mesh(GarmentMesh mesh);
 
-    // Playback / simulation //
-    void set_playing(bool playing);
-
     // GPU / rendering //
-    bool initialize_gpu(const std::filesystem::path& vertex_shader_path,
-                        const std::filesystem::path& fragment_shader_path,
-                        QOpenGLFunctions_4_5_Core& gl);
+    bool initialize_gpu(const ShaderPaths& shader_paths, QOpenGLFunctions_4_5_Core& gl);
     bool is_gpu_initialized() const;
+    double sim_fps() const;
     void draw(const glm::mat4& mvp, QOpenGLFunctions_4_5_Core& gl);
     void release_gpu();
 
 private:
     void tick_frame();
+    void update_sim_fps();
     bool is_viewport_ready() const;
-    bool simulation_step(QOpenGLFunctions_4_5_Core& gl);
-    void sync_gpu(QOpenGLFunctions_4_5_Core& gl);
 
     // CPU-side scene state //
     SceneState scene_;
 
     // GPU-side dynamic simulation state //
-    SceneGpuResources gpu_state_;
+    SceneGpuState gpu_state_;
 
-    // Future cloth solver / collision / constraint pass orchestration //
-    ClothSimulationPipeline cloth_pipeline_;
+    // Simulation pass orchestration //
+    SimulationPipeline simulation_pipeline_;
 
     // Rendering orchestration //
-    SceneRenderer renderer_;
+    RenderPipeline render_pipeline_;
 
     std::uint64_t simulation_step_count_ = 0;
+    std::uint64_t motion_step_count_ = 0;
+    std::uint64_t sim_fps_step_count_ = 0;
+    double sim_fps_ = 0.0;
+    QElapsedTimer sim_fps_timer_;
     QTimer frame_timer_;
 
     ViewportCallbacks viewport_callbacks_;

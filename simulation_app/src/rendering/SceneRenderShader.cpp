@@ -1,6 +1,6 @@
 #include "rendering/SceneRenderShader.h"
 
-#include "support/FileUtils.h"
+#include "utils/FileUtils.h"
 
 #include <iostream>
 
@@ -32,28 +32,27 @@ bool SceneRenderShader::load(const std::filesystem::path& vertex_shader_path,
         return false;
     }
 
-    const GLuint next_program = gl.glCreateProgram();
-    gl.glAttachShader(next_program, vertex_shader);
-    gl.glAttachShader(next_program, fragment_shader);
-    gl.glLinkProgram(next_program);
+    program_ = gl.glCreateProgram();
+    gl.glAttachShader(program_, vertex_shader);
+    gl.glAttachShader(program_, fragment_shader);
+    gl.glLinkProgram(program_);
 
     GLint success = 0;
-    gl.glGetProgramiv(next_program, GL_LINK_STATUS, &success);
+    gl.glGetProgramiv(program_, GL_LINK_STATUS, &success);
     if (!success) {
         char log[1024] = {};
-        gl.glGetProgramInfoLog(next_program, sizeof(log), nullptr, log);
+        gl.glGetProgramInfoLog(program_, sizeof(log), nullptr, log);
         std::cerr << "Program link failed: " << log << '\n';
         gl.glDeleteShader(vertex_shader);
         gl.glDeleteShader(fragment_shader);
-        gl.glDeleteProgram(next_program);
+        gl.glDeleteProgram(program_);
+        program_ = 0;
         return false;
     }
 
     gl.glDeleteShader(vertex_shader);
     gl.glDeleteShader(fragment_shader);
 
-    release(gl);
-    program_ = next_program;
     mvp_location_ = gl.glGetUniformLocation(program_, "uMVP");
     solid_mode_location_ = gl.glGetUniformLocation(program_, "uUseSolidColor");
     solid_color_location_ = gl.glGetUniformLocation(program_, "uSolidColor");

@@ -2,6 +2,8 @@
 
 #include <QOpenGLFunctions_4_5_Core>
 
+#include <filesystem>
+
 #include <glm/vec3.hpp>
 
 class BackgroundGradient final {
@@ -11,12 +13,16 @@ public:
     BackgroundGradient& operator=(const BackgroundGradient&) = delete;
 
     bool is_initialized() const;
-    bool initialize(QOpenGLFunctions_4_5_Core& gl);
+    bool initialize(const std::filesystem::path& vertex_shader_path,
+                    const std::filesystem::path& fragment_shader_path,
+                    QOpenGLFunctions_4_5_Core& gl);
     void draw(QOpenGLFunctions_4_5_Core& gl) const;
     void release(QOpenGLFunctions_4_5_Core& gl);
 
 private:
-    GLuint load_program(QOpenGLFunctions_4_5_Core& gl) const;
+    GLuint load_program(const std::filesystem::path& vertex_shader_path,
+                        const std::filesystem::path& fragment_shader_path,
+                        QOpenGLFunctions_4_5_Core& gl) const;
     GLuint compile_shader(GLenum type, const char* source, QOpenGLFunctions_4_5_Core& gl) const;
 
     glm::vec3 top_color_{0.58f, 0.59f, 0.62f};

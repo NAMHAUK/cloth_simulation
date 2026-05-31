@@ -4,7 +4,7 @@
 #include "asset/MotionConverter.h"
 #include "simulation/SimulationController.h"
 #include "ui/SceneViewport.h"
-#include "support/QtHelpers.h"
+#include "utils/QtUtils.h"
 #include "ui/MotionBrowserPanel.h"
 
 #include <algorithm>
@@ -71,6 +71,7 @@ MainWindow::~MainWindow()
     if (simulation_viewport_) {
         simulation_viewport_->set_initialize_callback({});
         simulation_viewport_->set_scene_render_callback({});
+        simulation_viewport_->set_sim_fps_callback({});
     }
 }
 
@@ -104,10 +105,8 @@ void MainWindow::setup_callbacks()
         },
     });
     simulation_viewport_->set_initialize_callback(
-        [this](const std::filesystem::path& vertex_shader_path,
-               const std::filesystem::path& fragment_shader_path,
-               QOpenGLFunctions_4_5_Core& gl) {
-            return simulation_controller_->initialize_gpu(vertex_shader_path, fragment_shader_path, gl);
+        [this](QOpenGLFunctions_4_5_Core& gl) {
+            return simulation_controller_->initialize_gpu(project_paths_.shaders, gl);
         }
     );
     simulation_viewport_->set_scene_render_callback(
@@ -115,6 +114,11 @@ void MainWindow::setup_callbacks()
             if (simulation_controller_ != nullptr && simulation_controller_->is_gpu_initialized()) {
                 simulation_controller_->draw(mvp, gl);
             }
+        }
+    );
+    simulation_viewport_->set_sim_fps_callback(
+        [this]() {
+            return simulation_controller_ != nullptr ? simulation_controller_->sim_fps() : 0.0;
         }
     );
 

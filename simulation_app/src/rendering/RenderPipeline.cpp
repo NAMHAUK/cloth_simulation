@@ -1,6 +1,7 @@
-#include "rendering/SceneRenderer.h"
+#include "rendering/RenderPipeline.h"
 
-#include "gpu/scene/SceneGpuResources.h"
+#include "app/ProjectPaths.h"
+#include "gpu/scene/SceneGpuState.h"
 #include "scene/SceneState.h"
 
 #include <iostream>
@@ -16,20 +17,18 @@ constexpr float ambient_strength = 0.35f;
 constexpr float diffuse_strength = 0.65f;
 }
 
-bool SceneRenderer::is_initialized() const
+bool RenderPipeline::is_initialized() const
 {
     return viewer_shader_.is_initialized();
 }
 
-bool SceneRenderer::initialize(const std::filesystem::path& vertex_shader_path,
-                                    const std::filesystem::path& fragment_shader_path,
-                                    QOpenGLFunctions_4_5_Core& gl)
+bool RenderPipeline::initialize(const ShaderPaths& shader_paths, QOpenGLFunctions_4_5_Core& gl)
 {
-    if (!viewer_shader_.load(vertex_shader_path, fragment_shader_path, gl)) {
+    if (!viewer_shader_.load(shader_paths.viewer_vertex, shader_paths.viewer_fragment, gl)) {
         std::cerr << "Failed to create viewer shader program.\n";
         return false;
     }
-    if (!background_gradient_.initialize(gl)) {
+    if (!background_gradient_.initialize(shader_paths.background_vertex, shader_paths.background_fragment, gl)) {
         std::cerr << "Failed to create background gradient.\n";
         return false;
     }
@@ -38,8 +37,8 @@ bool SceneRenderer::initialize(const std::filesystem::path& vertex_shader_path,
     return true;
 }
 
-void SceneRenderer::draw(const SceneState& scene,
-                              const SceneGpuResources& gpu_state,
+void RenderPipeline::draw(const SceneState& scene,
+                              const SceneGpuState& gpu_state,
                               const glm::mat4& mvp,
                               QOpenGLFunctions_4_5_Core& gl)
 {
@@ -63,7 +62,7 @@ void SceneRenderer::draw(const SceneState& scene,
     viewer_shader_.set_attribute_position_mode(gl);
 
     // ground grid
-    if (ground_grid_.initialized()) {
+    if (ground_grid_.is_initialized()) {
         viewer_shader_.set_normal_lighting_enabled(false, gl);
         viewer_shader_.set_solid_color(ground_grid_.color(), gl);
         gl.glDepthMask(GL_FALSE);
@@ -104,7 +103,7 @@ void SceneRenderer::draw(const SceneState& scene,
     }
 }
 
-void SceneRenderer::release(QOpenGLFunctions_4_5_Core& gl)
+void RenderPipeline::release(QOpenGLFunctions_4_5_Core& gl)
 {
     ground_grid_.release(gl);
     background_gradient_.release(gl);

@@ -1,10 +1,13 @@
-#include "support/FileUtils.h"
+#pragma once
 
+#include <filesystem>
 #include <fstream>
 #include <iostream>
+#include <optional>
 #include <sstream>
+#include <string>
 
-std::optional<std::string> read_text_file(const std::filesystem::path& path)
+inline std::optional<std::string> read_text_file(const std::filesystem::path& path)
 {
     std::ifstream file(path, std::ios::binary);
     if (!file) {

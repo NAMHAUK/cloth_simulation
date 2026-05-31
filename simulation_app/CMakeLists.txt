@@ -20,7 +20,13 @@ add_executable(simulation_app
     src/app/ProjectPaths.h
     src/simulation/SimulationController.cpp
     src/simulation/SimulationController.h
+    src/simulation/SimulationForceField.cpp
+    src/simulation/SimulationForceField.h
     src/simulation/SimulationSettings.h
+    src/simulation/cloth/ExternalForceSolver.cpp
+    src/simulation/cloth/ExternalForceSolver.h
+    src/simulation/collision/GroundCollisionSolver.cpp
+    src/simulation/collision/GroundCollisionSolver.h
     src/asset/GarmentAsset.cpp
     src/asset/GarmentAsset.h
     src/asset/MeshTopology.cpp
@@ -35,24 +41,25 @@ add_executable(simulation_app
     src/rendering/BackgroundGradient.h
     src/rendering/GroundGridMesh.cpp
     src/rendering/GroundGridMesh.h
-    src/gpu/scene/SceneGpuResources.cpp
-    src/gpu/scene/SceneGpuResources.h
+    src/gpu/scene/SceneGpuState.cpp
+    src/gpu/scene/SceneGpuState.h
     src/gpu/scene/NormalUpdater.cpp
     src/gpu/scene/NormalUpdater.h
     src/gpu/scene/MeshBufferResources.h
-    src/rendering/SceneRenderer.cpp
-    src/rendering/SceneRenderer.h
+    src/rendering/RenderPipeline.cpp
+    src/rendering/RenderPipeline.h
     src/ui/SceneViewport.cpp
     src/ui/SceneViewport.h
     src/rendering/SceneRenderShader.cpp
     src/rendering/SceneRenderShader.h
-    src/simulation/ClothSimulationPipeline.cpp
-    src/simulation/ClothSimulationPipeline.h
+    src/simulation/SimulationPipeline.cpp
+    src/simulation/SimulationPipeline.h
     src/scene/SceneState.cpp
     src/scene/SceneState.h
-    src/support/QtHelpers.h
-    src/support/FileUtils.cpp
-    src/support/FileUtils.h
+    src/utils/QtUtils.h
+    src/utils/BufferUtils.h
+    src/utils/FileUtils.h
+    src/utils/ShaderUtils.h
     src/ui/MainWindow.cpp
     src/ui/MainWindow.h
     src/ui/MotionBrowserPanel.cpp
@@ -63,6 +70,8 @@ add_executable(simulation_app
     shaders/background.frag
     shaders/triangle_normal.comp
     shaders/vertex_normal.comp
+    shaders/cloth_external_force.comp
+    shaders/cloth_ground_collision.comp
 )
 
 target_include_directories(simulation_app PRIVATE

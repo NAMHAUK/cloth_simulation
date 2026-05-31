@@ -10,7 +10,7 @@ public:
     GroundGridMesh(const GroundGridMesh&) = delete;
     GroundGridMesh& operator=(const GroundGridMesh&) = delete;
 
-    bool initialized() const;
+    bool is_initialized() const;
     const glm::vec3& color() const;
 
     void upload(QOpenGLFunctions_4_5_Core& gl);
