@@ -1,4 +1,4 @@
-﻿#include "asset/MotionAsset.h"
+#include "asset/MotionAsset.h"
 
 #include "simulation/SimulationSettings.h"
 #include "utils/QtUtils.h"
@@ -75,7 +75,7 @@ bool is_path_inside(const std::filesystem::path& path, const std::filesystem::pa
 }
 
 // asset에서 motion mesh 값을 읽고 저장
-bool load_character_mesh(const std::filesystem::path& motion_asset_path, CharacterMesh& character_mesh)
+bool read_character_mesh_asset(const std::filesystem::path& motion_asset_path, CharacterMesh& character_mesh)
 {
     std::ifstream input(motion_asset_path, std::ios::binary);
     if (!validate_motion_asset(input, motion_asset_path)) {

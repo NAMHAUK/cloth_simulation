@@ -1,4 +1,4 @@
-﻿#include "ui/MainWindow.h"
+#include "ui/MainWindow.h"
 
 #include "asset/AssetLoader.h"
 #include "asset/MotionConverter.h"
@@ -234,7 +234,7 @@ void MainWindow::request_garment_asset_selection()
         return;
     }
 
-    asset_loader_->queue_garment_mesh_load(selected_file.toStdWString());
+    asset_loader_->load_garment_mesh(selected_file.toStdWString());
 }
 
 // AMASS conversion //

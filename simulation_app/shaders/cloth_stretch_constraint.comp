@@ -1,0 +1,63 @@
+#version 430 core
+
+layout(local_size_x = 128) in;
+
+layout(std430, binding = 0) buffer CurrentPositions {
+    float current_positions[];
+};
+
+layout(std430, binding = 1) readonly buffer StretchEdgeIndices {
+    uint edge_indices[];
+};
+
+layout(std430, binding = 2) readonly buffer StretchRestLengths {
+    float rest_lengths[];
+};
+
+uniform uint uConstraintOffset;
+uniform uint uConstraintCount;
+uniform float uStiffness;
+
+void main()
+{
+    uint local_index = gl_GlobalInvocationID.x;
+    if (local_index >= uConstraintCount) {
+        return;
+    }
+
+    uint constraint_index = uConstraintOffset + local_index;
+    uint edge_base = constraint_index * 2u;
+    uint vertex_a = edge_indices[edge_base];
+    uint vertex_b = edge_indices[edge_base + 1u];
+
+    uint position_a_base = vertex_a * 3u;
+    uint position_b_base = vertex_b * 3u;
+
+    vec3 position_a = vec3(current_positions[position_a_base],
+                           current_positions[position_a_base + 1u],
+                           current_positions[position_a_base + 2u]);
+    vec3 position_b = vec3(current_positions[position_b_base],
+                           current_positions[position_b_base + 1u],
+                           current_positions[position_b_base + 2u]);
+
+    vec3 delta = position_b - position_a;
+    float current_length = length(delta);
+    if (current_length <= 0.000001) {
+        return;
+    }
+
+    float rest_length = rest_lengths[constraint_index];
+    float stretch_error = current_length - rest_length;
+    vec3 correction = 0.5 * clamp(uStiffness, 0.0, 1.0) * stretch_error * (delta / current_length);
+
+    position_a += correction;
+    position_b -= correction;
+
+    current_positions[position_a_base] = position_a.x;
+    current_positions[position_a_base + 1u] = position_a.y;
+    current_positions[position_a_base + 2u] = position_a.z;
+
+    current_positions[position_b_base] = position_b.x;
+    current_positions[position_b_base + 1u] = position_b.y;
+    current_positions[position_b_base + 2u] = position_b.z;
+}
