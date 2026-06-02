@@ -20,7 +20,7 @@ public:
     bool is_initialized() const;
     bool initialize(const ShaderPaths& shader_paths, QOpenGLFunctions_4_5_Core& gl);
     void release(QOpenGLFunctions_4_5_Core& gl);
-    void sync_character_frame(const SceneState& scene);
+    void update_character_frame(const SceneState& scene);
     void update_mesh_normals(QOpenGLFunctions_4_5_Core& gl);
 
     const CharacterGpuResources& character_gpu_state() const;

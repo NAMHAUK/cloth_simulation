@@ -1,7 +1,8 @@
 #pragma once
 
-#include "simulation/SimulationForceField.h"
-#include "simulation/cloth/ExternalForceSolver.h"
+#include "simulation/forces/SimulationForceField.h"
+#include "simulation/forces/ExternalForceSolver.h"
+#include "simulation/constraints/StretchConstraintSolver.h"
 #include "simulation/collision/GroundCollisionSolver.h"
 
 #include <cstdint>
@@ -26,6 +27,7 @@ public:
 private:
     SimulationForceField force_field_;
     ExternalForceSolver external_force_solver_;
+    StretchConstraintSolver stretch_constraint_solver_;
     GroundCollisionSolver ground_collision_solver_;
     bool initialized_ = false;
 };

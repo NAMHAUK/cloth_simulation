@@ -1,4 +1,4 @@
-#include "simulation/SimulationForceField.h"
+#include "simulation/forces/SimulationForceField.h"
 
 #include "simulation/SimulationSettings.h"
 

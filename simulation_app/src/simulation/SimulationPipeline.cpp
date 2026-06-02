@@ -18,8 +18,14 @@ bool SimulationPipeline::initialize(const ShaderPaths& shader_paths, QOpenGLFunc
         return false;
     }
 
+    if (!stretch_constraint_solver_.initialize(shader_paths.cloth_stretch_constraint_compute, gl)) {
+        external_force_solver_.release(gl);
+        return false;
+    }
+
     const float floor_height = simulation_settings::ground_y + simulation_settings::ground_collision_offset;
     if (!ground_collision_solver_.initialize(shader_paths.cloth_ground_collision_compute, floor_height, gl)) {
+        stretch_constraint_solver_.release(gl);
         external_force_solver_.release(gl);
         return false;
     }
@@ -36,13 +42,19 @@ bool SimulationPipeline::step(SceneState& scene, SceneGpuState& gpu_state, std::
 
     if (scene.has_character()) {
         scene.update_character_frame(motion_step_count, simulation_settings::character_frame_stride);
-        gpu_state.sync_character_frame(scene);
+        gpu_state.update_character_frame(scene);
     }
 
     const auto position_view = gpu_state.cloth_gpu_state().position_buffer_view();
+    const auto stretch_constraint_view = gpu_state.cloth_gpu_state().stretch_constraint_buffer_view();
     const glm::vec3 external_acceleration = force_field_.external_acceleration();
 
     external_force_solver_.solve(position_view, simulation_settings::fixed_dt, external_acceleration, gl);
+    stretch_constraint_solver_.solve(position_view,
+                                     stretch_constraint_view,
+                                     simulation_settings::stretch_constraint_iterations,
+                                     simulation_settings::stretch_constraint_stiffness,
+                                     gl);
     ground_collision_solver_.solve(position_view, gl);
 
     gpu_state.update_mesh_normals(gl);
@@ -52,6 +64,7 @@ bool SimulationPipeline::step(SceneState& scene, SceneGpuState& gpu_state, std::
 void SimulationPipeline::release(QOpenGLFunctions_4_5_Core& gl)
 {
     ground_collision_solver_.release(gl);
+    stretch_constraint_solver_.release(gl);
     external_force_solver_.release(gl);
     initialized_ = false;
 }

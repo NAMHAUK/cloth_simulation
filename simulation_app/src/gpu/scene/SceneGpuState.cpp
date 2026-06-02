@@ -18,7 +18,7 @@ bool SceneGpuState::initialize(const ShaderPaths& shader_paths, QOpenGLFunctions
     return true;
 }
 
-void SceneGpuState::sync_character_frame(const SceneState& scene)
+void SceneGpuState::update_character_frame(const SceneState& scene)
 {
     if (!is_initialized() || !scene.has_character() || !character_uploaded_) {
         return;
@@ -88,7 +88,7 @@ const ClothGpuResources& SceneGpuState::cloth_gpu_state() const
 
 void SceneGpuState::set_garment_meshes(const SceneState& scene, QOpenGLFunctions_4_5_Core& gl)
 {
-    cloth_gpu_state_.sync_garments(scene.garments(), gl);
+    cloth_gpu_state_.update_garment_buffers(scene.garments(), gl);
 
     if (cloth_gpu_state_.is_initialized()) {
         update_mesh_normals(gl);
@@ -97,7 +97,7 @@ void SceneGpuState::set_garment_meshes(const SceneState& scene, QOpenGLFunctions
 
 void SceneGpuState::remove_garment_gpu_state(GarmentId, const SceneState& scene, QOpenGLFunctions_4_5_Core& gl)
 {
-    cloth_gpu_state_.rebuild_compact_buffers(scene.garments(), gl);
+    cloth_gpu_state_.update_garment_buffers(scene.garments(), gl);
 
     if (cloth_gpu_state_.is_initialized()) {
         update_mesh_normals(gl);
