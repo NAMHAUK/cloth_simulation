@@ -17,3 +17,12 @@ inline bool is_valid_stretch_constraint_view(const StretchConstraintBufferView& 
            constraint_view.color_ranges != nullptr &&
            !constraint_view.color_ranges->empty();
 }
+
+inline bool is_valid_bending_constraint_view(const BendingConstraintBufferView& constraint_view)
+{
+    return constraint_view.edge_index_buffer != 0 &&
+           constraint_view.rest_length_buffer != 0 &&
+           constraint_view.constraint_count != 0 &&
+           constraint_view.color_ranges != nullptr &&
+           !constraint_view.color_ranges->empty();
+}

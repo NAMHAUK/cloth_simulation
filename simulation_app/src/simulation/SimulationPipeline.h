@@ -3,6 +3,7 @@
 #include "simulation/forces/SimulationForceField.h"
 #include "simulation/forces/ExternalForceSolver.h"
 #include "simulation/constraints/StretchConstraintSolver.h"
+#include "simulation/constraints/BendingConstraintSolver.h"
 #include "simulation/collision/GroundCollisionSolver.h"
 
 #include <cstdint>
@@ -28,6 +29,7 @@ private:
     SimulationForceField force_field_;
     ExternalForceSolver external_force_solver_;
     StretchConstraintSolver stretch_constraint_solver_;
+    BendingConstraintSolver bending_constraint_solver_;
     GroundCollisionSolver ground_collision_solver_;
     bool initialized_ = false;
 };
