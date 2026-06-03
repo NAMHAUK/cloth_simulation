@@ -44,13 +44,16 @@ void GroundCollisionSolver::solve(const ClothPositionBufferView& position_view, 
         return;
     }
 
+    // shader & GPU 연결
     gl.glUseProgram(program_);
     gl.glBindBufferBase(GL_SHADER_STORAGE_BUFFER, current_positions_binding, position_view.current_position_buffer);
     gl.glBindBufferBase(GL_SHADER_STORAGE_BUFFER, previous_positions_binding, position_view.previous_position_buffer);
 
+    // shader에 값 전달
     gl.glProgramUniform1ui(program_, vertex_count_location_, position_view.vertex_count);
     gl.glProgramUniform1f(program_, floor_height_location_, floor_height_);
 
+    // shader가 바닥과 충돌 처리 (GPU에서 바로 업데이트)
     gl.glDispatchCompute(compute_group_count(position_view.vertex_count, ground_collision_local_size), 1, 1);
     gl.glMemoryBarrier(GL_SHADER_STORAGE_BARRIER_BIT | GL_VERTEX_ATTRIB_ARRAY_BARRIER_BIT);
 }

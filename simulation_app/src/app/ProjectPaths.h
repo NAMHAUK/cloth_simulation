@@ -11,6 +11,8 @@ struct ShaderPaths {
     std::filesystem::path triangle_normal_compute;
     std::filesystem::path vertex_normal_compute;
     std::filesystem::path cloth_external_force_compute;
+    std::filesystem::path cloth_stretch_constraint_compute;
+    std::filesystem::path cloth_bending_constraint_compute;
     std::filesystem::path cloth_ground_collision_compute;
 };
 
@@ -37,6 +39,8 @@ inline ShaderPaths make_shader_paths(const std::filesystem::path& project_root)
         shader_dir / "triangle_normal.comp",
         shader_dir / "vertex_normal.comp",
         shader_dir / "cloth_external_force.comp",
+        shader_dir / "cloth_stretch_constraint.comp",
+        shader_dir / "cloth_bending_constraint.comp",
         shader_dir / "cloth_ground_collision.comp",
     };
 }

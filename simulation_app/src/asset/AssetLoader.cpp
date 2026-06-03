@@ -5,30 +5,19 @@
 
 #include <QtConcurrent/QtConcurrentRun>
 
-AssetLoader::CharacterMeshLoad AssetLoader::load_character_mesh_async(std::filesystem::path motion_asset_path)
-{
-    CharacterMeshLoad result;
-    result.source_path = std::move(motion_asset_path);
-    result.is_loaded = ::load_character_mesh(result.source_path, result.mesh);
-    return result;
-}
-
-AssetLoader::GarmentMeshLoad AssetLoader::load_garment_mesh_async(std::filesystem::path garment_asset_path)
-{
-    GarmentMeshLoad result;
-    result.source_path = std::move(garment_asset_path);
-    result.is_loaded = ::load_garment_mesh(result.source_path, result.mesh);
-    return result;
-}
+// 버튼을 통해 캐릭터 or garment load 함수 호출
+// 캐릭터  : load_character_mesh -> (background) file read -> call_character_load_callbacks
+// garment: load_garment_mesh -> (background) file read -> call_garment_load_callbacks
 
 AssetLoader::AssetLoader(QObject* parent)
     : QObject(parent)
 {
-    connect(&character_load_watcher_, &QFutureWatcher<CharacterMeshLoad>::finished, this, [this]() {
-        finish_character_mesh_load();
+    // watcher의 finish 시그널이 오면 호출되는 함수 설정
+    connect(&character_load_watcher_, &QFutureWatcher<CharacterMeshLoadResult>::finished, this, [this]() {
+        call_character_load_callbacks();
     });
-    connect(&garment_load_watcher_, &QFutureWatcher<GarmentMeshLoad>::finished, this, [this]() {
-        finish_garment_mesh_load();
+    connect(&garment_load_watcher_, &QFutureWatcher<GarmentMeshLoadResult>::finished, this, [this]() {
+        call_garment_load_callbacks();
     });
 }
 
@@ -38,6 +27,80 @@ AssetLoader::~AssetLoader()
     garment_load_watcher_.waitForFinished();
 }
 
+// 캐릭터 //
+void AssetLoader::load_character_mesh(std::filesystem::path motion_asset_path)
+{
+    if (character_load_watcher_.isRunning()) {
+        std::cerr << "Character load already in progress.\n";
+        return;
+    }
+
+    // background에서 character mesh 파일 read
+    character_load_watcher_.setFuture(QtConcurrent::run(
+        [motion_asset_path = std::move(motion_asset_path)]() mutable {
+            CharacterMeshLoadResult result;
+            result.source_path = std::move(motion_asset_path);
+            result.is_loaded = read_character_mesh_asset(result.source_path, result.mesh);
+            return result;
+        }
+    ));
+}
+
+void AssetLoader::call_character_load_callbacks()
+{
+    CharacterMeshLoadResult result = character_load_watcher_.result();
+    if (!result.is_loaded) {
+        if (character_load_failed_callback_) {
+            character_load_failed_callback_(result.source_path);
+        }
+    } else if (character_loaded_callback_) {
+        character_loaded_callback_(result.source_path, std::move(result.mesh));
+    }
+}
+
+// garment //
+// garment load는 queue로 하나씩 처리
+void AssetLoader::load_garment_mesh(std::filesystem::path garment_asset_path)
+{
+    garment_load_queue_.push_back(std::move(garment_asset_path));
+    load_next_garment_mesh();
+}
+
+void AssetLoader::load_next_garment_mesh()
+{
+    if (garment_load_watcher_.isRunning() || garment_load_queue_.empty()) {
+        return;
+    }
+
+    std::filesystem::path garment_asset_path = std::move(garment_load_queue_.front());
+    garment_load_queue_.pop_front();
+
+    // background에서 garment mesh 파일 read
+    garment_load_watcher_.setFuture(QtConcurrent::run(
+        [garment_asset_path = std::move(garment_asset_path)]() mutable {
+            GarmentMeshLoadResult result;
+            result.source_path = std::move(garment_asset_path);
+            result.is_loaded = read_garment_obj(result.source_path, result.mesh);
+            return result;
+        }
+    ));
+}
+
+void AssetLoader::call_garment_load_callbacks()
+{
+    GarmentMeshLoadResult result = garment_load_watcher_.result();
+    if (!result.is_loaded) {
+        if (garment_load_failed_callback_) {
+            garment_load_failed_callback_(result.source_path);
+        }
+    } else if (garment_loaded_callback_) {
+        garment_loaded_callback_(std::move(result.mesh));
+    }
+
+    load_next_garment_mesh();
+}
+
+// 콜백 설정 함수 //
 void AssetLoader::set_character_loaded_callback(CharacterLoadedCallback callback)
 {
     character_loaded_callback_ = std::move(callback);
@@ -56,67 +119,4 @@ void AssetLoader::set_garment_loaded_callback(GarmentLoadedCallback callback)
 void AssetLoader::set_garment_load_failed_callback(GarmentLoadFailedCallback callback)
 {
     garment_load_failed_callback_ = std::move(callback);
-}
-
-void AssetLoader::load_character_mesh(std::filesystem::path motion_asset_path)
-{
-    if (character_load_watcher_.isRunning()) {
-        std::cerr << "Character load already in progress.\n";
-        return;
-    }
-
-    character_load_watcher_.setFuture(QtConcurrent::run(
-        &AssetLoader::load_character_mesh_async,
-        std::move(motion_asset_path)
-    ));
-}
-
-void AssetLoader::queue_garment_mesh_load(std::filesystem::path garment_asset_path)
-{
-    garment_load_queue_.push_back(std::move(garment_asset_path));
-    start_next_garment_mesh_load();
-}
-
-void AssetLoader::finish_character_mesh_load()
-{
-    CharacterMeshLoad result = character_load_watcher_.result();
-    if (!result.is_loaded) {
-        if (character_load_failed_callback_) {
-            character_load_failed_callback_(result.source_path);
-        }
-        return;
-    }
-
-    if (character_loaded_callback_) {
-        character_loaded_callback_(result.source_path, std::move(result.mesh));
-    }
-}
-
-void AssetLoader::start_next_garment_mesh_load()
-{
-    if (garment_load_watcher_.isRunning() || garment_load_queue_.empty()) {
-        return;
-    }
-
-    std::filesystem::path garment_asset_path = std::move(garment_load_queue_.front());
-    garment_load_queue_.pop_front();
-
-    garment_load_watcher_.setFuture(QtConcurrent::run(
-        &AssetLoader::load_garment_mesh_async,
-        std::move(garment_asset_path)
-    ));
-}
-
-void AssetLoader::finish_garment_mesh_load()
-{
-    GarmentMeshLoad result = garment_load_watcher_.result();
-    if (!result.is_loaded) {
-        if (garment_load_failed_callback_) {
-            garment_load_failed_callback_(result.source_path);
-        }
-    } else if (garment_loaded_callback_) {
-        garment_loaded_callback_(std::move(result.mesh));
-    }
-
-    start_next_garment_mesh_load();
 }

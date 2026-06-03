@@ -20,17 +20,21 @@ add_executable(simulation_app
     src/app/ProjectPaths.h
     src/simulation/SimulationController.cpp
     src/simulation/SimulationController.h
-    src/simulation/SimulationForceField.cpp
-    src/simulation/SimulationForceField.h
+    src/simulation/forces/SimulationForceField.cpp
+    src/simulation/forces/SimulationForceField.h
     src/simulation/SimulationSettings.h
-    src/simulation/cloth/ExternalForceSolver.cpp
-    src/simulation/cloth/ExternalForceSolver.h
+    src/simulation/forces/ExternalForceSolver.cpp
+    src/simulation/forces/ExternalForceSolver.h
+    src/simulation/constraints/StretchConstraintSolver.cpp
+    src/simulation/constraints/StretchConstraintSolver.h
+    src/simulation/constraints/BendingConstraintSolver.cpp
+    src/simulation/constraints/BendingConstraintSolver.h
     src/simulation/collision/GroundCollisionSolver.cpp
     src/simulation/collision/GroundCollisionSolver.h
     src/asset/GarmentAsset.cpp
     src/asset/GarmentAsset.h
-    src/asset/MeshTopology.cpp
-    src/asset/MeshTopology.h
+    src/asset/MeshGeometryUtils.cpp
+    src/asset/MeshGeometryUtils.h
     src/asset/MotionAsset.cpp
     src/asset/MotionAsset.h
     src/gpu/body/CharacterGpuResources.cpp
@@ -71,6 +75,8 @@ add_executable(simulation_app
     shaders/triangle_normal.comp
     shaders/vertex_normal.comp
     shaders/cloth_external_force.comp
+    shaders/cloth_stretch_constraint.comp
+    shaders/cloth_bending_constraint.comp
     shaders/cloth_ground_collision.comp
 )
 

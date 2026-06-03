@@ -42,7 +42,7 @@ struct ConverterCommand {
     std::string error_message;
 };
 
-bool load_character_mesh(const std::filesystem::path& motion_asset_path, CharacterMesh& character_mesh);
+bool read_character_mesh_asset(const std::filesystem::path& motion_asset_path, CharacterMesh& character_mesh);
 ConverterCommand make_converter_command(
     const ProjectPaths& project_paths,
     const std::filesystem::path& amass_motion_path,

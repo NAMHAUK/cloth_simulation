@@ -29,30 +29,27 @@ public:
     void set_garment_load_failed_callback(GarmentLoadFailedCallback callback);
 
     void load_character_mesh(std::filesystem::path motion_asset_path);
-    void queue_garment_mesh_load(std::filesystem::path garment_asset_path);
+    void load_garment_mesh(std::filesystem::path garment_asset_path);
 
 private:
-    struct CharacterMeshLoad {
+    struct CharacterMeshLoadResult {
         std::filesystem::path source_path;
         bool is_loaded = false;
         CharacterMesh mesh;
     };
 
-    struct GarmentMeshLoad {
+    struct GarmentMeshLoadResult {
         std::filesystem::path source_path;
         bool is_loaded = false;
         GarmentMesh mesh;
     };
 
-    static CharacterMeshLoad load_character_mesh_async(std::filesystem::path motion_asset_path);
-    static GarmentMeshLoad load_garment_mesh_async(std::filesystem::path garment_asset_path);
+    void call_character_load_callbacks();
+    void load_next_garment_mesh();
+    void call_garment_load_callbacks();
 
-    void finish_character_mesh_load();
-    void start_next_garment_mesh_load();
-    void finish_garment_mesh_load();
-
-    QFutureWatcher<CharacterMeshLoad> character_load_watcher_;
-    QFutureWatcher<GarmentMeshLoad> garment_load_watcher_;
+    QFutureWatcher<CharacterMeshLoadResult> character_load_watcher_;
+    QFutureWatcher<GarmentMeshLoadResult> garment_load_watcher_;
     std::deque<std::filesystem::path> garment_load_queue_;
 
     CharacterLoadedCallback character_loaded_callback_;

@@ -1,6 +1,6 @@
 #include "gpu/body/CharacterGpuResources.h"
 
-#include "asset/MeshTopology.h"
+#include "asset/MeshGeometryUtils.h"
 #include "gpu/scene/MeshBufferResources.h"
 
 #include <cstddef>
@@ -61,8 +61,8 @@ void CharacterGpuResources::upload_mesh(const CharacterMesh& character_mesh, QOp
     }
 
     // 각 vertex에 인접한 triangle 정보 생성
-    VertexTriangleAdjacency adjacency;
-    if (!build_vertex_triangle_adjacency(character_mesh.vertex_count, character_mesh.indices, adjacency)) {
+    VertexFaceAdjacency adjacency;
+    if (!build_vertex_face_adjacency(character_mesh.vertex_count, character_mesh.indices, adjacency)) {
         release(gl);
         return;
     }
@@ -73,21 +73,21 @@ void CharacterGpuResources::upload_mesh(const CharacterMesh& character_mesh, QOp
     const GLsizeiptr position_bytes = static_cast<GLsizeiptr>(frame_position_component_count(character_mesh) * sizeof(float));
     const GLsizeiptr index_bytes = static_cast<GLsizeiptr>(character_mesh.indices.size() * sizeof(std::uint32_t));
     const GLsizeiptr adjacency_offsets_bytes = static_cast<GLsizeiptr>(adjacency.offsets.size() * sizeof(std::uint32_t));
-    const GLsizeiptr adjacency_triangles_bytes = static_cast<GLsizeiptr>(adjacency.triangles.size() * sizeof(std::uint32_t));
-    const GLsizeiptr triangle_normals_bytes = static_cast<GLsizeiptr>(adjacency.triangle_count * 4u * sizeof(float));
+    const GLsizeiptr adjacency_triangles_bytes = static_cast<GLsizeiptr>(adjacency.face_indices.size() * sizeof(std::uint32_t));
+    const GLsizeiptr triangle_normals_bytes = static_cast<GLsizeiptr>(adjacency.face_count * 4u * sizeof(float));
     const GLsizeiptr vertex_normals_bytes = static_cast<GLsizeiptr>(character_mesh.vertex_count * 4u * sizeof(float));
 
     gl.glNamedBufferData(all_frame_vertex_buffer_, position_bytes, character_mesh.vertices.data(), GL_STATIC_DRAW);
     gl.glNamedBufferData(index_buffer_, index_bytes, character_mesh.indices.data(), GL_STATIC_DRAW);
     gl.glNamedBufferData(adjacency_offset_buffer_, adjacency_offsets_bytes, adjacency.offsets.data(), GL_STATIC_DRAW);
-    gl.glNamedBufferData(adjacency_triangle_buffer_, adjacency_triangles_bytes, adjacency.triangles.data(), GL_STATIC_DRAW);
+    gl.glNamedBufferData(adjacency_triangle_buffer_, adjacency_triangles_bytes, adjacency.face_indices.data(), GL_STATIC_DRAW);
     gl.glNamedBufferData(triangle_normal_buffer_, triangle_normals_bytes, nullptr, GL_DYNAMIC_DRAW);
     gl.glNamedBufferData(vertex_normal_buffer_, vertex_normals_bytes, nullptr, GL_DYNAMIC_DRAW);
 
     // 캐릭터 mesh GPU 초기값 설정
     frame_count_ = character_mesh.frame_count;
     vertex_count_ = character_mesh.vertex_count;
-    triangle_count_ = adjacency.triangle_count;
+    triangle_count_ = adjacency.face_count;
     current_frame_index_ = 0;
     index_count_ = static_cast<GLsizei>(character_mesh.indices.size());
 }

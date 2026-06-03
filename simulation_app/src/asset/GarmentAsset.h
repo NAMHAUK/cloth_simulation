@@ -1,6 +1,6 @@
 #pragma once
 
-#include "asset/MeshTopology.h"
+#include "asset/MeshGeometryUtils.h"
 
 #include <cstdint>
 #include <filesystem>
@@ -8,13 +8,28 @@
 
 #include <glm/vec3.hpp>
 
+struct GarmentDistanceConstraints final {
+    std::vector<MeshEdge> colorized_edges;
+    std::vector<MeshEdgeRange> color_ranges;
+    std::vector<float> rest_lengths;
+
+    bool is_valid() const
+    {
+        return !colorized_edges.empty() &&
+               !color_ranges.empty() &&
+               colorized_edges.size() == rest_lengths.size();
+    }
+};
+
 struct GarmentMesh {
     std::vector<float> vertices;
     std::vector<std::uint32_t> indices;
-    VertexTriangleAdjacency adjacency;
+    VertexFaceAdjacency adjacency;
+    GarmentDistanceConstraints stretch_constraints;
+    GarmentDistanceConstraints bending_constraints;
     glm::vec3 color{0.95f, 0.42f, 0.18f};
     glm::vec3 bounds_center{};
     float bounds_radius = 1.0f;
 };
 
-bool load_garment_mesh(const std::filesystem::path& obj_path, GarmentMesh& garment_mesh);
+bool read_garment_obj(const std::filesystem::path& obj_path, GarmentMesh& garment_mesh);
