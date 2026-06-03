@@ -27,6 +27,8 @@ add_executable(simulation_app
     src/simulation/forces/ExternalForceSolver.h
     src/simulation/constraints/StretchConstraintSolver.cpp
     src/simulation/constraints/StretchConstraintSolver.h
+    src/simulation/constraints/BendingConstraintSolver.cpp
+    src/simulation/constraints/BendingConstraintSolver.h
     src/simulation/collision/GroundCollisionSolver.cpp
     src/simulation/collision/GroundCollisionSolver.h
     src/asset/GarmentAsset.cpp
@@ -74,6 +76,7 @@ add_executable(simulation_app
     shaders/vertex_normal.comp
     shaders/cloth_external_force.comp
     shaders/cloth_stretch_constraint.comp
+    shaders/cloth_bending_constraint.comp
     shaders/cloth_ground_collision.comp
 )
 

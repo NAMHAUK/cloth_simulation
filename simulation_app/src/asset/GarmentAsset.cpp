@@ -20,6 +20,8 @@ namespace {
 constexpr float obj_to_world_scale = 0.01f;
 constexpr std::uint32_t position_components = 3;
 
+using MeshEdgeBuilder = std::vector<MeshEdge> (*)(std::uint32_t, const std::vector<std::uint32_t>&);
+
 // OBJ 파일의 token 하나에서 vertex index만 읽는 함수
 // Ex) "1/2/3" -> 0
 bool parse_face_token(const std::string& token, std::uint32_t vertex_count, std::uint32_t& index)
@@ -52,18 +54,31 @@ void assign_bounds(GarmentMesh& garment_mesh, const glm::vec3& min_bounds, const
     garment_mesh.bounds_radius = glm::length(max_bounds - min_bounds) * 0.5f;
 }
 
-GarmentStretchConstraints build_stretch_constraints(const std::vector<std::uint32_t>& triangle_indices,
-                                                    const std::vector<float>& vertices)
+GarmentDistanceConstraints build_distance_constraints(const std::vector<std::uint32_t>& triangle_indices,
+                                                      const std::vector<float>& vertices,
+                                                      MeshEdgeBuilder build_edges)
 {
     const std::uint32_t vertex_count = static_cast<std::uint32_t>(vertices.size() / position_components);
-    const std::vector<MeshEdge> edges = build_unique_triangle_edges(vertex_count, triangle_indices);
+    const std::vector<MeshEdge> edges = build_edges(vertex_count, triangle_indices);
     ColorizedMeshEdges colorized_edges = colorize_mesh_edges(vertex_count, edges);
 
-    GarmentStretchConstraints stretch_constraints;
-    stretch_constraints.colorized_edges = std::move(colorized_edges.edges);
-    stretch_constraints.color_ranges = std::move(colorized_edges.ranges);
-    stretch_constraints.rest_lengths = compute_mesh_edge_lengths(stretch_constraints.colorized_edges, vertices);
-    return stretch_constraints;
+    GarmentDistanceConstraints distance_constraints;
+    distance_constraints.colorized_edges = std::move(colorized_edges.edges);
+    distance_constraints.color_ranges = std::move(colorized_edges.ranges);
+    distance_constraints.rest_lengths = compute_mesh_edge_lengths(distance_constraints.colorized_edges, vertices);
+    return distance_constraints;
+}
+
+GarmentDistanceConstraints build_stretch_constraints(const std::vector<std::uint32_t>& triangle_indices,
+                                                     const std::vector<float>& vertices)
+{
+    return build_distance_constraints(triangle_indices, vertices, build_unique_triangle_edges);
+}
+
+GarmentDistanceConstraints build_bending_constraints(const std::vector<std::uint32_t>& triangle_indices,
+                                                     const std::vector<float>& vertices)
+{
+    return build_distance_constraints(triangle_indices, vertices, build_unique_bending_edges);
 }
 
 // vertex 좌표 parsing
@@ -193,11 +208,18 @@ bool read_garment_obj(const std::filesystem::path& obj_path, GarmentMesh& garmen
         return fail("Invalid garment stretch constraints");
     }
 
+    next_mesh.bending_constraints = build_bending_constraints(next_mesh.indices, next_mesh.vertices);
+    if (!next_mesh.bending_constraints.is_valid()) {
+        return fail("Invalid garment bending constraints");
+    }
+
     std::cout << "Loaded garment OBJ: " << obj_path << '\n';
     std::cout << "  vertices=" << next_mesh.vertices.size() / 3
               << " indices=" << next_mesh.indices.size()
               << " stretch_constraints=" << next_mesh.stretch_constraints.colorized_edges.size()
-              << " color_groups=" << next_mesh.stretch_constraints.color_ranges.size()
+              << " stretch_color_groups=" << next_mesh.stretch_constraints.color_ranges.size()
+              << " bending_constraints=" << next_mesh.bending_constraints.colorized_edges.size()
+              << " bending_color_groups=" << next_mesh.bending_constraints.color_ranges.size()
               << " bounds_radius=" << next_mesh.bounds_radius << '\n';
 
     garment_mesh = std::move(next_mesh);

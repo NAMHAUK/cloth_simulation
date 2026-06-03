@@ -33,6 +33,9 @@ bool build_vertex_face_adjacency(std::uint32_t vertex_count,
 std::vector<MeshEdge> build_unique_triangle_edges(std::uint32_t vertex_count,
                                                   const std::vector<std::uint32_t>& triangle_indices);
 
+std::vector<MeshEdge> build_unique_bending_edges(std::uint32_t vertex_count,
+                                                 const std::vector<std::uint32_t>& triangle_indices);
+
 ColorizedMeshEdges colorize_mesh_edges(std::uint32_t vertex_count,
                                        const std::vector<MeshEdge>& edges);
 

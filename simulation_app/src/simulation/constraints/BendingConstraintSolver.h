@@ -1,23 +1,22 @@
 #pragma once
 
-#include <cstdint>
 #include <filesystem>
 
 #include <QOpenGLFunctions_4_5_Core>
 
+struct BendingConstraintBufferView;
 struct ClothPositionBufferView;
-struct StretchConstraintBufferView;
 
-class StretchConstraintSolver final {
+class BendingConstraintSolver final {
 public:
-    StretchConstraintSolver() = default;
-    StretchConstraintSolver(const StretchConstraintSolver&) = delete;
-    StretchConstraintSolver& operator=(const StretchConstraintSolver&) = delete;
+    BendingConstraintSolver() = default;
+    BendingConstraintSolver(const BendingConstraintSolver&) = delete;
+    BendingConstraintSolver& operator=(const BendingConstraintSolver&) = delete;
 
     bool is_initialized() const;
     bool initialize(const std::filesystem::path& shader_path, QOpenGLFunctions_4_5_Core& gl);
     void solve(const ClothPositionBufferView& position_view,
-               const StretchConstraintBufferView& constraint_view,
+               const BendingConstraintBufferView& constraint_view,
                float stiffness,
                QOpenGLFunctions_4_5_Core& gl) const;
     void release(QOpenGLFunctions_4_5_Core& gl);
