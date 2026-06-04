@@ -1,7 +1,6 @@
 #pragma once
 
-#include "asset/GarmentAsset.h"
-#include "asset/MotionAsset.h"
+#include "asset/AssetDataTypes.h"
 #include "gpu/scene/SceneGpuState.h"
 #include "rendering/RenderPipeline.h"
 #include "scene/SceneState.h"

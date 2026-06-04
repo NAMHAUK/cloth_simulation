@@ -1,7 +1,6 @@
 #pragma once
 
-#include "asset/GarmentAsset.h"
-#include "asset/MotionAsset.h"
+#include "asset/AssetDataTypes.h"
 
 #include <cstddef>
 #include <cstdint>

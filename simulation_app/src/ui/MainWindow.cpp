@@ -1,9 +1,9 @@
 #include "ui/MainWindow.h"
 
+#include "asset/AssetConverter.h"
+#include "asset/AssetConverterCommands.h"
+#include "asset/AssetIO.h"
 #include "asset/AssetLoader.h"
-#include "asset/GarmentAsset.h"
-#include "asset/MotionAsset.h"
-#include "asset/MotionConverter.h"
 #include "simulation/SimulationController.h"
 #include "ui/AssetBrowserPanel.h"
 #include "ui/SceneViewport.h"
@@ -80,8 +80,8 @@ MainWindow::MainWindow(const std::filesystem::path& project_root, QWidget* paren
     simulation_controller_ = std::make_unique<SimulationController>();
     browser_panel_ = new AssetBrowserPanel(viewer_container_);
     asset_loader_ = new AssetLoader(this);
-    motion_converter_ = new MotionConverter(this);
-    garment_converter_ = new MotionConverter(this);
+    motion_converter_ = new AssetConverter(this);
+    garment_converter_ = new AssetConverter(this);
 
     setCentralWidget(viewer_container_);
     viewer_container_->installEventFilter(this);
@@ -252,7 +252,7 @@ void MainWindow::refresh_motion_list()
 {
     browser_panel_->set_asset_paths(
         AssetPanelMode::Motions,
-        make_motion_asset_paths(scan_motion_assets(project_paths_))
+        make_motion_asset_paths(asset_io::scan_motion_assets(project_paths_))
     );
 }
 
@@ -260,7 +260,7 @@ void MainWindow::refresh_garment_list()
 {
     browser_panel_->set_asset_paths(
         AssetPanelMode::Garments,
-        make_garment_asset_paths(scan_garment_assets(project_paths_))
+        make_garment_asset_paths(asset_io::scan_garment_assets(project_paths_))
     );
 }
 
@@ -309,14 +309,18 @@ std::optional<ConverterCommand> MainWindow::prepare_amass_conversion()
     }
 
     const std::filesystem::path amass_motion_path = selected_file.toStdWString();
-    const std::filesystem::path motion_asset_path = make_motion_asset_path(project_paths_, amass_motion_path);
+    const std::filesystem::path motion_asset_path = asset_io::make_motion_asset_path(project_paths_, amass_motion_path);
 
     if (std::filesystem::exists(motion_asset_path)) {
         refresh_motion_list();
         return std::nullopt;
     }
 
-    const ConverterCommand command = make_converter_command(project_paths_, amass_motion_path, motion_asset_path);
+    const ConverterCommand command = asset_converter_commands::make_motion_command(
+        project_paths_,
+        amass_motion_path,
+        motion_asset_path
+    );
     if (!command.is_valid) {
         std::cerr << command.error_message << '\n';
         show_motion_conversion_failure(this);
@@ -328,10 +332,7 @@ std::optional<ConverterCommand> MainWindow::prepare_amass_conversion()
 
 std::optional<ConverterCommand> MainWindow::prepare_garment_conversion()
 {
-    const std::filesystem::path source_dir = project_paths_.garment_asset_dir / "source";
-    const std::filesystem::path default_dir = std::filesystem::exists(source_dir)
-        ? source_dir
-        : project_paths_.garment_asset_dir;
+    const std::filesystem::path default_dir = project_paths_.garment_source_dir;
     const QString selected_file = QFileDialog::getOpenFileName(
         this,
         "Select Garment OBJ",
@@ -352,8 +353,11 @@ std::optional<ConverterCommand> MainWindow::prepare_garment_conversion()
         return std::nullopt;
     }
 
-    const ConverterCommand command =
-        make_garment_converter_command(project_paths_, garment_obj_path, garment_asset_path);
+    const ConverterCommand command = asset_converter_commands::make_garment_command(
+        project_paths_,
+        garment_obj_path,
+        garment_asset_path
+    );
     if (!command.is_valid) {
         std::cerr << command.error_message << '\n';
         show_garment_conversion_failure(this);

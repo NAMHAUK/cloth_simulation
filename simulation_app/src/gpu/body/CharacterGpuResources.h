@@ -1,6 +1,6 @@
 #pragma once
 
-#include "asset/MotionAsset.h"
+#include "asset/AssetDataTypes.h"
 
 #include <cstdint>
 

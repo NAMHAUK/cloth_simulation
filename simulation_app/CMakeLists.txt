@@ -15,10 +15,13 @@ add_executable(simulation_app
     src/app/main.cpp
     src/asset/AssetConverter.cpp
     src/asset/AssetConverter.h
+    src/asset/AssetConverterCommands.cpp
+    src/asset/AssetConverterCommands.h
+    src/asset/AssetDataTypes.h
+    src/asset/AssetIO.cpp
+    src/asset/AssetIO.h
     src/asset/AssetLoader.cpp
     src/asset/AssetLoader.h
-    src/asset/MotionConverter.cpp
-    src/asset/MotionConverter.h
     src/app/ProjectPaths.h
     src/simulation/SimulationController.cpp
     src/simulation/SimulationController.h
@@ -33,14 +36,8 @@ add_executable(simulation_app
     src/simulation/constraints/BendingConstraintSolver.h
     src/simulation/collision/GroundCollisionSolver.cpp
     src/simulation/collision/GroundCollisionSolver.h
-    src/asset/GarmentAsset.cpp
-    src/asset/GarmentAsset.h
-    src/asset/GarmentAssetIO.cpp
-    src/asset/GarmentAssetIO.h
     src/asset/MeshGeometryUtils.cpp
     src/asset/MeshGeometryUtils.h
-    src/asset/MotionAsset.cpp
-    src/asset/MotionAsset.h
     src/gpu/body/CharacterGpuResources.cpp
     src/gpu/body/CharacterGpuResources.h
     src/gpu/cloth/ClothGpuResources.cpp
@@ -87,11 +84,11 @@ add_executable(simulation_app
 
 add_executable(garment_converter
     tools/garment_converter/main.cpp
-    src/asset/GarmentConverter.cpp
-    src/asset/GarmentConverter.h
-    src/asset/GarmentAsset.h
-    src/asset/GarmentAssetIO.cpp
-    src/asset/GarmentAssetIO.h
+    tools/garment_converter/GarmentConverter.cpp
+    tools/garment_converter/GarmentConverter.h
+    src/asset/AssetDataTypes.h
+    src/asset/AssetIO.cpp
+    src/asset/AssetIO.h
     src/asset/MeshGeometryUtils.cpp
     src/asset/MeshGeometryUtils.h
 )

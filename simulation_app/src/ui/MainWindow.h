@@ -7,11 +7,10 @@
 #include <QMainWindow>
 
 #include "app/ProjectPaths.h"
-#include "asset/MotionConverter.h"
+#include "asset/AssetConverter.h"
 
 class AssetBrowserPanel;
 class AssetLoader;
-class MotionConverter;
 class QObject;
 class SimulationController;
 class SceneViewport;
@@ -38,8 +37,8 @@ private:
 
     ProjectPaths project_paths_;
     AssetLoader* asset_loader_ = nullptr;
-    MotionConverter* motion_converter_ = nullptr;
-    MotionConverter* garment_converter_ = nullptr;
+    AssetConverter* motion_converter_ = nullptr;
+    AssetConverter* garment_converter_ = nullptr;
     QWidget* viewer_container_ = nullptr;
     AssetBrowserPanel* browser_panel_ = nullptr;
     SceneViewport* simulation_viewport_ = nullptr;
