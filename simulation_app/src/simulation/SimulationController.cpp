@@ -45,16 +45,8 @@ bool SimulationController::initialize_gpu(const ShaderPaths& shader_paths, QOpen
     }
 
     gpu_released_ = false;
-    sim_fps_ = 0.0;
-    sim_fps_step_count_ = 0;
-    sim_fps_timer_.restart();
     frame_timer_.start(simulation_settings::simulation_tick_ms);
     return true;
-}
-
-double SimulationController::sim_fps() const
-{
-    return sim_fps_;
 }
 
 void SimulationController::draw(const glm::mat4& mvp, QOpenGLFunctions_4_5_Core& gl)
@@ -80,22 +72,7 @@ void SimulationController::tick_frame()
 
     ++simulation_step_count_;
     ++motion_step_count_;
-    update_sim_fps();
     viewport_callbacks_.request_update();
-}
-
-void SimulationController::update_sim_fps()
-{
-    ++sim_fps_step_count_;
-
-    const qint64 elapsed_ms = sim_fps_timer_.elapsed();
-    if (elapsed_ms < simulation_settings::fps_update_interval_ms) {
-        return;
-    }
-
-    sim_fps_ = static_cast<double>(sim_fps_step_count_) * 1000.0 / static_cast<double>(elapsed_ms);
-    sim_fps_step_count_ = 0;
-    sim_fps_timer_.restart();
 }
 
 void SimulationController::release_gpu()

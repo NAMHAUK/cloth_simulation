@@ -1,34 +1,17 @@
 #pragma once
 
+#include "asset/AssetDataTypes.h"
+
 #include <cstdint>
 #include <vector>
 
-struct VertexFaceAdjacency final {
-    std::vector<std::uint32_t> offsets;
-    std::vector<std::uint32_t> face_indices;
-    std::uint32_t face_count = 0;
-
-    bool is_valid(std::uint32_t vertex_count) const;
-};
-
-struct MeshEdge final {
-    std::uint32_t vertex_a = 0;
-    std::uint32_t vertex_b = 0;
-};
-
-struct MeshEdgeRange final {
-    std::uint32_t offset = 0;
-    std::uint32_t count = 0;
-};
-
-struct ColorizedMeshEdges final {
-    std::vector<MeshEdge> edges;
-    std::vector<MeshEdgeRange> ranges;
-};
+#include <glm/vec3.hpp>
 
 bool build_vertex_face_adjacency(std::uint32_t vertex_count,
                                  const std::vector<std::uint32_t>& triangle_indices,
                                  VertexFaceAdjacency& adjacency);
+
+glm::vec3 get_vertex_position(const std::vector<float>& vertices, std::uint32_t vertex_index);
 
 std::vector<MeshEdge> build_unique_triangle_edges(std::uint32_t vertex_count,
                                                   const std::vector<std::uint32_t>& triangle_indices);

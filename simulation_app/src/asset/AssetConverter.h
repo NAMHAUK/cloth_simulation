@@ -1,23 +1,37 @@
 #pragma once
 
-#include "asset/MotionAsset.h"
-
 #include <functional>
 #include <string>
 
 #include <QObject>
 #include <QProcess>
+#include <QString>
+#include <QStringList>
 
-class MotionConverter final : public QObject {
+struct ConverterResult {
+    bool succeeded = false;
+    int exit_code = -1;
+    std::string error_message;
+};
+
+struct ConverterCommand {
+    bool is_valid = false;
+    QString program;
+    QStringList arguments;
+    QString working_directory;
+    std::string error_message;
+};
+
+class AssetConverter final : public QObject {
 public:
     using ConversionSucceededCallback = std::function<void()>;
     using ConversionFailedCallback = std::function<void(const std::string&)>;
 
-    explicit MotionConverter(QObject* parent = nullptr);
-    ~MotionConverter() override;
+    explicit AssetConverter(QObject* parent = nullptr);
+    ~AssetConverter() override;
 
-    MotionConverter(const MotionConverter&) = delete;
-    MotionConverter& operator=(const MotionConverter&) = delete;
+    AssetConverter(const AssetConverter&) = delete;
+    AssetConverter& operator=(const AssetConverter&) = delete;
 
     bool is_running() const;
 

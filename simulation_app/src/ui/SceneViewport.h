@@ -1,12 +1,14 @@
 #pragma once
 
-#include "asset/MotionAsset.h"
+#include "asset/AssetDataTypes.h"
 
+#include <cstdint>
 #include <functional>
 
 #include <glm/mat4x4.hpp>
 #include <glm/vec3.hpp>
 
+#include <QElapsedTimer>
 #include <QOpenGLFunctions_4_5_Core>
 #include <QOpenGLWidget>
 #include <QPoint>
@@ -29,14 +31,12 @@ class SceneViewport final : public QOpenGLWidget, protected QOpenGLFunctions_4_5
 public:
     using InitializeCallback = std::function<bool(QOpenGLFunctions_4_5_Core&)>;
     using SceneRenderCallback = std::function<void(const glm::mat4&, QOpenGLFunctions_4_5_Core&)>;
-    using SimFpsCallback = std::function<double()>;
 
     explicit SceneViewport(QWidget* parent = nullptr);
     ~SceneViewport() override;
 
     void set_initialize_callback(InitializeCallback callback);
     void set_scene_render_callback(SceneRenderCallback callback);
-    void set_sim_fps_callback(SimFpsCallback callback);
     bool is_gl_initialized() const;
     QOpenGLFunctions_4_5_Core& gl_functions();
     void reset_camera_to_character(const CharacterMesh& character_mesh);
@@ -52,12 +52,16 @@ protected:
     void wheelEvent(QWheelEvent* event) override;
 
 private:
+    void update_render_time();
     void draw_display_fps();
 
     InitializeCallback initialize_callback_;
     SceneRenderCallback scene_render_callback_;
-    SimFpsCallback sim_fps_callback_;
     OrbitCamera camera_;
+    QElapsedTimer render_fps_timer_;
 
+    std::uint64_t render_frame_count_ = 0;
+    double render_fps_ = 0.0;
+    double frame_ms_ = 0.0;
     bool gl_initialized_ = false;
 };
