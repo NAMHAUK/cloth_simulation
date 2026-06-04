@@ -7,7 +7,7 @@ layout(std430, binding = 0) buffer CurrentPositions {
 };
 
 layout(std430, binding = 1) readonly buffer BendingEdgeIndices {
-    uint edge_indices[];
+    uvec2 edge_indices[];
 };
 
 layout(std430, binding = 2) readonly buffer BendingRestLengths {
@@ -26,9 +26,9 @@ void main()
     }
 
     uint constraint_index = uConstraintOffset + local_index;
-    uint edge_base = constraint_index * 2u;
-    uint vertex_a = edge_indices[edge_base];
-    uint vertex_b = edge_indices[edge_base + 1u];
+    uvec2 edge = edge_indices[constraint_index];
+    uint vertex_a = edge.x;
+    uint vertex_b = edge.y;
 
     uint position_a_base = vertex_a * 3u;
     uint position_b_base = vertex_b * 3u;
@@ -41,14 +41,16 @@ void main()
                            current_positions[position_b_base + 2u]);
 
     vec3 delta = position_b - position_a;
-    float current_length = length(delta);
-    if (current_length <= 0.000001) {
+    float length_sq = dot(delta, delta);
+    if (length_sq <= 0.000000000001) {
         return;
     }
 
+    float inv_length = inversesqrt(length_sq);
+    float current_length = length_sq * inv_length;
     float rest_length = rest_lengths[constraint_index];
     float bend_error = current_length - rest_length;
-    vec3 correction = 0.5 * clamp(uStiffness, 0.0, 1.0) * bend_error * (delta / current_length);
+    vec3 correction = 0.5 * uStiffness * bend_error * delta * inv_length;
 
     position_a += correction;
     position_b -= correction;

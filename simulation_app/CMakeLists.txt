@@ -13,6 +13,8 @@ get_filename_component(REPO_ROOT "${CMAKE_CURRENT_SOURCE_DIR}/.." ABSOLUTE)
 
 add_executable(simulation_app
     src/app/main.cpp
+    src/asset/AssetConverter.cpp
+    src/asset/AssetConverter.h
     src/asset/AssetLoader.cpp
     src/asset/AssetLoader.h
     src/asset/MotionConverter.cpp
@@ -33,6 +35,8 @@ add_executable(simulation_app
     src/simulation/collision/GroundCollisionSolver.h
     src/asset/GarmentAsset.cpp
     src/asset/GarmentAsset.h
+    src/asset/GarmentAssetIO.cpp
+    src/asset/GarmentAssetIO.h
     src/asset/MeshGeometryUtils.cpp
     src/asset/MeshGeometryUtils.h
     src/asset/MotionAsset.cpp
@@ -63,11 +67,12 @@ add_executable(simulation_app
     src/utils/QtUtils.h
     src/utils/BufferUtils.h
     src/utils/FileUtils.h
+    src/utils/NumericUtils.h
     src/utils/ShaderUtils.h
     src/ui/MainWindow.cpp
     src/ui/MainWindow.h
-    src/ui/MotionBrowserPanel.cpp
-    src/ui/MotionBrowserPanel.h
+    src/ui/AssetBrowserPanel.cpp
+    src/ui/AssetBrowserPanel.h
     shaders/viewer.vert
     shaders/viewer.frag
     shaders/background.vert
@@ -80,7 +85,22 @@ add_executable(simulation_app
     shaders/cloth_ground_collision.comp
 )
 
+add_executable(garment_converter
+    tools/garment_converter/main.cpp
+    src/asset/GarmentConverter.cpp
+    src/asset/GarmentConverter.h
+    src/asset/GarmentAsset.h
+    src/asset/GarmentAssetIO.cpp
+    src/asset/GarmentAssetIO.h
+    src/asset/MeshGeometryUtils.cpp
+    src/asset/MeshGeometryUtils.h
+)
+
 target_include_directories(simulation_app PRIVATE
+    src
+)
+
+target_include_directories(garment_converter PRIVATE
     src
 )
 
@@ -95,6 +115,10 @@ target_link_libraries(simulation_app PRIVATE
     Qt6::Concurrent
     glm::glm
     opengl32
+)
+
+target_link_libraries(garment_converter PRIVATE
+    glm::glm
 )
 
 if(WIN32)

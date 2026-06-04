@@ -1,12 +1,16 @@
 #pragma once
 
+#include "app/ProjectPaths.h"
 #include "asset/MeshGeometryUtils.h"
 
 #include <cstdint>
 #include <filesystem>
+#include <string>
 #include <vector>
 
 #include <glm/vec3.hpp>
+
+struct ConverterCommand;
 
 struct GarmentDistanceConstraints final {
     std::vector<MeshEdge> colorized_edges;
@@ -32,4 +36,14 @@ struct GarmentMesh {
     float bounds_radius = 1.0f;
 };
 
-bool read_garment_obj(const std::filesystem::path& obj_path, GarmentMesh& garment_mesh);
+struct GarmentAsset {
+    std::filesystem::path garment_asset_path;
+    std::string display_name;
+};
+
+bool read_garment_asset(const std::filesystem::path& garment_asset_path, GarmentMesh& garment_mesh);
+ConverterCommand make_garment_converter_command(
+    const ProjectPaths& project_paths,
+    const std::filesystem::path& garment_obj_path,
+    const std::filesystem::path& garment_asset_path);
+std::vector<GarmentAsset> scan_garment_assets(const ProjectPaths& project_paths);

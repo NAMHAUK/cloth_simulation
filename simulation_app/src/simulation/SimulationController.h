@@ -12,7 +12,6 @@
 
 #include <glm/mat4x4.hpp>
 
-#include <QElapsedTimer>
 #include <QTimer>
 
 class QOpenGLFunctions_4_5_Core;
@@ -44,13 +43,11 @@ public:
     // GPU / rendering //
     bool initialize_gpu(const ShaderPaths& shader_paths, QOpenGLFunctions_4_5_Core& gl);
     bool is_gpu_initialized() const;
-    double sim_fps() const;
     void draw(const glm::mat4& mvp, QOpenGLFunctions_4_5_Core& gl);
     void release_gpu();
 
 private:
     void tick_frame();
-    void update_sim_fps();
     bool is_viewport_ready() const;
 
     // CPU-side scene state //
@@ -67,9 +64,6 @@ private:
 
     std::uint64_t simulation_step_count_ = 0;
     std::uint64_t motion_step_count_ = 0;
-    std::uint64_t sim_fps_step_count_ = 0;
-    double sim_fps_ = 0.0;
-    QElapsedTimer sim_fps_timer_;
     QTimer frame_timer_;
 
     ViewportCallbacks viewport_callbacks_;

@@ -66,10 +66,12 @@ void add_edge_opposite_vertex(std::vector<EdgeOppositeVertex>& edge_opposite_ver
     edge_opposite_vertices.push_back({make_edge(vertex_a, vertex_b), edge_opposite_vertex});
 }
 
-// rest length //
+// vertex position //
 constexpr std::uint32_t position_components = 3;
+}
 
-glm::vec3 read_vertex_position(const std::vector<float>& vertices, std::uint32_t vertex_index)
+// vertex position //
+glm::vec3 get_vertex_position(const std::vector<float>& vertices, std::uint32_t vertex_index)
 {
     const std::size_t position_base = static_cast<std::size_t>(vertex_index) * position_components;
     return {
@@ -77,7 +79,6 @@ glm::vec3 read_vertex_position(const std::vector<float>& vertices, std::uint32_t
         vertices[position_base + 1u],
         vertices[position_base + 2u],
     };
-}
 }
 
 // vertex_face_adjacency //
@@ -287,8 +288,8 @@ std::vector<float> compute_mesh_edge_lengths(const std::vector<MeshEdge>& edges,
     std::vector<float> lengths;
     lengths.reserve(edges.size());
     for (const MeshEdge& edge : edges) {
-        const glm::vec3 vertex_a = read_vertex_position(vertices, edge.vertex_a);
-        const glm::vec3 vertex_b = read_vertex_position(vertices, edge.vertex_b);
+        const glm::vec3 vertex_a = get_vertex_position(vertices, edge.vertex_a);
+        const glm::vec3 vertex_b = get_vertex_position(vertices, edge.vertex_b);
         lengths.push_back(glm::length(vertex_b - vertex_a));
     }
     return lengths;

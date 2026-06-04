@@ -51,6 +51,7 @@ constexpr glm::vec3 world_up{0.0f, 1.0f, 0.0f};
 constexpr int fps_overlay_margin = 14;
 constexpr int fps_overlay_horizontal_padding = 8;
 constexpr int fps_overlay_vertical_padding = 4;
+constexpr int render_time_update_interval_ms = 500;
 
 void orbit_camera(OrbitCamera& camera, const QPoint& delta)
 {
@@ -118,11 +119,6 @@ void SceneViewport::set_scene_render_callback(SceneRenderCallback callback)
     scene_render_callback_ = std::move(callback);
 }
 
-void SceneViewport::set_sim_fps_callback(SimFpsCallback callback)
-{
-    sim_fps_callback_ = std::move(callback);
-}
-
 bool SceneViewport::is_gl_initialized() const
 {
     return gl_initialized_;
@@ -173,13 +169,34 @@ void SceneViewport::paintGL()
         scene_render_callback_(mvp, gl_functions());
     }
 
+    update_render_time();
     draw_display_fps();
+}
+
+void SceneViewport::update_render_time()
+{
+    if (!render_fps_timer_.isValid()) {
+        render_fps_timer_.start();
+    }
+
+    ++render_frame_count_;
+
+    const qint64 elapsed_ms = render_fps_timer_.elapsed();
+    if (elapsed_ms < render_time_update_interval_ms) {
+        return;
+    }
+
+    render_fps_ = static_cast<double>(render_frame_count_) * 1000.0 / static_cast<double>(elapsed_ms);
+    frame_ms_ = static_cast<double>(elapsed_ms) / static_cast<double>(render_frame_count_);
+    render_frame_count_ = 0;
+    render_fps_timer_.restart();
 }
 
 void SceneViewport::draw_display_fps()
 {
-    const double current_sim_fps = sim_fps_callback_ ? sim_fps_callback_() : 0.0;
-    const QString fps_text = QString("Sim FPS: %1").arg(current_sim_fps, 0, 'f', 1);
+    const QString fps_text = QString("FPS: %1  Frame: %2ms")
+        .arg(render_fps_, 0, 'f', 1)
+        .arg(frame_ms_, 0, 'f', 1);
 
     QPainter painter(this);
     painter.setRenderHint(QPainter::Antialiasing);
@@ -224,6 +241,11 @@ void SceneViewport::reset_camera_to_character(const CharacterMesh& character_mes
 // Mouse Event //
 void SceneViewport::mousePressEvent(QMouseEvent* event)
 {
+    if (event->button() == Qt::LeftButton) {
+        event->ignore();
+        return;
+    }
+
     camera_.last_mouse_position = event->pos();
     camera_.has_last_mouse = true;
     event->accept();
@@ -239,16 +261,15 @@ void SceneViewport::mouseMoveEvent(QMouseEvent* event)
     const QPoint delta = event->pos() - camera_.last_mouse_position;
     camera_.last_mouse_position = event->pos();
 
-    if (event->buttons() & Qt::LeftButton) {
+    if (event->buttons() & Qt::RightButton) {
         orbit_camera(camera_, delta);
-    } else if ((event->buttons() & Qt::RightButton) || (event->buttons() & Qt::MiddleButton)) {
+    } else if (event->buttons() & Qt::MiddleButton) {
         pan_camera(camera_, delta, camera_position(camera_));
     } else {
         event->ignore();
         return;
     }
 
-    update();
     event->accept();
 }
 
@@ -266,7 +287,6 @@ void SceneViewport::wheelEvent(QWheelEvent* event)
     if (std::abs(wheel_steps) > wheel_step_epsilon) {
         camera_.distance *= std::pow(zoom_step_scale, wheel_steps);
         camera_.distance = std::clamp(camera_.distance, camera_.min_distance, camera_.max_distance);
-        update();
     }
     event->accept();
 }

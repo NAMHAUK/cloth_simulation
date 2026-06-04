@@ -42,18 +42,15 @@ void MotionConverter::set_conversion_failed_callback(ConversionFailedCallback ca
 
 void MotionConverter::start_conversion(const ConverterCommand& command)
 {
-    if (process_) {
-        return;
-    }
-
-    result_ = {};
-    process_ = new QProcess(this);
-    process_->setProgram(command.program);
-    process_->setArguments(command.arguments);
-    process_->setWorkingDirectory(command.working_directory);
-
-    setup_process_callbacks();
-    process_->start();
+    asset_converter::start_conversion(
+        this,
+        process_,
+        result_,
+        command,
+        [this]() {
+            setup_process_callbacks();
+        }
+    );
 }
 
 void MotionConverter::setup_process_callbacks()
