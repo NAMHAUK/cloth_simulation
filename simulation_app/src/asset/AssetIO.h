@@ -15,12 +15,14 @@ bool is_valid_garment_mesh(const GarmentMesh& garment_mesh);
 
 // Motion //
 bool read_character_mesh_asset(const std::filesystem::path& motion_asset_path, CharacterMesh& character_mesh);
-std::vector<MotionAsset> scan_motion_assets(const ProjectPaths& project_paths);
+std::vector<std::filesystem::path> scan_motion_asset_paths(const ProjectPaths& project_paths);
 std::filesystem::path make_motion_asset_path(const ProjectPaths& project_paths,
                                              const std::filesystem::path& amass_motion_path);
 
 // Garment //
 bool read_garment_asset(const std::filesystem::path& garment_asset_path, GarmentMesh& garment_mesh);
 bool write_garment_asset(const std::filesystem::path& garment_asset_path, const GarmentMesh& garment_mesh);
-std::vector<GarmentAsset> scan_garment_assets(const ProjectPaths& project_paths);
+std::vector<std::filesystem::path> scan_garment_asset_paths(const ProjectPaths& project_paths);
+std::filesystem::path make_garment_asset_path(const ProjectPaths& project_paths,
+                                              const std::filesystem::path& garment_obj_path);
 }

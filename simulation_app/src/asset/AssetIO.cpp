@@ -395,11 +395,11 @@ bool read_character_mesh_asset(const std::filesystem::path& motion_asset_path, C
     return true;
 }
 
-std::vector<MotionAsset> scan_motion_assets(const ProjectPaths& project_paths)
+std::vector<std::filesystem::path> scan_motion_asset_paths(const ProjectPaths& project_paths)
 {
-    std::vector<MotionAsset> assets;
+    std::vector<std::filesystem::path> asset_paths;
     if (!std::filesystem::exists(project_paths.motion_asset_dir)) {
-        return assets;
+        return asset_paths;
     }
 
     for (const auto& file : std::filesystem::recursive_directory_iterator(project_paths.motion_asset_dir)) {
@@ -407,16 +407,13 @@ std::vector<MotionAsset> scan_motion_assets(const ProjectPaths& project_paths)
             continue;
         }
 
-        assets.push_back({
-            file.path(),
-            file.path().stem().string(),
-        });
+        asset_paths.push_back(file.path());
     }
 
-    std::sort(assets.begin(), assets.end(), [](const MotionAsset& lhs, const MotionAsset& rhs) {
-        return lhs.display_name < rhs.display_name;
+    std::sort(asset_paths.begin(), asset_paths.end(), [](const auto& lhs, const auto& rhs) {
+        return lhs.stem().string() < rhs.stem().string();
     });
-    return assets;
+    return asset_paths;
 }
 
 std::filesystem::path make_motion_asset_path(const ProjectPaths& project_paths, const std::filesystem::path& amass_motion_path)
@@ -503,11 +500,11 @@ bool write_garment_asset(const std::filesystem::path& garment_asset_path, const 
     return true;
 }
 
-std::vector<GarmentAsset> scan_garment_assets(const ProjectPaths& project_paths)
+std::vector<std::filesystem::path> scan_garment_asset_paths(const ProjectPaths& project_paths)
 {
-    std::vector<GarmentAsset> assets;
+    std::vector<std::filesystem::path> asset_paths;
     if (!std::filesystem::exists(project_paths.garment_asset_dir)) {
-        return assets;
+        return asset_paths;
     }
 
     for (const auto& file : std::filesystem::recursive_directory_iterator(project_paths.garment_asset_dir)) {
@@ -517,15 +514,18 @@ std::vector<GarmentAsset> scan_garment_assets(const ProjectPaths& project_paths)
             continue;
         }
 
-        assets.push_back({
-            garment_asset_path,
-            garment_asset_path.stem().string(),
-        });
+        asset_paths.push_back(garment_asset_path);
     }
 
-    std::sort(assets.begin(), assets.end(), [](const GarmentAsset& lhs, const GarmentAsset& rhs) {
-        return lhs.display_name < rhs.display_name;
+    std::sort(asset_paths.begin(), asset_paths.end(), [](const auto& lhs, const auto& rhs) {
+        return lhs.stem().string() < rhs.stem().string();
     });
-    return assets;
+    return asset_paths;
+}
+
+std::filesystem::path make_garment_asset_path(const ProjectPaths& project_paths,
+                                              const std::filesystem::path& garment_obj_path)
+{
+    return project_paths.garment_asset_dir / (garment_obj_path.stem().string() + ".garment");
 }
 }
