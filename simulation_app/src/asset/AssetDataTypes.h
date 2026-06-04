@@ -1,8 +1,5 @@
 #pragma once
 
-#include "app/ProjectPaths.h"
-#include "asset/MeshGeometryUtils.h"
-
 #include <cstdint>
 #include <filesystem>
 #include <string>
@@ -10,7 +7,44 @@
 
 #include <glm/vec3.hpp>
 
-struct ConverterCommand;
+struct VertexFaceAdjacency final {
+    std::vector<std::uint32_t> offsets;
+    std::vector<std::uint32_t> face_indices;
+    std::uint32_t face_count = 0;
+
+    bool is_valid(std::uint32_t vertex_count) const;
+};
+
+struct MeshEdge final {
+    std::uint32_t vertex_a = 0;
+    std::uint32_t vertex_b = 0;
+};
+
+struct MeshEdgeRange final {
+    std::uint32_t offset = 0;
+    std::uint32_t count = 0;
+};
+
+struct ColorizedMeshEdges final {
+    std::vector<MeshEdge> edges;
+    std::vector<MeshEdgeRange> ranges;
+};
+
+struct CharacterMesh {
+    float fps = 0.0f;
+    std::uint32_t frame_count = 0;
+    std::uint32_t vertex_count = 0;
+    std::uint32_t index_count = 0;
+    std::vector<std::uint32_t> indices;
+    std::vector<float> vertices;
+    glm::vec3 bounds_center{};
+    float bounds_radius = 1.0f;
+};
+
+struct MotionAsset {
+    std::filesystem::path motion_asset_path;
+    std::string display_name;
+};
 
 struct GarmentDistanceConstraints final {
     std::vector<MeshEdge> colorized_edges;
@@ -40,10 +74,3 @@ struct GarmentAsset {
     std::filesystem::path garment_asset_path;
     std::string display_name;
 };
-
-bool read_garment_asset(const std::filesystem::path& garment_asset_path, GarmentMesh& garment_mesh);
-ConverterCommand make_garment_converter_command(
-    const ProjectPaths& project_paths,
-    const std::filesystem::path& garment_obj_path,
-    const std::filesystem::path& garment_asset_path);
-std::vector<GarmentAsset> scan_garment_assets(const ProjectPaths& project_paths);

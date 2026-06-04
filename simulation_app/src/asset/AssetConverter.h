@@ -22,12 +22,30 @@ struct ConverterCommand {
     std::string error_message;
 };
 
-namespace asset_converter {
-using SetupProcessCallbacks = std::function<void()>;
+class AssetConverter final : public QObject {
+public:
+    using ConversionSucceededCallback = std::function<void()>;
+    using ConversionFailedCallback = std::function<void(const std::string&)>;
 
-bool start_conversion(QObject* owner,
-                      QProcess*& process,
-                      ConverterResult& result,
-                      const ConverterCommand& command,
-                      const SetupProcessCallbacks& setup_process_callbacks);
-}
+    explicit AssetConverter(QObject* parent = nullptr);
+    ~AssetConverter() override;
+
+    AssetConverter(const AssetConverter&) = delete;
+    AssetConverter& operator=(const AssetConverter&) = delete;
+
+    bool is_running() const;
+
+    void set_conversion_succeeded_callback(ConversionSucceededCallback callback);
+    void set_conversion_failed_callback(ConversionFailedCallback callback);
+
+    void start_conversion(const ConverterCommand& command);
+
+private:
+    void setup_process_callbacks();
+    void finish_process(int exit_code, QProcess::ExitStatus exit_status);
+
+    QProcess* process_ = nullptr;
+    ConverterResult result_;
+    ConversionSucceededCallback conversion_succeeded_callback_;
+    ConversionFailedCallback conversion_failed_callback_;
+};

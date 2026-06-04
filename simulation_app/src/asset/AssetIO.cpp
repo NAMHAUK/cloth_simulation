@@ -1,7 +1,8 @@
-#include "asset/GarmentAssetIO.h"
+#include "asset/AssetIO.h"
 
 #include "utils/NumericUtils.h"
 
+#include <algorithm>
 #include <array>
 #include <cmath>
 #include <cstddef>
@@ -9,6 +10,7 @@
 #include <filesystem>
 #include <fstream>
 #include <iostream>
+#include <string>
 #include <utility>
 #include <vector>
 
@@ -31,7 +33,7 @@ bool is_valid_header(const GarmentAssetCounts& counts, const GarmentMesh& garmen
 GarmentAssetCounts make_garment_asset_counts(const GarmentMesh& garment_mesh)
 {
     return {
-        static_cast<std::uint32_t>(garment_mesh.vertices.size() / garment_asset_io::position_components),
+        static_cast<std::uint32_t>(garment_mesh.vertices.size() / asset_io::position_components),
         static_cast<std::uint32_t>(garment_mesh.indices.size()),
         static_cast<std::uint32_t>(garment_mesh.adjacency.offsets.size()),
         static_cast<std::uint32_t>(garment_mesh.adjacency.face_indices.size()),
@@ -42,7 +44,6 @@ GarmentAssetCounts make_garment_asset_counts(const GarmentMesh& garment_mesh)
     };
 }
 
-// read //
 template <typename T>
 bool read_binary_value(std::ifstream& input, T& value)
 {
@@ -60,6 +61,57 @@ bool read_binary_values(std::ifstream& input, std::vector<T>& values, std::uint3
 
     input.read(reinterpret_cast<char*>(values.data()), static_cast<std::streamsize>(values.size() * sizeof(T)));
     return static_cast<bool>(input);
+}
+
+template <typename T>
+bool write_binary_value(std::ofstream& output, const T& value)
+{
+    output.write(reinterpret_cast<const char*>(&value), sizeof(T));
+    return static_cast<bool>(output);
+}
+
+template <typename T>
+bool write_binary_values(std::ofstream& output, const std::vector<T>& values)
+{
+    if (values.empty()) {
+        return true;
+    }
+
+    output.write(reinterpret_cast<const char*>(values.data()), static_cast<std::streamsize>(values.size() * sizeof(T)));
+    return static_cast<bool>(output);
+}
+
+bool validate_motion_asset(std::ifstream& input, const std::filesystem::path& motion_asset_path)
+{
+    if (!input) {
+        std::cerr << "Failed to open motion asset: " << motion_asset_path << '\n';
+        return false;
+    }
+
+    std::array<char, 8> magic = {};
+    input.read(magic.data(), magic.size());
+    if (!input || std::string(magic.data(), magic.size()) != "SMPLCACH") {
+        std::cerr << "Invalid motion asset magic: " << motion_asset_path << '\n';
+        return false;
+    }
+
+    return true;
+}
+
+bool is_path_inside(const std::filesystem::path& path, const std::filesystem::path& root)
+{
+    std::error_code error;
+    const std::filesystem::path relative = std::filesystem::relative(path, root, error);
+    if (error || relative.empty()) {
+        return false;
+    }
+
+    for (const auto& part : relative) {
+        if (part == "..") {
+            return false;
+        }
+    }
+    return true;
 }
 
 bool read_edges(std::ifstream& input, std::vector<MeshEdge>& edges, std::uint32_t count)
@@ -84,9 +136,7 @@ bool read_ranges(std::ifstream& input, std::vector<MeshEdgeRange>& ranges, std::
     return true;
 }
 
-bool read_header_values(std::ifstream& input,
-                        GarmentAssetCounts& counts,
-                        GarmentMesh& garment_mesh)
+bool read_header_values(std::ifstream& input, GarmentAssetCounts& counts, GarmentMesh& garment_mesh)
 {
     return read_binary_value(input, counts.vertex_count) &&
            read_binary_value(input, counts.index_count) &&
@@ -138,7 +188,7 @@ bool read_asset_header(std::ifstream& input,
 bool read_mesh_data(std::ifstream& input, const GarmentAssetCounts& counts, GarmentMesh& garment_mesh)
 {
     garment_mesh.adjacency.face_count = counts.index_count / 3u;
-    const std::uint32_t position_value_count = counts.vertex_count * garment_asset_io::position_components;
+    const std::uint32_t position_value_count = counts.vertex_count * asset_io::position_components;
     return read_binary_values(input, garment_mesh.vertices, position_value_count) &&
            read_binary_values(input, garment_mesh.indices, counts.index_count) &&
            read_binary_values(input, garment_mesh.adjacency.offsets, counts.adjacency_offset_count) &&
@@ -149,25 +199,6 @@ bool read_mesh_data(std::ifstream& input, const GarmentAssetCounts& counts, Garm
            read_edges(input, garment_mesh.bending_constraints.colorized_edges, counts.bending_edge_count) &&
            read_ranges(input, garment_mesh.bending_constraints.color_ranges, counts.bending_range_count) &&
            read_binary_values(input, garment_mesh.bending_constraints.rest_lengths, counts.bending_edge_count);
-}
-
-// write //
-template <typename T>
-bool write_binary_value(std::ofstream& output, const T& value)
-{
-    output.write(reinterpret_cast<const char*>(&value), sizeof(T));
-    return static_cast<bool>(output);
-}
-
-template <typename T>
-bool write_binary_values(std::ofstream& output, const std::vector<T>& values)
-{
-    if (values.empty()) {
-        return true;
-    }
-
-    output.write(reinterpret_cast<const char*>(values.data()), static_cast<std::streamsize>(values.size() * sizeof(T)));
-    return static_cast<bool>(output);
 }
 
 bool write_edges(std::ofstream& output, const std::vector<MeshEdge>& edges)
@@ -231,7 +262,6 @@ bool write_mesh_data(std::ofstream& output, const GarmentMesh& garment_mesh)
            write_binary_values(output, garment_mesh.bending_constraints.rest_lengths);
 }
 
-// check //
 bool is_valid_edge_ranges(const std::vector<MeshEdgeRange>& ranges, std::size_t edge_count)
 {
     for (const MeshEdgeRange& range : ranges) {
@@ -282,7 +312,7 @@ bool is_valid_header(const GarmentAssetCounts& counts, const GarmentMesh& garmen
 }
 }
 
-namespace garment_asset_io {
+namespace asset_io {
 bool is_valid_garment_mesh(const GarmentMesh& garment_mesh)
 {
     const GarmentAssetCounts counts = make_garment_asset_counts(garment_mesh);
@@ -309,7 +339,103 @@ bool is_valid_garment_mesh(const GarmentMesh& garment_mesh)
            is_finite_vec3(garment_mesh.color);
 }
 
-bool read_garment_asset_file(const std::filesystem::path& garment_asset_path, GarmentMesh& garment_mesh)
+bool read_character_mesh_asset(const std::filesystem::path& motion_asset_path, CharacterMesh& character_mesh)
+{
+    std::ifstream input(motion_asset_path, std::ios::binary);
+    if (!validate_motion_asset(input, motion_asset_path)) {
+        return false;
+    }
+
+    std::uint32_t version = 0;
+    if (!read_binary_value(input, version) ||
+        !read_binary_value(input, character_mesh.fps) ||
+        !read_binary_value(input, character_mesh.frame_count) ||
+        !read_binary_value(input, character_mesh.vertex_count) ||
+        !read_binary_value(input, character_mesh.index_count) ||
+        !read_binary_value(input, character_mesh.bounds_center.x) ||
+        !read_binary_value(input, character_mesh.bounds_center.y) ||
+        !read_binary_value(input, character_mesh.bounds_center.z) ||
+        !read_binary_value(input, character_mesh.bounds_radius)) {
+        std::cerr << "Invalid motion asset header: " << motion_asset_path << '\n';
+        return false;
+    }
+
+    if (version != 1 || character_mesh.fps <= 0.0f ||
+        character_mesh.frame_count == 0 || character_mesh.vertex_count == 0 ||
+        character_mesh.index_count == 0 || character_mesh.bounds_radius <= 0.0f) {
+        std::cerr << "Unsupported motion asset header values: " << motion_asset_path << '\n';
+        return false;
+    }
+
+    character_mesh.indices.resize(character_mesh.index_count);
+    character_mesh.vertices.resize(
+        static_cast<std::size_t>(character_mesh.frame_count) *
+        static_cast<std::size_t>(character_mesh.vertex_count) * position_components
+    );
+
+    input.read(
+        reinterpret_cast<char*>(character_mesh.indices.data()),
+        static_cast<std::streamsize>(character_mesh.indices.size() * sizeof(std::uint32_t))
+    );
+    input.read(
+        reinterpret_cast<char*>(character_mesh.vertices.data()),
+        static_cast<std::streamsize>(character_mesh.vertices.size() * sizeof(float))
+    );
+
+    if (!input) {
+        std::cerr << "Failed to read full motion asset payload: " << motion_asset_path << '\n';
+        return false;
+    }
+
+    std::cout << "Loaded motion asset: " << motion_asset_path << '\n';
+    std::cout << "  fps=" << character_mesh.fps
+              << " frames=" << character_mesh.frame_count
+              << " vertices=" << character_mesh.vertex_count
+              << " indices=" << character_mesh.index_count << '\n';
+    return true;
+}
+
+std::vector<MotionAsset> scan_motion_assets(const ProjectPaths& project_paths)
+{
+    std::vector<MotionAsset> assets;
+    if (!std::filesystem::exists(project_paths.motion_asset_dir)) {
+        return assets;
+    }
+
+    for (const auto& file : std::filesystem::recursive_directory_iterator(project_paths.motion_asset_dir)) {
+        if (!file.is_regular_file() || file.path().extension() != ".cache") {
+            continue;
+        }
+
+        assets.push_back({
+            file.path(),
+            file.path().stem().string(),
+        });
+    }
+
+    std::sort(assets.begin(), assets.end(), [](const MotionAsset& lhs, const MotionAsset& rhs) {
+        return lhs.display_name < rhs.display_name;
+    });
+    return assets;
+}
+
+std::filesystem::path make_motion_asset_path(const ProjectPaths& project_paths, const std::filesystem::path& amass_motion_path)
+{
+    const std::string motion_asset_file_name = amass_motion_path.stem().string() + ".cache";
+
+    if (is_path_inside(amass_motion_path, project_paths.amass_dir)) {
+        std::error_code error;
+        std::filesystem::path relative_path = std::filesystem::relative(amass_motion_path, project_paths.amass_dir, error);
+        if (!error) {
+            relative_path.replace_filename(motion_asset_file_name);
+            return project_paths.motion_asset_dir / relative_path;
+        }
+    }
+
+    return project_paths.motion_asset_dir / "imported" / motion_asset_file_name;
+}
+
+bool read_garment_asset(const std::filesystem::path& garment_asset_path, GarmentMesh& garment_mesh)
 {
     std::ifstream input(garment_asset_path, std::ios::binary);
 
@@ -330,11 +456,20 @@ bool read_garment_asset_file(const std::filesystem::path& garment_asset_path, Ga
         return false;
     }
 
+    std::cout << "Loaded garment asset: " << garment_asset_path << '\n';
+    std::cout << "  vertices=" << asset_mesh.vertices.size() / position_components
+              << " triangles=" << asset_mesh.indices.size() / 3u
+              << " stretch_constraints=" << asset_mesh.stretch_constraints.colorized_edges.size()
+              << " stretch_color_groups=" << asset_mesh.stretch_constraints.color_ranges.size()
+              << " bending_constraints=" << asset_mesh.bending_constraints.colorized_edges.size()
+              << " bending_color_groups=" << asset_mesh.bending_constraints.color_ranges.size()
+              << " bounds_radius=" << asset_mesh.bounds_radius << '\n';
+
     garment_mesh = std::move(asset_mesh);
     return true;
 }
 
-bool write_garment_asset_file(const std::filesystem::path& garment_asset_path, const GarmentMesh& garment_mesh)
+bool write_garment_asset(const std::filesystem::path& garment_asset_path, const GarmentMesh& garment_mesh)
 {
     if (!is_valid_garment_mesh(garment_mesh)) {
         std::cerr << "Cannot write invalid garment asset mesh.\n";
@@ -342,7 +477,7 @@ bool write_garment_asset_file(const std::filesystem::path& garment_asset_path, c
     }
 
     std::error_code error;
-    const std::filesystem::path parent_path = garment_asset_path.parent_path();
+    const auto parent_path = garment_asset_path.parent_path();
     if (!parent_path.empty()) {
         std::filesystem::create_directories(parent_path, error);
         if (error) {
@@ -366,5 +501,31 @@ bool write_garment_asset_file(const std::filesystem::path& garment_asset_path, c
     }
 
     return true;
+}
+
+std::vector<GarmentAsset> scan_garment_assets(const ProjectPaths& project_paths)
+{
+    std::vector<GarmentAsset> assets;
+    if (!std::filesystem::exists(project_paths.garment_asset_dir)) {
+        return assets;
+    }
+
+    for (const auto& file : std::filesystem::recursive_directory_iterator(project_paths.garment_asset_dir)) {
+        const auto garment_asset_path = file.path();
+
+        if (!file.is_regular_file() || garment_asset_path.extension() != ".garment") {
+            continue;
+        }
+
+        assets.push_back({
+            garment_asset_path,
+            garment_asset_path.stem().string(),
+        });
+    }
+
+    std::sort(assets.begin(), assets.end(), [](const GarmentAsset& lhs, const GarmentAsset& rhs) {
+        return lhs.display_name < rhs.display_name;
+    });
+    return assets;
 }
 }

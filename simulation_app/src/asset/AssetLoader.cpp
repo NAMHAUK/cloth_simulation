@@ -1,5 +1,7 @@
 #include "asset/AssetLoader.h"
 
+#include "asset/AssetIO.h"
+
 #include <iostream>
 #include <utility>
 
@@ -40,7 +42,7 @@ void AssetLoader::load_character_mesh(std::filesystem::path motion_asset_path)
         [motion_asset_path = std::move(motion_asset_path)]() mutable {
             CharacterMeshLoadResult result;
             result.source_path = std::move(motion_asset_path);
-            result.is_loaded = read_character_mesh_asset(result.source_path, result.mesh);
+            result.is_loaded = asset_io::read_character_mesh_asset(result.source_path, result.mesh);
             return result;
         }
     ));
@@ -80,7 +82,7 @@ void AssetLoader::load_next_garment_mesh()
         [garment_asset_path = std::move(garment_asset_path)]() mutable {
             GarmentMeshLoadResult result;
             result.source_path = std::move(garment_asset_path);
-            result.is_loaded = read_garment_asset(result.source_path, result.mesh);
+            result.is_loaded = asset_io::read_garment_asset(result.source_path, result.mesh);
             return result;
         }
     ));

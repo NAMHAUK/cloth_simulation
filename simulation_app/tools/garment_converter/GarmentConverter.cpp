@@ -1,6 +1,7 @@
-#include "asset/GarmentConverter.h"
+#include "GarmentConverter.h"
 
-#include "asset/GarmentAssetIO.h"
+#include "asset/AssetIO.h"
+#include "asset/MeshGeometryUtils.h"
 #include "utils/NumericUtils.h"
 
 #include <array>
@@ -31,7 +32,7 @@ GarmentDistanceConstraints build_distance_constraints(const std::vector<std::uin
                                                       const std::vector<float>& vertices,
                                                       MeshEdgeBuilder build_edges)
 {
-    const auto vertex_count = static_cast<std::uint32_t>(vertices.size() / garment_asset_io::position_components);
+    const auto vertex_count = static_cast<std::uint32_t>(vertices.size() / asset_io::position_components);
     const std::vector<MeshEdge> edges = build_edges(vertex_count, triangle_indices);
     ColorizedMeshEdges colorized_edges = colorize_mesh_edges(vertex_count, edges);
 
@@ -102,7 +103,7 @@ std::uint32_t count_connected_components(const std::vector<std::vector<std::uint
 bool validate_garment_obj(const GarmentMesh& garment_mesh, std::uint32_t vertex_count)
 {
     if (vertex_count == 0 ||
-        garment_mesh.vertices.size() != static_cast<std::size_t>(vertex_count) * garment_asset_io::position_components) {
+        garment_mesh.vertices.size() != static_cast<std::size_t>(vertex_count) * asset_io::position_components) {
         std::cerr << "Invalid garment OBJ vertex data.\n";
         return false;
     }
@@ -317,7 +318,7 @@ bool build_garment_simulation_data(GarmentMesh& garment_mesh, std::uint32_t vert
 void print_garment_obj_summary(const std::filesystem::path& obj_path, const GarmentMesh& garment_mesh)
 {
     std::cout << "Read garment OBJ: " << obj_path << '\n';
-    std::cout << "  vertices=" << garment_mesh.vertices.size() / garment_asset_io::position_components
+    std::cout << "  vertices=" << garment_mesh.vertices.size() / asset_io::position_components
               << " triangles=" << garment_mesh.indices.size() / 3u
               << " stretch_constraints=" << garment_mesh.stretch_constraints.colorized_edges.size()
               << " bending_constraints=" << garment_mesh.bending_constraints.colorized_edges.size()
@@ -375,7 +376,7 @@ bool read_garment_obj(const std::filesystem::path& obj_path, GarmentMesh& garmen
 
 bool write_garment_asset(const std::filesystem::path& garment_asset_path, const GarmentMesh& garment_mesh)
 {
-    if (!garment_asset_io::write_garment_asset_file(garment_asset_path, garment_mesh)) {
+    if (!asset_io::write_garment_asset(garment_asset_path, garment_mesh)) {
         return false;
     }
 

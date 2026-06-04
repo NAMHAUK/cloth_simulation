@@ -1,6 +1,6 @@
 #pragma once
 
-#include "asset/GarmentAsset.h"
+#include "asset/AssetDataTypes.h"
 
 #include <filesystem>
 
