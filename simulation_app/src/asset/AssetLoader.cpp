@@ -80,7 +80,7 @@ void AssetLoader::load_next_garment_mesh()
         [garment_asset_path = std::move(garment_asset_path)]() mutable {
             GarmentMeshLoadResult result;
             result.source_path = std::move(garment_asset_path);
-            result.is_loaded = read_garment_obj(result.source_path, result.mesh);
+            result.is_loaded = read_garment_asset(result.source_path, result.mesh);
             return result;
         }
     ));

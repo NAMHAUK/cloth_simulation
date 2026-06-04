@@ -5,12 +5,10 @@
 #include <string>
 #include <vector>
 
-#include <QString>
-#include <QStringList>
-
 #include <glm/vec3.hpp>
 
 #include "app/ProjectPaths.h"
+#include "asset/AssetConverter.h"
 
 struct CharacterMesh {
     float fps = 0.0f;
@@ -26,20 +24,6 @@ struct CharacterMesh {
 struct MotionAsset {
     std::filesystem::path motion_asset_path;
     std::string display_name;
-};
-
-struct ConverterResult {
-    bool succeeded = false;
-    int exit_code = -1;
-    std::string error_message;
-};
-
-struct ConverterCommand {
-    bool is_valid = false;
-    QString program;
-    QStringList arguments;
-    QString working_directory;
-    std::string error_message;
 };
 
 bool read_character_mesh_asset(const std::filesystem::path& motion_asset_path, CharacterMesh& character_mesh);

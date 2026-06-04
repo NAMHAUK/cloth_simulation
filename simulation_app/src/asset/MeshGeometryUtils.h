@@ -3,6 +3,8 @@
 #include <cstdint>
 #include <vector>
 
+#include <glm/vec3.hpp>
+
 struct VertexFaceAdjacency final {
     std::vector<std::uint32_t> offsets;
     std::vector<std::uint32_t> face_indices;
@@ -29,6 +31,8 @@ struct ColorizedMeshEdges final {
 bool build_vertex_face_adjacency(std::uint32_t vertex_count,
                                  const std::vector<std::uint32_t>& triangle_indices,
                                  VertexFaceAdjacency& adjacency);
+
+glm::vec3 get_vertex_position(const std::vector<float>& vertices, std::uint32_t vertex_index);
 
 std::vector<MeshEdge> build_unique_triangle_edges(std::uint32_t vertex_count,
                                                   const std::vector<std::uint32_t>& triangle_indices);
