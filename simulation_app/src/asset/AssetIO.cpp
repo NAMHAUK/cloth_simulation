@@ -432,7 +432,7 @@ std::filesystem::path make_motion_asset_path(const ProjectPaths& project_paths, 
     return project_paths.motion_asset_dir / "imported" / motion_asset_file_name;
 }
 
-bool read_garment_asset(const std::filesystem::path& garment_asset_path, GarmentMesh& garment_mesh)
+bool read_garment_mesh(const std::filesystem::path& garment_asset_path, GarmentMesh& garment_mesh)
 {
     std::ifstream input(garment_asset_path, std::ios::binary);
 

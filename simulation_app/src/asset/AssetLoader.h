@@ -9,6 +9,12 @@
 #include <QFutureWatcher>
 #include <QObject>
 
+struct GarmentMeshLoadResult {
+    std::filesystem::path source_path;
+    bool is_loaded = false;
+    GarmentMesh mesh;
+};
+
 class AssetLoader final : public QObject {
 public:
     using CharacterLoadedCallback = std::function<void(const std::filesystem::path&, CharacterMesh)>;
@@ -35,12 +41,6 @@ private:
         std::filesystem::path source_path;
         bool is_loaded = false;
         CharacterMesh mesh;
-    };
-
-    struct GarmentMeshLoadResult {
-        std::filesystem::path source_path;
-        bool is_loaded = false;
-        GarmentMesh mesh;
     };
 
     void call_character_load_callbacks();

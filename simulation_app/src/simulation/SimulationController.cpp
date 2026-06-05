@@ -128,7 +128,7 @@ void SimulationController::add_garment_mesh(GarmentMesh mesh)
 
     viewport_callbacks_.run_with_gl_context([this, &mesh](QOpenGLFunctions_4_5_Core& gl) {
         scene_.add_garment_mesh(std::move(mesh));
-        gpu_state_.set_garment_meshes(scene_, gl);
+        gpu_state_.update_garment_meshes(scene_, gl);
     });
 
     viewport_callbacks_.request_update();
