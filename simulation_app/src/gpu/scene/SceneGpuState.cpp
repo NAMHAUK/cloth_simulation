@@ -76,7 +76,9 @@ void SceneGpuState::set_character_mesh(const SceneState& scene, QOpenGLFunctions
     character_gpu_state_.set_current_frame(0);
     current_character_frame_ = 0;
     character_uploaded_ = true;
-    update_mesh_normals(gl);
+    normal_updater_.update_normals(character_gpu_state_.mesh_topology_resources(),
+                                   character_gpu_state_.mesh_normal_resources(),
+                                   gl);
 }
 
 // Garments //
@@ -86,20 +88,18 @@ const ClothGpuResources& SceneGpuState::cloth_gpu_state() const
     return cloth_gpu_state_;
 }
 
-void SceneGpuState::set_garment_meshes(const SceneState& scene, QOpenGLFunctions_4_5_Core& gl)
+void SceneGpuState::update_garment_meshes(const SceneState& scene, QOpenGLFunctions_4_5_Core& gl)
 {
     cloth_gpu_state_.update_garment_buffers(scene.garments(), gl);
-
-    if (cloth_gpu_state_.is_initialized()) {
-        update_mesh_normals(gl);
-    }
+    normal_updater_.update_normals(cloth_gpu_state_.mesh_topology_resources(),
+                                   cloth_gpu_state_.mesh_normal_resources(),
+                                   gl);
 }
 
 void SceneGpuState::remove_garment_gpu_state(GarmentId, const SceneState& scene, QOpenGLFunctions_4_5_Core& gl)
 {
     cloth_gpu_state_.update_garment_buffers(scene.garments(), gl);
-
-    if (cloth_gpu_state_.is_initialized()) {
-        update_mesh_normals(gl);
-    }
+    normal_updater_.update_normals(cloth_gpu_state_.mesh_topology_resources(),
+                                   cloth_gpu_state_.mesh_normal_resources(),
+                                   gl);
 }

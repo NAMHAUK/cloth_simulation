@@ -27,7 +27,7 @@ public:
     void set_character_mesh(const SceneState& scene, QOpenGLFunctions_4_5_Core& gl);
 
     const ClothGpuResources& cloth_gpu_state() const;
-    void set_garment_meshes(const SceneState& scene, QOpenGLFunctions_4_5_Core& gl);
+    void update_garment_meshes(const SceneState& scene, QOpenGLFunctions_4_5_Core& gl);
     void remove_garment_gpu_state(GarmentId garment_id, const SceneState& scene, QOpenGLFunctions_4_5_Core& gl);
 
 private:
