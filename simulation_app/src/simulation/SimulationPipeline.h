@@ -5,6 +5,7 @@
 #include "simulation/constraints/StretchConstraintSolver.h"
 #include "simulation/constraints/BendingConstraintSolver.h"
 #include "simulation/collision/GroundCollisionSolver.h"
+#include "simulation/collision/CharacterCollisionSolver.h"
 
 #include <cstdint>
 
@@ -26,10 +27,17 @@ public:
     void release(QOpenGLFunctions_4_5_Core& gl);
 
 private:
+    bool can_solve_constraint_iteration(const ClothPositionBufferView& position_view,
+                                        const StretchConstraintBufferView& stretch_constraint_view,
+                                        const BendingConstraintBufferView& bending_constraint_view,
+                                        const MeshTopologyResources& character_topology,
+                                        bool has_character) const;
+
     SimulationForceField force_field_;
     ExternalForceSolver external_force_solver_;
     StretchConstraintSolver stretch_constraint_solver_;
     BendingConstraintSolver bending_constraint_solver_;
     GroundCollisionSolver ground_collision_solver_;
+    CharacterCollisionSolver character_collision_solver_;
     bool initialized_ = false;
 };

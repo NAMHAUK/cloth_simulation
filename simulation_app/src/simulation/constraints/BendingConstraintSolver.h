@@ -15,6 +15,9 @@ public:
 
     bool is_initialized() const;
     bool initialize(const std::filesystem::path& shader_path, QOpenGLFunctions_4_5_Core& gl);
+    bool can_solve(const ClothPositionBufferView& position_view,
+                   const BendingConstraintBufferView& constraint_view,
+                   float stiffness) const;
     void solve(const ClothPositionBufferView& position_view,
                const BendingConstraintBufferView& constraint_view,
                float stiffness,

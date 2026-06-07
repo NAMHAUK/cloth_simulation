@@ -24,7 +24,7 @@
 #include <glm/geometric.hpp>
 
 namespace {
-constexpr float obj_to_world_scale = 0.01f;
+constexpr float obj_to_world_scale = 0.001f;
 
 using MeshEdgeBuilder = std::vector<MeshEdge> (*)(std::uint32_t, const std::vector<std::uint32_t>&);
 
