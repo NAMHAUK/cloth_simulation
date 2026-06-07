@@ -36,6 +36,8 @@ add_executable(simulation_app
     src/simulation/constraints/BendingConstraintSolver.h
     src/simulation/collision/GroundCollisionSolver.cpp
     src/simulation/collision/GroundCollisionSolver.h
+    src/simulation/collision/CharacterCollisionSolver.cpp
+    src/simulation/collision/CharacterCollisionSolver.h
     src/asset/MeshGeometryUtils.cpp
     src/asset/MeshGeometryUtils.h
     src/gpu/body/CharacterGpuResources.cpp
@@ -80,6 +82,7 @@ add_executable(simulation_app
     shaders/cloth_stretch_constraint.comp
     shaders/cloth_bending_constraint.comp
     shaders/cloth_ground_collision.comp
+    shaders/cloth_character_collision.comp
 )
 
 add_executable(garment_converter

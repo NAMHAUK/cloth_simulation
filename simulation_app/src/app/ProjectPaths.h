@@ -14,6 +14,7 @@ struct ShaderPaths {
     std::filesystem::path cloth_stretch_constraint_compute;
     std::filesystem::path cloth_bending_constraint_compute;
     std::filesystem::path cloth_ground_collision_compute;
+    std::filesystem::path cloth_character_collision_compute;
 };
 
 struct ProjectPaths {
@@ -43,6 +44,7 @@ inline ShaderPaths make_shader_paths(const std::filesystem::path& project_root)
         shader_dir / "cloth_stretch_constraint.comp",
         shader_dir / "cloth_bending_constraint.comp",
         shader_dir / "cloth_ground_collision.comp",
+        shader_dir / "cloth_character_collision.comp",
     };
 }
 

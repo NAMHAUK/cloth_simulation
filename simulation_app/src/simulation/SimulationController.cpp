@@ -66,12 +66,11 @@ void SimulationController::tick_frame()
         simulation_step_finished = simulation_pipeline_.step(scene_, gpu_state_, motion_step_count_, gl);
     });
 
-    if (!simulation_step_finished) {
-        return;
+    if (simulation_step_finished) {
+        ++simulation_step_count_;
+        ++motion_step_count_;
     }
 
-    ++simulation_step_count_;
-    ++motion_step_count_;
     viewport_callbacks_.request_update();
 }
 
