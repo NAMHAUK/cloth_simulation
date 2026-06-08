@@ -42,17 +42,17 @@ bool BendingConstraintSolver::initialize(const std::filesystem::path& shader_pat
 }
 
 bool BendingConstraintSolver::can_solve(const ClothPositionBufferView& position_view,
-                                        const BendingConstraintBufferView& constraint_view,
+                                        const DistanceConstraintBufferView& constraint_view,
                                         float stiffness) const
 {
     return is_initialized() &&
            is_valid_position_view(position_view) &&
-           is_valid_bending_constraint_view(constraint_view) &&
+           is_valid_distance_constraint_view(constraint_view) &&
            stiffness > 0.0f;
 }
 
 void BendingConstraintSolver::solve(const ClothPositionBufferView& position_view,
-                                    const BendingConstraintBufferView& constraint_view,
+                                    const DistanceConstraintBufferView& constraint_view,
                                     float stiffness,
                                     QOpenGLFunctions_4_5_Core& gl) const
 {

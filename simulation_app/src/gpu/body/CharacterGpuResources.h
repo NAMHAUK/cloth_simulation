@@ -6,8 +6,21 @@
 
 #include <QOpenGLFunctions_4_5_Core>
 
-struct MeshNormalResources;
-struct MeshTopologyResources;
+struct CharacterMeshTopologyResources final {
+    GLuint position_buffer = 0;
+    GLuint index_buffer = 0;
+    GLuint adjacent_triangle_offsets_buffer = 0;
+    GLuint adjacent_triangle_indices_buffer = 0;
+
+    std::uint32_t position_component_offset = 0;
+    std::uint32_t vertex_count = 0;
+    std::uint32_t triangle_count = 0;
+};
+
+struct CharacterTriangleGeometryResources final {
+    GLuint triangle_geometry_buffer = 0;
+    std::uint32_t triangle_count = 0;
+};
 
 class CharacterGpuResources final {
 public:
@@ -30,8 +43,9 @@ public:
     void draw(QOpenGLFunctions_4_5_Core& gl) const;
 
     // Mesh buffer resources
-    MeshTopologyResources mesh_topology_resources() const;
-    MeshNormalResources mesh_normal_resources() const;
+    CharacterMeshTopologyResources mesh_topology_resources() const;
+    CharacterTriangleGeometryResources character_triangle_geometry_resources() const;
+    GLuint vertex_normal_buffer() const;
 
     // GPU resource lifetime
     void release(QOpenGLFunctions_4_5_Core& gl);
@@ -51,13 +65,13 @@ private:
     std::uint32_t vertex_count_ = 0;
     std::uint32_t current_frame_index_ = 0;
 
-    // Mesh adjacency data
+    // Mesh adjacent triangle data
     GLuint index_buffer_ = 0;
     std::uint32_t triangle_count_ = 0;
 
     // Normal update buffers
-    GLuint adjacency_offset_buffer_ = 0;
-    GLuint adjacency_triangle_buffer_ = 0;
-    GLuint triangle_normal_buffer_ = 0;
+    GLuint adjacent_triangle_offsets_ = 0;
+    GLuint adjacent_triangle_indices_ = 0;
+    GLuint character_triangle_geometry_buffer_ = 0;
     GLuint vertex_normal_buffer_ = 0;
 };

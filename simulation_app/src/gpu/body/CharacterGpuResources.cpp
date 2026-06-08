@@ -1,12 +1,11 @@
 #include "gpu/body/CharacterGpuResources.h"
 
 #include "asset/MeshGeometryUtils.h"
-#include "gpu/scene/MeshBufferResources.h"
-
 #include <cstddef>
 
 namespace {
 constexpr std::size_t position_component_per_vertex = 3;
+constexpr std::size_t character_triangle_geometry_components = 20;
 
 std::size_t frame_position_component_count(const CharacterMesh& character_mesh)
 {
@@ -45,9 +44,9 @@ void CharacterGpuResources::initialize_gpu_resources(QOpenGLFunctions_4_5_Core& 
     gl.glCreateVertexArrays(1, &vao_);
     gl.glCreateBuffers(1, &all_frame_vertex_buffer_);
     gl.glCreateBuffers(1, &index_buffer_);
-    gl.glCreateBuffers(1, &adjacency_offset_buffer_);
-    gl.glCreateBuffers(1, &adjacency_triangle_buffer_);
-    gl.glCreateBuffers(1, &triangle_normal_buffer_);
+    gl.glCreateBuffers(1, &adjacent_triangle_offsets_);
+    gl.glCreateBuffers(1, &adjacent_triangle_indices_);
+    gl.glCreateBuffers(1, &character_triangle_geometry_buffer_);
     gl.glCreateBuffers(1, &vertex_normal_buffer_);
 
     gl.glVertexArrayElementBuffer(vao_, index_buffer_);
@@ -72,16 +71,18 @@ void CharacterGpuResources::upload_mesh(const CharacterMesh& character_mesh, QOp
     // GPU buffer 공간 생성 & 초기값 설정
     const GLsizeiptr position_bytes = static_cast<GLsizeiptr>(frame_position_component_count(character_mesh) * sizeof(float));
     const GLsizeiptr index_bytes = static_cast<GLsizeiptr>(character_mesh.indices.size() * sizeof(std::uint32_t));
-    const GLsizeiptr adjacency_offsets_bytes = static_cast<GLsizeiptr>(adjacency.offsets.size() * sizeof(std::uint32_t));
-    const GLsizeiptr adjacency_triangles_bytes = static_cast<GLsizeiptr>(adjacency.face_indices.size() * sizeof(std::uint32_t));
-    const GLsizeiptr triangle_normals_bytes = static_cast<GLsizeiptr>(adjacency.face_count * 4u * sizeof(float));
+    const GLsizeiptr adjacent_triangle_offsets_bytes = static_cast<GLsizeiptr>(adjacency.offsets.size() * sizeof(std::uint32_t));
+    const GLsizeiptr adjacent_triangle_indices_bytes = static_cast<GLsizeiptr>(adjacency.face_indices.size() * sizeof(std::uint32_t));
+    const GLsizeiptr triangle_geometry_bytes = static_cast<GLsizeiptr>(
+        static_cast<std::size_t>(adjacency.face_count) * character_triangle_geometry_components * sizeof(float)
+    );
     const GLsizeiptr vertex_normals_bytes = static_cast<GLsizeiptr>(character_mesh.vertex_count * 4u * sizeof(float));
 
     gl.glNamedBufferData(all_frame_vertex_buffer_, position_bytes, character_mesh.vertices.data(), GL_STATIC_DRAW);
     gl.glNamedBufferData(index_buffer_, index_bytes, character_mesh.indices.data(), GL_STATIC_DRAW);
-    gl.glNamedBufferData(adjacency_offset_buffer_, adjacency_offsets_bytes, adjacency.offsets.data(), GL_STATIC_DRAW);
-    gl.glNamedBufferData(adjacency_triangle_buffer_, adjacency_triangles_bytes, adjacency.face_indices.data(), GL_STATIC_DRAW);
-    gl.glNamedBufferData(triangle_normal_buffer_, triangle_normals_bytes, nullptr, GL_DYNAMIC_DRAW);
+    gl.glNamedBufferData(adjacent_triangle_offsets_, adjacent_triangle_offsets_bytes, adjacency.offsets.data(), GL_STATIC_DRAW);
+    gl.glNamedBufferData(adjacent_triangle_indices_, adjacent_triangle_indices_bytes, adjacency.face_indices.data(), GL_STATIC_DRAW);
+    gl.glNamedBufferData(character_triangle_geometry_buffer_, triangle_geometry_bytes, nullptr, GL_DYNAMIC_DRAW);
     gl.glNamedBufferData(vertex_normal_buffer_, vertex_normals_bytes, nullptr, GL_DYNAMIC_DRAW);
 
     // 캐릭터 mesh GPU 초기값 설정
@@ -139,25 +140,30 @@ void CharacterGpuResources::draw(QOpenGLFunctions_4_5_Core& gl) const
     gl.glDrawElements(GL_TRIANGLES, index_count_, GL_UNSIGNED_INT, nullptr);
 }
 
-MeshTopologyResources CharacterGpuResources::mesh_topology_resources() const
+CharacterMeshTopologyResources CharacterGpuResources::mesh_topology_resources() const
 {
-    MeshTopologyResources topology;
+    CharacterMeshTopologyResources topology;
     topology.position_buffer = all_frame_vertex_buffer_;
     topology.index_buffer = index_buffer_;
-    topology.adjacency_offset_buffer = adjacency_offset_buffer_;
-    topology.adjacency_triangle_buffer = adjacency_triangle_buffer_;
+    topology.adjacent_triangle_offsets_buffer = adjacent_triangle_offsets_;
+    topology.adjacent_triangle_indices_buffer = adjacent_triangle_indices_;
     topology.position_component_offset = current_frame_index_ * vertex_count_ * 3u;
     topology.vertex_count = vertex_count_;
     topology.triangle_count = triangle_count_;
     return topology;
 }
 
-MeshNormalResources CharacterGpuResources::mesh_normal_resources() const
+CharacterTriangleGeometryResources CharacterGpuResources::character_triangle_geometry_resources() const
 {
-    MeshNormalResources normals;
-    normals.triangle_normal_buffer = triangle_normal_buffer_;
-    normals.vertex_normal_buffer = vertex_normal_buffer_;
-    return normals;
+    CharacterTriangleGeometryResources resources;
+    resources.triangle_geometry_buffer = character_triangle_geometry_buffer_;
+    resources.triangle_count = triangle_count_;
+    return resources;
+}
+
+GLuint CharacterGpuResources::vertex_normal_buffer() const
+{
+    return vertex_normal_buffer_;
 }
 
 void CharacterGpuResources::release(QOpenGLFunctions_4_5_Core& gl)
@@ -165,14 +171,14 @@ void CharacterGpuResources::release(QOpenGLFunctions_4_5_Core& gl)
     if (vertex_normal_buffer_ != 0) {
         gl.glDeleteBuffers(1, &vertex_normal_buffer_);
     }
-    if (triangle_normal_buffer_ != 0) {
-        gl.glDeleteBuffers(1, &triangle_normal_buffer_);
+    if (character_triangle_geometry_buffer_ != 0) {
+        gl.glDeleteBuffers(1, &character_triangle_geometry_buffer_);
     }
-    if (adjacency_triangle_buffer_ != 0) {
-        gl.glDeleteBuffers(1, &adjacency_triangle_buffer_);
+    if (adjacent_triangle_indices_ != 0) {
+        gl.glDeleteBuffers(1, &adjacent_triangle_indices_);
     }
-    if (adjacency_offset_buffer_ != 0) {
-        gl.glDeleteBuffers(1, &adjacency_offset_buffer_);
+    if (adjacent_triangle_offsets_ != 0) {
+        gl.glDeleteBuffers(1, &adjacent_triangle_offsets_);
     }
     if (index_buffer_ != 0) {
         gl.glDeleteBuffers(1, &index_buffer_);
@@ -192,9 +198,9 @@ void CharacterGpuResources::reset_resources() noexcept
     vao_ = 0;
     all_frame_vertex_buffer_ = 0;
     index_buffer_ = 0;
-    adjacency_offset_buffer_ = 0;
-    adjacency_triangle_buffer_ = 0;
-    triangle_normal_buffer_ = 0;
+    adjacent_triangle_offsets_ = 0;
+    adjacent_triangle_indices_ = 0;
+    character_triangle_geometry_buffer_ = 0;
     vertex_normal_buffer_ = 0;
     frame_count_ = 0;
     vertex_count_ = 0;
@@ -208,8 +214,8 @@ bool CharacterGpuResources::has_gpu_objects() const
     return vao_ != 0 &&
            all_frame_vertex_buffer_ != 0 &&
            index_buffer_ != 0 &&
-           adjacency_offset_buffer_ != 0 &&
-           adjacency_triangle_buffer_ != 0 &&
-           triangle_normal_buffer_ != 0 &&
+           adjacent_triangle_offsets_ != 0 &&
+           adjacent_triangle_indices_ != 0 &&
+           character_triangle_geometry_buffer_ != 0 &&
            vertex_normal_buffer_ != 0;
 }

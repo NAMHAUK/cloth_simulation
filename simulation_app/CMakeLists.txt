@@ -42,6 +42,8 @@ add_executable(simulation_app
     src/asset/MeshGeometryUtils.h
     src/gpu/body/CharacterGpuResources.cpp
     src/gpu/body/CharacterGpuResources.h
+    src/gpu/body/TriangleGeometryUpdater.cpp
+    src/gpu/body/TriangleGeometryUpdater.h
     src/gpu/cloth/ClothGpuResources.cpp
     src/gpu/cloth/ClothGpuResources.h
     src/rendering/BackgroundGradient.cpp
@@ -52,7 +54,6 @@ add_executable(simulation_app
     src/gpu/scene/SceneGpuState.h
     src/gpu/scene/NormalUpdater.cpp
     src/gpu/scene/NormalUpdater.h
-    src/gpu/scene/MeshBufferResources.h
     src/rendering/RenderPipeline.cpp
     src/rendering/RenderPipeline.h
     src/ui/SceneViewport.cpp
@@ -78,6 +79,7 @@ add_executable(simulation_app
     shaders/background.frag
     shaders/triangle_normal.comp
     shaders/vertex_normal.comp
+    shaders/character_triangle_geometry_update.comp
     shaders/cloth_external_force.comp
     shaders/cloth_stretch_constraint.comp
     shaders/cloth_bending_constraint.comp

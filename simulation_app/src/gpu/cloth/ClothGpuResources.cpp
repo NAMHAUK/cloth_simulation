@@ -1,7 +1,5 @@
 #include "gpu/cloth/ClothGpuResources.h"
 
-#include "gpu/scene/MeshBufferResources.h"
-
 #include <algorithm>
 #include <cstddef>
 #include <cstdint>
@@ -157,21 +155,21 @@ bool assign_buffer_rebuild_ranges(const std::vector<GarmentObject>& garments,
 // topology upload //
 struct TopologyUploadData final {
     std::vector<std::uint32_t> vertex_indices;
-    std::vector<std::uint32_t> adjacency_offsets;
-    std::vector<std::uint32_t> adjacency_triangles;
+    std::vector<std::uint32_t> adjacent_triangle_offsets;
+    std::vector<std::uint32_t> adjacent_triangle_indices;
 };
 
 struct TopologyUploadOffsets final {
     std::uint32_t index = 0;
-    std::uint32_t adjacency_offset = 0;
-    std::uint32_t adjacency_triangle = 0;
+    std::uint32_t adjacent_triangle_offsets = 0;
+    std::uint32_t adjacent_triangle_indices = 0;
 };
 
 // buffer에 upload할 topology data 생성
 // garment 별로 있는 정보를 하나의 buffer에 upload하기 위해 모으는 과정
 void build_topology_upload_data(const GarmentObject& garment,
                                 const GarmentBufferRanges& buffer_ranges,
-                                std::uint32_t adjacency_offset_destination,
+                                std::uint32_t adjacent_triangle_offset_destination,
                                 TopologyUploadData& data)
 {
     const VertexFaceAdjacency& adjacency = garment.mesh.adjacency;
@@ -181,15 +179,15 @@ void build_topology_upload_data(const GarmentObject& garment,
         data.vertex_indices.push_back(buffer_ranges.vertex_offset + local_index);
     }
 
-    // adjacency_offsets: 각 vertex의 adjacency triangle 배열에서 시작 위치
+    // adjacent_triangle_offsets: 각 vertex의 adjacent triangle 배열에서 시작 위치
     for (std::uint32_t local_vertex = 0; local_vertex <= buffer_ranges.vertex_count; ++local_vertex) {
-        const std::uint32_t destination_vertex = adjacency_offset_destination + local_vertex;
-        data.adjacency_offsets[destination_vertex] = buffer_ranges.adjacency_entry_offset + adjacency.offsets[local_vertex];
+        const std::uint32_t destination_vertex = adjacent_triangle_offset_destination + local_vertex;
+        data.adjacent_triangle_offsets[destination_vertex] = buffer_ranges.adjacency_entry_offset + adjacency.offsets[local_vertex];
     }
 
-    // adjacency_triangles: 각 vertex가 속한 triangle index 배열
+    // adjacent_triangle_indices: 각 vertex가 속한 triangle index 배열
     for (std::uint32_t local_face : adjacency.face_indices) {
-        data.adjacency_triangles.push_back(buffer_ranges.triangle_offset + local_face);
+        data.adjacent_triangle_indices.push_back(buffer_ranges.triangle_offset + local_face);
     }
 }
 
@@ -203,30 +201,25 @@ void upload_topology_data(const ClothBufferSet& buffers,
                             scalar_byte_size(offsets.index, sizeof(std::uint32_t)),
                             scalar_byte_size(static_cast<std::uint32_t>(data.vertex_indices.size()), sizeof(std::uint32_t)),
                             data.vertex_indices.data());
-    gl.glNamedBufferSubData(buffers.adjacency_offset,
-                            scalar_byte_size(offsets.adjacency_offset, sizeof(std::uint32_t)),
-                            scalar_byte_size(static_cast<std::uint32_t>(data.adjacency_offsets.size()), sizeof(std::uint32_t)),
-                            data.adjacency_offsets.data());
-    gl.glNamedBufferSubData(buffers.adjacency_triangle,
-                            scalar_byte_size(offsets.adjacency_triangle, sizeof(std::uint32_t)),
-                            scalar_byte_size(static_cast<std::uint32_t>(data.adjacency_triangles.size()), sizeof(std::uint32_t)),
-                            data.adjacency_triangles.data());
+    gl.glNamedBufferSubData(buffers.adjacent_triangle_offsets,
+                            scalar_byte_size(offsets.adjacent_triangle_offsets, sizeof(std::uint32_t)),
+                            scalar_byte_size(static_cast<std::uint32_t>(data.adjacent_triangle_offsets.size()), sizeof(std::uint32_t)),
+                            data.adjacent_triangle_offsets.data());
+    gl.glNamedBufferSubData(buffers.adjacent_triangle_indices,
+                            scalar_byte_size(offsets.adjacent_triangle_indices, sizeof(std::uint32_t)),
+                            scalar_byte_size(static_cast<std::uint32_t>(data.adjacent_triangle_indices.size()), sizeof(std::uint32_t)),
+                            data.adjacent_triangle_indices.data());
 }
 
 // stretch constraint //
-struct StretchConstraintUploadData final {
-    std::vector<std::uint32_t> edge_indices;
-    std::vector<float> rest_lengths;
-};
-
-struct BendingConstraintUploadData final {
+struct DistanceConstraintUploadData final {
     std::vector<std::uint32_t> edge_indices;
     std::vector<float> rest_lengths;
 };
 
 void build_stretch_constraint_upload_data(const GarmentDistanceConstraints& stretch_constraints,
                                           const GarmentBufferRanges& buffer_ranges,
-                                          StretchConstraintUploadData& data)
+                                          DistanceConstraintUploadData& data)
 {
     for (const MeshEdge& edge : stretch_constraints.colorized_edges) {
         data.edge_indices.push_back(buffer_ranges.vertex_offset + edge.vertex_a);
@@ -240,7 +233,7 @@ void build_stretch_constraint_upload_data(const GarmentDistanceConstraints& stre
 
 void build_bending_constraint_upload_data(const GarmentDistanceConstraints& bending_constraints,
                                           const GarmentBufferRanges& buffer_ranges,
-                                          BendingConstraintUploadData& data)
+                                          DistanceConstraintUploadData& data)
 {
     for (const MeshEdge& edge : bending_constraints.colorized_edges) {
         data.edge_indices.push_back(buffer_ranges.vertex_offset + edge.vertex_a);
@@ -255,7 +248,7 @@ void build_bending_constraint_upload_data(const GarmentDistanceConstraints& bend
 // stretch_constraints를 GPU buffer에 upload
 void upload_stretch_constraints_data(const ClothBufferSet& buffers,
                                      std::uint32_t constraint_offset,
-                                     const StretchConstraintUploadData& data,
+                                     const DistanceConstraintUploadData& data,
                                      QOpenGLFunctions_4_5_Core& gl)
 {
     gl.glNamedBufferSubData(buffers.stretch_edge_index,
@@ -271,7 +264,7 @@ void upload_stretch_constraints_data(const ClothBufferSet& buffers,
 
 void upload_bending_constraints_data(const ClothBufferSet& buffers,
                                      std::uint32_t constraint_offset,
-                                     const BendingConstraintUploadData& data,
+                                     const DistanceConstraintUploadData& data,
                                      QOpenGLFunctions_4_5_Core& gl)
 {
     gl.glNamedBufferSubData(buffers.bending_edge_index,
@@ -297,8 +290,8 @@ void append_color_ranges(const std::vector<MeshEdgeRange>& local_ranges,
 // garment upload //
 struct GarmentUploadData final {
     TopologyUploadData topology;
-    StretchConstraintUploadData stretch_constraints;
-    BendingConstraintUploadData bending_constraints;
+    DistanceConstraintUploadData stretch_constraints;
+    DistanceConstraintUploadData bending_constraints;
 };
 
 GarmentUploadData prepare_garment_upload_data(const GarmentObject& garment,
@@ -306,8 +299,8 @@ GarmentUploadData prepare_garment_upload_data(const GarmentObject& garment,
 {
     GarmentUploadData data;
     data.topology.vertex_indices.reserve(garment.mesh.indices.size());
-    data.topology.adjacency_offsets.resize(static_cast<std::size_t>(buffer_ranges.vertex_count) + 1u, 0);
-    data.topology.adjacency_triangles.reserve(garment.mesh.adjacency.face_indices.size());
+    data.topology.adjacent_triangle_offsets.resize(static_cast<std::size_t>(buffer_ranges.vertex_count) + 1u, 0);
+    data.topology.adjacent_triangle_indices.reserve(garment.mesh.adjacency.face_indices.size());
     data.stretch_constraints.edge_indices.reserve(buffer_ranges.stretch_constraint_count * 2u);
     data.stretch_constraints.rest_lengths.reserve(buffer_ranges.stretch_constraint_count);
     data.bending_constraints.edge_indices.reserve(buffer_ranges.bending_constraint_count * 2u);
@@ -332,7 +325,6 @@ void upload_position_data(const ClothBufferSet& buffers,
     const GLsizeiptr position_offset_bytes = byte_size(buffer_ranges.vertex_offset, position_components, sizeof(float));
     const GLsizeiptr position_size_bytes = byte_size(buffer_ranges.vertex_count, position_components, sizeof(float));
 
-    gl.glNamedBufferSubData(buffers.rest_position, position_offset_bytes, position_size_bytes, vertices.data());
     gl.glNamedBufferSubData(buffers.current_position, position_offset_bytes, position_size_bytes, vertices.data());
     gl.glNamedBufferSubData(buffers.previous_position, position_offset_bytes, position_size_bytes, vertices.data());
 }
@@ -340,8 +332,8 @@ void upload_position_data(const ClothBufferSet& buffers,
 // buffer rebuild upload //
 struct BufferRebuildUploadData final {
     TopologyUploadData topology;
-    StretchConstraintUploadData stretch_constraints;
-    BendingConstraintUploadData bending_constraints;
+    DistanceConstraintUploadData stretch_constraints;
+    DistanceConstraintUploadData bending_constraints;
     std::vector<ConstraintRange> stretch_color_ranges;
     std::vector<ConstraintRange> bending_color_ranges;
 };
@@ -350,8 +342,8 @@ BufferRebuildUploadData prepare_buffer_rebuild_upload_data(const ClothBufferElem
 {
     BufferRebuildUploadData data;
     data.topology.vertex_indices.reserve(element_counts.index);
-    data.topology.adjacency_offsets.resize(static_cast<std::size_t>(element_counts.vertex) + 1u, 0);
-    data.topology.adjacency_triangles.reserve(element_counts.adjacency_entry);
+    data.topology.adjacent_triangle_offsets.resize(static_cast<std::size_t>(element_counts.vertex) + 1u, 0);
+    data.topology.adjacent_triangle_indices.reserve(element_counts.adjacency_entry);
     data.stretch_constraints.edge_indices.reserve(element_counts.stretch_constraint * 2u);
     data.stretch_constraints.rest_lengths.reserve(element_counts.stretch_constraint);
     data.bending_constraints.edge_indices.reserve(element_counts.bending_constraint * 2u);
@@ -385,12 +377,11 @@ ClothBufferSet create_buffer_set(const ClothBufferElementCounts& allocated_eleme
 {
     ClothBufferSet buffers;
     gl.glCreateVertexArrays(1, &buffers.vao);
-    gl.glCreateBuffers(1, &buffers.rest_position);
     gl.glCreateBuffers(1, &buffers.current_position);
     gl.glCreateBuffers(1, &buffers.previous_position);
     gl.glCreateBuffers(1, &buffers.index);
-    gl.glCreateBuffers(1, &buffers.adjacency_offset);
-    gl.glCreateBuffers(1, &buffers.adjacency_triangle);
+    gl.glCreateBuffers(1, &buffers.adjacent_triangle_offsets);
+    gl.glCreateBuffers(1, &buffers.adjacent_triangle_indices);
     gl.glCreateBuffers(1, &buffers.stretch_edge_index);
     gl.glCreateBuffers(1, &buffers.stretch_rest_length);
     gl.glCreateBuffers(1, &buffers.bending_edge_index);
@@ -398,10 +389,6 @@ ClothBufferSet create_buffer_set(const ClothBufferElementCounts& allocated_eleme
     gl.glCreateBuffers(1, &buffers.triangle_normal);
     gl.glCreateBuffers(1, &buffers.vertex_normal);
 
-    gl.glNamedBufferData(buffers.rest_position,
-                         byte_size(allocated_elements.vertex, position_components , sizeof(float)),
-                         nullptr,
-                         GL_STATIC_DRAW);
     gl.glNamedBufferData(buffers.current_position,
                          byte_size(allocated_elements.vertex, position_components , sizeof(float)),
                          nullptr,
@@ -414,11 +401,11 @@ ClothBufferSet create_buffer_set(const ClothBufferElementCounts& allocated_eleme
                          scalar_byte_size(allocated_elements.index, sizeof(std::uint32_t)),
                          nullptr,
                          GL_STATIC_DRAW);
-    gl.glNamedBufferData(buffers.adjacency_offset,
+    gl.glNamedBufferData(buffers.adjacent_triangle_offsets,
                          scalar_byte_size(allocated_elements.vertex + 1u, sizeof(std::uint32_t)),
                          nullptr,
                          GL_STATIC_DRAW);
-    gl.glNamedBufferData(buffers.adjacency_triangle,
+    gl.glNamedBufferData(buffers.adjacent_triangle_indices,
                          scalar_byte_size(allocated_elements.adjacency_entry, sizeof(std::uint32_t)),
                          nullptr,
                          GL_STATIC_DRAW);
@@ -455,36 +442,39 @@ void copy_used_buffer_data(const ClothBufferSet& old_buffers,
                            const ClothBufferElementCounts& used_elements,
                            QOpenGLFunctions_4_5_Core& gl)
 {
-    if (old_buffers.rest_position == 0) {
+    if (old_buffers.current_position == 0) {
         return;
     }
 
     const GLsizeiptr position_bytes = byte_size(used_elements.vertex, position_components, sizeof(float));
     const GLsizeiptr index_bytes = scalar_byte_size(used_elements.index, sizeof(std::uint32_t));
-    const GLsizeiptr adjacency_offset_bytes = scalar_byte_size(used_elements.vertex + 1u, sizeof(std::uint32_t));
-    const GLsizeiptr adjacency_triangle_bytes = scalar_byte_size(used_elements.adjacency_entry, sizeof(std::uint32_t));
+    const GLsizeiptr adjacent_triangle_offsets_bytes = scalar_byte_size(used_elements.vertex + 1u, sizeof(std::uint32_t));
+    const GLsizeiptr adjacent_triangle_indices_bytes = scalar_byte_size(used_elements.adjacency_entry, sizeof(std::uint32_t));
     const GLsizeiptr stretch_edge_index_bytes = scalar_byte_size(used_elements.stretch_constraint * 2u, sizeof(std::uint32_t));
     const GLsizeiptr stretch_rest_length_bytes = scalar_byte_size(used_elements.stretch_constraint, sizeof(float));
     const GLsizeiptr bending_edge_index_bytes = scalar_byte_size(used_elements.bending_constraint * 2u, sizeof(std::uint32_t));
     const GLsizeiptr bending_rest_length_bytes = scalar_byte_size(used_elements.bending_constraint, sizeof(float));
 
     if (position_bytes > 0) {
-        gl.glCopyNamedBufferSubData(old_buffers.rest_position, next_buffers.rest_position, 0, 0, position_bytes);
         gl.glCopyNamedBufferSubData(old_buffers.current_position, next_buffers.current_position, 0, 0, position_bytes);
         gl.glCopyNamedBufferSubData(old_buffers.previous_position, next_buffers.previous_position, 0, 0, position_bytes);
     }
     if (index_bytes > 0) {
         gl.glCopyNamedBufferSubData(old_buffers.index, next_buffers.index, 0, 0, index_bytes);
     }
-    if (adjacency_offset_bytes > 0) {
-        gl.glCopyNamedBufferSubData(old_buffers.adjacency_offset, next_buffers.adjacency_offset, 0, 0, adjacency_offset_bytes);
+    if (adjacent_triangle_offsets_bytes > 0) {
+        gl.glCopyNamedBufferSubData(old_buffers.adjacent_triangle_offsets,
+                                    next_buffers.adjacent_triangle_offsets,
+                                    0,
+                                    0,
+                                    adjacent_triangle_offsets_bytes);
     }
-    if (adjacency_triangle_bytes > 0) {
-        gl.glCopyNamedBufferSubData(old_buffers.adjacency_triangle,
-                                    next_buffers.adjacency_triangle,
+    if (adjacent_triangle_indices_bytes > 0) {
+        gl.glCopyNamedBufferSubData(old_buffers.adjacent_triangle_indices,
+                                    next_buffers.adjacent_triangle_indices,
                                     0,
                                     0,
-                                    adjacency_triangle_bytes);
+                                    adjacent_triangle_indices_bytes);
     }
     if (stretch_edge_index_bytes > 0 && old_buffers.stretch_edge_index != 0) {
         gl.glCopyNamedBufferSubData(old_buffers.stretch_edge_index,
@@ -523,10 +513,8 @@ bool copy_position_buffers(const GarmentBufferRanges& old_data,
                            QOpenGLFunctions_4_5_Core& gl)
 {
     if (old_data.vertex_count != next_data.vertex_count ||
-        old_buffers.rest_position == 0 ||
         old_buffers.current_position == 0 ||
         old_buffers.previous_position == 0 ||
-        next_buffers.rest_position == 0 ||
         next_buffers.current_position == 0 ||
         next_buffers.previous_position == 0) {
         return false;
@@ -536,11 +524,6 @@ bool copy_position_buffers(const GarmentBufferRanges& old_data,
     const GLsizeiptr next_offset_bytes = byte_size(next_data.vertex_offset, position_components, sizeof(float));
     const GLsizeiptr position_size_bytes = byte_size(next_data.vertex_count, position_components, sizeof(float));
 
-    gl.glCopyNamedBufferSubData(old_buffers.rest_position,
-                                next_buffers.rest_position,
-                                old_offset_bytes,
-                                next_offset_bytes,
-                                position_size_bytes);
     gl.glCopyNamedBufferSubData(old_buffers.current_position,
                                 next_buffers.current_position,
                                 old_offset_bytes,
@@ -809,11 +792,11 @@ void ClothGpuResources::delete_buffer_set(ClothBufferSet& buffers, QOpenGLFuncti
     if (buffers.triangle_normal != 0) {
         gl.glDeleteBuffers(1, &buffers.triangle_normal);
     }
-    if (buffers.adjacency_triangle != 0) {
-        gl.glDeleteBuffers(1, &buffers.adjacency_triangle);
+    if (buffers.adjacent_triangle_indices != 0) {
+        gl.glDeleteBuffers(1, &buffers.adjacent_triangle_indices);
     }
-    if (buffers.adjacency_offset != 0) {
-        gl.glDeleteBuffers(1, &buffers.adjacency_offset);
+    if (buffers.adjacent_triangle_offsets != 0) {
+        gl.glDeleteBuffers(1, &buffers.adjacent_triangle_offsets);
     }
     if (buffers.stretch_rest_length != 0) {
         gl.glDeleteBuffers(1, &buffers.stretch_rest_length);
@@ -835,9 +818,6 @@ void ClothGpuResources::delete_buffer_set(ClothBufferSet& buffers, QOpenGLFuncti
     }
     if (buffers.current_position != 0) {
         gl.glDeleteBuffers(1, &buffers.current_position);
-    }
-    if (buffers.rest_position != 0) {
-        gl.glDeleteBuffers(1, &buffers.rest_position);
     }
     if (buffers.vao != 0) {
         gl.glDeleteVertexArrays(1, &buffers.vao);
@@ -911,12 +891,11 @@ const GarmentBufferRanges* ClothGpuResources::find_garment_buffer_ranges(Garment
 bool ClothGpuResources::has_gpu_objects() const
 {
     return buffers_.vao != 0 &&
-           buffers_.rest_position != 0 &&
            buffers_.current_position != 0 &&
            buffers_.previous_position != 0 &&
            buffers_.index != 0 &&
-           buffers_.adjacency_offset != 0 &&
-           buffers_.adjacency_triangle != 0 &&
+           buffers_.adjacent_triangle_offsets != 0 &&
+           buffers_.adjacent_triangle_indices != 0 &&
            buffers_.stretch_edge_index != 0 &&
            buffers_.stretch_rest_length != 0 &&
            buffers_.bending_edge_index != 0 &&
@@ -943,16 +922,15 @@ bool ClothGpuResources::is_initialized() const
 ClothPositionBufferView ClothGpuResources::position_buffer_view() const
 {
     ClothPositionBufferView view;
-    view.rest_position_buffer = buffers_.rest_position;
     view.current_position_buffer = buffers_.current_position;
     view.previous_position_buffer = buffers_.previous_position;
     view.vertex_count = used_elements_.vertex;
     return view;
 }
 
-StretchConstraintBufferView ClothGpuResources::stretch_constraint_buffer_view() const
+DistanceConstraintBufferView ClothGpuResources::stretch_constraint_buffer_view() const
 {
-    StretchConstraintBufferView view;
+    DistanceConstraintBufferView view;
     view.edge_index_buffer = buffers_.stretch_edge_index;
     view.rest_length_buffer = buffers_.stretch_rest_length;
     view.constraint_count = used_elements_.stretch_constraint;
@@ -960,9 +938,9 @@ StretchConstraintBufferView ClothGpuResources::stretch_constraint_buffer_view() 
     return view;
 }
 
-BendingConstraintBufferView ClothGpuResources::bending_constraint_buffer_view() const
+DistanceConstraintBufferView ClothGpuResources::bending_constraint_buffer_view() const
 {
-    BendingConstraintBufferView view;
+    DistanceConstraintBufferView view;
     view.edge_index_buffer = buffers_.bending_edge_index;
     view.rest_length_buffer = buffers_.bending_rest_length;
     view.constraint_count = used_elements_.bending_constraint;
@@ -970,22 +948,21 @@ BendingConstraintBufferView ClothGpuResources::bending_constraint_buffer_view() 
     return view;
 }
 
-MeshTopologyResources ClothGpuResources::mesh_topology_resources() const
+ClothMeshTopologyResources ClothGpuResources::mesh_topology_resources() const
 {
-    MeshTopologyResources topology;
+    ClothMeshTopologyResources topology;
     topology.position_buffer = buffers_.current_position;
     topology.index_buffer = buffers_.index;
-    topology.adjacency_offset_buffer = buffers_.adjacency_offset;
-    topology.adjacency_triangle_buffer = buffers_.adjacency_triangle;
-    topology.position_component_offset = 0;
+    topology.adjacent_triangle_offsets_buffer = buffers_.adjacent_triangle_offsets;
+    topology.adjacent_triangle_indices_buffer = buffers_.adjacent_triangle_indices;
     topology.vertex_count = used_elements_.vertex;
     topology.triangle_count = used_elements_.triangle;
     return topology;
 }
 
-MeshNormalResources ClothGpuResources::mesh_normal_resources() const
+ClothNormalResources ClothGpuResources::mesh_normal_resources() const
 {
-    MeshNormalResources normals;
+    ClothNormalResources normals;
     normals.triangle_normal_buffer = buffers_.triangle_normal;
     normals.vertex_normal_buffer = buffers_.vertex_normal;
     return normals;
