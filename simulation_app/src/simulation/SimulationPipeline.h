@@ -28,9 +28,9 @@ public:
 
 private:
     bool can_solve_constraint_iteration(const ClothPositionBufferView& position_view,
-                                        const StretchConstraintBufferView& stretch_constraint_view,
-                                        const BendingConstraintBufferView& bending_constraint_view,
-                                        const MeshTopologyResources& character_topology,
+                                        const DistanceConstraintBufferView& stretch_constraint_view,
+                                        const DistanceConstraintBufferView& bending_constraint_view,
+                                        const CharacterTriangleGeometryResources& character_geometry,
                                         bool has_character) const;
 
     SimulationForceField force_field_;

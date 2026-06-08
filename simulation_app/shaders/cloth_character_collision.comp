@@ -10,26 +10,30 @@ layout(std430, binding = 1) buffer PreviousPositions {
     float previous_positions[];
 };
 
-layout(std430, binding = 2) readonly buffer CharacterPositions {
-    float character_positions[];
+struct CharacterTriangleGeometry {
+    vec4 a;
+    vec4 b;
+    vec4 c;
+    vec4 face_normal;
+    vec4 unit_face_normal;
 };
 
-layout(std430, binding = 3) readonly buffer CharacterIndices {
-    uint character_indices[];
+layout(std430, binding = 2) readonly buffer CharacterTriangleGeometryBuffer {
+    CharacterTriangleGeometry triangle_geometry[];
 };
 
 uniform uint uClothVertexCount;
 uniform uint uCharacterTriangleCount;
-uniform uint uCharacterPositionComponentOffset;
 uniform float uCollisionThickness;
 
-const uint tile_size = 128u;
-const float epsilon = 1.0e-12;
+const uint triangle_batch_size = 128u;
 
-shared vec4 tile_triangle_a[tile_size];
-shared vec4 tile_triangle_b[tile_size];
-shared vec4 tile_triangle_c[tile_size];
-shared vec4 tile_triangle_normal[tile_size];
+shared vec4 triangle_batch_a[triangle_batch_size];
+shared vec4 triangle_batch_b[triangle_batch_size];
+shared vec4 triangle_batch_c[triangle_batch_size];
+shared vec4 triangle_batch_ab[triangle_batch_size];
+shared vec4 triangle_batch_ac[triangle_batch_size];
+shared vec4 triangle_batch_unit_normal[triangle_batch_size];
 
 float length_squared(vec3 value)
 {
@@ -53,16 +57,8 @@ void store_cloth_position(uint vertex_index, vec3 position)
     previous_positions[base + 2u] = position.z;
 }
 
-vec3 load_character_position(uint vertex_index)
+vec3 closest_point_on_triangle(vec3 point, vec3 a, vec3 b, vec3 c, vec3 ab, vec3 ac)
 {
-    uint base = uCharacterPositionComponentOffset + vertex_index * 3u;
-    return vec3(character_positions[base], character_positions[base + 1u], character_positions[base + 2u]);
-}
-
-vec3 closest_point_on_triangle(vec3 point, vec3 a, vec3 b, vec3 c)
-{
-    vec3 ab = b - a;
-    vec3 ac = c - a;
     vec3 ap = point - a;
     float d1 = dot(ab, ap);
     float d2 = dot(ac, ap);
@@ -99,7 +95,7 @@ vec3 closest_point_on_triangle(vec3 point, vec3 a, vec3 b, vec3 c)
     float va = d3 * d6 - d5 * d4;
     if (va <= 0.0 && (d4 - d3) >= 0.0 && (d5 - d6) >= 0.0) {
         float w = (d4 - d3) / ((d4 - d3) + (d5 - d6));
-        return b + w * (c - b);
+        return b + w * (ac - ab);
     }
 
     float denom = 1.0 / (va + vb + vc);
@@ -108,30 +104,26 @@ vec3 closest_point_on_triangle(vec3 point, vec3 a, vec3 b, vec3 c)
     return a + ab * v + ac * w;
 }
 
-void load_character_triangle_tile(uint tile_start, uint local_index)
+void load_character_triangle_batch(uint triangle_batch_start, uint local_index)
 {
-    uint triangle_index = tile_start + local_index;
+    uint triangle_index = triangle_batch_start + local_index;
     if (triangle_index >= uCharacterTriangleCount) {
-        tile_triangle_a[local_index] = vec4(0.0);
-        tile_triangle_b[local_index] = vec4(0.0);
-        tile_triangle_c[local_index] = vec4(0.0);
-        tile_triangle_normal[local_index] = vec4(0.0);
+        triangle_batch_a[local_index] = vec4(0.0);
+        triangle_batch_b[local_index] = vec4(0.0);
+        triangle_batch_c[local_index] = vec4(0.0);
+        triangle_batch_ab[local_index] = vec4(0.0);
+        triangle_batch_ac[local_index] = vec4(0.0);
+        triangle_batch_unit_normal[local_index] = vec4(0.0);
         return;
     }
 
-    uint index_base = triangle_index * 3u;
-    vec3 a = load_character_position(character_indices[index_base]);
-    vec3 b = load_character_position(character_indices[index_base + 1u]);
-    vec3 c = load_character_position(character_indices[index_base + 2u]);
-    vec3 normal = cross(b - a, c - a);
-    float normal_length_sq = length_squared(normal);
-
-    tile_triangle_a[local_index] = vec4(a, 0.0);
-    tile_triangle_b[local_index] = vec4(b, 0.0);
-    tile_triangle_c[local_index] = vec4(c, 0.0);
-    tile_triangle_normal[local_index] = normal_length_sq > epsilon
-        ? vec4(normal * inversesqrt(normal_length_sq), 1.0)
-        : vec4(0.0);
+    CharacterTriangleGeometry triangle = triangle_geometry[triangle_index];
+    triangle_batch_a[local_index] = triangle.a;
+    triangle_batch_b[local_index] = triangle.b;
+    triangle_batch_c[local_index] = triangle.c;
+    triangle_batch_ab[local_index] = vec4(triangle.b.xyz - triangle.a.xyz, 0.0);
+    triangle_batch_ac[local_index] = vec4(triangle.c.xyz - triangle.a.xyz, 0.0);
+    triangle_batch_unit_normal[local_index] = triangle.unit_face_normal;
 }
 
 void main()
@@ -147,31 +139,40 @@ void main()
     vec3 best_normal = vec3(0.0, 1.0, 0.0);
     float best_distance_sq = 3.402823e+38;
     bool has_candidate = false;
+    float collision_thickness_sq = uCollisionThickness * uCollisionThickness;
 
-    for (uint tile_start = 0u; tile_start < uCharacterTriangleCount; tile_start += tile_size) {
-        load_character_triangle_tile(tile_start, local_index);
+    for (uint triangle_batch_start = 0u; triangle_batch_start < uCharacterTriangleCount; triangle_batch_start += triangle_batch_size) {
+        load_character_triangle_batch(triangle_batch_start, local_index);
         barrier();
 
         if (is_active_thread) {
-            uint remaining_triangle_count = uCharacterTriangleCount - tile_start;
-            uint tile_triangle_count = min(tile_size, remaining_triangle_count);
-            for (uint tile_index = 0u; tile_index < tile_triangle_count; ++tile_index) {
-                vec4 normal_and_valid = tile_triangle_normal[tile_index];
-                if (normal_and_valid.w == 0.0) {
+            uint remaining_triangle_count = uCharacterTriangleCount - triangle_batch_start;
+            uint triangle_batch_count = min(triangle_batch_size, remaining_triangle_count);
+            for (uint triangle_batch_index = 0u; triangle_batch_index < triangle_batch_count; ++triangle_batch_index) {
+                vec4 unit_normal_and_valid = triangle_batch_unit_normal[triangle_batch_index];
+                if (unit_normal_and_valid.w == 0.0) {
                     continue;
                 }
 
-                vec3 a = tile_triangle_a[tile_index].xyz;
-                vec3 b = tile_triangle_b[tile_index].xyz;
-                vec3 c = tile_triangle_c[tile_index].xyz;
-                vec3 closest_point = closest_point_on_triangle(cloth_position, a, b, c);
+                vec3 a = triangle_batch_a[triangle_batch_index].xyz;
+                vec3 b = triangle_batch_b[triangle_batch_index].xyz;
+                vec3 c = triangle_batch_c[triangle_batch_index].xyz;
+                vec3 ab = triangle_batch_ab[triangle_batch_index].xyz;
+                vec3 ac = triangle_batch_ac[triangle_batch_index].xyz;
+                vec3 unit_normal = unit_normal_and_valid.xyz;
+                float plane_distance = dot(cloth_position - a, unit_normal);
+                if (plane_distance * plane_distance > collision_thickness_sq) {
+                    continue;
+                }
+
+                vec3 closest_point = closest_point_on_triangle(cloth_position, a, b, c, ab, ac);
                 vec3 offset = cloth_position - closest_point;
                 float distance_sq = length_squared(offset);
 
                 if (distance_sq < best_distance_sq) {
                     best_distance_sq = distance_sq;
                     best_closest_point = closest_point;
-                    best_normal = normal_and_valid.xyz;
+                    best_normal = unit_normal;
                     has_candidate = true;
                 }
             }
@@ -184,7 +185,6 @@ void main()
         return;
     }
 
-    float collision_thickness_sq = uCollisionThickness * uCollisionThickness;
     if (best_distance_sq > collision_thickness_sq) {
         return;
     }

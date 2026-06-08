@@ -41,17 +41,17 @@ bool StretchConstraintSolver::initialize(const std::filesystem::path& shader_pat
 }
 
 bool StretchConstraintSolver::can_solve(const ClothPositionBufferView& position_view,
-                                        const StretchConstraintBufferView& constraint_view,
+                                        const DistanceConstraintBufferView& constraint_view,
                                         float stiffness) const
 {
     return is_initialized() &&
            is_valid_position_view(position_view) &&
-           is_valid_stretch_constraint_view(constraint_view) &&
+           is_valid_distance_constraint_view(constraint_view) &&
            stiffness > 0.0f;
 }
 
 void StretchConstraintSolver::solve(const ClothPositionBufferView& position_view,
-                                    const StretchConstraintBufferView& constraint_view,
+                                    const DistanceConstraintBufferView& constraint_view,
                                     float stiffness,
                                     QOpenGLFunctions_4_5_Core& gl) const
 {

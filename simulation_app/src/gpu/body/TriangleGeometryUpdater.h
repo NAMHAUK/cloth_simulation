@@ -1,0 +1,27 @@
+#pragma once
+
+#include <filesystem>
+
+#include <QOpenGLFunctions_4_5_Core>
+
+struct CharacterTriangleGeometryResources;
+struct CharacterMeshTopologyResources;
+
+class TriangleGeometryUpdater final {
+public:
+    TriangleGeometryUpdater() = default;
+    TriangleGeometryUpdater(const TriangleGeometryUpdater&) = delete;
+    TriangleGeometryUpdater& operator=(const TriangleGeometryUpdater&) = delete;
+
+    bool is_initialized() const;
+    bool initialize(const std::filesystem::path& shader_path, QOpenGLFunctions_4_5_Core& gl);
+    void update(const CharacterMeshTopologyResources& topology,
+                const CharacterTriangleGeometryResources& triangle_geometry,
+                QOpenGLFunctions_4_5_Core& gl) const;
+    void release(QOpenGLFunctions_4_5_Core& gl);
+
+private:
+    GLuint program_ = 0;
+    GLint triangle_count_location_ = -1;
+    GLint position_component_offset_location_ = -1;
+};

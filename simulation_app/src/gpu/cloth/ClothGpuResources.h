@@ -7,17 +7,13 @@
 
 #include <QOpenGLFunctions_4_5_Core>
 
-struct MeshNormalResources;
-struct MeshTopologyResources;
-
 struct ClothBufferSet final {
     GLuint vao = 0;
-    GLuint rest_position = 0;
     GLuint current_position = 0;
     GLuint previous_position = 0;
     GLuint index = 0;
-    GLuint adjacency_offset = 0;
-    GLuint adjacency_triangle = 0;
+    GLuint adjacent_triangle_offsets = 0;
+    GLuint adjacent_triangle_indices = 0;
     GLuint stretch_edge_index = 0;
     GLuint stretch_rest_length = 0;
     GLuint bending_edge_index = 0;
@@ -41,20 +37,27 @@ struct ClothBufferElementCounts final {
 };
 
 struct ClothPositionBufferView final {
-    GLuint rest_position_buffer = 0;
     GLuint current_position_buffer = 0;
     GLuint previous_position_buffer = 0;
     std::uint32_t vertex_count = 0;
 };
 
-struct StretchConstraintBufferView final {
-    GLuint edge_index_buffer = 0;
-    GLuint rest_length_buffer = 0;
-    std::uint32_t constraint_count = 0;
-    const std::vector<ConstraintRange>* color_ranges = nullptr;
+struct ClothMeshTopologyResources final {
+    GLuint position_buffer = 0;
+    GLuint index_buffer = 0;
+    GLuint adjacent_triangle_offsets_buffer = 0;
+    GLuint adjacent_triangle_indices_buffer = 0;
+
+    std::uint32_t vertex_count = 0;
+    std::uint32_t triangle_count = 0;
 };
 
-struct BendingConstraintBufferView final {
+struct ClothNormalResources final {
+    GLuint triangle_normal_buffer = 0;
+    GLuint vertex_normal_buffer = 0;
+};
+
+struct DistanceConstraintBufferView final {
     GLuint edge_index_buffer = 0;
     GLuint rest_length_buffer = 0;
     std::uint32_t constraint_count = 0;
@@ -90,10 +93,10 @@ public:
 
     void update_garment_buffers(const std::vector<GarmentObject>& garments, QOpenGLFunctions_4_5_Core& gl);
     ClothPositionBufferView position_buffer_view() const;
-    StretchConstraintBufferView stretch_constraint_buffer_view() const;
-    BendingConstraintBufferView bending_constraint_buffer_view() const;
-    MeshTopologyResources mesh_topology_resources() const;
-    MeshNormalResources mesh_normal_resources() const;
+    DistanceConstraintBufferView stretch_constraint_buffer_view() const;
+    DistanceConstraintBufferView bending_constraint_buffer_view() const;
+    ClothMeshTopologyResources mesh_topology_resources() const;
+    ClothNormalResources mesh_normal_resources() const;
     void bind_vertex_normals(GLuint binding_index, QOpenGLFunctions_4_5_Core& gl) const;
     void draw_garment(GarmentId garment_id, QOpenGLFunctions_4_5_Core& gl) const;
     void release(QOpenGLFunctions_4_5_Core& gl);
