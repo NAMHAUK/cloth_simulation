@@ -31,6 +31,7 @@ private:
                                         const DistanceConstraintBufferView& stretch_constraint_view,
                                         const DistanceConstraintBufferView& bending_constraint_view,
                                         const CharacterTriangleGeometryResources& character_geometry,
+                                        const CharacterBvhResources& character_bvh,
                                         bool has_character) const;
 
     SimulationForceField force_field_;

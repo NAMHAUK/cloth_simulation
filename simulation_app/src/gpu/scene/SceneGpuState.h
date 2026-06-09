@@ -1,6 +1,7 @@
 #pragma once
 
 #include "gpu/body/CharacterGpuResources.h"
+#include "gpu/body/CharacterBvhBoundsUpdater.h"
 #include "gpu/body/TriangleGeometryUpdater.h"
 #include "gpu/cloth/ClothGpuResources.h"
 #include "gpu/scene/NormalUpdater.h"
@@ -37,6 +38,7 @@ private:
     CharacterGpuResources character_gpu_state_;
     ClothGpuResources cloth_gpu_state_;
     TriangleGeometryUpdater triangle_geometry_updater_;
+    CharacterBvhBoundsUpdater bvh_bounds_updater_;
     NormalUpdater normal_updater_;
 
     std::uint32_t current_character_frame_ = 0;

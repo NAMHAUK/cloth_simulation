@@ -1,8 +1,10 @@
 #pragma once
 
 #include "asset/AssetDataTypes.h"
+#include "gpu/body/CharacterBvhBuilder.h"
 
 #include <cstdint>
+#include <vector>
 
 #include <QOpenGLFunctions_4_5_Core>
 
@@ -20,6 +22,12 @@ struct CharacterMeshTopologyResources final {
 struct CharacterTriangleGeometryResources final {
     GLuint triangle_geometry_buffer = 0;
     std::uint32_t triangle_count = 0;
+};
+
+struct CharacterBvhResources final {
+    GLuint node_buffer = 0;
+    std::uint32_t node_count = 0;
+    std::uint32_t root_node_index = 0;
 };
 
 class CharacterGpuResources final {
@@ -45,6 +53,8 @@ public:
     // Mesh buffer resources
     CharacterMeshTopologyResources mesh_topology_resources() const;
     CharacterTriangleGeometryResources character_triangle_geometry_resources() const;
+    CharacterBvhResources character_bvh_resources() const;
+    const std::vector<BvhBoundsUpdateLevelRange>& bvh_bounds_update_level_ranges() const;
     GLuint vertex_normal_buffer() const;
 
     // GPU resource lifetime
@@ -68,6 +78,12 @@ private:
     // Mesh adjacent triangle data
     GLuint index_buffer_ = 0;
     std::uint32_t triangle_count_ = 0;
+
+    // Character BVH data
+    GLuint character_bvh_node_buffer_ = 0;
+    std::uint32_t bvh_node_count_ = 0;
+    std::uint32_t bvh_root_node_index_ = 0;
+    std::vector<BvhBoundsUpdateLevelRange> bvh_bounds_update_level_ranges_;
 
     // Normal update buffers
     GLuint adjacent_triangle_offsets_ = 0;
