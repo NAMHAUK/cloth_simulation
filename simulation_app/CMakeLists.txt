@@ -42,6 +42,10 @@ add_executable(simulation_app
     src/asset/MeshGeometryUtils.h
     src/gpu/body/CharacterGpuResources.cpp
     src/gpu/body/CharacterGpuResources.h
+    src/gpu/body/CharacterBvhBuilder.cpp
+    src/gpu/body/CharacterBvhBuilder.h
+    src/gpu/body/CharacterBvhBoundsUpdater.cpp
+    src/gpu/body/CharacterBvhBoundsUpdater.h
     src/gpu/body/TriangleGeometryUpdater.cpp
     src/gpu/body/TriangleGeometryUpdater.h
     src/gpu/cloth/ClothGpuResources.cpp
@@ -80,6 +84,7 @@ add_executable(simulation_app
     shaders/triangle_normal.comp
     shaders/vertex_normal.comp
     shaders/character_triangle_geometry_update.comp
+    shaders/character_bvh_bounds_update.comp
     shaders/cloth_external_force.comp
     shaders/cloth_stretch_constraint.comp
     shaders/cloth_bending_constraint.comp

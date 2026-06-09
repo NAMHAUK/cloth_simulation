@@ -17,6 +17,11 @@ bool SceneGpuState::initialize(const ShaderPaths& shader_paths, QOpenGLFunctions
         normal_updater_.release(gl);
         return false;
     }
+    if (!bvh_bounds_updater_.initialize(shader_paths.character_bvh_bounds_update_compute, gl)) {
+        triangle_geometry_updater_.release(gl);
+        normal_updater_.release(gl);
+        return false;
+    }
 
     initialized_ = true;
     return true;
@@ -43,6 +48,7 @@ void SceneGpuState::release(QOpenGLFunctions_4_5_Core& gl)
     character_gpu_state_.release(gl);
     normal_updater_.release(gl);
     triangle_geometry_updater_.release(gl);
+    bvh_bounds_updater_.release(gl);
 
     current_character_frame_ = 0;
     initialized_ = false;
@@ -96,6 +102,10 @@ void SceneGpuState::update_character_triangle_geometry(QOpenGLFunctions_4_5_Core
     triangle_geometry_updater_.update(character_gpu_state_.mesh_topology_resources(),
                                       character_gpu_state_.character_triangle_geometry_resources(),
                                       gl);
+    bvh_bounds_updater_.update(character_gpu_state_.character_triangle_geometry_resources(),
+                               character_gpu_state_.character_bvh_resources(),
+                               character_gpu_state_.bvh_bounds_update_level_ranges(),
+                               gl);
 }
 
 // Garments //

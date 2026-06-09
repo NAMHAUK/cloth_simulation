@@ -1,0 +1,83 @@
+#version 430 core
+
+layout(local_size_x = 128) in;
+
+struct CharacterTriangleGeometry {
+    vec4 a;
+    vec4 b;
+    vec4 c;
+    vec4 face_normal;
+    vec4 unit_face_normal;
+};
+
+struct CharacterBvhNode {
+    vec4 min_bounds;
+    vec4 max_bounds;
+    uvec4 metadata;
+};
+
+layout(std430, binding = 0) readonly buffer CharacterTriangleGeometryBuffer {
+    CharacterTriangleGeometry triangle_geometry[];
+};
+
+layout(std430, binding = 1) buffer CharacterBvhNodeBuffer {
+    CharacterBvhNode bvh_nodes[];
+};
+
+uniform uint uFirstNode;
+uniform uint uNodeCount;
+
+vec3 min_vec3(vec3 lhs, vec3 rhs)
+{
+    return vec3(min(lhs.x, rhs.x), min(lhs.y, rhs.y), min(lhs.z, rhs.z));
+}
+
+vec3 max_vec3(vec3 lhs, vec3 rhs)
+{
+    return vec3(max(lhs.x, rhs.x), max(lhs.y, rhs.y), max(lhs.z, rhs.z));
+}
+
+void update_leaf_bounds(uint node_index, CharacterBvhNode node)
+{
+    uint first_triangle = node.metadata.z;
+    uint triangle_count = node.metadata.w;
+
+    vec3 min_bounds = vec3(3.402823e+38);
+    vec3 max_bounds = vec3(-3.402823e+38);
+    for (uint triangle_offset = 0u; triangle_offset < triangle_count; ++triangle_offset) {
+        CharacterTriangleGeometry triangle = triangle_geometry[first_triangle + triangle_offset];
+        min_bounds = min_vec3(min_bounds, min_vec3(triangle.a.xyz, min_vec3(triangle.b.xyz, triangle.c.xyz)));
+        max_bounds = max_vec3(max_bounds, max_vec3(triangle.a.xyz, max_vec3(triangle.b.xyz, triangle.c.xyz)));
+    }
+
+    bvh_nodes[node_index].min_bounds = vec4(min_bounds, 0.0);
+    bvh_nodes[node_index].max_bounds = vec4(max_bounds, 0.0);
+}
+
+void update_internal_bounds(uint node_index, CharacterBvhNode node)
+{
+    CharacterBvhNode left_child = bvh_nodes[node.metadata.x];
+    CharacterBvhNode right_child = bvh_nodes[node.metadata.y];
+
+    vec3 min_bounds = min_vec3(left_child.min_bounds.xyz, right_child.min_bounds.xyz);
+    vec3 max_bounds = max_vec3(left_child.max_bounds.xyz, right_child.max_bounds.xyz);
+
+    bvh_nodes[node_index].min_bounds = vec4(min_bounds, 0.0);
+    bvh_nodes[node_index].max_bounds = vec4(max_bounds, 0.0);
+}
+
+void main()
+{
+    uint local_node_index = gl_GlobalInvocationID.x;
+    if (local_node_index >= uNodeCount) {
+        return;
+    }
+
+    uint node_index = uFirstNode + local_node_index;
+    CharacterBvhNode node = bvh_nodes[node_index];
+    if (node.metadata.w > 0u) {
+        update_leaf_bounds(node_index, node);
+    } else {
+        update_internal_bounds(node_index, node);
+    }
+}
