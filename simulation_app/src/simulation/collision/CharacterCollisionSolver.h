@@ -1,7 +1,7 @@
 #pragma once
 
-#include "gpu/body/CharacterGpuResources.h"
-#include "gpu/cloth/ClothGpuResources.h"
+#include "gpu/body/CharacterGpuDataTypes.h"
+#include "gpu/cloth/ClothGpuDataTypes.h"
 
 #include <filesystem>
 

@@ -10,7 +10,7 @@ struct CharacterTriangleGeometry {
     vec4 unit_face_normal;
 };
 
-struct CharacterBvhNode {
+struct MeshBvhNode {
     vec4 min_bounds;
     vec4 max_bounds;
     uvec4 metadata;
@@ -20,47 +20,40 @@ layout(std430, binding = 0) readonly buffer CharacterTriangleGeometryBuffer {
     CharacterTriangleGeometry triangle_geometry[];
 };
 
-layout(std430, binding = 1) buffer CharacterBvhNodeBuffer {
-    CharacterBvhNode bvh_nodes[];
+layout(std430, binding = 1) buffer MeshBvhNodeBuffer {
+    MeshBvhNode bvh_nodes[];
 };
 
 uniform uint uFirstNode;
 uniform uint uNodeCount;
 
-vec3 min_vec3(vec3 lhs, vec3 rhs)
+void update_leaf_bounds(uint node_index, uvec4 metadata)
 {
-    return vec3(min(lhs.x, rhs.x), min(lhs.y, rhs.y), min(lhs.z, rhs.z));
-}
-
-vec3 max_vec3(vec3 lhs, vec3 rhs)
-{
-    return vec3(max(lhs.x, rhs.x), max(lhs.y, rhs.y), max(lhs.z, rhs.z));
-}
-
-void update_leaf_bounds(uint node_index, CharacterBvhNode node)
-{
-    uint first_triangle = node.metadata.z;
-    uint triangle_count = node.metadata.w;
+    uint first_triangle = metadata.x;
+    uint triangle_count = metadata.y;
 
     vec3 min_bounds = vec3(3.402823e+38);
     vec3 max_bounds = vec3(-3.402823e+38);
     for (uint triangle_offset = 0u; triangle_offset < triangle_count; ++triangle_offset) {
-        CharacterTriangleGeometry triangle = triangle_geometry[first_triangle + triangle_offset];
-        min_bounds = min_vec3(min_bounds, min_vec3(triangle.a.xyz, min_vec3(triangle.b.xyz, triangle.c.xyz)));
-        max_bounds = max_vec3(max_bounds, max_vec3(triangle.a.xyz, max_vec3(triangle.b.xyz, triangle.c.xyz)));
+        uint triangle_index = first_triangle + triangle_offset;
+        vec3 a = triangle_geometry[triangle_index].a.xyz;
+        vec3 b = triangle_geometry[triangle_index].b.xyz;
+        vec3 c = triangle_geometry[triangle_index].c.xyz;
+        min_bounds = min(min_bounds, min(a, min(b, c)));
+        max_bounds = max(max_bounds, max(a, max(b, c)));
     }
 
     bvh_nodes[node_index].min_bounds = vec4(min_bounds, 0.0);
     bvh_nodes[node_index].max_bounds = vec4(max_bounds, 0.0);
 }
 
-void update_internal_bounds(uint node_index, CharacterBvhNode node)
+void update_internal_bounds(uint node_index, uvec4 metadata)
 {
-    CharacterBvhNode left_child = bvh_nodes[node.metadata.x];
-    CharacterBvhNode right_child = bvh_nodes[node.metadata.y];
+    uint left_child_index = metadata.x;
+    uint right_child_index = metadata.y;
 
-    vec3 min_bounds = min_vec3(left_child.min_bounds.xyz, right_child.min_bounds.xyz);
-    vec3 max_bounds = max_vec3(left_child.max_bounds.xyz, right_child.max_bounds.xyz);
+    vec3 min_bounds = min(bvh_nodes[left_child_index].min_bounds.xyz, bvh_nodes[right_child_index].min_bounds.xyz);
+    vec3 max_bounds = max(bvh_nodes[left_child_index].max_bounds.xyz, bvh_nodes[right_child_index].max_bounds.xyz);
 
     bvh_nodes[node_index].min_bounds = vec4(min_bounds, 0.0);
     bvh_nodes[node_index].max_bounds = vec4(max_bounds, 0.0);
@@ -74,10 +67,10 @@ void main()
     }
 
     uint node_index = uFirstNode + local_node_index;
-    CharacterBvhNode node = bvh_nodes[node_index];
-    if (node.metadata.w > 0u) {
-        update_leaf_bounds(node_index, node);
+    uvec4 metadata = bvh_nodes[node_index].metadata;
+    if (metadata.w > 0u) {
+        update_leaf_bounds(node_index, metadata);
     } else {
-        update_internal_bounds(node_index, node);
+        update_internal_bounds(node_index, metadata);
     }
 }

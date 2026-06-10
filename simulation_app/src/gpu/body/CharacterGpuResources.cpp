@@ -1,6 +1,7 @@
 #include "gpu/body/CharacterGpuResources.h"
 
 #include "asset/MeshGeometryUtils.h"
+#include "gpu/collision/MeshBvhBuilder.h"
 #include <cstddef>
 #include <iostream>
 #include <utility>
@@ -65,11 +66,12 @@ void CharacterGpuResources::upload_mesh(const CharacterMesh& character_mesh, QOp
 
     // 각 vertex에 인접한 triangle 정보 생성
     const std::uint32_t source_triangle_count = static_cast<std::uint32_t>(character_mesh.indices.size() / 3u);
-    CharacterBvhBuildResult bvh_result = build_character_bvh(
+    MeshBvhBuilder bvh_builder(
         character_mesh.vertex_count,
         character_mesh.indices,
         character_mesh.vertices
     );
+    MeshBvhBuildResult bvh_result = bvh_builder.build_mesh_bvh();
     if (!bvh_result.is_valid(source_triangle_count)) {
         std::cerr << "Failed to build character BVH.\n";
         release(gl);
@@ -87,7 +89,7 @@ void CharacterGpuResources::upload_mesh(const CharacterMesh& character_mesh, QOp
     // GPU buffer 공간 생성 & 초기값 설정
     const GLsizeiptr position_bytes = static_cast<GLsizeiptr>(frame_position_component_count(character_mesh) * sizeof(float));
     const GLsizeiptr index_bytes = static_cast<GLsizeiptr>(bvh_result.triangle_indices.size() * sizeof(std::uint32_t));
-    const GLsizeiptr bvh_node_bytes = static_cast<GLsizeiptr>(bvh_result.nodes.size() * sizeof(CharacterBvhNode));
+    const GLsizeiptr bvh_node_bytes = static_cast<GLsizeiptr>(bvh_result.nodes.size() * sizeof(MeshBvhNode));
     const GLsizeiptr adjacent_triangle_offsets_bytes = static_cast<GLsizeiptr>(adjacency.offsets.size() * sizeof(std::uint32_t));
     const GLsizeiptr adjacent_triangle_indices_bytes = static_cast<GLsizeiptr>(adjacency.face_indices.size() * sizeof(std::uint32_t));
     const GLsizeiptr triangle_geometry_bytes = static_cast<GLsizeiptr>(
@@ -109,7 +111,7 @@ void CharacterGpuResources::upload_mesh(const CharacterMesh& character_mesh, QOp
     triangle_count_ = adjacency.face_count;
     bvh_node_count_ = static_cast<std::uint32_t>(bvh_result.nodes.size());
     bvh_root_node_index_ = bvh_result.root_node_index;
-    bvh_bounds_update_level_ranges_ = std::move(bvh_result.bounds_update_level_ranges);
+    bvh_node_ranges_by_level_ = std::move(bvh_result.node_ranges_by_level);
     current_frame_index_ = 0;
     index_count_ = static_cast<GLsizei>(bvh_result.triangle_indices.size());
 }
@@ -182,6 +184,15 @@ CharacterTriangleGeometryResources CharacterGpuResources::character_triangle_geo
     return resources;
 }
 
+CharacterNormalResources CharacterGpuResources::mesh_normal_resources() const
+{
+    CharacterNormalResources resources;
+    resources.triangle_geometry_buffer = character_triangle_geometry_buffer_;
+    resources.vertex_normal_buffer = vertex_normal_buffer_;
+    resources.triangle_count = triangle_count_;
+    return resources;
+}
+
 CharacterBvhResources CharacterGpuResources::character_bvh_resources() const
 {
     CharacterBvhResources resources;
@@ -191,14 +202,9 @@ CharacterBvhResources CharacterGpuResources::character_bvh_resources() const
     return resources;
 }
 
-const std::vector<BvhBoundsUpdateLevelRange>& CharacterGpuResources::bvh_bounds_update_level_ranges() const
+const std::vector<BvhNodeRange>& CharacterGpuResources::bvh_node_ranges_by_level() const
 {
-    return bvh_bounds_update_level_ranges_;
-}
-
-GLuint CharacterGpuResources::vertex_normal_buffer() const
-{
-    return vertex_normal_buffer_;
+    return bvh_node_ranges_by_level_;
 }
 
 void CharacterGpuResources::release(QOpenGLFunctions_4_5_Core& gl)
@@ -246,7 +252,7 @@ void CharacterGpuResources::reset_resources() noexcept
     triangle_count_ = 0;
     bvh_node_count_ = 0;
     bvh_root_node_index_ = 0;
-    bvh_bounds_update_level_ranges_.clear();
+    bvh_node_ranges_by_level_.clear();
     current_frame_index_ = 0;
     index_count_ = 0;
 }

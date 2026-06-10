@@ -1,7 +1,7 @@
 #pragma once
 
 #include "gpu/body/CharacterGpuResources.h"
-#include "gpu/body/CharacterBvhBoundsUpdater.h"
+#include "gpu/collision/MeshBvhBoundsUpdater.h"
 #include "gpu/body/TriangleGeometryUpdater.h"
 #include "gpu/cloth/ClothGpuResources.h"
 #include "gpu/scene/NormalUpdater.h"
@@ -30,7 +30,7 @@ public:
 
     const ClothGpuResources& cloth_gpu_state() const;
     void update_garment_meshes(const SceneState& scene, QOpenGLFunctions_4_5_Core& gl);
-    void remove_garment_gpu_state(GarmentId garment_id, const SceneState& scene, QOpenGLFunctions_4_5_Core& gl);
+    void remove_garment_gpu_state(std::uint32_t garment_id, const SceneState& scene, QOpenGLFunctions_4_5_Core& gl);
 
 private:
     void update_character_triangle_geometry(QOpenGLFunctions_4_5_Core& gl);
@@ -38,10 +38,8 @@ private:
     CharacterGpuResources character_gpu_state_;
     ClothGpuResources cloth_gpu_state_;
     TriangleGeometryUpdater triangle_geometry_updater_;
-    CharacterBvhBoundsUpdater bvh_bounds_updater_;
+    MeshBvhBoundsUpdater bvh_bounds_updater_;
     NormalUpdater normal_updater_;
 
-    std::uint32_t current_character_frame_ = 0;
     bool initialized_ = false;
-    bool character_uploaded_ = false;
 };

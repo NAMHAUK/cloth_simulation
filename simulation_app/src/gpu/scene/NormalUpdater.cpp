@@ -1,6 +1,6 @@
 #include "gpu/scene/NormalUpdater.h"
 
-#include "gpu/body/CharacterGpuResources.h"
+#include "gpu/body/CharacterGpuDataTypes.h"
 #include "gpu/cloth/ClothGpuResources.h"
 #include "utils/FileUtils.h"
 #include "utils/ShaderUtils.h"
@@ -126,25 +126,24 @@ void NormalUpdater::update_cloth_normals(const ClothMeshTopologyResources& topol
 }
 
 void NormalUpdater::update_character_normals(const CharacterMeshTopologyResources& topology,
-                                             const CharacterTriangleGeometryResources& triangle_geometry,
-                                             GLuint vertex_normal_buffer,
+                                             const CharacterNormalResources& normals,
                                              QOpenGLFunctions_4_5_Core& gl) const
 {
     if (!is_initialized() ||
-        triangle_geometry.triangle_geometry_buffer == 0 ||
-        triangle_geometry.triangle_count == 0 ||
-        triangle_geometry.triangle_count != topology.triangle_count ||
+        normals.triangle_geometry_buffer == 0 ||
+        normals.triangle_count == 0 ||
+        normals.triangle_count != topology.triangle_count ||
         !has_valid_vertex_normal_inputs(topology.adjacent_triangle_offsets_buffer,
                                         topology.adjacent_triangle_indices_buffer,
-                                        vertex_normal_buffer,
+                                        normals.vertex_normal_buffer,
                                         topology.vertex_count)) {
         return;
     }
 
-    update_vertex_normals(triangle_geometry.triangle_geometry_buffer,
+    update_vertex_normals(normals.triangle_geometry_buffer,
                           topology.adjacent_triangle_offsets_buffer,
                           topology.adjacent_triangle_indices_buffer,
-                          vertex_normal_buffer,
+                          normals.vertex_normal_buffer,
                           topology.vertex_count,
                           triangle_geometry_face_normal_stride,
                           triangle_geometry_face_normal_offset,
