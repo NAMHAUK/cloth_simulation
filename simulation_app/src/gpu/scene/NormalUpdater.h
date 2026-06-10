@@ -1,11 +1,14 @@
 #pragma once
 
-#include "gpu/scene/MeshBufferResources.h"
-
 #include <cstdint>
 #include <filesystem>
 
 #include <QOpenGLFunctions_4_5_Core>
+
+struct CharacterNormalResources;
+struct CharacterMeshTopologyResources;
+struct ClothMeshTopologyResources;
+struct ClothNormalResources;
 
 class NormalUpdater final {
 public:
@@ -19,11 +22,23 @@ public:
                     QOpenGLFunctions_4_5_Core& gl);
     void release(QOpenGLFunctions_4_5_Core& gl);
 
-    void update_normals(const MeshTopologyResources& topology,
-                        const MeshNormalResources& normals,
-                        QOpenGLFunctions_4_5_Core& gl) const;
+    void update_cloth_normals(const ClothMeshTopologyResources& topology,
+                              const ClothNormalResources& normals,
+                              QOpenGLFunctions_4_5_Core& gl) const;
+    void update_character_normals(const CharacterMeshTopologyResources& topology,
+                                  const CharacterNormalResources& normals,
+                                  QOpenGLFunctions_4_5_Core& gl) const;
 
 private:
+    void update_vertex_normals(GLuint triangle_normal_source_buffer,
+                               GLuint adjacent_triangle_offsets_buffer,
+                               GLuint adjacent_triangle_indices_buffer,
+                               GLuint vertex_normal_buffer,
+                               std::uint32_t vertex_count,
+                               std::uint32_t triangle_normal_stride,
+                               std::uint32_t triangle_normal_offset,
+                               QOpenGLFunctions_4_5_Core& gl) const;
+
     // Shader loading
     GLuint load_compute_program(const std::filesystem::path& shader_path, QOpenGLFunctions_4_5_Core& gl) const;
     GLuint compile_compute_shader(const char* source, QOpenGLFunctions_4_5_Core& gl) const;
@@ -36,4 +51,6 @@ private:
     GLint triangle_count_location_ = -1;
     GLint position_component_offset_location_ = -1;
     GLint vertex_count_location_ = -1;
+    GLint triangle_normal_stride_location_ = -1;
+    GLint triangle_normal_offset_location_ = -1;
 };

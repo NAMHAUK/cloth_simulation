@@ -1,13 +1,13 @@
 #pragma once
 
 #include "asset/AssetDataTypes.h"
+#include "gpu/body/CharacterGpuDataTypes.h"
+#include "gpu/collision/BvhDataTypes.h"
 
 #include <cstdint>
+#include <vector>
 
 #include <QOpenGLFunctions_4_5_Core>
-
-struct MeshNormalResources;
-struct MeshTopologyResources;
 
 class CharacterGpuResources final {
 public:
@@ -30,8 +30,11 @@ public:
     void draw(QOpenGLFunctions_4_5_Core& gl) const;
 
     // Mesh buffer resources
-    MeshTopologyResources mesh_topology_resources() const;
-    MeshNormalResources mesh_normal_resources() const;
+    CharacterMeshTopologyResources mesh_topology_resources() const;
+    CharacterTriangleGeometryResources character_triangle_geometry_resources() const;
+    CharacterNormalResources mesh_normal_resources() const;
+    CharacterBvhResources character_bvh_resources() const;
+    const std::vector<BvhNodeRange>& bvh_node_ranges_by_level() const;
 
     // GPU resource lifetime
     void release(QOpenGLFunctions_4_5_Core& gl);
@@ -51,13 +54,19 @@ private:
     std::uint32_t vertex_count_ = 0;
     std::uint32_t current_frame_index_ = 0;
 
-    // Mesh adjacency data
+    // Mesh adjacent triangle data
     GLuint index_buffer_ = 0;
     std::uint32_t triangle_count_ = 0;
 
+    // Character BVH data
+    GLuint character_bvh_node_buffer_ = 0;
+    std::uint32_t bvh_node_count_ = 0;
+    std::uint32_t bvh_root_node_index_ = 0;
+    std::vector<BvhNodeRange> bvh_node_ranges_by_level_;
+
     // Normal update buffers
-    GLuint adjacency_offset_buffer_ = 0;
-    GLuint adjacency_triangle_buffer_ = 0;
-    GLuint triangle_normal_buffer_ = 0;
+    GLuint adjacent_triangle_offsets_ = 0;
+    GLuint adjacent_triangle_indices_ = 0;
+    GLuint character_triangle_geometry_buffer_ = 0;
     GLuint vertex_normal_buffer_ = 0;
 };

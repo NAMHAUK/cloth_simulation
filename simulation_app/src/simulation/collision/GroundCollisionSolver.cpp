@@ -3,6 +3,7 @@
 #include "utils/BufferUtils.h"
 #include "utils/ShaderUtils.h"
 
+#include <cassert>
 #include <iostream>
 
 namespace {
@@ -38,11 +39,14 @@ bool GroundCollisionSolver::initialize(const std::filesystem::path& shader_path,
     return true;
 }
 
+bool GroundCollisionSolver::can_solve(const ClothPositionBufferView& position_view) const
+{
+    return is_initialized() && is_valid_position_view(position_view);
+}
+
 void GroundCollisionSolver::solve(const ClothPositionBufferView& position_view, QOpenGLFunctions_4_5_Core& gl) const
 {
-    if (!is_initialized() || !is_valid_position_view(position_view)) {
-        return;
-    }
+    assert(can_solve(position_view));
 
     // shader & GPU 연결
     gl.glUseProgram(program_);

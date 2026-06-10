@@ -24,7 +24,7 @@
 #include <glm/geometric.hpp>
 
 namespace {
-constexpr float obj_to_world_scale = 0.01f;
+constexpr float obj_to_world_scale = 0.001f;
 
 using MeshEdgeBuilder = std::vector<MeshEdge> (*)(std::uint32_t, const std::vector<std::uint32_t>&);
 
@@ -55,49 +55,19 @@ GarmentDistanceConstraints build_bending_constraints(const std::vector<std::uint
     return build_distance_constraints(triangle_indices, vertices, build_unique_bending_edges);
 }
 
-void add_undirected_edge(std::vector<std::vector<std::uint32_t>>& vertex_edges, std::uint32_t vertex_a, std::uint32_t vertex_b)
-{
-    vertex_edges[vertex_a].push_back(vertex_b);
-    vertex_edges[vertex_b].push_back(vertex_a);
-}
-
 void assign_bounds(GarmentMesh& garment_mesh, const glm::vec3& min_bounds, const glm::vec3& max_bounds)
 {
     garment_mesh.bounds_center = (min_bounds + max_bounds) * 0.5f;
     garment_mesh.bounds_radius = glm::length(max_bounds - min_bounds) * 0.5f;
 }
 
-std::uint32_t count_connected_components(const std::vector<std::vector<std::uint32_t>>& vertex_edges,
-                                         const std::vector<std::uint8_t>& used_vertices)
+std::uint32_t find_component_root(std::vector<std::uint32_t>& component_parent, std::uint32_t vertex_index)
 {
-    std::uint32_t component_count = 0;
-    std::vector<std::uint8_t> visited(used_vertices.size(), 0u);
-    std::vector<std::uint32_t> stack;
-
-    for (std::uint32_t vertex_index = 0; vertex_index < used_vertices.size(); ++vertex_index) {
-        if (used_vertices[vertex_index] == 0u || visited[vertex_index] != 0u) {
-            continue;
-        }
-
-        ++component_count;
-        visited[vertex_index] = 1u;
-        stack.push_back(vertex_index);
-
-        while (!stack.empty()) {
-            const std::uint32_t current_vertex = stack.back();
-            stack.pop_back();
-
-            for (std::uint32_t next_vertex : vertex_edges[current_vertex]) {
-                if (visited[next_vertex] != 0u) {
-                    continue;
-                }
-                visited[next_vertex] = 1u;
-                stack.push_back(next_vertex);
-            }
-        }
+    if (component_parent[vertex_index] != vertex_index) {
+        component_parent[vertex_index] = find_component_root(component_parent, component_parent[vertex_index]);
     }
 
-    return component_count;
+    return component_parent[vertex_index];
 }
 
 bool validate_garment_obj(const GarmentMesh& garment_mesh, std::uint32_t vertex_count)
@@ -114,9 +84,9 @@ bool validate_garment_obj(const GarmentMesh& garment_mesh, std::uint32_t vertex_
     }
 
     std::vector<std::uint8_t> used_vertices(vertex_count, 0u);
-    std::vector<std::vector<std::uint32_t>> vertex_edges(vertex_count);
-
+    std::vector<std::uint32_t> component_parent(vertex_count, 0u);
     for (std::uint32_t vertex_index = 0; vertex_index < vertex_count; ++vertex_index) {
+        component_parent[vertex_index] = vertex_index;
         if (!is_finite_vec3(get_vertex_position(garment_mesh.vertices, vertex_index))) {
             std::cerr << "Garment OBJ contains a non-finite vertex.\n";
             return false;
@@ -150,23 +120,33 @@ bool validate_garment_obj(const GarmentMesh& garment_mesh, std::uint32_t vertex_
         used_vertices[vertex_b] = 1u;
         used_vertices[vertex_c] = 1u;
 
-        add_undirected_edge(vertex_edges, vertex_a, vertex_b);
-        add_undirected_edge(vertex_edges, vertex_b, vertex_c);
-        add_undirected_edge(vertex_edges, vertex_c, vertex_a);
+        const std::uint32_t root_a = find_component_root(component_parent, vertex_a);
+        component_parent[find_component_root(component_parent, vertex_b)] = root_a;
+        component_parent[find_component_root(component_parent, vertex_c)] = root_a;
     }
 
     std::uint32_t unused_vertex_count = 0;
-    for (std::uint8_t used : used_vertices) {
-        if (used == 0u) {
+    std::uint32_t component_count = 0;
+    std::vector<std::uint8_t> component_roots(vertex_count, 0u);
+    for (std::uint32_t vertex_index = 0; vertex_index < vertex_count; ++vertex_index) {
+        if (used_vertices[vertex_index] == 0u) {
             ++unused_vertex_count;
+            continue;
         }
+
+        const std::uint32_t root = find_component_root(component_parent, vertex_index);
+        if (component_roots[root] != 0u) {
+            continue;
+        }
+        component_roots[root] = 1u;
+        ++component_count;
     }
+
     if (unused_vertex_count > 0u) {
         std::cerr << "Garment OBJ contains unused vertices: " << unused_vertex_count << '\n';
         return false;
     }
 
-    const std::uint32_t component_count = count_connected_components(vertex_edges, used_vertices);
     if (component_count != 1u) {
         std::cerr << "Garment OBJ must be one connected component. component_count=" << component_count << '\n';
         return false;

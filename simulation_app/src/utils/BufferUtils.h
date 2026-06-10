@@ -9,16 +9,7 @@ inline bool is_valid_position_view(const ClothPositionBufferView& position_view)
            position_view.vertex_count != 0;
 }
 
-inline bool is_valid_stretch_constraint_view(const StretchConstraintBufferView& constraint_view)
-{
-    return constraint_view.edge_index_buffer != 0 &&
-           constraint_view.rest_length_buffer != 0 &&
-           constraint_view.constraint_count != 0 &&
-           constraint_view.color_ranges != nullptr &&
-           !constraint_view.color_ranges->empty();
-}
-
-inline bool is_valid_bending_constraint_view(const BendingConstraintBufferView& constraint_view)
+inline bool is_valid_distance_constraint_view(const DistanceConstraintBufferView& constraint_view)
 {
     return constraint_view.edge_index_buffer != 0 &&
            constraint_view.rest_length_buffer != 0 &&

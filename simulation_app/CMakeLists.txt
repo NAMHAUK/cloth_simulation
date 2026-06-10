@@ -36,11 +36,22 @@ add_executable(simulation_app
     src/simulation/constraints/BendingConstraintSolver.h
     src/simulation/collision/GroundCollisionSolver.cpp
     src/simulation/collision/GroundCollisionSolver.h
+    src/simulation/collision/CharacterCollisionSolver.cpp
+    src/simulation/collision/CharacterCollisionSolver.h
     src/asset/MeshGeometryUtils.cpp
     src/asset/MeshGeometryUtils.h
     src/gpu/body/CharacterGpuResources.cpp
+    src/gpu/body/CharacterGpuDataTypes.h
     src/gpu/body/CharacterGpuResources.h
+    src/gpu/collision/MeshBvhBuilder.cpp
+    src/gpu/collision/BvhDataTypes.h
+    src/gpu/collision/MeshBvhBuilder.h
+    src/gpu/collision/MeshBvhBoundsUpdater.cpp
+    src/gpu/collision/MeshBvhBoundsUpdater.h
+    src/gpu/body/TriangleGeometryUpdater.cpp
+    src/gpu/body/TriangleGeometryUpdater.h
     src/gpu/cloth/ClothGpuResources.cpp
+    src/gpu/cloth/ClothGpuDataTypes.h
     src/gpu/cloth/ClothGpuResources.h
     src/rendering/BackgroundGradient.cpp
     src/rendering/BackgroundGradient.h
@@ -50,7 +61,6 @@ add_executable(simulation_app
     src/gpu/scene/SceneGpuState.h
     src/gpu/scene/NormalUpdater.cpp
     src/gpu/scene/NormalUpdater.h
-    src/gpu/scene/MeshBufferResources.h
     src/rendering/RenderPipeline.cpp
     src/rendering/RenderPipeline.h
     src/ui/SceneViewport.cpp
@@ -76,10 +86,13 @@ add_executable(simulation_app
     shaders/background.frag
     shaders/triangle_normal.comp
     shaders/vertex_normal.comp
+    shaders/character_triangle_geometry_update.comp
+    shaders/character_bvh_bounds_update.comp
     shaders/cloth_external_force.comp
     shaders/cloth_stretch_constraint.comp
     shaders/cloth_bending_constraint.comp
     shaders/cloth_ground_collision.comp
+    shaders/cloth_character_collision.comp
 )
 
 add_executable(garment_converter

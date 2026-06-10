@@ -66,12 +66,11 @@ void SimulationController::tick_frame()
         simulation_step_finished = simulation_pipeline_.step(scene_, gpu_state_, motion_step_count_, gl);
     });
 
-    if (!simulation_step_finished) {
-        return;
+    if (simulation_step_finished) {
+        ++simulation_step_count_;
+        ++motion_step_count_;
     }
 
-    ++simulation_step_count_;
-    ++motion_step_count_;
     viewport_callbacks_.request_update();
 }
 
@@ -128,7 +127,7 @@ void SimulationController::add_garment_mesh(GarmentMesh mesh)
 
     viewport_callbacks_.run_with_gl_context([this, &mesh](QOpenGLFunctions_4_5_Core& gl) {
         scene_.add_garment_mesh(std::move(mesh));
-        gpu_state_.set_garment_meshes(scene_, gl);
+        gpu_state_.update_garment_meshes(scene_, gl);
     });
 
     viewport_callbacks_.request_update();

@@ -20,7 +20,7 @@ std::filesystem::path make_motion_asset_path(const ProjectPaths& project_paths,
                                              const std::filesystem::path& amass_motion_path);
 
 // Garment //
-bool read_garment_asset(const std::filesystem::path& garment_asset_path, GarmentMesh& garment_mesh);
+bool read_garment_mesh(const std::filesystem::path& garment_asset_path, GarmentMesh& garment_mesh);
 bool write_garment_asset(const std::filesystem::path& garment_asset_path, const GarmentMesh& garment_mesh);
 std::vector<std::filesystem::path> scan_garment_asset_paths(const ProjectPaths& project_paths);
 std::filesystem::path make_garment_asset_path(const ProjectPaths& project_paths,

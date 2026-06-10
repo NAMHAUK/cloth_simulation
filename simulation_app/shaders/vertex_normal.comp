@@ -6,12 +6,12 @@ layout(std430, binding = 0) readonly buffer TriangleNormals {
     vec4 triangle_normals[];
 };
 
-layout(std430, binding = 1) readonly buffer AdjacencyOffsets {
-    uint adjacency_offsets[];
+layout(std430, binding = 1) readonly buffer AdjacentTriangleOffsets {
+    uint adjacent_triangle_offsets[];
 };
 
-layout(std430, binding = 2) readonly buffer AdjacencyTriangles {
-    uint adjacency_triangles[];
+layout(std430, binding = 2) readonly buffer AdjacentTriangleIndices {
+    uint adjacent_triangle_indices[];
 };
 
 layout(std430, binding = 3) writeonly buffer VertexNormals {
@@ -19,6 +19,8 @@ layout(std430, binding = 3) writeonly buffer VertexNormals {
 };
 
 uniform uint uVertexCount;
+uniform uint uTriangleNormalStride;
+uniform uint uTriangleNormalOffset;
 
 vec3 safe_normalize(vec3 normal)
 {
@@ -33,13 +35,14 @@ void main()
         return;
     }
 
-    uint begin = adjacency_offsets[vertex_index];
-    uint end = adjacency_offsets[vertex_index + 1u];
+    uint begin = adjacent_triangle_offsets[vertex_index];
+    uint end = adjacent_triangle_offsets[vertex_index + 1u];
 
     vec3 normal_sum = vec3(0.0);
     for (uint entry_index = begin; entry_index < end; ++entry_index) {
-        uint triangle_index = adjacency_triangles[entry_index];
-        normal_sum += triangle_normals[triangle_index].xyz;
+        uint triangle_index = adjacent_triangle_indices[entry_index];
+        uint normal_index = triangle_index * uTriangleNormalStride + uTriangleNormalOffset;
+        normal_sum += triangle_normals[normal_index].xyz;
     }
 
     vertex_normals[vertex_index] = vec4(safe_normalize(normal_sum), 0.0);
