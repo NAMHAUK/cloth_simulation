@@ -1,5 +1,7 @@
 #include "gpu/cloth/ClothGpuResources.h"
 
+#include "scene/SceneState.h"
+
 #include <algorithm>
 #include <cstddef>
 #include <cstdint>
@@ -858,7 +860,7 @@ void ClothGpuResources::bind_vertex_normals(GLuint binding_index, QOpenGLFunctio
     gl.glBindBufferBase(GL_SHADER_STORAGE_BUFFER, binding_index, buffers_.vertex_normal);
 }
 
-void ClothGpuResources::draw_garment(GarmentId garment_id, QOpenGLFunctions_4_5_Core& gl) const
+void ClothGpuResources::draw_garment(std::uint32_t garment_id, QOpenGLFunctions_4_5_Core& gl) const
 {
     const GarmentBufferRanges* buffer_ranges = find_garment_buffer_ranges(garment_id);
     if (!is_initialized() || buffer_ranges == nullptr || buffer_ranges->index_count == 0) {
@@ -874,7 +876,7 @@ void ClothGpuResources::draw_garment(GarmentId garment_id, QOpenGLFunctions_4_5_
 }
 
 // state checks //
-const GarmentBufferRanges* ClothGpuResources::find_garment_buffer_ranges(GarmentId garment_id) const
+const GarmentBufferRanges* ClothGpuResources::find_garment_buffer_ranges(std::uint32_t garment_id) const
 {
     const auto iter = std::find_if(garments_.begin(), garments_.end(),
         [garment_id](const GarmentBufferRanges& buffer_ranges) {

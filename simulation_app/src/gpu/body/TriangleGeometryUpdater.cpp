@@ -1,6 +1,6 @@
 #include "gpu/body/TriangleGeometryUpdater.h"
 
-#include "gpu/body/CharacterGpuResources.h"
+#include "gpu/body/CharacterGpuDataTypes.h"
 #include "utils/ShaderUtils.h"
 
 #include <iostream>

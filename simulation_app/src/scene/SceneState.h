@@ -6,10 +6,8 @@
 #include <cstdint>
 #include <vector>
 
-using GarmentId = std::uint64_t;
-
 struct GarmentObject {
-    GarmentId id = 0;
+    std::uint32_t id = 0;
     GarmentMesh mesh;
     bool visible = true;
 };
@@ -22,7 +20,7 @@ public:
     const CharacterMesh& character_mesh() const;
 
     // Garments
-    GarmentId add_garment_mesh(GarmentMesh mesh);
+    std::uint32_t add_garment_mesh(GarmentMesh mesh);
     const std::vector<GarmentObject>& garments() const;
 
     // Playback
@@ -37,7 +35,7 @@ private:
 
     // Garments
     std::vector<GarmentObject> garments_;
-    GarmentId next_garment_id_ = 1;
+    std::uint32_t next_garment_id_ = 1;
 
     // Playback
     std::uint32_t current_character_frame_ = 0;

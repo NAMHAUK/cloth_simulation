@@ -5,7 +5,7 @@
 
 #include <QOpenGLFunctions_4_5_Core>
 
-struct CharacterTriangleGeometryResources;
+struct CharacterNormalResources;
 struct CharacterMeshTopologyResources;
 struct ClothMeshTopologyResources;
 struct ClothNormalResources;
@@ -26,8 +26,7 @@ public:
                               const ClothNormalResources& normals,
                               QOpenGLFunctions_4_5_Core& gl) const;
     void update_character_normals(const CharacterMeshTopologyResources& topology,
-                                  const CharacterTriangleGeometryResources& triangle_geometry,
-                                  GLuint vertex_normal_buffer,
+                                  const CharacterNormalResources& normals,
                                   QOpenGLFunctions_4_5_Core& gl) const;
 
 private:

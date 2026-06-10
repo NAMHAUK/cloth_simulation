@@ -26,7 +26,7 @@ const CharacterMesh& SceneState::character_mesh() const
 
 // Garments //
 
-GarmentId SceneState::add_garment_mesh(GarmentMesh mesh)
+std::uint32_t SceneState::add_garment_mesh(GarmentMesh mesh)
 {
     const std::uint32_t vertex_count = static_cast<std::uint32_t>(mesh.vertices.size() / 3u);
     if (!mesh.adjacency.is_valid(vertex_count) &&
@@ -34,7 +34,7 @@ GarmentId SceneState::add_garment_mesh(GarmentMesh mesh)
         std::cerr << "Cannot add garment mesh with invalid topology.\n";
     }
 
-    const GarmentId garment_id = next_garment_id_++;
+    const std::uint32_t garment_id = next_garment_id_++;
     garments_.push_back({
         garment_id,
         std::move(mesh),

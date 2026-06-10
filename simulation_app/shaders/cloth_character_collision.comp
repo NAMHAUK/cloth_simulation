@@ -18,7 +18,7 @@ struct CharacterTriangleGeometry {
     vec4 unit_face_normal;
 };
 
-struct CharacterBvhNode {
+struct MeshBvhNode {
     vec4 min_bounds;
     vec4 max_bounds;
     uvec4 metadata;
@@ -28,16 +28,14 @@ layout(std430, binding = 2) readonly buffer CharacterTriangleGeometryBuffer {
     CharacterTriangleGeometry triangle_geometry[];
 };
 
-layout(std430, binding = 3) readonly buffer CharacterBvhNodeBuffer {
-    CharacterBvhNode bvh_nodes[];
+layout(std430, binding = 3) readonly buffer MeshBvhNodeBuffer {
+    MeshBvhNode bvh_nodes[];
 };
 
 uniform uint uClothVertexCount;
 uniform uint uBvhNodeCount;
 uniform uint uRootNodeIndex;
 uniform float uCollisionThickness;
-
-const uint traversal_stack_size = 64u;
 
 float length_squared(vec3 value)
 {
@@ -61,7 +59,7 @@ void store_cloth_position(uint vertex_index, vec3 position)
     previous_positions[base + 2u] = position.z;
 }
 
-float point_aabb_distance_sq(vec3 point, vec3 min_bounds, vec3 max_bounds)
+float squared_distance_to_bounds(vec3 point, vec3 min_bounds, vec3 max_bounds)
 {
     vec3 clamped_point = clamp(point, min_bounds, max_bounds);
     return length_squared(point - clamped_point);
@@ -122,17 +120,17 @@ void test_character_triangle(uint triangle_index,
                              inout float best_distance_sq,
                              inout bool has_candidate)
 {
-    CharacterTriangleGeometry triangle = triangle_geometry[triangle_index];
-    if (triangle.unit_face_normal.w == 0.0) {
+    vec4 unit_face_normal = triangle_geometry[triangle_index].unit_face_normal;
+    if (unit_face_normal.w == 0.0) {
         return;
     }
 
-    vec3 a = triangle.a.xyz;
-    vec3 b = triangle.b.xyz;
-    vec3 c = triangle.c.xyz;
+    vec3 a = triangle_geometry[triangle_index].a.xyz;
+    vec3 b = triangle_geometry[triangle_index].b.xyz;
+    vec3 c = triangle_geometry[triangle_index].c.xyz;
     vec3 ab = b - a;
     vec3 ac = c - a;
-    vec3 unit_normal = triangle.unit_face_normal.xyz;
+    vec3 unit_normal = unit_face_normal.xyz;
 
     float plane_distance = dot(cloth_position - a, unit_normal);
     if (plane_distance * plane_distance > collision_thickness_sq) {
@@ -154,12 +152,7 @@ void test_character_triangle(uint triangle_index,
 void main()
 {
     uint cloth_vertex_index = gl_GlobalInvocationID.x;
-    bool is_active_thread = cloth_vertex_index < uClothVertexCount &&
-                            uBvhNodeCount > 0u &&
-                            uRootNodeIndex < uBvhNodeCount &&
-                            uCollisionThickness > 0.0;
-
-    if (!is_active_thread) {
+    if (cloth_vertex_index >= uClothVertexCount) {
         return;
     }
 
@@ -170,24 +163,19 @@ void main()
     bool has_candidate = false;
     float collision_thickness_sq = uCollisionThickness * uCollisionThickness;
 
-    uint node_stack[traversal_stack_size];
-    uint stack_size = 0u;
-    node_stack[stack_size++] = uRootNodeIndex;
-
-    while (stack_size > 0u) {
-        uint node_index = node_stack[--stack_size];
-        if (node_index >= uBvhNodeCount) {
-            continue;
-        }
-
-        CharacterBvhNode node = bvh_nodes[node_index];
-        if (point_aabb_distance_sq(cloth_position, node.min_bounds.xyz, node.max_bounds.xyz) > collision_thickness_sq) {
+    uint node_index = uRootNodeIndex;
+    while (node_index < uBvhNodeCount) {
+        MeshBvhNode node = bvh_nodes[node_index];
+        uint next_node = node.metadata.z;
+        float search_radius_sq = has_candidate ? min(best_distance_sq, collision_thickness_sq) : collision_thickness_sq;
+        if (squared_distance_to_bounds(cloth_position, node.min_bounds.xyz, node.max_bounds.xyz) > search_radius_sq) {
+            node_index = next_node;
             continue;
         }
 
         if (node.metadata.w > 0u) {
-            uint first_triangle = node.metadata.z;
-            uint triangle_count = node.metadata.w;
+            uint first_triangle = node.metadata.x;
+            uint triangle_count = node.metadata.y;
             for (uint triangle_offset = 0u; triangle_offset < triangle_count; ++triangle_offset) {
                 test_character_triangle(first_triangle + triangle_offset,
                                         cloth_position,
@@ -197,16 +185,18 @@ void main()
                                         best_distance_sq,
                                         has_candidate);
             }
+            node_index = next_node;
             continue;
         }
 
         uint left_child = node.metadata.x;
         uint right_child = node.metadata.y;
-        if (left_child < uBvhNodeCount && stack_size < traversal_stack_size) {
-            node_stack[stack_size++] = left_child;
-        }
-        if (right_child < uBvhNodeCount && stack_size < traversal_stack_size) {
-            node_stack[stack_size++] = right_child;
+        if (left_child < uBvhNodeCount) {
+            node_index = left_child;
+        } else if (right_child < uBvhNodeCount) {
+            node_index = right_child;
+        } else {
+            node_index = next_node;
         }
     }
 

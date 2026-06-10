@@ -1,4 +1,4 @@
-#include "gpu/body/CharacterBvhBoundsUpdater.h"
+#include "gpu/collision/MeshBvhBoundsUpdater.h"
 
 #include "utils/ShaderUtils.h"
 
@@ -23,13 +23,22 @@ bool is_valid_character_bvh(const CharacterBvhResources& character_bvh)
 }
 }
 
-bool CharacterBvhBoundsUpdater::is_initialized() const
+bool MeshBvhBoundsUpdater::is_initialized() const
 {
     return program_ != 0;
 }
 
-bool CharacterBvhBoundsUpdater::initialize(const std::filesystem::path& shader_path,
-                                           QOpenGLFunctions_4_5_Core& gl)
+bool MeshBvhBoundsUpdater::can_update(const CharacterTriangleGeometryResources& character_geometry,
+                                      const CharacterBvhResources& character_bvh,
+                                      const std::vector<BvhNodeRange>& node_ranges_by_level) const
+{
+    return is_initialized() &&
+           is_valid_character_geometry(character_geometry) &&
+           is_valid_character_bvh(character_bvh) &&
+           !node_ranges_by_level.empty();
+}
+
+bool MeshBvhBoundsUpdater::initialize(const std::filesystem::path& shader_path, QOpenGLFunctions_4_5_Core& gl)
 {
     program_ = load_compute_program(shader_path, "Character BVH bounds update", gl);
     if (program_ == 0) {
@@ -48,15 +57,12 @@ bool CharacterBvhBoundsUpdater::initialize(const std::filesystem::path& shader_p
     return true;
 }
 
-void CharacterBvhBoundsUpdater::update(const CharacterTriangleGeometryResources& character_geometry,
-                                       const CharacterBvhResources& character_bvh,
-                                       const std::vector<BvhBoundsUpdateLevelRange>& level_ranges,
-                                       QOpenGLFunctions_4_5_Core& gl) const
+void MeshBvhBoundsUpdater::update(const CharacterTriangleGeometryResources& character_geometry,
+                                  const CharacterBvhResources& character_bvh,
+                                  const std::vector<BvhNodeRange>& node_ranges_by_level,
+                                  QOpenGLFunctions_4_5_Core& gl) const
 {
-    if (!is_initialized() ||
-        !is_valid_character_geometry(character_geometry) ||
-        !is_valid_character_bvh(character_bvh) ||
-        level_ranges.empty()) {
+    if (!can_update(character_geometry, character_bvh, node_ranges_by_level)) {
         return;
     }
 
@@ -64,7 +70,7 @@ void CharacterBvhBoundsUpdater::update(const CharacterTriangleGeometryResources&
     gl.glBindBufferBase(GL_SHADER_STORAGE_BUFFER, character_triangle_geometry_binding, character_geometry.triangle_geometry_buffer);
     gl.glBindBufferBase(GL_SHADER_STORAGE_BUFFER, character_bvh_node_binding, character_bvh.node_buffer);
 
-    for (const BvhBoundsUpdateLevelRange& range : level_ranges) {
+    for (const BvhNodeRange& range : node_ranges_by_level) {
         if (range.node_count == 0 ||
             range.first_node >= character_bvh.node_count ||
             range.first_node + range.node_count > character_bvh.node_count) {
@@ -78,7 +84,7 @@ void CharacterBvhBoundsUpdater::update(const CharacterTriangleGeometryResources&
     }
 }
 
-void CharacterBvhBoundsUpdater::release(QOpenGLFunctions_4_5_Core& gl)
+void MeshBvhBoundsUpdater::release(QOpenGLFunctions_4_5_Core& gl)
 {
     if (program_ != 0) {
         gl.glDeleteProgram(program_);

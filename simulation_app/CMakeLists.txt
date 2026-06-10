@@ -41,14 +41,17 @@ add_executable(simulation_app
     src/asset/MeshGeometryUtils.cpp
     src/asset/MeshGeometryUtils.h
     src/gpu/body/CharacterGpuResources.cpp
+    src/gpu/body/CharacterGpuDataTypes.h
     src/gpu/body/CharacterGpuResources.h
-    src/gpu/body/CharacterBvhBuilder.cpp
-    src/gpu/body/CharacterBvhBuilder.h
-    src/gpu/body/CharacterBvhBoundsUpdater.cpp
-    src/gpu/body/CharacterBvhBoundsUpdater.h
+    src/gpu/collision/MeshBvhBuilder.cpp
+    src/gpu/collision/BvhDataTypes.h
+    src/gpu/collision/MeshBvhBuilder.h
+    src/gpu/collision/MeshBvhBoundsUpdater.cpp
+    src/gpu/collision/MeshBvhBoundsUpdater.h
     src/gpu/body/TriangleGeometryUpdater.cpp
     src/gpu/body/TriangleGeometryUpdater.h
     src/gpu/cloth/ClothGpuResources.cpp
+    src/gpu/cloth/ClothGpuDataTypes.h
     src/gpu/cloth/ClothGpuResources.h
     src/rendering/BackgroundGradient.cpp
     src/rendering/BackgroundGradient.h

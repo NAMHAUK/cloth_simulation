@@ -1,6 +1,5 @@
 #include "simulation/collision/CharacterCollisionSolver.h"
 
-#include "gpu/body/CharacterGpuResources.h"
 #include "utils/BufferUtils.h"
 #include "utils/ShaderUtils.h"
 
