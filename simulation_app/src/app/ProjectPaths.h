@@ -26,6 +26,7 @@ struct ProjectPaths {
     std::filesystem::path converter_script;
     std::filesystem::path smpl_model_dir;
     std::filesystem::path motion_asset_dir;
+    std::filesystem::path default_character_motion_path;
     std::filesystem::path amass_dir;
     std::filesystem::path garment_source_dir;
     std::filesystem::path garment_asset_dir;
@@ -61,6 +62,7 @@ inline ProjectPaths make_project_paths(const std::filesystem::path& project_root
         project_root / "simulation_app" / "tools" / "motion_converter" / "convert_amass_to_cache.py",
         project_root / "data" / "sources" / "smpl" / "models",
         project_root / "data" / "runtime_assets" / "motions",
+        project_root / "data" / "runtime_assets" / "motions" / "init" / "t_pose.cache",
         project_root / "data" / "sources" / "amass",
         project_root / "data" / "sources" / "garments",
         project_root / "data" / "runtime_assets" / "garments",

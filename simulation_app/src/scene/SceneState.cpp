@@ -10,13 +10,7 @@
 void SceneState::set_character_mesh(CharacterMesh mesh)
 {
     character_mesh_ = std::move(mesh);
-    character_loaded_ = true;
     current_character_frame_ = 0;
-}
-
-bool SceneState::has_character() const
-{
-    return character_loaded_;
 }
 
 const CharacterMesh& SceneState::character_mesh() const
@@ -54,7 +48,7 @@ const std::vector<GarmentObject>& SceneState::garments() const
 void SceneState::update_character_frame(std::uint64_t simulation_step_count,
                                         std::uint32_t character_frame_stride)
 {
-    if (!character_loaded_ || character_mesh_.frame_count == 0) {
+    if (character_mesh_.frame_count == 0) {
         return;
     }
 

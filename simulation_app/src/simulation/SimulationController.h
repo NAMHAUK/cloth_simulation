@@ -37,6 +37,7 @@ public:
 
     // Scene editing //
     void set_character_mesh(CharacterMesh mesh);
+    void set_character_mesh_in_context(CharacterMesh mesh, QOpenGLFunctions_4_5_Core& gl);
     void add_garment_mesh(GarmentMesh mesh);
 
     // GPU / rendering //

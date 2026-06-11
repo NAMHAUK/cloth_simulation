@@ -65,9 +65,8 @@ bool SimulationPipeline::step(SceneState& scene, SceneGpuState& gpu_state, std::
     scene.update_character_frame(motion_step_count, simulation_settings::character_frame_stride);
     gpu_state.update_character_frame(scene, gl);
 
-    const bool has_character = scene.has_character();
     const auto views = collect_gpu_views(gpu_state);
-    if (!can_solve_constraint_iteration(views.cloth_position, views.stretch_constraints, views.bending_constraints, views.character_geometry, views.character_bvh, has_character)) {
+    if (!can_solve_constraint_iteration(views.cloth_position, views.stretch_constraints, views.bending_constraints, views.character_geometry, views.character_bvh)) {
         return false;
     }
 
@@ -77,9 +76,7 @@ bool SimulationPipeline::step(SceneState& scene, SceneGpuState& gpu_state, std::
     for (std::uint32_t iteration = 0; iteration < simulation_settings::solver_iteration_count; ++iteration) {
         stretch_constraint_solver_.solve(views.cloth_position, views.stretch_constraints, simulation_settings::stretch_stiffness, gl);
         bending_constraint_solver_.solve(views.cloth_position, views.bending_constraints, simulation_settings::bending_stiffness, gl);
-        if (has_character) {
-            character_collision_solver_.solve(views.cloth_position, views.character_geometry, views.character_bvh, gl);
-        }
+        character_collision_solver_.solve(views.cloth_position, views.character_geometry, views.character_bvh, gl);
         ground_collision_solver_.solve(views.cloth_position, gl);
     }
 
@@ -101,11 +98,10 @@ bool SimulationPipeline::can_solve_constraint_iteration(const ClothPositionBuffe
                                                         const DistanceConstraintBufferView& stretch_constraint_view,
                                                         const DistanceConstraintBufferView& bending_constraint_view,
                                                         const CharacterTriangleGeometryResources& character_geometry,
-                                                        const CharacterBvhResources& character_bvh,
-                                                        bool has_character) const
+                                                        const CharacterBvhResources& character_bvh) const
 {
     return stretch_constraint_solver_.can_solve(position_view, stretch_constraint_view, simulation_settings::stretch_stiffness) &&
            bending_constraint_solver_.can_solve(position_view, bending_constraint_view, simulation_settings::bending_stiffness) &&
-           (!has_character || character_collision_solver_.can_solve(position_view, character_geometry, character_bvh)) &&
+           character_collision_solver_.can_solve(position_view, character_geometry, character_bvh) &&
            ground_collision_solver_.can_solve(position_view);
 }

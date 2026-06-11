@@ -15,6 +15,7 @@ class QObject;
 class SimulationController;
 class SceneViewport;
 class QEvent;
+class QOpenGLFunctions_4_5_Core;
 class QWidget;
 enum class AssetPanelMode;
 
@@ -27,14 +28,18 @@ protected:
     bool eventFilter(QObject* watched, QEvent* event) override;
 
 private:
+    bool initialize_scene(QOpenGLFunctions_4_5_Core& gl);
+
     void setup_callbacks();
     void setup_viewport_callbacks();
     void setup_browser_callbacks();
     void setup_asset_loader_callbacks();
     void setup_asset_converter_callbacks();
+
     void update_viewer_layout();
     void refresh_motion_list();
     void refresh_garment_list();
+    
     void request_conversion(AssetPanelMode mode);
     std::optional<ConverterCommand> prepare_amass_conversion();
     std::optional<ConverterCommand> prepare_garment_conversion();

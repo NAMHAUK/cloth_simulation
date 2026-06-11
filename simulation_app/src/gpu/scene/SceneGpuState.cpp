@@ -60,10 +60,6 @@ const CharacterGpuResources& SceneGpuState::character_gpu_state() const
 
 void SceneGpuState::set_character_mesh(const SceneState& scene, QOpenGLFunctions_4_5_Core& gl)
 {
-    if (!scene.has_character()) {
-        return;
-    }
-
     // 새 character mesh가 들어오면 전체 frame character mesh를 GPU에 올리고 frame 상태 설정
     const CharacterMesh& character_mesh = scene.character_mesh();
     character_gpu_state_.upload_mesh(character_mesh, gl);
@@ -76,7 +72,7 @@ void SceneGpuState::set_character_mesh(const SceneState& scene, QOpenGLFunctions
 
 void SceneGpuState::update_character_frame(const SceneState& scene, QOpenGLFunctions_4_5_Core& gl)
 {
-    if (!is_initialized() || !scene.has_character() || !character_gpu_state_.is_initialized()) {
+    if (!is_initialized() || !character_gpu_state_.is_initialized()) {
         return;
     }
 

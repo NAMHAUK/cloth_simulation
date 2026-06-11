@@ -85,6 +85,21 @@ MainWindow::~MainWindow()
     }
 }
 
+bool MainWindow::initialize_scene(QOpenGLFunctions_4_5_Core& gl)
+{
+    CharacterMesh default_character_mesh;
+    if (!asset_io::read_character_mesh_asset(project_paths_.default_character_motion_path, default_character_mesh)) {
+        return false;
+    }
+
+    if (!simulation_controller_->initialize_gpu(project_paths_.shaders, gl)) {
+        return false;
+    }
+
+    simulation_controller_->set_character_mesh_in_context(std::move(default_character_mesh), gl);
+    return true;
+}
+
 // callback //
 void MainWindow::setup_callbacks()
 {
@@ -122,7 +137,7 @@ void MainWindow::setup_viewport_callbacks()
     });
     simulation_viewport_->set_initialize_callback(
         [this](QOpenGLFunctions_4_5_Core& gl) {
-            return simulation_controller_->initialize_gpu(project_paths_.shaders, gl);
+            return initialize_scene(gl);
         }
     );
     simulation_viewport_->set_scene_render_callback(

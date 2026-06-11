@@ -72,7 +72,7 @@ void RenderPipeline::draw(const SceneState& scene,
 
     // character
     const CharacterGpuResources& character_gpu_state = gpu_state.character_gpu_state();
-    if (scene.has_character() && character_gpu_state.is_initialized()) {
+    if (character_gpu_state.is_initialized()) {
         character_gpu_state.bind_animation_positions(character_animation_position_binding, gl);
         character_gpu_state.bind_vertex_normals(vertex_normal_binding, gl);
         viewer_shader_.set_character_animation_mode(

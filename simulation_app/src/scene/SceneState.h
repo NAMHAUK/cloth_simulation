@@ -16,7 +16,6 @@ class SceneState final {
 public:
     // Character
     void set_character_mesh(CharacterMesh mesh);
-    bool has_character() const;
     const CharacterMesh& character_mesh() const;
 
     // Garments
@@ -31,7 +30,6 @@ public:
 private:
     // Character
     CharacterMesh character_mesh_;
-    bool character_loaded_ = false;
 
     // Garments
     std::vector<GarmentObject> garments_;

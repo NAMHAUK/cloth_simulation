@@ -106,14 +106,16 @@ void SimulationController::set_character_mesh(CharacterMesh mesh)
     }
 
     viewport_callbacks_.run_with_gl_context([this, &mesh](QOpenGLFunctions_4_5_Core& gl) {
-        scene_.set_character_mesh(std::move(mesh));
-        gpu_state_.set_character_mesh(scene_, gl);
+        set_character_mesh_in_context(std::move(mesh), gl);
     });
+}
 
+void SimulationController::set_character_mesh_in_context(CharacterMesh mesh, QOpenGLFunctions_4_5_Core& gl)
+{
+    scene_.set_character_mesh(std::move(mesh));
+    gpu_state_.set_character_mesh(scene_, gl);
     motion_step_count_ = 0;
-    if (scene_.has_character()) {
-        viewport_callbacks_.reset_camera_to_character(scene_.character_mesh());
-    }
+    viewport_callbacks_.reset_camera_to_character(scene_.character_mesh());
 
     viewport_callbacks_.request_update();
 }
