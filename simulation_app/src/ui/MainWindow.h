@@ -56,6 +56,7 @@ private:
     GarmentPlacementPanel* garment_placement_panel_ = nullptr;
     QPushButton* run_button_ = nullptr;
     QPushButton* stop_button_ = nullptr;
+    QPushButton* reset_button_ = nullptr;
     SceneViewport* simulation_viewport_ = nullptr;
     std::unique_ptr<SimulationController> simulation_controller_;
     bool has_editable_garment_ = false;

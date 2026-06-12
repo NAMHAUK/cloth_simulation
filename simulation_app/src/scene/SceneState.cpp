@@ -87,6 +87,12 @@ bool SceneState::update_garment_placement(std::uint32_t garment_id, const glm::v
     return false;
 }
 
+void SceneState::clear_garments()
+{
+    garments_.clear();
+    next_garment_id_ = 1;
+}
+
 const std::vector<GarmentObject>& SceneState::garments() const
 {
     return garments_;

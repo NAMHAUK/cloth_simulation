@@ -38,9 +38,10 @@ public:
 
     // Scene editing //
     void set_character_mesh(CharacterMesh mesh);
-    void set_default_character_mesh(CharacterMesh mesh, QOpenGLFunctions_4_5_Core& gl);
+    void load_default_character_mesh(CharacterMesh mesh, QOpenGLFunctions_4_5_Core& gl);
     void add_garment_mesh(GarmentMesh mesh);
     void set_garment_placement(const glm::vec3& position_offset, float scale);
+    void reset_scene_to_default();
 
     // GPU / rendering //
     bool initialize_gpu(const ShaderPaths& shader_paths, QOpenGLFunctions_4_5_Core& gl);
@@ -56,11 +57,13 @@ private:
     void tick_frame();
     bool is_viewport_ready() const;
     void set_character_mesh_state(CharacterMesh mesh, QOpenGLFunctions_4_5_Core& gl);
+    void set_default_character_mesh(QOpenGLFunctions_4_5_Core& gl);
     bool has_pending_garment_placement() const;
     void apply_pending_garment_placement(QOpenGLFunctions_4_5_Core& gl);
 
     // CPU-side scene state //
     SceneState scene_;
+    CharacterMesh default_character_mesh_;
 
     // GPU-side dynamic simulation state //
     SceneGpuState gpu_state_;

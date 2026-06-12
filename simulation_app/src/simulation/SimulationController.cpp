@@ -89,10 +89,10 @@ void SimulationController::set_character_mesh(CharacterMesh mesh)
     });
 }
 
-void SimulationController::set_default_character_mesh(CharacterMesh mesh, QOpenGLFunctions_4_5_Core& gl)
+void SimulationController::load_default_character_mesh(CharacterMesh mesh, QOpenGLFunctions_4_5_Core& gl)
 {
-    set_character_mesh_state(std::move(mesh), gl);
-    is_default_pose_ = true;
+    default_character_mesh_ = std::move(mesh);
+    set_default_character_mesh(gl);
 }
 
 void SimulationController::set_character_mesh_state(CharacterMesh mesh, QOpenGLFunctions_4_5_Core& gl)
@@ -104,6 +104,12 @@ void SimulationController::set_character_mesh_state(CharacterMesh mesh, QOpenGLF
     viewport_callbacks_.reset_camera_to_character(scene_.character_mesh());
 
     viewport_callbacks_.request_update();
+}
+
+void SimulationController::set_default_character_mesh(QOpenGLFunctions_4_5_Core& gl)
+{
+    set_character_mesh_state(default_character_mesh_, gl);
+    is_default_pose_ = true;
 }
 
 void SimulationController::add_garment_mesh(GarmentMesh mesh)
@@ -120,6 +126,31 @@ void SimulationController::add_garment_mesh(GarmentMesh mesh)
         placement_position_changed_ = false;
         placement_scale_changed_ = false;
         gpu_state_.update_garment_meshes(scene_, gl);
+    });
+
+    viewport_callbacks_.request_update();
+}
+
+void SimulationController::reset_scene_to_default()
+{
+    if (!is_viewport_ready()) {
+        std::cerr << "Cannot reset scene before OpenGL initialization.\n";
+        return;
+    }
+
+    viewport_callbacks_.run_with_gl_context([this](QOpenGLFunctions_4_5_Core& gl) {
+        simulation_running_ = false;
+        simulation_step_count_ = 0;
+        motion_step_count_ = 0;
+        editable_garment_id_ = 0;
+        pending_position_offset_ = glm::vec3{0.0f};
+        pending_scale_ = 1.0f;
+        placement_position_changed_ = false;
+        placement_scale_changed_ = false;
+
+        scene_.clear_garments();
+        gpu_state_.update_garment_meshes(scene_, gl);
+        set_default_character_mesh(gl);
     });
 
     viewport_callbacks_.request_update();

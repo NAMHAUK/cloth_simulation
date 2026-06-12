@@ -17,9 +17,12 @@
 
 #include <QEvent>
 #include <QFileDialog>
+#include <QIcon>
 #include <QMessageBox>
+#include <QPainter>
 #include <QPushButton>
 #include <QSize>
+#include <QPixmap>
 #include <QWidget>
 
 namespace {
@@ -29,11 +32,76 @@ constexpr int panel_margin = 12;
 constexpr int panel_width = 340;
 constexpr int panel_min_height = 180;
 constexpr int panel_max_height = 280;
-constexpr int simulation_button_width = 72;
-constexpr int simulation_button_height = 32;
-constexpr int simulation_button_gap = 6;
+constexpr int simulation_button_size = 40;
+constexpr int simulation_button_gap = 10;
+constexpr int simulation_button_count = 3;
+constexpr int simulation_icon_size = 22;
 constexpr int placement_panel_width = 280;
 constexpr int placement_panel_height = 210;
+
+enum class SimulationControlIcon {
+    Play,
+    Pause,
+    Reset,
+};
+
+QIcon make_simulation_control_icon(SimulationControlIcon icon_type, const QColor& icon_color)
+{
+    QPixmap pixmap(simulation_icon_size, simulation_icon_size);
+    pixmap.fill(Qt::transparent);
+
+    QPainter painter(&pixmap);
+    painter.setRenderHint(QPainter::Antialiasing, true);
+    painter.setPen(Qt::NoPen);
+    painter.setBrush(icon_color);
+
+    switch (icon_type) {
+    case SimulationControlIcon::Play: {
+        QPolygonF triangle;
+        triangle << QPointF{6.0, 4.0} << QPointF{6.0, 18.0} << QPointF{18.0, 11.0};
+        painter.drawPolygon(triangle);
+        break;
+    }
+    case SimulationControlIcon::Pause:
+        painter.drawRect(QRectF{6.0, 4.0, 4.5, 14.0});
+        painter.drawRect(QRectF{13.5, 4.0, 4.5, 14.0});
+        break;
+    case SimulationControlIcon::Reset:
+        painter.drawRect(QRectF{5.0, 5.0, 12.0, 12.0});
+        break;
+    }
+
+    return QIcon{pixmap};
+}
+
+void configure_simulation_button(
+    QPushButton* button,
+    SimulationControlIcon icon_type,
+    const char* tool_tip,
+    const QColor& icon_color
+)
+{
+    button->setText("");
+    button->setFixedSize(simulation_button_size, simulation_button_size);
+    button->setIcon(make_simulation_control_icon(icon_type, icon_color));
+    button->setIconSize(QSize{simulation_icon_size, simulation_icon_size});
+    button->setToolTip(tool_tip);
+    button->setFocusPolicy(Qt::NoFocus);
+    button->setStyleSheet(
+        "QPushButton {"
+        "  background-color: #eeeeee;"
+        "  border: 1px solid #c8c8c8;"
+        "  border-radius: 7px;"
+        "}"
+        "QPushButton:hover {"
+        "  background-color: #f7f7f7;"
+        "}"
+        "QPushButton:disabled {"
+        "  background-color: #dddddd;"
+        "  border-color: #c6c6c6;"
+        "}"
+    );
+}
 
 void show_conversion_failure(QWidget* parent, AssetPanelMode mode)
 {
@@ -67,11 +135,25 @@ MainWindow::MainWindow(const std::filesystem::path& project_root, QWidget* paren
     simulation_controller_ = std::make_unique<SimulationController>();
     browser_panel_ = new AssetBrowserPanel(viewer_container_);
     garment_placement_panel_ = new GarmentPlacementPanel(viewer_container_);
-    run_button_ = new QPushButton("Run", viewer_container_);
-    stop_button_ = new QPushButton("Stop", viewer_container_);
+    run_button_ = new QPushButton(viewer_container_);
+    stop_button_ = new QPushButton(viewer_container_);
+    reset_button_ = new QPushButton(viewer_container_);
     asset_loader_ = new AssetLoader(this);
     motion_converter_ = new AssetConverter(this);
     garment_converter_ = new AssetConverter(this);
+
+    configure_simulation_button(run_button_,
+                                SimulationControlIcon::Play,
+                                "Run",
+                                QColor{"#43a047"});
+    configure_simulation_button(stop_button_,
+                                SimulationControlIcon::Pause,
+                                "Stop",
+                                QColor{"#f4b400"});
+    configure_simulation_button(reset_button_,
+                                SimulationControlIcon::Reset,
+                                "Reset",
+                                QColor{"#e53935"});
 
     setCentralWidget(viewer_container_);
     viewer_container_->installEventFilter(this);
@@ -107,7 +189,7 @@ bool MainWindow::initialize_scene(QOpenGLFunctions_4_5_Core& gl)
         return false;
     }
 
-    simulation_controller_->set_default_character_mesh(std::move(default_character_mesh), gl);
+    simulation_controller_->load_default_character_mesh(std::move(default_character_mesh), gl);
     return true;
 }
 
@@ -202,6 +284,14 @@ void MainWindow::setup_browser_callbacks()
     connect(stop_button_, &QPushButton::clicked, this, [this]() {
         simulation_controller_->stop_simulation();
         update_simulation_controls();
+    });
+
+    connect(reset_button_, &QPushButton::clicked, this, [this]() {
+        simulation_controller_->reset_scene_to_default();
+        has_editable_garment_ = false;
+        garment_placement_panel_->reset_placement();
+        update_simulation_controls();
+        update_viewer_layout();
     });
 
     garment_placement_panel_->set_confirm_run_callback([this]() {
@@ -301,25 +391,31 @@ void MainWindow::update_viewer_layout()
     browser_panel_->setGeometry(panel_margin, panel_margin, overlay_width, overlay_height);
     browser_panel_->raise();
 
-    const int controls_width = simulation_button_width * 2 + simulation_button_gap;
-    const int controls_x = std::max(panel_margin, container_size.width() - panel_margin - controls_width);
+    const int controls_width =
+        simulation_button_size * simulation_button_count + simulation_button_gap * (simulation_button_count - 1);
+    const int controls_x = std::max(panel_margin, (container_size.width() - controls_width) / 2);
     const int controls_y = panel_margin;
     run_button_->setGeometry(controls_x,
                              controls_y,
-                             simulation_button_width,
-                             simulation_button_height);
-    stop_button_->setGeometry(controls_x + simulation_button_width + simulation_button_gap,
+                             simulation_button_size,
+                             simulation_button_size);
+    stop_button_->setGeometry(controls_x + simulation_button_size + simulation_button_gap,
                               controls_y,
-                              simulation_button_width,
-                              simulation_button_height);
+                              simulation_button_size,
+                              simulation_button_size);
+    reset_button_->setGeometry(controls_x + (simulation_button_size + simulation_button_gap) * 2,
+                               controls_y,
+                               simulation_button_size,
+                               simulation_button_size);
     run_button_->raise();
     stop_button_->raise();
+    reset_button_->raise();
 
     if (has_editable_garment_) {
         const int placement_width = std::min(placement_panel_width, available_width);
         const int placement_height = std::min(placement_panel_height, available_height);
         const int placement_x = std::max(panel_margin, container_size.width() - panel_margin - placement_width);
-        const int placement_y = controls_y + simulation_button_height + simulation_button_gap;
+        const int placement_y = controls_y + simulation_button_size + simulation_button_gap;
         garment_placement_panel_->setGeometry(placement_x, placement_y, placement_width, placement_height);
         garment_placement_panel_->raise();
     }
@@ -328,7 +424,7 @@ void MainWindow::update_viewer_layout()
 // simulation control //
 void MainWindow::update_simulation_controls()
 {
-    if (!simulation_controller_ || !run_button_ || !stop_button_ || !garment_placement_panel_) {
+    if (!simulation_controller_ || !run_button_ || !stop_button_ || !reset_button_ || !garment_placement_panel_) {
         return;
     }
 
@@ -342,6 +438,7 @@ void MainWindow::update_simulation_controls()
 
     run_button_->setEnabled(!simulation_running && !placement_panel_visible);
     stop_button_->setEnabled(simulation_running);
+    reset_button_->setEnabled(true);
     garment_placement_panel_->setVisible(placement_panel_visible);
     garment_placement_panel_->setEnabled(placement_available);
 }
