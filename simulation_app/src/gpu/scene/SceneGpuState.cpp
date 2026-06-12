@@ -125,11 +125,3 @@ bool SceneGpuState::update_garment_placement(const GarmentObject& garment,
                                          gl);
     return true;
 }
-
-void SceneGpuState::remove_garment_gpu_state(std::uint32_t, const SceneState& scene, QOpenGLFunctions_4_5_Core& gl)
-{
-    cloth_gpu_state_.update_garment_buffers(scene.garments(), gl);
-    normal_updater_.update_cloth_normals(cloth_gpu_state_.mesh_topology_resources(),
-                                         cloth_gpu_state_.mesh_normal_resources(),
-                                         gl);
-}

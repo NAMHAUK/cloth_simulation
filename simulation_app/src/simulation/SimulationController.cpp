@@ -22,8 +22,6 @@ SimulationController::~SimulationController()
     release_gpu();
 }
 
-// GPU / rendering //
-
 bool SimulationController::initialize_gpu(const ShaderPaths& shader_paths, QOpenGLFunctions_4_5_Core& gl)
 {
     assert(!is_gpu_initialized());
@@ -39,17 +37,17 @@ bool SimulationController::initialize_gpu(const ShaderPaths& shader_paths, QOpen
         return false;
     }
 
-    gpu_released_ = false;
     frame_timer_.start(simulation_settings::simulation_tick_ms);
     return true;
 }
+
+// rendering //
 
 void SimulationController::draw(const glm::mat4& mvp, QOpenGLFunctions_4_5_Core& gl)
 {
     render_pipeline_.draw(scene_, gpu_state_, mvp, gl);
 }
 
-// frame마다 실행되는 함수
 void SimulationController::tick_frame()
 {
     if (!is_viewport_ready() || !is_gpu_initialized()) {
@@ -57,9 +55,9 @@ void SimulationController::tick_frame()
     }
 
     bool simulation_step_finished = false;
-    if (simulation_running_ || has_pending_garment_placement()) {
+    if (simulation_running_ || has_garment_placement_update()) {
         viewport_callbacks_.run_with_gl_context([this, &simulation_step_finished](QOpenGLFunctions_4_5_Core& gl) {
-            apply_pending_garment_placement(gl);
+            set_current_garment_placement(gl);
 
             if (simulation_running_) {
                 simulation_step_finished = simulation_pipeline_.step(scene_, gpu_state_, motion_step_count_, gl);
@@ -68,14 +66,20 @@ void SimulationController::tick_frame()
     }
 
     if (simulation_step_finished) {
-        ++simulation_step_count_;
         ++motion_step_count_;
     }
 
     viewport_callbacks_.request_update();
 }
 
-// Scene editing //
+// Object //
+
+void SimulationController::load_default_character_mesh(CharacterMesh mesh, QOpenGLFunctions_4_5_Core& gl)
+{
+    default_character_mesh_ = std::move(mesh);
+    set_character_mesh_state(default_character_mesh_, gl);
+    is_default_pose_ = true;
+}
 
 void SimulationController::set_character_mesh(CharacterMesh mesh)
 {
@@ -87,12 +91,8 @@ void SimulationController::set_character_mesh(CharacterMesh mesh)
     viewport_callbacks_.run_with_gl_context([this, &mesh](QOpenGLFunctions_4_5_Core& gl) {
         set_character_mesh_state(std::move(mesh), gl);
     });
-}
 
-void SimulationController::load_default_character_mesh(CharacterMesh mesh, QOpenGLFunctions_4_5_Core& gl)
-{
-    default_character_mesh_ = std::move(mesh);
-    set_default_character_mesh(gl);
+    viewport_callbacks_.request_update();
 }
 
 void SimulationController::set_character_mesh_state(CharacterMesh mesh, QOpenGLFunctions_4_5_Core& gl)
@@ -102,14 +102,6 @@ void SimulationController::set_character_mesh_state(CharacterMesh mesh, QOpenGLF
     motion_step_count_ = 0;
     is_default_pose_ = false;
     viewport_callbacks_.reset_camera_to_character(scene_.character_mesh());
-
-    viewport_callbacks_.request_update();
-}
-
-void SimulationController::set_default_character_mesh(QOpenGLFunctions_4_5_Core& gl)
-{
-    set_character_mesh_state(default_character_mesh_, gl);
-    is_default_pose_ = true;
 }
 
 void SimulationController::add_garment_mesh(GarmentMesh mesh)
@@ -120,15 +112,35 @@ void SimulationController::add_garment_mesh(GarmentMesh mesh)
     }
 
     viewport_callbacks_.run_with_gl_context([this, &mesh](QOpenGLFunctions_4_5_Core& gl) {
-        editable_garment_id_ = scene_.add_garment_mesh(std::move(mesh));
-        pending_position_offset_ = glm::vec3{0.0f};
-        pending_scale_ = 1.0f;
-        placement_position_changed_ = false;
-        placement_scale_changed_ = false;
+        // 배치중이던 garment 있으면 제거
+        if (garment_placement_.garment_id != 0 && scene_.remove_garment(garment_placement_.garment_id)) {
+            gpu_state_.update_garment_meshes(scene_, gl);
+        }
+
+        // 새 garment 추가
+        garment_placement_.clear();
+        garment_placement_.garment_id = scene_.add_garment_mesh(std::move(mesh));
         gpu_state_.update_garment_meshes(scene_, gl);
     });
 
     viewport_callbacks_.request_update();
+}
+
+void SimulationController::set_current_garment_placement(QOpenGLFunctions_4_5_Core& gl)
+{
+    if (!has_garment_placement_update()) {
+        return;
+    }
+
+    const bool update_rest_lengths = garment_placement_.scale_changed;
+    const GarmentObject* garment = scene_.update_garment_placement(garment_placement_.garment_id,
+                                                                   garment_placement_.position_offset,
+                                                                   garment_placement_.scale);
+    if (garment != nullptr) {
+        gpu_state_.update_garment_placement(*garment, update_rest_lengths, gl);
+    }
+
+    garment_placement_.clear_update();
 }
 
 void SimulationController::reset_scene_to_default()
@@ -140,65 +152,66 @@ void SimulationController::reset_scene_to_default()
 
     viewport_callbacks_.run_with_gl_context([this](QOpenGLFunctions_4_5_Core& gl) {
         simulation_running_ = false;
-        simulation_step_count_ = 0;
         motion_step_count_ = 0;
-        editable_garment_id_ = 0;
-        pending_position_offset_ = glm::vec3{0.0f};
-        pending_scale_ = 1.0f;
-        placement_position_changed_ = false;
-        placement_scale_changed_ = false;
+        garment_placement_.clear();
 
         scene_.clear_garments();
         gpu_state_.update_garment_meshes(scene_, gl);
-        set_default_character_mesh(gl);
+        set_character_mesh_state(default_character_mesh_, gl);
+        is_default_pose_ = true;
     });
 
     viewport_callbacks_.request_update();
 }
 
+// garment placement panel //
 void SimulationController::set_garment_placement(const glm::vec3& position_offset, float scale)
 {
-    if (editable_garment_id_ == 0 || scale <= 0.0f) {
+    if (garment_placement_.garment_id == 0 || scale <= 0.0f) {
         return;
     }
 
-    if (pending_position_offset_ != position_offset) {
-        pending_position_offset_ = position_offset;
-        placement_position_changed_ = true;
+    if (garment_placement_.position_offset != position_offset) {
+        garment_placement_.position_offset = position_offset;
+        garment_placement_.position_changed = true;
     }
-    if (pending_scale_ != scale) {
-        pending_scale_ = scale;
-        placement_scale_changed_ = true;
+    if (garment_placement_.scale != scale) {
+        garment_placement_.scale = scale;
+        garment_placement_.scale_changed = true;
     }
 }
 
-bool SimulationController::has_pending_garment_placement() const
+void SimulationController::confirm_garment_placement()
 {
-    return editable_garment_id_ != 0 && (placement_position_changed_ || placement_scale_changed_);
+    if (!is_viewport_ready()) {
+        std::cerr << "Cannot confirm garment placement before OpenGL initialization.\n";
+        return;
+    }
+
+    viewport_callbacks_.run_with_gl_context([this](QOpenGLFunctions_4_5_Core& gl) {
+        set_current_garment_placement(gl);
+        garment_placement_.clear();
+    });
+
+    viewport_callbacks_.request_update();
 }
 
-void SimulationController::apply_pending_garment_placement(QOpenGLFunctions_4_5_Core& gl)
+void SimulationController::cancel_garment_placement()
 {
-    if (!has_pending_garment_placement()) {
+    if (!is_viewport_ready()) {
+        std::cerr << "Cannot cancel garment placement before OpenGL initialization.\n";
         return;
     }
 
-    const bool update_rest_lengths = placement_scale_changed_;
-    if (!scene_.update_garment_placement(editable_garment_id_, pending_position_offset_, pending_scale_)) {
-        placement_position_changed_ = false;
-        placement_scale_changed_ = false;
-        return;
-    }
-
-    for (const GarmentObject& garment : scene_.garments()) {
-        if (garment.id == editable_garment_id_) {
-            gpu_state_.update_garment_placement(garment, update_rest_lengths, gl);
-            break;
+    viewport_callbacks_.run_with_gl_context([this](QOpenGLFunctions_4_5_Core& gl) {
+        if (garment_placement_.garment_id != 0 && scene_.remove_garment(garment_placement_.garment_id)) {
+            gpu_state_.update_garment_meshes(scene_, gl);
         }
-    }
 
-    placement_position_changed_ = false;
-    placement_scale_changed_ = false;
+        garment_placement_.clear();
+    });
+
+    viewport_callbacks_.request_update();
 }
 
 // getter //
@@ -228,6 +241,11 @@ bool SimulationController::is_default_pose() const
     return is_default_pose_;
 }
 
+bool SimulationController::has_garment_placement_update() const
+{
+    return garment_placement_.has_update();
+}
+
 // setter //
 void SimulationController::start_simulation()
 {
@@ -246,7 +264,7 @@ void SimulationController::set_viewport_callbacks(ViewportCallbacks callbacks)
 
 void SimulationController::release_gpu()
 {
-    if (gpu_released_ || !is_viewport_ready()) {
+    if (!is_viewport_ready() || !is_gpu_initialized()) {
         return;
     }
 
@@ -255,5 +273,4 @@ void SimulationController::release_gpu()
         simulation_pipeline_.release(gl);
         gpu_state_.release(gl);
     });
-    gpu_released_ = true;
 }

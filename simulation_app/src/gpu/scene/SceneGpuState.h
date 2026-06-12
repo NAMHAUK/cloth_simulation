@@ -33,7 +33,6 @@ public:
     bool update_garment_placement(const GarmentObject& garment,
                                   bool update_rest_lengths,
                                   QOpenGLFunctions_4_5_Core& gl);
-    void remove_garment_gpu_state(std::uint32_t garment_id, const SceneState& scene, QOpenGLFunctions_4_5_Core& gl);
 
 private:
     void update_character_triangle_geometry(QOpenGLFunctions_4_5_Core& gl);

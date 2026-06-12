@@ -41,6 +41,8 @@ public:
     void load_default_character_mesh(CharacterMesh mesh, QOpenGLFunctions_4_5_Core& gl);
     void add_garment_mesh(GarmentMesh mesh);
     void set_garment_placement(const glm::vec3& position_offset, float scale);
+    void confirm_garment_placement();
+    void cancel_garment_placement();
     void reset_scene_to_default();
 
     // GPU / rendering //
@@ -54,12 +56,38 @@ public:
     void release_gpu();
 
 private:
+    struct GarmentPlacementState final {
+        std::uint32_t garment_id = 0;
+        glm::vec3 position_offset{0.0f};
+        float scale = 1.0f;
+        bool position_changed = false;
+        bool scale_changed = false;
+
+        void clear()
+        {
+            garment_id = 0;
+            position_offset = glm::vec3{0.0f};
+            scale = 1.0f;
+            clear_update();
+        }
+
+        bool has_update() const
+        {
+            return garment_id != 0 && (position_changed || scale_changed);
+        }
+
+        void clear_update()
+        {
+            position_changed = false;
+            scale_changed = false;
+        }
+    };
+
     void tick_frame();
     bool is_viewport_ready() const;
     void set_character_mesh_state(CharacterMesh mesh, QOpenGLFunctions_4_5_Core& gl);
-    void set_default_character_mesh(QOpenGLFunctions_4_5_Core& gl);
-    bool has_pending_garment_placement() const;
-    void apply_pending_garment_placement(QOpenGLFunctions_4_5_Core& gl);
+    bool has_garment_placement_update() const;
+    void set_current_garment_placement(QOpenGLFunctions_4_5_Core& gl);
 
     // CPU-side scene state //
     SceneState scene_;
@@ -74,17 +102,11 @@ private:
     // Rendering orchestration //
     RenderPipeline render_pipeline_;
 
-    std::uint64_t simulation_step_count_ = 0;
     std::uint64_t motion_step_count_ = 0;
-    std::uint32_t editable_garment_id_ = 0;
-    glm::vec3 pending_position_offset_{0.0f};
-    float pending_scale_ = 1.0f;
-    bool placement_position_changed_ = false;
-    bool placement_scale_changed_ = false;
+    GarmentPlacementState garment_placement_;
     bool simulation_running_ = false;
     bool is_default_pose_ = false;
     QTimer frame_timer_;
 
     ViewportCallbacks viewport_callbacks_;
-    bool gpu_released_ = false;
 };

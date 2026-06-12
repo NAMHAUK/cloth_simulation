@@ -295,8 +295,16 @@ void MainWindow::setup_browser_callbacks()
     });
 
     garment_placement_panel_->set_confirm_run_callback([this]() {
+        simulation_controller_->confirm_garment_placement();
         simulation_controller_->start_simulation();
         has_editable_garment_ = false;
+        update_simulation_controls();
+        update_viewer_layout();
+    });
+    garment_placement_panel_->set_cancel_callback([this]() {
+        simulation_controller_->cancel_garment_placement();
+        has_editable_garment_ = false;
+        garment_placement_panel_->reset_placement();
         update_simulation_controls();
         update_viewer_layout();
     });

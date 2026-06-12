@@ -15,11 +15,13 @@ class GarmentPlacementPanel final : public QWidget {
 public:
     using PlacementChangedCallback = std::function<void(const glm::vec3& position_offset, float scale)>;
     using ConfirmRunCallback = std::function<void()>;
+    using CancelCallback = std::function<void()>;
 
     explicit GarmentPlacementPanel(QWidget* parent = nullptr);
 
     void set_placement_changed_callback(PlacementChangedCallback callback);
     void set_confirm_run_callback(ConfirmRunCallback callback);
+    void set_cancel_callback(CancelCallback callback);
     void reset_placement();
 
 private:
@@ -35,6 +37,8 @@ private:
     QLabel* scale_value_label_ = nullptr;
     QSlider* scale_slider_ = nullptr;
     QPushButton* confirm_run_button_ = nullptr;
+    QPushButton* cancel_button_ = nullptr;
     PlacementChangedCallback placement_changed_callback_;
     ConfirmRunCallback confirm_run_callback_;
+    CancelCallback cancel_callback_;
 };

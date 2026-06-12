@@ -4,6 +4,7 @@
 
 #include <glm/vec3.hpp>
 
+#include <algorithm>
 #include <iostream>
 #include <utility>
 
@@ -41,10 +42,10 @@ std::uint32_t SceneState::add_garment_mesh(GarmentMesh mesh)
     return garment_id;
 }
 
-bool SceneState::update_garment_placement(std::uint32_t garment_id, const glm::vec3& position_offset, float scale)
+GarmentObject* SceneState::update_garment_placement(std::uint32_t garment_id, const glm::vec3& position_offset, float scale)
 {
     if (scale <= 0.0f) {
-        return false;
+        return nullptr;
     }
 
     for (GarmentObject& garment : garments_) {
@@ -81,10 +82,26 @@ bool SceneState::update_garment_placement(std::uint32_t garment_id, const glm::v
         }
 
         garment.mesh = std::move(next_mesh);
-        return true;
+        return &garment;
     }
 
-    return false;
+    return nullptr;
+}
+
+bool SceneState::remove_garment(std::uint32_t garment_id)
+{
+    const auto iter = std::find_if(garments_.begin(), garments_.end(),
+        [garment_id](const GarmentObject& garment) {
+            return garment.id == garment_id;
+        }
+    );
+
+    if (iter == garments_.end()) {
+        return false;
+    }
+
+    garments_.erase(iter);
+    return true;
 }
 
 void SceneState::clear_garments()

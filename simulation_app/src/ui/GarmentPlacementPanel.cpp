@@ -5,6 +5,7 @@
 #include <utility>
 
 #include <QGridLayout>
+#include <QHBoxLayout>
 #include <QLabel>
 #include <QPushButton>
 #include <QSignalBlocker>
@@ -28,8 +29,7 @@ QString format_float(float value)
 }
 }
 
-GarmentPlacementPanel::GarmentPlacementPanel(QWidget* parent)
-    : QWidget(parent)
+GarmentPlacementPanel::GarmentPlacementPanel(QWidget* parent): QWidget(parent)
 {
     setObjectName("garmentPlacementPanel");
     setStyleSheet(
@@ -123,7 +123,17 @@ GarmentPlacementPanel::GarmentPlacementPanel(QWidget* parent)
 
     confirm_run_button_ = new QPushButton("Confirm&Run", this);
     confirm_run_button_->setMinimumWidth(120);
-    root_layout->addWidget(confirm_run_button_, 0, Qt::AlignHCenter);
+    cancel_button_ = new QPushButton("Cancel", this);
+    cancel_button_->setMinimumWidth(80);
+
+    auto* button_layout = new QHBoxLayout();
+    button_layout->setContentsMargins(0, 0, 0, 0);
+    button_layout->setSpacing(6);
+    button_layout->addStretch(1);
+    button_layout->addWidget(confirm_run_button_);
+    button_layout->addWidget(cancel_button_);
+    button_layout->addStretch(1);
+    root_layout->addLayout(button_layout);
 
     connect(scale_slider_, &QSlider::valueChanged, this, [this](int value) {
         set_scale_from_slider(value);
@@ -133,18 +143,43 @@ GarmentPlacementPanel::GarmentPlacementPanel(QWidget* parent)
             confirm_run_callback_();
         }
     });
+    connect(cancel_button_, &QPushButton::clicked, this, [this]() {
+        if (cancel_callback_) {
+            cancel_callback_();
+        }
+    });
 
     setEnabled(false);
 }
 
-void GarmentPlacementPanel::set_placement_changed_callback(PlacementChangedCallback callback)
+void GarmentPlacementPanel::notify_placement_changed()
 {
-    placement_changed_callback_ = std::move(callback);
+    if (placement_changed_callback_) {
+        placement_changed_callback_(position_offset_, scale_);
+    }
 }
 
-void GarmentPlacementPanel::set_confirm_run_callback(ConfirmRunCallback callback)
+void GarmentPlacementPanel::update_value_labels()
 {
-    confirm_run_callback_ = std::move(callback);
+    for (std::size_t index = 0; index < position_value_labels_.size(); ++index) {
+        position_value_labels_[index]->setText(format_float(position_offset_[static_cast<int>(index)]));
+    }
+
+    scale_value_label_->setText(format_float(scale_));
+}
+
+void GarmentPlacementPanel::set_position_from_slider(int axis_index, int slider_value)
+{
+    position_offset_[axis_index] = static_cast<float>(slider_value) * position_slider_factor;
+    update_value_labels();
+    notify_placement_changed();
+}
+
+void GarmentPlacementPanel::set_scale_from_slider(int slider_value)
+{
+    scale_ = static_cast<float>(slider_value) * scale_slider_factor;
+    update_value_labels();
+    notify_placement_changed();
 }
 
 void GarmentPlacementPanel::reset_placement()
@@ -163,32 +198,18 @@ void GarmentPlacementPanel::reset_placement()
     update_value_labels();
 }
 
-void GarmentPlacementPanel::set_position_from_slider(int axis_index, int slider_value)
+// setter //
+void GarmentPlacementPanel::set_placement_changed_callback(PlacementChangedCallback callback)
 {
-    position_offset_[axis_index] = static_cast<float>(slider_value) * position_slider_factor;
-    update_value_labels();
-    notify_placement_changed();
+    placement_changed_callback_ = std::move(callback);
 }
 
-void GarmentPlacementPanel::set_scale_from_slider(int slider_value)
+void GarmentPlacementPanel::set_confirm_run_callback(ConfirmRunCallback callback)
 {
-    scale_ = static_cast<float>(slider_value) * scale_slider_factor;
-    update_value_labels();
-    notify_placement_changed();
+    confirm_run_callback_ = std::move(callback);
 }
 
-void GarmentPlacementPanel::notify_placement_changed()
+void GarmentPlacementPanel::set_cancel_callback(CancelCallback callback)
 {
-    if (placement_changed_callback_) {
-        placement_changed_callback_(position_offset_, scale_);
-    }
-}
-
-void GarmentPlacementPanel::update_value_labels()
-{
-    for (std::size_t index = 0; index < position_value_labels_.size(); ++index) {
-        position_value_labels_[index]->setText(format_float(position_offset_[static_cast<int>(index)]));
-    }
-
-    scale_value_label_->setText(format_float(scale_));
+    cancel_callback_ = std::move(callback);
 }

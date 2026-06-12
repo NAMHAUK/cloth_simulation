@@ -23,7 +23,8 @@ public:
 
     // Garments
     std::uint32_t add_garment_mesh(GarmentMesh mesh);
-    bool update_garment_placement(std::uint32_t garment_id, const glm::vec3& position_offset, float scale);
+    bool remove_garment(std::uint32_t garment_id);
+    GarmentObject* update_garment_placement(std::uint32_t garment_id, const glm::vec3& position_offset, float scale);
     void clear_garments();
     const std::vector<GarmentObject>& garments() const;
 
