@@ -13,7 +13,7 @@ inline constexpr float gravity = -9.8f;
 
 inline constexpr float ground_y = 0.0f;
 inline constexpr float ground_collision_offset = 0.001f;
-inline constexpr float character_collision_thickness = 0.01f;
+inline constexpr float character_collision_thickness = 0.02f;
 
 inline constexpr std::uint32_t solver_iteration_count = 10;
 inline constexpr float stretch_stiffness = 0.8f;

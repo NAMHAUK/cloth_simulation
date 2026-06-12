@@ -80,6 +80,8 @@ add_executable(simulation_app
     src/ui/MainWindow.h
     src/ui/AssetBrowserPanel.cpp
     src/ui/AssetBrowserPanel.h
+    src/ui/GarmentPlacementPanel.cpp
+    src/ui/GarmentPlacementPanel.h
     shaders/viewer.vert
     shaders/viewer.frag
     shaders/background.vert

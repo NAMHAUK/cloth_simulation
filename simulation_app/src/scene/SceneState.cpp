@@ -2,6 +2,8 @@
 
 #include "asset/MeshGeometryUtils.h"
 
+#include <glm/vec3.hpp>
+
 #include <iostream>
 #include <utility>
 
@@ -29,12 +31,60 @@ std::uint32_t SceneState::add_garment_mesh(GarmentMesh mesh)
     }
 
     const std::uint32_t garment_id = next_garment_id_++;
+    GarmentMesh source_mesh = mesh;
     garments_.push_back({
         garment_id,
+        std::move(source_mesh),
         std::move(mesh),
         true,
     });
     return garment_id;
+}
+
+bool SceneState::update_garment_placement(std::uint32_t garment_id, const glm::vec3& position_offset, float scale)
+{
+    if (scale <= 0.0f) {
+        return false;
+    }
+
+    for (GarmentObject& garment : garments_) {
+        if (garment.id != garment_id) {
+            continue;
+        }
+
+        const GarmentMesh& source_mesh = garment.source_mesh;
+        GarmentMesh next_mesh = source_mesh;
+        const glm::vec3 scale_center = source_mesh.bounds_center;
+
+        for (std::size_t index = 0; index < next_mesh.vertices.size(); index += 3u) {
+            const glm::vec3 source_position{
+                source_mesh.vertices[index],
+                source_mesh.vertices[index + 1u],
+                source_mesh.vertices[index + 2u],
+            };
+            const glm::vec3 next_position = scale_center + (source_position - scale_center) * scale + position_offset;
+            next_mesh.vertices[index] = next_position.x;
+            next_mesh.vertices[index + 1u] = next_position.y;
+            next_mesh.vertices[index + 2u] = next_position.z;
+        }
+
+        next_mesh.bounds_center = source_mesh.bounds_center + position_offset;
+        next_mesh.bounds_radius = source_mesh.bounds_radius * scale;
+
+        for (std::size_t index = 0; index < next_mesh.stretch_constraints.rest_lengths.size(); ++index) {
+            next_mesh.stretch_constraints.rest_lengths[index] =
+                source_mesh.stretch_constraints.rest_lengths[index] * scale;
+        }
+        for (std::size_t index = 0; index < next_mesh.bending_constraints.rest_lengths.size(); ++index) {
+            next_mesh.bending_constraints.rest_lengths[index] =
+                source_mesh.bending_constraints.rest_lengths[index] * scale;
+        }
+
+        garment.mesh = std::move(next_mesh);
+        return true;
+    }
+
+    return false;
 }
 
 const std::vector<GarmentObject>& SceneState::garments() const

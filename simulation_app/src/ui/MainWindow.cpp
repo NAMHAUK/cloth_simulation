@@ -6,6 +6,7 @@
 #include "asset/AssetLoader.h"
 #include "simulation/SimulationController.h"
 #include "ui/AssetBrowserPanel.h"
+#include "ui/GarmentPlacementPanel.h"
 #include "ui/SceneViewport.h"
 #include "utils/QtUtils.h"
 
@@ -17,6 +18,7 @@
 #include <QEvent>
 #include <QFileDialog>
 #include <QMessageBox>
+#include <QPushButton>
 #include <QSize>
 #include <QWidget>
 
@@ -27,6 +29,11 @@ constexpr int panel_margin = 12;
 constexpr int panel_width = 340;
 constexpr int panel_min_height = 180;
 constexpr int panel_max_height = 280;
+constexpr int simulation_button_width = 72;
+constexpr int simulation_button_height = 32;
+constexpr int simulation_button_gap = 6;
+constexpr int placement_panel_width = 280;
+constexpr int placement_panel_height = 210;
 
 void show_conversion_failure(QWidget* parent, AssetPanelMode mode)
 {
@@ -59,6 +66,9 @@ MainWindow::MainWindow(const std::filesystem::path& project_root, QWidget* paren
     simulation_viewport_ = new SceneViewport(viewer_container_);
     simulation_controller_ = std::make_unique<SimulationController>();
     browser_panel_ = new AssetBrowserPanel(viewer_container_);
+    garment_placement_panel_ = new GarmentPlacementPanel(viewer_container_);
+    run_button_ = new QPushButton("Run", viewer_container_);
+    stop_button_ = new QPushButton("Stop", viewer_container_);
     asset_loader_ = new AssetLoader(this);
     motion_converter_ = new AssetConverter(this);
     garment_converter_ = new AssetConverter(this);
@@ -70,6 +80,7 @@ MainWindow::MainWindow(const std::filesystem::path& project_root, QWidget* paren
 
     refresh_motion_list();
     refresh_garment_list();
+    update_simulation_controls();
     update_viewer_layout();
 }
 
@@ -96,7 +107,7 @@ bool MainWindow::initialize_scene(QOpenGLFunctions_4_5_Core& gl)
         return false;
     }
 
-    simulation_controller_->set_character_mesh_in_context(std::move(default_character_mesh), gl);
+    simulation_controller_->set_default_character_mesh(std::move(default_character_mesh), gl);
     return true;
 }
 
@@ -153,11 +164,22 @@ void MainWindow::setup_browser_callbacks()
 {
     browser_panel_->set_selected_callback(
         [this](AssetPanelMode mode, const std::filesystem::path& asset_path) {
+            if (simulation_controller_->is_simulation_running()) {
+                QMessageBox::information(this, "Asset Load Blocked", "Stop the simulation before loading an asset.");
+                return;
+            }
+
             if (mode == AssetPanelMode::Motions) {
                 asset_loader_->load_character_mesh(asset_path);
                 return;
+            } else {
+                if (!simulation_controller_->is_default_pose()) {
+                    QMessageBox::information(this, "Garment Load Blocked", "Load garments only from the default pose.");
+                    return;
+                }
+                asset_loader_->load_garment_mesh(asset_path);
             }
-            asset_loader_->load_garment_mesh(asset_path);
+
         }
     );
     browser_panel_->set_import_button_callback([this](AssetPanelMode mode) {
@@ -166,13 +188,37 @@ void MainWindow::setup_browser_callbacks()
     browser_panel_->set_expansion_changed_callback([this]() {
         update_viewer_layout();
     });
+    garment_placement_panel_->set_placement_changed_callback(
+        [this](const glm::vec3& position_offset, float scale) {
+            simulation_controller_->set_garment_placement(position_offset, scale);
+        }
+    );
+
+    connect(run_button_, &QPushButton::clicked, this, [this]() {
+        simulation_controller_->start_simulation();
+        update_simulation_controls();
+    });
+
+    connect(stop_button_, &QPushButton::clicked, this, [this]() {
+        simulation_controller_->stop_simulation();
+        update_simulation_controls();
+    });
+
+    garment_placement_panel_->set_confirm_run_callback([this]() {
+        simulation_controller_->start_simulation();
+        has_editable_garment_ = false;
+        update_simulation_controls();
+        update_viewer_layout();
+    });
 }
 
 void MainWindow::setup_asset_loader_callbacks()
 {
     asset_loader_->set_character_loaded_callback(
         [this](const std::filesystem::path&, CharacterMesh mesh) {
+            has_editable_garment_ = false;
             simulation_controller_->set_character_mesh(std::move(mesh));
+            update_simulation_controls();
         }
     );
     asset_loader_->set_character_load_failed_callback([this](const std::filesystem::path& motion_asset_path) {
@@ -180,6 +226,10 @@ void MainWindow::setup_asset_loader_callbacks()
     });
     asset_loader_->set_garment_loaded_callback([this](GarmentMesh mesh) {
         simulation_controller_->add_garment_mesh(std::move(mesh));
+        has_editable_garment_ = true;
+        garment_placement_panel_->reset_placement();
+        update_simulation_controls();
+        update_viewer_layout();
     });
     asset_loader_->set_garment_load_failed_callback([this](const std::filesystem::path& garment_asset_path) {
         QMessageBox::warning(this, "Load Failed", "Failed to load garment:\n" + to_q_string(garment_asset_path));
@@ -221,7 +271,7 @@ bool MainWindow::eventFilter(QObject* watched, QEvent* event)
 
 void MainWindow::update_viewer_layout()
 {
-    if (!viewer_container_ || !simulation_viewport_ || !browser_panel_) {
+    if (!viewer_container_ || !simulation_viewport_ || !browser_panel_ || !garment_placement_panel_) {
         return;
     }
 
@@ -250,6 +300,50 @@ void MainWindow::update_viewer_layout()
 
     browser_panel_->setGeometry(panel_margin, panel_margin, overlay_width, overlay_height);
     browser_panel_->raise();
+
+    const int controls_width = simulation_button_width * 2 + simulation_button_gap;
+    const int controls_x = std::max(panel_margin, container_size.width() - panel_margin - controls_width);
+    const int controls_y = panel_margin;
+    run_button_->setGeometry(controls_x,
+                             controls_y,
+                             simulation_button_width,
+                             simulation_button_height);
+    stop_button_->setGeometry(controls_x + simulation_button_width + simulation_button_gap,
+                              controls_y,
+                              simulation_button_width,
+                              simulation_button_height);
+    run_button_->raise();
+    stop_button_->raise();
+
+    if (has_editable_garment_) {
+        const int placement_width = std::min(placement_panel_width, available_width);
+        const int placement_height = std::min(placement_panel_height, available_height);
+        const int placement_x = std::max(panel_margin, container_size.width() - panel_margin - placement_width);
+        const int placement_y = controls_y + simulation_button_height + simulation_button_gap;
+        garment_placement_panel_->setGeometry(placement_x, placement_y, placement_width, placement_height);
+        garment_placement_panel_->raise();
+    }
+}
+
+// simulation control //
+void MainWindow::update_simulation_controls()
+{
+    if (!simulation_controller_ || !run_button_ || !stop_button_ || !garment_placement_panel_) {
+        return;
+    }
+
+    const bool simulation_running = simulation_controller_->is_simulation_running();
+    const bool placement_available =
+        has_editable_garment_ &&
+        !simulation_running &&
+        simulation_controller_->is_default_pose();
+
+    const bool placement_panel_visible = has_editable_garment_;
+
+    run_button_->setEnabled(!simulation_running && !placement_panel_visible);
+    stop_button_->setEnabled(simulation_running);
+    garment_placement_panel_->setVisible(placement_panel_visible);
+    garment_placement_panel_->setEnabled(placement_available);
 }
 
 // panel update //

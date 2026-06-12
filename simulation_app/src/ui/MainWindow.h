@@ -11,11 +11,13 @@
 
 class AssetBrowserPanel;
 class AssetLoader;
+class GarmentPlacementPanel;
 class QObject;
 class SimulationController;
 class SceneViewport;
 class QEvent;
 class QOpenGLFunctions_4_5_Core;
+class QPushButton;
 class QWidget;
 enum class AssetPanelMode;
 
@@ -37,6 +39,7 @@ private:
     void setup_asset_converter_callbacks();
 
     void update_viewer_layout();
+    void update_simulation_controls();
     void refresh_motion_list();
     void refresh_garment_list();
     
@@ -50,6 +53,10 @@ private:
     AssetConverter* garment_converter_ = nullptr;
     QWidget* viewer_container_ = nullptr;
     AssetBrowserPanel* browser_panel_ = nullptr;
+    GarmentPlacementPanel* garment_placement_panel_ = nullptr;
+    QPushButton* run_button_ = nullptr;
+    QPushButton* stop_button_ = nullptr;
     SceneViewport* simulation_viewport_ = nullptr;
     std::unique_ptr<SimulationController> simulation_controller_;
+    bool has_editable_garment_ = false;
 };

@@ -21,6 +21,9 @@ public:
     bool is_initialized() const;
 
     void update_garment_buffers(const std::vector<GarmentObject>& garments, QOpenGLFunctions_4_5_Core& gl);
+    bool update_garment_placement(const GarmentObject& garment,
+                                  bool update_rest_lengths,
+                                  QOpenGLFunctions_4_5_Core& gl);
     ClothPositionBufferView position_buffer_view() const;
     DistanceConstraintBufferView stretch_constraint_buffer_view() const;
     DistanceConstraintBufferView bending_constraint_buffer_view() const;

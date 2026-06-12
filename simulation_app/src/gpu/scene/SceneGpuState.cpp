@@ -112,6 +112,20 @@ void SceneGpuState::update_garment_meshes(const SceneState& scene, QOpenGLFuncti
                                          gl);
 }
 
+bool SceneGpuState::update_garment_placement(const GarmentObject& garment,
+                                             bool update_rest_lengths,
+                                             QOpenGLFunctions_4_5_Core& gl)
+{
+    if (!cloth_gpu_state_.update_garment_placement(garment, update_rest_lengths, gl)) {
+        return false;
+    }
+
+    normal_updater_.update_cloth_normals(cloth_gpu_state_.mesh_topology_resources(),
+                                         cloth_gpu_state_.mesh_normal_resources(),
+                                         gl);
+    return true;
+}
+
 void SceneGpuState::remove_garment_gpu_state(std::uint32_t, const SceneState& scene, QOpenGLFunctions_4_5_Core& gl)
 {
     cloth_gpu_state_.update_garment_buffers(scene.garments(), gl);
