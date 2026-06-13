@@ -31,9 +31,9 @@ public:
 
     // Mesh buffer resources
     CharacterMeshTopologyResources mesh_topology_resources() const;
-    CharacterTriangleGeometryResources character_triangle_geometry_resources() const;
+    TriangleGeometryResources character_triangle_geometry_resources() const;
     CharacterNormalResources mesh_normal_resources() const;
-    CharacterBvhResources character_bvh_resources() const;
+    MeshBvhResources character_bvh_resources() const;
     const std::vector<BvhNodeRange>& bvh_node_ranges_by_level() const;
 
     // GPU resource lifetime

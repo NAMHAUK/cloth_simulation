@@ -1,5 +1,6 @@
 #include "gpu/collision/MeshBvhBoundsUpdater.h"
 
+#include "utils/BufferUtils.h"
 #include "utils/ShaderUtils.h"
 
 #include <iostream>
@@ -8,19 +9,6 @@ namespace {
 constexpr GLuint character_triangle_geometry_binding = 0;
 constexpr GLuint character_bvh_node_binding = 1;
 constexpr std::uint32_t bvh_bounds_update_local_size = 128;
-
-bool is_valid_character_geometry(const CharacterTriangleGeometryResources& character_geometry)
-{
-    return character_geometry.triangle_geometry_buffer != 0 &&
-           character_geometry.triangle_count != 0;
-}
-
-bool is_valid_character_bvh(const CharacterBvhResources& character_bvh)
-{
-    return character_bvh.node_buffer != 0 &&
-           character_bvh.node_count != 0 &&
-           character_bvh.root_node_index < character_bvh.node_count;
-}
 }
 
 bool MeshBvhBoundsUpdater::is_initialized() const
@@ -28,13 +16,13 @@ bool MeshBvhBoundsUpdater::is_initialized() const
     return program_ != 0;
 }
 
-bool MeshBvhBoundsUpdater::can_update(const CharacterTriangleGeometryResources& character_geometry,
-                                      const CharacterBvhResources& character_bvh,
+bool MeshBvhBoundsUpdater::can_update(const TriangleGeometryResources& character_geometry,
+                                      const MeshBvhResources& character_bvh,
                                       const std::vector<BvhNodeRange>& node_ranges_by_level) const
 {
     return is_initialized() &&
-           is_valid_character_geometry(character_geometry) &&
-           is_valid_character_bvh(character_bvh) &&
+           is_valid_triangle_geometry_resource(character_geometry) &&
+           is_valid_mesh_bvh_resource(character_bvh) &&
            !node_ranges_by_level.empty();
 }
 
@@ -57,8 +45,8 @@ bool MeshBvhBoundsUpdater::initialize(const std::filesystem::path& shader_path, 
     return true;
 }
 
-void MeshBvhBoundsUpdater::update(const CharacterTriangleGeometryResources& character_geometry,
-                                  const CharacterBvhResources& character_bvh,
+void MeshBvhBoundsUpdater::update(const TriangleGeometryResources& character_geometry,
+                                  const MeshBvhResources& character_bvh,
                                   const std::vector<BvhNodeRange>& node_ranges_by_level,
                                   QOpenGLFunctions_4_5_Core& gl) const
 {

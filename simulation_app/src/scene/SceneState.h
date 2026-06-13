@@ -6,8 +6,11 @@
 #include <cstdint>
 #include <vector>
 
+#include <glm/vec3.hpp>
+
 struct GarmentObject {
     std::uint32_t id = 0;
+    GarmentMesh source_mesh;
     GarmentMesh mesh;
     bool visible = true;
 };
@@ -16,22 +19,22 @@ class SceneState final {
 public:
     // Character
     void set_character_mesh(CharacterMesh mesh);
-    bool has_character() const;
     const CharacterMesh& character_mesh() const;
 
     // Garments
     std::uint32_t add_garment_mesh(GarmentMesh mesh);
+    bool remove_garment(std::uint32_t garment_id);
+    GarmentObject* update_garment_placement(std::uint32_t garment_id, const glm::vec3& position_offset, float scale);
+    void clear_garments();
     const std::vector<GarmentObject>& garments() const;
 
     // Playback
-    void update_character_frame(std::uint64_t simulation_step_count,
-                                std::uint32_t character_frame_stride);
+    void update_character_frame(std::uint64_t simulation_step_count, std::uint32_t character_frame_stride);
     std::uint32_t current_character_frame() const;
 
 private:
     // Character
     CharacterMesh character_mesh_;
-    bool character_loaded_ = false;
 
     // Garments
     std::vector<GarmentObject> garments_;

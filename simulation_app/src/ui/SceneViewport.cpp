@@ -28,7 +28,7 @@ constexpr float character_camera_yaw = 0.5f * pi;
 constexpr float character_camera_pitch = 10.0f * pi / 180.0f;
 
 constexpr float character_camera_distance_min = 1.5f;
-constexpr float character_camera_distance_scale = 2.2f;
+constexpr float character_camera_distance_scale = 3.0f;
 
 constexpr float character_camera_near_min = 0.05f;
 constexpr float character_camera_near_scale = 0.15f;

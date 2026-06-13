@@ -60,10 +60,6 @@ const CharacterGpuResources& SceneGpuState::character_gpu_state() const
 
 void SceneGpuState::set_character_mesh(const SceneState& scene, QOpenGLFunctions_4_5_Core& gl)
 {
-    if (!scene.has_character()) {
-        return;
-    }
-
     // 새 character mesh가 들어오면 전체 frame character mesh를 GPU에 올리고 frame 상태 설정
     const CharacterMesh& character_mesh = scene.character_mesh();
     character_gpu_state_.upload_mesh(character_mesh, gl);
@@ -76,7 +72,7 @@ void SceneGpuState::set_character_mesh(const SceneState& scene, QOpenGLFunctions
 
 void SceneGpuState::update_character_frame(const SceneState& scene, QOpenGLFunctions_4_5_Core& gl)
 {
-    if (!is_initialized() || !scene.has_character() || !character_gpu_state_.is_initialized()) {
+    if (!is_initialized() || !character_gpu_state_.is_initialized()) {
         return;
     }
 
@@ -116,10 +112,16 @@ void SceneGpuState::update_garment_meshes(const SceneState& scene, QOpenGLFuncti
                                          gl);
 }
 
-void SceneGpuState::remove_garment_gpu_state(std::uint32_t, const SceneState& scene, QOpenGLFunctions_4_5_Core& gl)
+bool SceneGpuState::update_garment_placement(const GarmentObject& garment,
+                                             bool update_rest_lengths,
+                                             QOpenGLFunctions_4_5_Core& gl)
 {
-    cloth_gpu_state_.update_garment_buffers(scene.garments(), gl);
+    if (!cloth_gpu_state_.update_garment_placement(garment, update_rest_lengths, gl)) {
+        return false;
+    }
+
     normal_updater_.update_cloth_normals(cloth_gpu_state_.mesh_topology_resources(),
                                          cloth_gpu_state_.mesh_normal_resources(),
                                          gl);
+    return true;
 }

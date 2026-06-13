@@ -331,6 +331,25 @@ void upload_position_data(const ClothBufferSet& buffers,
     gl.glNamedBufferSubData(buffers.previous_position, position_offset_bytes, position_size_bytes, vertices.data());
 }
 
+void upload_rest_length_data(const ClothBufferSet& buffers,
+                             const GarmentObject& garment,
+                             const GarmentBufferRanges& buffer_ranges,
+                             QOpenGLFunctions_4_5_Core& gl)
+{
+    const GarmentDistanceConstraints& stretch_constraints = garment.mesh.stretch_constraints;
+    const GarmentDistanceConstraints& bending_constraints = garment.mesh.bending_constraints;
+
+    gl.glNamedBufferSubData(buffers.stretch_rest_length,
+                            scalar_byte_size(buffer_ranges.stretch_constraint_offset, sizeof(float)),
+                            scalar_byte_size(static_cast<std::uint32_t>(stretch_constraints.rest_lengths.size()), sizeof(float)),
+                            stretch_constraints.rest_lengths.data());
+
+    gl.glNamedBufferSubData(buffers.bending_rest_length,
+                            scalar_byte_size(buffer_ranges.bending_constraint_offset, sizeof(float)),
+                            scalar_byte_size(static_cast<std::uint32_t>(bending_constraints.rest_lengths.size()), sizeof(float)),
+                            bending_constraints.rest_lengths.data());
+}
+
 // buffer rebuild upload //
 struct BufferRebuildUploadData final {
     TopologyUploadData topology;
@@ -642,6 +661,23 @@ void ClothGpuResources::update_garment_buffers(const std::vector<GarmentObject>&
 }
 
 // garment 삭제 -> buffer rebuild: 남은 garments 빈틈 없이 연속적으로 새 buffer에 재배치
+bool ClothGpuResources::update_garment_placement(const GarmentObject& garment,
+                                                 bool update_rest_lengths,
+                                                 QOpenGLFunctions_4_5_Core& gl)
+{
+    const GarmentBufferRanges* buffer_ranges = find_garment_buffer_ranges(garment.id);
+    if (!is_initialized() || buffer_ranges == nullptr || !is_uploadable_mesh(garment.mesh)) {
+        return false;
+    }
+
+    upload_position_data(buffers_, garment.mesh.vertices, *buffer_ranges, gl);
+    if (update_rest_lengths) {
+        upload_rest_length_data(buffers_, garment, *buffer_ranges, gl);
+    }
+
+    return true;
+}
+
 void ClothGpuResources::rebuild_garment_buffers(const std::vector<GarmentObject>& garments, QOpenGLFunctions_4_5_Core& gl)
 {
     std::vector<BufferRebuildGarmentData> rebuild_garments;
@@ -928,6 +964,25 @@ ClothPositionBufferView ClothGpuResources::position_buffer_view() const
     view.previous_position_buffer = buffers_.previous_position;
     view.vertex_count = used_elements_.vertex;
     return view;
+}
+
+void ClothGpuResources::copy_current_positions_to_previous(QOpenGLFunctions_4_5_Core& gl) const
+{
+    if (buffers_.current_position == 0 ||
+        buffers_.previous_position == 0 ||
+        used_elements_.vertex == 0) {
+        return;
+    }
+
+    const GLsizeiptr position_bytes = byte_size(used_elements_.vertex, position_components, sizeof(float));
+
+    gl.glMemoryBarrier(GL_SHADER_STORAGE_BARRIER_BIT | GL_BUFFER_UPDATE_BARRIER_BIT);
+    gl.glCopyNamedBufferSubData(buffers_.current_position,
+                                buffers_.previous_position,
+                                0,
+                                0,
+                                position_bytes);
+    gl.glMemoryBarrier(GL_SHADER_STORAGE_BARRIER_BIT);
 }
 
 DistanceConstraintBufferView ClothGpuResources::stretch_constraint_buffer_view() const

@@ -12,7 +12,7 @@ constexpr GLuint triangle_geometry_binding = 2;
 constexpr std::uint32_t triangle_geometry_local_size = 128;
 
 bool is_valid_update_input(const CharacterMeshTopologyResources& topology,
-                           const CharacterTriangleGeometryResources& triangle_geometry)
+                           const TriangleGeometryResources& triangle_geometry)
 {
     return topology.position_buffer != 0 &&
            topology.index_buffer != 0 &&
@@ -47,7 +47,7 @@ bool TriangleGeometryUpdater::initialize(const std::filesystem::path& shader_pat
 }
 
 void TriangleGeometryUpdater::update(const CharacterMeshTopologyResources& topology,
-                                     const CharacterTriangleGeometryResources& triangle_geometry,
+                                     const TriangleGeometryResources& triangle_geometry,
                                      QOpenGLFunctions_4_5_Core& gl) const
 {
     if (!is_initialized() || !is_valid_update_input(topology, triangle_geometry)) {

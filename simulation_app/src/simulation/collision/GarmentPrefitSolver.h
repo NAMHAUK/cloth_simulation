@@ -7,16 +7,16 @@
 
 #include <QOpenGLFunctions_4_5_Core>
 
-class CharacterCollisionSolver final {
+class GarmentPrefitSolver final {
 public:
-    CharacterCollisionSolver() = default;
-    CharacterCollisionSolver(const CharacterCollisionSolver&) = delete;
-    CharacterCollisionSolver& operator=(const CharacterCollisionSolver&) = delete;
+    GarmentPrefitSolver() = default;
+    GarmentPrefitSolver(const GarmentPrefitSolver&) = delete;
+    GarmentPrefitSolver& operator=(const GarmentPrefitSolver&) = delete;
 
     bool is_initialized() const;
     bool initialize(const std::filesystem::path& shader_path,
                     float search_radius,
-                    float collision_thickness,
+                    float pushout_margin,
                     QOpenGLFunctions_4_5_Core& gl);
     bool can_solve(const ClothPositionBufferView& position_view,
                    const TriangleGeometryResources& character_geometry,
@@ -33,7 +33,7 @@ private:
     GLint bvh_node_count_location_ = -1;
     GLint root_node_index_location_ = -1;
     GLint search_radius_location_ = -1;
-    GLint collision_thickness_location_ = -1;
+    GLint pushout_margin_location_ = -1;
     float search_radius_ = 0.0f;
-    float collision_thickness_ = 0.0f;
+    float pushout_margin_ = 0.0f;
 };
