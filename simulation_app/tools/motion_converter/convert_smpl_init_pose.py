@@ -9,6 +9,11 @@ import torch
 CACHE_MAGIC = b"SMPLCACH"
 CACHE_VERSION = 1
 CACHE_HEADER_FORMAT = "<IfIIIffff"
+LEFT_SHOULDER_BODY_POSE_INDEX = (16 - 1) * 3
+RIGHT_SHOULDER_BODY_POSE_INDEX = (17 - 1) * 3
+DEFAULT_A_POSE_ARM_ANGLE_DEG = 80.0
+SHOULDER_AXIS_CHOICES = ("x", "y", "z")
+SHOULDER_AXIS_TO_OFFSET = {"x": 0, "y": 1, "z": 2}
 
 
 def set_smpl_compatibility():
@@ -38,7 +43,19 @@ def align_vertices_min_y_to_ground(vertices, ground_clearance):
     return aligned_vertices
 
 
-def write_t_pose_cache(output_path, fps, faces, vertices):
+def make_body_pose(pose_name, arm_angle_deg, shoulder_axis):
+    body_pose = torch.zeros((1, 69), dtype=torch.float32)
+    if pose_name == "t":
+        return body_pose
+
+    angle = np.deg2rad(float(arm_angle_deg))
+    axis_offset = SHOULDER_AXIS_TO_OFFSET[shoulder_axis]
+    body_pose[0, LEFT_SHOULDER_BODY_POSE_INDEX + axis_offset] = -angle
+    body_pose[0, RIGHT_SHOULDER_BODY_POSE_INDEX + axis_offset] = angle
+    return body_pose
+
+
+def write_init_pose_cache(output_path, fps, faces, vertices):
     if fps <= 0.0:
         raise ValueError(f"Invalid FPS: {fps}")
     if vertices.ndim != 2 or vertices.shape[1] != 3:
@@ -81,9 +98,12 @@ def write_t_pose_cache(output_path, fps, faces, vertices):
 
 
 def main():
-    parser = argparse.ArgumentParser(description="Convert a neutral SMPL zero pose to a one-frame mesh cache.")
+    parser = argparse.ArgumentParser(description="Convert a neutral SMPL init pose to a one-frame mesh cache.")
     parser.add_argument("--model", required=True, type=Path)
     parser.add_argument("--output", required=True, type=Path)
+    parser.add_argument("--pose", default="a", choices=("a", "t"))
+    parser.add_argument("--arm-angle-deg", default=DEFAULT_A_POSE_ARM_ANGLE_DEG, type=float)
+    parser.add_argument("--shoulder-axis", default="z", choices=SHOULDER_AXIS_CHOICES)
     parser.add_argument("--fps", default=30.0, type=float)
     parser.add_argument("--ground-clearance", default=0.0, type=float)
     args = parser.parse_args()
@@ -94,23 +114,28 @@ def main():
 
     model = SMPL(str(args.model), gender="neutral", num_betas=10, batch_size=1)
     model.eval()
+    body_pose = make_body_pose(args.pose, args.arm_angle_deg, args.shoulder_axis)
 
     with torch.no_grad():
         output = model(
             betas=torch.zeros((1, 10), dtype=torch.float32),
             global_orient=torch.zeros((1, 3), dtype=torch.float32),
-            body_pose=torch.zeros((1, 69), dtype=torch.float32),
+            body_pose=body_pose,
             transl=torch.zeros((1, 3), dtype=torch.float32),
             return_verts=True,
         )
 
     vertices = output.vertices.detach().cpu().numpy()[0]
     vertices = align_vertices_min_y_to_ground(vertices, args.ground_clearance)
-    write_t_pose_cache(args.output, args.fps, model.faces, vertices)
+    write_init_pose_cache(args.output, args.fps, model.faces, vertices)
 
     print()
-    print(f"Converted neutral SMPL T-pose: {args.model}")
+    print(f"Converted neutral SMPL {args.pose.upper()}-pose: {args.model}")
     print(f"Output: {args.output}")
+    print(f"Pose: {args.pose}")
+    if args.pose == "a":
+        print(f"Arm angle: {args.arm_angle_deg}")
+        print(f"Shoulder axis: {args.shoulder_axis}")
     print(f"FPS: {args.fps}")
     print(f"Frames: 1")
     print(f"Vertices: {vertices.shape[0]}")

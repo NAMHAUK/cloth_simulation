@@ -190,6 +190,7 @@ void SimulationController::confirm_garment_placement()
 
     viewport_callbacks_.run_with_gl_context([this](QOpenGLFunctions_4_5_Core& gl) {
         set_current_garment_placement(gl);
+        simulation_pipeline_.prefit_garments(scene_, gpu_state_, gl);
         garment_placement_.clear();
     });
 

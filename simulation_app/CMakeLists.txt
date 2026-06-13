@@ -38,6 +38,8 @@ add_executable(simulation_app
     src/simulation/collision/GroundCollisionSolver.h
     src/simulation/collision/CharacterCollisionSolver.cpp
     src/simulation/collision/CharacterCollisionSolver.h
+    src/simulation/collision/GarmentPrefitSolver.cpp
+    src/simulation/collision/GarmentPrefitSolver.h
     src/asset/MeshGeometryUtils.cpp
     src/asset/MeshGeometryUtils.h
     src/gpu/body/CharacterGpuResources.cpp
@@ -82,19 +84,20 @@ add_executable(simulation_app
     src/ui/AssetBrowserPanel.h
     src/ui/GarmentPlacementPanel.cpp
     src/ui/GarmentPlacementPanel.h
-    shaders/viewer.vert
-    shaders/viewer.frag
-    shaders/background.vert
-    shaders/background.frag
-    shaders/triangle_normal.comp
-    shaders/vertex_normal.comp
-    shaders/character_triangle_geometry_update.comp
-    shaders/character_bvh_bounds_update.comp
-    shaders/cloth_external_force.comp
-    shaders/cloth_stretch_constraint.comp
-    shaders/cloth_bending_constraint.comp
-    shaders/cloth_ground_collision.comp
-    shaders/cloth_character_collision.comp
+    shaders/rendering/viewer.vert
+    shaders/rendering/viewer.frag
+    shaders/rendering/background.vert
+    shaders/rendering/background.frag
+    shaders/gpu/triangle_normal.comp
+    shaders/gpu/vertex_normal.comp
+    shaders/gpu/character_triangle_geometry_update.comp
+    shaders/gpu/character_bvh_bounds_update.comp
+    shaders/simulation/cloth_external_force.comp
+    shaders/simulation/cloth_stretch_constraint.comp
+    shaders/simulation/cloth_bending_constraint.comp
+    shaders/simulation/cloth_ground_collision.comp
+    shaders/simulation/cloth_character_collision.comp
+    shaders/simulation/garment_prefit.comp
 )
 
 add_executable(garment_converter

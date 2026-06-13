@@ -16,15 +16,15 @@ public:
 
     bool is_initialized() const;
     bool initialize(const std::filesystem::path& shader_path, QOpenGLFunctions_4_5_Core& gl);
-    void update(const CharacterTriangleGeometryResources& character_geometry,
-                const CharacterBvhResources& character_bvh,
+    void update(const TriangleGeometryResources& character_geometry,
+                const MeshBvhResources& character_bvh,
                 const std::vector<BvhNodeRange>& node_ranges_by_level,
                 QOpenGLFunctions_4_5_Core& gl) const;
     void release(QOpenGLFunctions_4_5_Core& gl);
 
 private:
-    bool can_update(const CharacterTriangleGeometryResources& character_geometry,
-                    const CharacterBvhResources& character_bvh,
+    bool can_update(const TriangleGeometryResources& character_geometry,
+                    const MeshBvhResources& character_bvh,
                     const std::vector<BvhNodeRange>& node_ranges_by_level) const;
 
     GLuint program_ = 0;

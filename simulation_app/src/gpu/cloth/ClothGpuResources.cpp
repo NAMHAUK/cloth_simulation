@@ -966,6 +966,25 @@ ClothPositionBufferView ClothGpuResources::position_buffer_view() const
     return view;
 }
 
+void ClothGpuResources::copy_current_positions_to_previous(QOpenGLFunctions_4_5_Core& gl) const
+{
+    if (buffers_.current_position == 0 ||
+        buffers_.previous_position == 0 ||
+        used_elements_.vertex == 0) {
+        return;
+    }
+
+    const GLsizeiptr position_bytes = byte_size(used_elements_.vertex, position_components, sizeof(float));
+
+    gl.glMemoryBarrier(GL_SHADER_STORAGE_BARRIER_BIT | GL_BUFFER_UPDATE_BARRIER_BIT);
+    gl.glCopyNamedBufferSubData(buffers_.current_position,
+                                buffers_.previous_position,
+                                0,
+                                0,
+                                position_bytes);
+    gl.glMemoryBarrier(GL_SHADER_STORAGE_BARRIER_BIT);
+}
+
 DistanceConstraintBufferView ClothGpuResources::stretch_constraint_buffer_view() const
 {
     DistanceConstraintBufferView view;

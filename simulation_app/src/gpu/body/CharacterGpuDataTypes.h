@@ -15,7 +15,7 @@ struct CharacterMeshTopologyResources final {
     std::uint32_t triangle_count = 0;
 };
 
-struct CharacterTriangleGeometryResources final {
+struct TriangleGeometryResources final {
     GLuint triangle_geometry_buffer = 0;
     std::uint32_t triangle_count = 0;
 };
@@ -26,7 +26,7 @@ struct CharacterNormalResources final {
     std::uint32_t triangle_count = 0;
 };
 
-struct CharacterBvhResources final {
+struct MeshBvhResources final {
     GLuint node_buffer = 0;
     std::uint32_t node_count = 0;
     std::uint32_t root_node_index = 0;

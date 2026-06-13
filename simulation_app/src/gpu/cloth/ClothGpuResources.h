@@ -25,6 +25,7 @@ public:
                                   bool update_rest_lengths,
                                   QOpenGLFunctions_4_5_Core& gl);
     ClothPositionBufferView position_buffer_view() const;
+    void copy_current_positions_to_previous(QOpenGLFunctions_4_5_Core& gl) const;
     DistanceConstraintBufferView stretch_constraint_buffer_view() const;
     DistanceConstraintBufferView bending_constraint_buffer_view() const;
     ClothMeshTopologyResources mesh_topology_resources() const;

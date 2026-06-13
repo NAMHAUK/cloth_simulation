@@ -6,10 +6,6 @@ layout(std430, binding = 0) buffer CurrentPositions {
     float current_positions[];
 };
 
-layout(std430, binding = 1) buffer PreviousPositions {
-    float previous_positions[];
-};
-
 struct CharacterTriangleGeometry {
     vec4 a;
     vec4 b;
@@ -35,7 +31,8 @@ layout(std430, binding = 3) readonly buffer MeshBvhNodeBuffer {
 uniform uint uClothVertexCount;
 uniform uint uBvhNodeCount;
 uniform uint uRootNodeIndex;
-uniform float uCollisionThickness;
+uniform float uSearchRadius;
+uniform float uPushoutMargin;
 
 float length_squared(vec3 value)
 {
@@ -54,9 +51,6 @@ void store_cloth_position(uint vertex_index, vec3 position)
     current_positions[base] = position.x;
     current_positions[base + 1u] = position.y;
     current_positions[base + 2u] = position.z;
-    previous_positions[base] = position.x;
-    previous_positions[base + 1u] = position.y;
-    previous_positions[base + 2u] = position.z;
 }
 
 float squared_distance_to_bounds(vec3 point, vec3 min_bounds, vec3 max_bounds)
@@ -114,7 +108,7 @@ vec3 closest_point_on_triangle(vec3 point, vec3 a, vec3 b, vec3 c, vec3 ab, vec3
 
 void test_character_triangle(uint triangle_index,
                              vec3 cloth_position,
-                             float collision_thickness_sq,
+                             float max_distance_sq,
                              inout vec3 best_closest_point,
                              inout vec3 best_normal,
                              inout float best_distance_sq,
@@ -133,7 +127,7 @@ void test_character_triangle(uint triangle_index,
     vec3 unit_normal = unit_face_normal.xyz;
 
     float plane_distance = dot(cloth_position - a, unit_normal);
-    if (plane_distance * plane_distance > collision_thickness_sq) {
+    if (plane_distance * plane_distance > max_distance_sq) {
         return;
     }
 
@@ -141,7 +135,7 @@ void test_character_triangle(uint triangle_index,
     vec3 offset = cloth_position - closest_point;
     float distance_sq = length_squared(offset);
 
-    if (distance_sq < best_distance_sq) {
+    if (distance_sq <= best_distance_sq) {
         best_distance_sq = distance_sq;
         best_closest_point = closest_point;
         best_normal = unit_normal;
@@ -157,18 +151,17 @@ void main()
     }
 
     vec3 cloth_position = load_cloth_position(cloth_vertex_index);
+    float search_radius_sq = uSearchRadius * uSearchRadius;
     vec3 best_closest_point = vec3(0.0);
     vec3 best_normal = vec3(0.0, 1.0, 0.0);
-    float best_distance_sq = 3.402823e+38;
+    float best_distance_sq = search_radius_sq;
     bool has_candidate = false;
-    float collision_thickness_sq = uCollisionThickness * uCollisionThickness;
 
     uint node_index = uRootNodeIndex;
     while (node_index < uBvhNodeCount) {
         MeshBvhNode node = bvh_nodes[node_index];
         uint next_node = node.metadata.z;
-        float search_radius_sq = has_candidate ? min(best_distance_sq, collision_thickness_sq) : collision_thickness_sq;
-        if (squared_distance_to_bounds(cloth_position, node.min_bounds.xyz, node.max_bounds.xyz) > search_radius_sq) {
+        if (squared_distance_to_bounds(cloth_position, node.min_bounds.xyz, node.max_bounds.xyz) > best_distance_sq) {
             node_index = next_node;
             continue;
         }
@@ -179,7 +172,7 @@ void main()
             for (uint triangle_offset = 0u; triangle_offset < triangle_count; ++triangle_offset) {
                 test_character_triangle(first_triangle + triangle_offset,
                                         cloth_position,
-                                        collision_thickness_sq,
+                                        best_distance_sq,
                                         best_closest_point,
                                         best_normal,
                                         best_distance_sq,
@@ -189,23 +182,15 @@ void main()
             continue;
         }
 
-        uint left_child = node.metadata.x;
-        uint right_child = node.metadata.y;
-        if (left_child < uBvhNodeCount) {
-            node_index = left_child;
-        } else if (right_child < uBvhNodeCount) {
-            node_index = right_child;
-        } else {
-            node_index = next_node;
-        }
+        node_index = node.metadata.x;
     }
 
-    if (!has_candidate || best_distance_sq > collision_thickness_sq) {
+    if (!has_candidate) {
         return;
     }
 
     float signed_distance = dot(cloth_position - best_closest_point, best_normal);
-    if (signed_distance < uCollisionThickness) {
-        store_cloth_position(cloth_vertex_index, best_closest_point + best_normal * uCollisionThickness);
+    if (signed_distance < uPushoutMargin) {
+        store_cloth_position(cloth_vertex_index, best_closest_point + best_normal * uPushoutMargin);
     }
 }

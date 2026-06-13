@@ -176,9 +176,9 @@ CharacterMeshTopologyResources CharacterGpuResources::mesh_topology_resources() 
     return topology;
 }
 
-CharacterTriangleGeometryResources CharacterGpuResources::character_triangle_geometry_resources() const
+TriangleGeometryResources CharacterGpuResources::character_triangle_geometry_resources() const
 {
-    CharacterTriangleGeometryResources resources;
+    TriangleGeometryResources resources;
     resources.triangle_geometry_buffer = character_triangle_geometry_buffer_;
     resources.triangle_count = triangle_count_;
     return resources;
@@ -193,9 +193,9 @@ CharacterNormalResources CharacterGpuResources::mesh_normal_resources() const
     return resources;
 }
 
-CharacterBvhResources CharacterGpuResources::character_bvh_resources() const
+MeshBvhResources CharacterGpuResources::character_bvh_resources() const
 {
-    CharacterBvhResources resources;
+    MeshBvhResources resources;
     resources.node_buffer = character_bvh_node_buffer_;
     resources.node_count = bvh_node_count_;
     resources.root_node_index = bvh_root_node_index_;
