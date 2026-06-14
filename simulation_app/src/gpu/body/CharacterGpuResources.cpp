@@ -112,8 +112,9 @@ void CharacterGpuResources::upload_mesh(const CharacterMesh& character_mesh, QOp
     bvh_node_count_ = static_cast<std::uint32_t>(bvh_result.nodes.size());
     bvh_root_node_index_ = bvh_result.root_node_index;
     bvh_node_ranges_by_level_ = std::move(bvh_result.node_ranges_by_level);
+    bvh_triangle_indices_ = std::move(bvh_result.triangle_indices);
     current_frame_index_ = 0;
-    index_count_ = static_cast<GLsizei>(bvh_result.triangle_indices.size());
+    index_count_ = static_cast<GLsizei>(bvh_triangle_indices_.size());
 }
 
 void CharacterGpuResources::set_current_frame(std::uint32_t frame_index)
@@ -151,6 +152,11 @@ std::uint32_t CharacterGpuResources::current_frame_index() const
 std::uint32_t CharacterGpuResources::vertex_count() const
 {
     return vertex_count_;
+}
+
+const std::vector<std::uint32_t>& CharacterGpuResources::bvh_triangle_indices() const
+{
+    return bvh_triangle_indices_;
 }
 
 void CharacterGpuResources::draw(QOpenGLFunctions_4_5_Core& gl) const
@@ -253,6 +259,7 @@ void CharacterGpuResources::reset_resources() noexcept
     bvh_node_count_ = 0;
     bvh_root_node_index_ = 0;
     bvh_node_ranges_by_level_.clear();
+    bvh_triangle_indices_.clear();
     current_frame_index_ = 0;
     index_count_ = 0;
 }

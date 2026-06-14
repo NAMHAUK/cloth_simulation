@@ -23,6 +23,7 @@ public:
     void set_current_frame(std::uint32_t frame_index);
     std::uint32_t current_frame_index() const;
     std::uint32_t vertex_count() const;
+    const std::vector<std::uint32_t>& bvh_triangle_indices() const;
 
     // Rendering
     void bind_animation_positions(GLuint binding_index, QOpenGLFunctions_4_5_Core& gl) const;
@@ -57,6 +58,7 @@ private:
     // Mesh adjacent triangle data
     GLuint index_buffer_ = 0;
     std::uint32_t triangle_count_ = 0;
+    std::vector<std::uint32_t> bvh_triangle_indices_;
 
     // Character BVH data
     GLuint character_bvh_node_buffer_ = 0;

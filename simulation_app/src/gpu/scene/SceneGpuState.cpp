@@ -1,7 +1,10 @@
 #include "gpu/scene/SceneGpuState.h"
 
 #include "app/ProjectPaths.h"
+#include "gpu/scene/GarmentAttachmentTargetBuilder.h"
 #include "scene/SceneState.h"
+
+#include <iostream>
 
 bool SceneGpuState::is_initialized() const
 {
@@ -124,4 +127,25 @@ bool SceneGpuState::update_garment_placement(const GarmentObject& garment,
                                          cloth_gpu_state_.mesh_normal_resources(),
                                          gl);
     return true;
+}
+
+void SceneGpuState::build_garment_attachment_targets(SceneState& scene,
+                                                     std::uint32_t garment_id,
+                                                     QOpenGLFunctions_4_5_Core& gl)
+{
+    GarmentObject* garment = scene.find_garment(garment_id);
+    if (garment == nullptr) {
+        return;
+    }
+
+    garment->attachment_constraints = garment_attachment_target_builder::build_garment_attachment_targets(
+        *garment,
+        scene.character_mesh(),
+        scene.current_character_frame(),
+        character_gpu_state_.bvh_triangle_indices()
+    );
+
+    if (!cloth_gpu_state_.update_garment_attachment_targets(*garment, gl)) {
+        std::cerr << "Failed to upload garment attachment targets.\n";
+    }
 }

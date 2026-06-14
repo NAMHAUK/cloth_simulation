@@ -26,6 +26,7 @@ struct GarmentAssetCounts final {
     std::uint32_t stretch_range_count = 0;
     std::uint32_t bending_edge_count = 0;
     std::uint32_t bending_range_count = 0;
+    std::uint32_t attachment_vertex_count = 0;
 };
 
 bool is_valid_header(const GarmentAssetCounts& counts, const GarmentMesh& garment_mesh);
@@ -40,7 +41,8 @@ GarmentAssetCounts make_garment_asset_counts(const GarmentMesh& garment_mesh)
         static_cast<std::uint32_t>(garment_mesh.stretch_constraints.colorized_edges.size()),
         static_cast<std::uint32_t>(garment_mesh.stretch_constraints.color_ranges.size()),
         static_cast<std::uint32_t>(garment_mesh.bending_constraints.colorized_edges.size()),
-        static_cast<std::uint32_t>(garment_mesh.bending_constraints.color_ranges.size())
+        static_cast<std::uint32_t>(garment_mesh.bending_constraints.color_ranges.size()),
+        static_cast<std::uint32_t>(garment_mesh.attachment_vertex_indices.size())
     };
 }
 
@@ -146,6 +148,7 @@ bool read_header_values(std::ifstream& input, GarmentAssetCounts& counts, Garmen
            read_binary_value(input, counts.stretch_range_count) &&
            read_binary_value(input, counts.bending_edge_count) &&
            read_binary_value(input, counts.bending_range_count) &&
+           read_binary_value(input, counts.attachment_vertex_count) &&
            read_binary_value(input, garment_mesh.bounds_center.x) &&
            read_binary_value(input, garment_mesh.bounds_center.y) &&
            read_binary_value(input, garment_mesh.bounds_center.z) &&
@@ -198,7 +201,8 @@ bool read_mesh_data(std::ifstream& input, const GarmentAssetCounts& counts, Garm
            read_binary_values(input, garment_mesh.stretch_constraints.rest_lengths, counts.stretch_edge_count) &&
            read_edges(input, garment_mesh.bending_constraints.colorized_edges, counts.bending_edge_count) &&
            read_ranges(input, garment_mesh.bending_constraints.color_ranges, counts.bending_range_count) &&
-           read_binary_values(input, garment_mesh.bending_constraints.rest_lengths, counts.bending_edge_count);
+           read_binary_values(input, garment_mesh.bending_constraints.rest_lengths, counts.bending_edge_count) &&
+           read_binary_values(input, garment_mesh.attachment_vertex_indices, counts.attachment_vertex_count);
 }
 
 bool write_edges(std::ofstream& output, const std::vector<MeshEdge>& edges)
@@ -233,6 +237,7 @@ bool write_header_values(std::ofstream& output,
            write_binary_value(output, counts.stretch_range_count) &&
            write_binary_value(output, counts.bending_edge_count) &&
            write_binary_value(output, counts.bending_range_count) &&
+           write_binary_value(output, counts.attachment_vertex_count) &&
            write_binary_value(output, garment_mesh.bounds_center.x) &&
            write_binary_value(output, garment_mesh.bounds_center.y) &&
            write_binary_value(output, garment_mesh.bounds_center.z) &&
@@ -259,7 +264,8 @@ bool write_mesh_data(std::ofstream& output, const GarmentMesh& garment_mesh)
            write_binary_values(output, garment_mesh.stretch_constraints.rest_lengths) &&
            write_edges(output, garment_mesh.bending_constraints.colorized_edges) &&
            write_ranges(output, garment_mesh.bending_constraints.color_ranges) &&
-           write_binary_values(output, garment_mesh.bending_constraints.rest_lengths);
+           write_binary_values(output, garment_mesh.bending_constraints.rest_lengths) &&
+           write_binary_values(output, garment_mesh.attachment_vertex_indices);
 }
 
 bool is_valid_edge_ranges(const std::vector<MeshEdgeRange>& ranges, std::size_t edge_count)
@@ -292,6 +298,15 @@ bool is_valid_indices(const std::vector<std::uint32_t>& indices, std::uint32_t v
         }
     }
     return true;
+}
+
+bool is_valid_attachment_vertices(const std::vector<std::uint32_t>& attachment_vertices, std::uint32_t vertex_count)
+{
+    return std::all_of(attachment_vertices.begin(), attachment_vertices.end(),
+        [vertex_count](std::uint32_t vertex_index) {
+            return vertex_index < vertex_count;
+        }
+    );
 }
 
 bool is_valid_header(const GarmentAssetCounts& counts, const GarmentMesh& garment_mesh)
@@ -333,6 +348,7 @@ bool is_valid_garment_mesh(const GarmentMesh& garment_mesh)
                                 garment_mesh.bending_constraints.colorized_edges.size()) &&
            is_finite_values(garment_mesh.stretch_constraints.rest_lengths) &&
            is_finite_values(garment_mesh.bending_constraints.rest_lengths) &&
+           is_valid_attachment_vertices(garment_mesh.attachment_vertex_indices, counts.vertex_count) &&
            is_finite_vec3(garment_mesh.bounds_center) &&
            std::isfinite(garment_mesh.bounds_radius) &&
            garment_mesh.bounds_radius > 0.0f &&
@@ -460,6 +476,7 @@ bool read_garment_mesh(const std::filesystem::path& garment_asset_path, GarmentM
               << " stretch_color_groups=" << asset_mesh.stretch_constraints.color_ranges.size()
               << " bending_constraints=" << asset_mesh.bending_constraints.colorized_edges.size()
               << " bending_color_groups=" << asset_mesh.bending_constraints.color_ranges.size()
+              << " attachment_vertices=" << asset_mesh.attachment_vertex_indices.size()
               << " bounds_radius=" << asset_mesh.bounds_radius << '\n';
 
     garment_mesh = std::move(asset_mesh);

@@ -24,6 +24,7 @@ inline constexpr std::uint32_t substep_count = 4;
 inline constexpr std::uint32_t prefit_iteration_count = 32;
 inline constexpr float stretch_stiffness = 0.8f;
 inline constexpr float bending_stiffness = 0.8f;
+inline constexpr float attachment_stiffness = 0.8f;
 
 static_assert(character_motion_fps > 0);
 static_assert(cloth_simulation_fps > 0);
@@ -37,4 +38,5 @@ static_assert(substep_count > 0);
 static_assert(prefit_iteration_count > 0);
 static_assert(stretch_stiffness >= 0.0f && stretch_stiffness <= 1.0f);
 static_assert(bending_stiffness >= 0.0f && bending_stiffness <= 1.0f);
+static_assert(attachment_stiffness >= 0.0f && attachment_stiffness <= 1.0f);
 }

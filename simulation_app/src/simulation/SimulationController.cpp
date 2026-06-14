@@ -41,7 +41,7 @@ bool SimulationController::initialize_gpu(const ShaderPaths& shader_paths, QOpen
     return true;
 }
 
-// rendering //
+// Rendering //
 
 void SimulationController::draw(const glm::mat4& mvp, QOpenGLFunctions_4_5_Core& gl)
 {
@@ -191,6 +191,7 @@ void SimulationController::confirm_garment_placement()
     viewport_callbacks_.run_with_gl_context([this](QOpenGLFunctions_4_5_Core& gl) {
         set_current_garment_placement(gl);
         simulation_pipeline_.prefit_garments(scene_, gpu_state_, gl);
+        gpu_state_.build_garment_attachment_targets(scene_, garment_placement_.garment_id, gl);
         garment_placement_.clear();
     });
 

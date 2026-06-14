@@ -77,7 +77,8 @@ ConverterCommand make_motion_command(
 ConverterCommand make_garment_command(
     const ProjectPaths& project_paths,
     const std::filesystem::path& garment_obj_path,
-    const std::filesystem::path& garment_asset_path)
+    const std::filesystem::path& garment_asset_path,
+    const QString& attachment_type)
 {
     ConverterCommand command;
 
@@ -100,13 +101,15 @@ ConverterCommand make_garment_command(
     command.arguments = {
         "--input", to_q_string(garment_obj_path),
         "--output", to_q_string(garment_asset_path),
+        "--attachment-type", attachment_type,
     };
     command.working_directory = to_q_string(project_paths.root);
 
     std::cout << "Prepared garment converter command...\n"
               << "  program=" << converter_exe_path << '\n'
               << "  garment_obj=" << garment_obj_path << '\n'
-              << "  garment_asset=" << garment_asset_path << '\n';
+              << "  garment_asset=" << garment_asset_path << '\n'
+              << "  attachment_type=" << attachment_type.toStdString() << '\n';
 
     command.is_valid = true;
     return command;
