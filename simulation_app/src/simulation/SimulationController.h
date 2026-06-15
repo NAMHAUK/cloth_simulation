@@ -25,7 +25,8 @@ public:
         std::function<bool()> is_ready;
         std::function<void(GlContextTask)> run_with_gl_context;
         std::function<void()> request_update;
-        std::function<void(const CharacterMesh&)> reset_camera_to_character;
+        std::function<void(const glm::vec3&)> reset_camera_to_character_root;
+        std::function<void(const glm::vec3&)> set_camera_target;
     };
 
     SimulationController();

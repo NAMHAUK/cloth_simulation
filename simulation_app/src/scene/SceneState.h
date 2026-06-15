@@ -36,6 +36,7 @@ public:
     // Playback
     void update_character_frame(std::uint64_t simulation_step_count, std::uint32_t character_frame_stride);
     std::uint32_t current_character_frame() const;
+    glm::vec3 character_root_position(std::uint32_t frame_index) const;
 
 private:
     // Character

@@ -246,9 +246,14 @@ void MainWindow::setup_viewport_callbacks()
                 simulation_viewport_->update();
             }
         },
-        [this](const CharacterMesh& character_mesh) {
+        [this](const glm::vec3& root_position) {
             if (simulation_viewport_ != nullptr) {
-                simulation_viewport_->reset_camera_to_character(character_mesh);
+                simulation_viewport_->reset_camera_to_character_root(root_position);
+            }
+        },
+        [this](const glm::vec3& root_position) {
+            if (simulation_viewport_ != nullptr) {
+                simulation_viewport_->set_camera_target(root_position);
             }
         },
     });
@@ -270,17 +275,17 @@ void MainWindow::setup_browser_callbacks()
 {
     browser_panel_->set_selected_callback(
         [this](AssetPanelMode mode, const std::filesystem::path& asset_path) {
-            if (simulation_controller_->is_simulation_running()) {
-                QMessageBox::information(this, "Asset Load Blocked", "Stop the simulation before loading an asset.");
-                return;
-            }
-
             if (mode == AssetPanelMode::Motions) {
+                if (!simulation_controller_->is_default_pose()) {
+                    QMessageBox::information(this, "Motion Load Blocked", "Load motions only from the default pose.");
+                    return;
+                }
+
                 asset_loader_->load_character_mesh(asset_path);
                 return;
             } else {
-                if (!simulation_controller_->is_default_pose()) {
-                    QMessageBox::information(this, "Garment Load Blocked", "Load garments only from the default pose.");
+                if (simulation_controller_->is_simulation_running() || !simulation_controller_->is_default_pose()) {
+                    QMessageBox::information(this, "Garment Load Blocked", "Load garments only while the simulation is stopped and the character is in the default pose.");
                     return;
                 }
                 asset_loader_->load_garment_mesh(asset_path);

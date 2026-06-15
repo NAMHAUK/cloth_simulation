@@ -6,12 +6,8 @@ from pathlib import Path
 import numpy as np
 import torch
 
-CACHE_MAGIC = b"SMPLCACH"
-CACHE_VERSION = 1
-CACHE_BASE_HEADER_FORMAT = "<IfIII"
-CACHE_BOUNDS_FORMAT = "<ffff"
-CACHE_BOUNDS_OFFSET = len(CACHE_MAGIC) + struct.calcsize(CACHE_BASE_HEADER_FORMAT)
-CACHE_HEADER_FORMAT = "<IfIIIffff"
+CACHE_SIGNATURE = b"SMPLCACH"
+CACHE_HEADER_FORMAT = "<fIII"
 
 """
 AMASS 모션 데이터를, SMPL 캐릭터 애니메이션으로 변환
@@ -67,35 +63,21 @@ def choose_frame_indices(frame_count, source_fps, target_fps):
 
 def write_cache_header(out_file, fps, faces, frame_count, vertex_count):
     indices = np.asarray(faces, dtype=np.uint32).reshape(-1)
-    out_file.write(CACHE_MAGIC)
+    out_file.write(CACHE_SIGNATURE)
     out_file.write(
         struct.pack(
             CACHE_HEADER_FORMAT,
-            CACHE_VERSION,
             float(fps),
             frame_count,
             vertex_count,
             indices.size,
-            0.0,
-            0.0,
-            0.0,
-            1.0,
         )
     )
     indices.tofile(out_file)
+    root_positions_offset = out_file.tell()
+    np.zeros((frame_count, 3), dtype=np.float32).tofile(out_file)
+    return root_positions_offset
 
-
-def write_cache_bounds(out_file, bounds_center, bounds_radius):
-    out_file.seek(CACHE_BOUNDS_OFFSET)
-    out_file.write(
-        struct.pack(
-            CACHE_BOUNDS_FORMAT,
-            float(bounds_center[0]),
-            float(bounds_center[1]),
-            float(bounds_center[2]),
-            float(bounds_radius),
-        )
-    )
 
 # motion을 Y-up 좌표계로 변환
 def convert_vertices_to_project_y_up(vertices):
@@ -105,19 +87,6 @@ def convert_vertices_to_project_y_up(vertices):
     converted[..., 2] = -vertices[..., 1]
     return converted
 
-
-def update_bounds(bounds_min, bounds_max, vertices):
-    flattened = vertices.reshape(-1, 3)
-    batch_min = flattened.min(axis=0)
-    batch_max = flattened.max(axis=0)
-    return np.minimum(bounds_min, batch_min), np.maximum(bounds_max, batch_max)
-
-
-def compute_bounds_fit(bounds_min, bounds_max):
-    bounds_center = ((bounds_min + bounds_max) * 0.5).astype(np.float32, copy=False)
-    extents = np.maximum(bounds_max - bounds_min, 0.001)
-    bounds_radius = float(np.max(extents) * 0.5)
-    return bounds_center, bounds_radius
 
 # 현재 batch의 vertices를 Y-up으로 변환해서 저장
 def write_y_up_vertices(out_file, vertices):
@@ -129,6 +98,11 @@ def write_y_up_vertices(out_file, vertices):
     return converted
 
 # 각 pose에서 캐릭터 몸 형태의 vertex 계산
+def write_root_positions(out_file, root_positions_offset, root_positions):
+    out_file.seek(root_positions_offset)
+    root_positions.tofile(out_file)
+
+
 def compute_batch_vertices(model, poses, translations, beta_values, ids, device):
     batch_poses = poses[ids]
 
@@ -144,7 +118,9 @@ def compute_batch_vertices(model, poses, translations, beta_values, ids, device)
         transl=transl,
         return_verts=True,
     )
-    return output.vertices.detach().cpu().numpy().astype(np.float32, copy=False)
+    vertices = output.vertices.detach().cpu().numpy().astype(np.float32, copy=False)
+    root_positions = output.joints[:, 0, :].detach().cpu().numpy().astype(np.float32, copy=False)
+    return vertices, root_positions
 
 
 def convert(input_path, model_dir, output_path, target_fps, batch_size):
@@ -156,9 +132,9 @@ def convert(input_path, model_dir, output_path, target_fps, batch_size):
     # 1) AMASS motion 데이터 load
     data = np.load(input_path)
     poses = data["poses"].astype(np.float32)
-    translations = data["trans"].astype(np.float32)
-    betas = data["betas"].astype(np.float32)
-    gender = str(data["gender"].item()).lower()
+    translations = data["trans"].astype(np.float32).copy()
+    source_gender = str(data["gender"].item()).lower()
+    target_gender = "neutral"
     source_fps = float(data["mocap_framerate"])
 
     if poses.shape[1] < 72:
@@ -169,23 +145,27 @@ def convert(input_path, model_dir, output_path, target_fps, batch_size):
     if len(frame_indices) == 0:
         raise ValueError(f"No frames selected from input motion: {input_path}")
 
+    start_translation = translations[frame_indices[0]].copy()
+    translations[:, 0] -= start_translation[0]
+    translations[:, 1] -= start_translation[1]
+
     # 3) gender에 맞는 SMPL model load
-    model_path = resolve_smpl_model_path(model_dir, gender)
+    model_path = resolve_smpl_model_path(model_dir, target_gender)
     model = SMPL(
         str(model_path),
-        gender=gender,
-        num_betas=min(10, betas.shape[0]),
+        gender=target_gender,
+        num_betas=10,
         batch_size=1,
     ).to(device)
     model.eval()
 
     # 4) batch 단위로 캐릭터 애니메이션 계산 및 저장
-    beta_values = betas[:10].reshape(1, -1)
+    beta_values = np.zeros((1, 10), dtype=np.float32)
     output_path.parent.mkdir(parents=True, exist_ok=True)
     temp_output_path = output_path.with_name(output_path.name + ".tmp")
     vertex_count = None
-    bounds_min = np.full(3, np.inf, dtype=np.float32)
-    bounds_max = np.full(3, -np.inf, dtype=np.float32)
+    root_positions_offset = None
+    converted_root_positions = []
 
     try:
         with temp_output_path.open("wb") as out_file:
@@ -194,12 +174,12 @@ def convert(input_path, model_dir, output_path, target_fps, batch_size):
                     ids = frame_indices[start:start + batch_size]
                     
                     # 각 batch의 캐릭터 몸 vertex 계산
-                    batch_vertices = compute_batch_vertices(model, poses, translations, beta_values, ids, device)
+                    batch_vertices, batch_root_positions = compute_batch_vertices(model, poses, translations, beta_values, ids, device)
 
                     # 첫 batch면 header에 metadata 작성
                     if vertex_count is None:
                         vertex_count = batch_vertices.shape[1]
-                        write_cache_header(
+                        root_positions_offset = write_cache_header(
                             out_file,
                             effective_fps,
                             model.faces,
@@ -214,11 +194,12 @@ def convert(input_path, model_dir, output_path, target_fps, batch_size):
                         )
 
                     # batch의 vertices를 Y-up으로 변환해서 저장
-                    converted_vertices = write_y_up_vertices(out_file, batch_vertices)
-                    bounds_min, bounds_max = update_bounds(bounds_min, bounds_max, converted_vertices)
+                    converted_roots = convert_vertices_to_project_y_up(batch_root_positions[:, None, :])[:, 0, :]
+                    converted_root_positions.append(converted_roots)
+                    write_y_up_vertices(out_file, batch_vertices)
 
-            bounds_center, bounds_radius = compute_bounds_fit(bounds_min, bounds_max)
-            write_cache_bounds(out_file, bounds_center, bounds_radius)
+            root_positions = np.concatenate(converted_root_positions, axis=0).astype(np.float32, copy=False)
+            write_root_positions(out_file, root_positions_offset, root_positions)
 
         # 모든 batch가 성공하면 최종 cache 파일로 교체
         temp_output_path.replace(output_path)
@@ -231,7 +212,9 @@ def convert(input_path, model_dir, output_path, target_fps, batch_size):
 
     print()
     print(f"Converted: {input_path}")
-    print(f"Gender: {gender}")
+    print(f"Source gender: {source_gender}")
+    print(f"Target gender: {target_gender}")
+    print(f"Start translation offset: x={start_translation[0]}, y={start_translation[1]}")
     print(f"Device: {device}")
     print(f"Source FPS: {source_fps}")
     print(f"Cache FPS: {effective_fps}")

@@ -1,7 +1,5 @@
 #pragma once
 
-#include "asset/AssetDataTypes.h"
-
 #include <cstdint>
 #include <functional>
 
@@ -39,7 +37,8 @@ public:
     void set_scene_render_callback(SceneRenderCallback callback);
     bool is_gl_initialized() const;
     QOpenGLFunctions_4_5_Core& gl_functions();
-    void reset_camera_to_character(const CharacterMesh& character_mesh);
+    void reset_camera_to_character_root(const glm::vec3& root_position);
+    void set_camera_target(const glm::vec3& root_position);
 
 protected:
     void initializeGL() override;
