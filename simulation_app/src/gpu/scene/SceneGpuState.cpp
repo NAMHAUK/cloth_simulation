@@ -1,7 +1,7 @@
 #include "gpu/scene/SceneGpuState.h"
 
 #include "app/ProjectPaths.h"
-#include "gpu/scene/GarmentAttachmentTargetBuilder.h"
+#include "gpu/scene/AttachmentBuilder.h"
 #include "scene/SceneState.h"
 
 #include <iostream>
@@ -138,7 +138,7 @@ void SceneGpuState::build_garment_attachment_targets(SceneState& scene,
         return;
     }
 
-    garment->attachment_constraints = garment_attachment_target_builder::build_garment_attachment_targets(
+    garment->attachment_constraints = attachment_builder::build_garment_attachment_targets(
         *garment,
         scene.character_mesh(),
         scene.current_character_frame(),

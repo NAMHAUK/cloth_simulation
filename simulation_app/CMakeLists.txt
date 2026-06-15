@@ -63,8 +63,8 @@ add_executable(simulation_app
     src/rendering/GroundGridMesh.h
     src/gpu/scene/SceneGpuState.cpp
     src/gpu/scene/SceneGpuState.h
-    src/gpu/scene/GarmentAttachmentTargetBuilder.cpp
-    src/gpu/scene/GarmentAttachmentTargetBuilder.h
+    src/gpu/scene/AttachmentBuilder.cpp
+    src/gpu/scene/AttachmentBuilder.h
     src/gpu/scene/NormalUpdater.cpp
     src/gpu/scene/NormalUpdater.h
     src/rendering/RenderPipeline.cpp

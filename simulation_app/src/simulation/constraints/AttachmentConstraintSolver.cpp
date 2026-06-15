@@ -36,7 +36,7 @@ bool AttachmentConstraintSolver::is_initialized() const
     return program_ != 0;
 }
 
-bool AttachmentConstraintSolver::initialize(const std::filesystem::path& shader_path, QOpenGLFunctions_4_5_Core& gl)
+bool AttachmentConstraintSolver::initialize(const std::filesystem::path& shader_path, float stiffness, QOpenGLFunctions_4_5_Core& gl)
 {
     program_ = load_compute_program(shader_path, "Attachment constraint", gl);
     if (program_ == 0) {
@@ -53,32 +53,31 @@ bool AttachmentConstraintSolver::initialize(const std::filesystem::path& shader_
         return false;
     }
 
+    stiffness_ = stiffness;
     return true;
 }
 
 bool AttachmentConstraintSolver::can_solve(const ClothPositionBufferView& position_view,
                                            const AttachmentConstraintBufferView& constraint_view,
-                                           const TriangleGeometryResources& character_geometry,
-                                           float stiffness) const
+                                           const TriangleGeometryResources& character_geometry) const
 {
     return is_initialized() &&
            is_valid_position_view(position_view) &&
            is_valid_attachment_constraint_view(constraint_view) &&
            is_valid_triangle_geometry_resource(character_geometry) &&
-           stiffness > 0.0f;
+           stiffness_ > 0.0f;
 }
 
 void AttachmentConstraintSolver::solve(const ClothPositionBufferView& position_view,
                                        const AttachmentConstraintBufferView& constraint_view,
                                        const TriangleGeometryResources& character_geometry,
-                                       float stiffness,
                                        QOpenGLFunctions_4_5_Core& gl) const
 {
     if (!has_attachment_constraints(constraint_view)) {
         return;
     }
 
-    assert(can_solve(position_view, constraint_view, character_geometry, stiffness));
+    assert(can_solve(position_view, constraint_view, character_geometry));
 
     gl.glUseProgram(program_);
     gl.glBindBufferBase(GL_SHADER_STORAGE_BUFFER, current_positions_binding, position_view.current_position_buffer);
@@ -86,7 +85,7 @@ void AttachmentConstraintSolver::solve(const ClothPositionBufferView& position_v
     gl.glBindBufferBase(GL_SHADER_STORAGE_BUFFER, attachment_indices_binding, constraint_view.attachment_index_buffer);
     gl.glBindBufferBase(GL_SHADER_STORAGE_BUFFER, attachment_barycentric_offsets_binding, constraint_view.barycentric_offset_buffer);
     gl.glBindBufferBase(GL_SHADER_STORAGE_BUFFER, character_triangle_geometry_binding, character_geometry.triangle_geometry_buffer);
-    gl.glProgramUniform1f(program_, stiffness_location_, std::clamp(stiffness, 0.0f, 1.0f));
+    gl.glProgramUniform1f(program_, stiffness_location_, std::clamp(stiffness_, 0.0f, 1.0f));
 
     for (const ConstraintRange& range : *constraint_view.ranges) {
         if (range.count == 0) {
@@ -110,4 +109,5 @@ void AttachmentConstraintSolver::release(QOpenGLFunctions_4_5_Core& gl)
     constraint_offset_location_ = -1;
     constraint_count_location_ = -1;
     stiffness_location_ = -1;
+    stiffness_ = 0.0f;
 }

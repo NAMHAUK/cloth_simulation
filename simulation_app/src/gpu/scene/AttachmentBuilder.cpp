@@ -1,4 +1,4 @@
-#include "gpu/scene/GarmentAttachmentTargetBuilder.h"
+#include "gpu/scene/AttachmentBuilder.h"
 
 #include "asset/MeshGeometryUtils.h"
 
@@ -152,7 +152,7 @@ ClosestTrianglePoint closest_point_on_triangle(const glm::vec3& point,
 }
 }
 
-namespace garment_attachment_target_builder {
+namespace attachment_builder {
 
 std::vector<GarmentAttachmentConstraint> build_garment_attachment_targets(
     const GarmentObject& garment,

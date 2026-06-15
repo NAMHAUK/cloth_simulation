@@ -5,7 +5,7 @@
 #include <cstdint>
 #include <vector>
 
-namespace garment_attachment_target_builder {
+namespace attachment_builder {
 
 std::vector<GarmentAttachmentConstraint> build_garment_attachment_targets(
     const GarmentObject& garment,

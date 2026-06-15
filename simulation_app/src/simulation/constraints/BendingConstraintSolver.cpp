@@ -21,7 +21,7 @@ bool BendingConstraintSolver::is_initialized() const
     return program_ != 0;
 }
 
-bool BendingConstraintSolver::initialize(const std::filesystem::path& shader_path, QOpenGLFunctions_4_5_Core& gl)
+bool BendingConstraintSolver::initialize(const std::filesystem::path& shader_path, float stiffness, QOpenGLFunctions_4_5_Core& gl)
 {
     program_ = load_compute_program(shader_path, "Bending constraint", gl);
     if (program_ == 0) {
@@ -38,31 +38,30 @@ bool BendingConstraintSolver::initialize(const std::filesystem::path& shader_pat
         return false;
     }
 
+    stiffness_ = stiffness;
     return true;
 }
 
 bool BendingConstraintSolver::can_solve(const ClothPositionBufferView& position_view,
-                                        const DistanceConstraintBufferView& constraint_view,
-                                        float stiffness) const
+                                        const DistanceConstraintBufferView& constraint_view) const
 {
     return is_initialized() &&
            is_valid_position_view(position_view) &&
            is_valid_distance_constraint_view(constraint_view) &&
-           stiffness > 0.0f;
+           stiffness_ > 0.0f;
 }
 
 void BendingConstraintSolver::solve(const ClothPositionBufferView& position_view,
                                     const DistanceConstraintBufferView& constraint_view,
-                                    float stiffness,
                                     QOpenGLFunctions_4_5_Core& gl) const
 {
-    assert(can_solve(position_view, constraint_view, stiffness));
+    assert(can_solve(position_view, constraint_view));
 
     gl.glUseProgram(program_);
     gl.glBindBufferBase(GL_SHADER_STORAGE_BUFFER, current_positions_binding, position_view.current_position_buffer);
     gl.glBindBufferBase(GL_SHADER_STORAGE_BUFFER, edge_indices_binding, constraint_view.edge_index_buffer);
     gl.glBindBufferBase(GL_SHADER_STORAGE_BUFFER, rest_lengths_binding, constraint_view.rest_length_buffer);
-    gl.glProgramUniform1f(program_, stiffness_location_, std::clamp(stiffness, 0.0f, 1.0f));
+    gl.glProgramUniform1f(program_, stiffness_location_, std::clamp(stiffness_, 0.0f, 1.0f));
 
     for (const ConstraintRange& range : *constraint_view.color_ranges) {
         if (range.count == 0) {
@@ -86,4 +85,5 @@ void BendingConstraintSolver::release(QOpenGLFunctions_4_5_Core& gl)
     constraint_offset_location_ = -1;
     constraint_count_location_ = -1;
     stiffness_location_ = -1;
+    stiffness_ = 0.0f;
 }

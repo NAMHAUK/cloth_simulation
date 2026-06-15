@@ -44,5 +44,6 @@ private:
     GroundCollisionSolver ground_collision_solver_;
     CharacterCollisionSolver character_collision_solver_;
     GarmentPrefitSolver garment_prefit_solver_;
+    float substep_dt_ = 0.0f;
     bool initialized_ = false;
 };
