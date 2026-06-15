@@ -67,6 +67,7 @@ void SimulationController::tick_frame()
     }
 
     if (simulation_step_finished) {
+        viewport_callbacks_.set_camera_target(scene_.character_root_position(scene_.current_character_frame()));
         ++motion_step_count_;
     }
 
@@ -115,7 +116,7 @@ void SimulationController::set_character_mesh_state(CharacterMesh mesh, QOpenGLF
     gpu_state_.set_character_mesh(scene_, gl);
     motion_step_count_ = 0;
     is_default_pose_ = false;
-    viewport_callbacks_.reset_camera_to_character(scene_.character_mesh());
+    viewport_callbacks_.reset_camera_to_character_root(scene_.character_root_position(0));
 }
 
 void SimulationController::add_garment_mesh(GarmentMesh mesh)
@@ -236,7 +237,8 @@ bool SimulationController::is_viewport_ready() const
     return viewport_callbacks_.is_ready &&
            viewport_callbacks_.run_with_gl_context &&
            viewport_callbacks_.request_update &&
-           viewport_callbacks_.reset_camera_to_character &&
+           viewport_callbacks_.reset_camera_to_character_root &&
+           viewport_callbacks_.set_camera_target &&
            viewport_callbacks_.is_ready();
 }
 

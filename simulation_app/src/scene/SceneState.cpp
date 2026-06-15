@@ -162,3 +162,18 @@ std::uint32_t SceneState::current_character_frame() const
 {
     return current_character_frame_;
 }
+
+glm::vec3 SceneState::character_root_position(std::uint32_t frame_index) const
+{
+    if (frame_index >= character_mesh_.frame_count ||
+        character_mesh_.root_positions.size() < (static_cast<std::size_t>(frame_index) + 1u) * 3u) {
+        return glm::vec3{0.0f};
+    }
+
+    const std::size_t root_base = static_cast<std::size_t>(frame_index) * 3u;
+    return {
+        character_mesh_.root_positions[root_base],
+        character_mesh_.root_positions[root_base + 1u],
+        character_mesh_.root_positions[root_base + 2u],
+    };
+}
