@@ -38,7 +38,7 @@ public:
                                           QOpenGLFunctions_4_5_Core& gl);
 
 private:
-    void update_character_triangle_geometry(QOpenGLFunctions_4_5_Core& gl);
+    void update_character_triangle_geometry(const SceneState& scene, QOpenGLFunctions_4_5_Core& gl);
 
     CharacterGpuResources character_gpu_state_;
     ClothGpuResources cloth_gpu_state_;

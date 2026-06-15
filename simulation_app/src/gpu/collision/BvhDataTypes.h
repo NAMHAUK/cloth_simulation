@@ -18,7 +18,7 @@ struct BvhNodeRange final {
     std::uint32_t node_count = 0;
 };
 
-struct MeshBvhBuildResult final {
+struct MeshBvhData final {
     std::vector<std::uint32_t> triangle_indices;
     std::vector<MeshBvhNode> nodes;
     std::vector<BvhNodeRange> node_ranges_by_level;

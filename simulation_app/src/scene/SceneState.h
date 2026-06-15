@@ -1,6 +1,7 @@
 #pragma once
 
 #include "asset/AssetDataTypes.h"
+#include "gpu/collision/BvhDataTypes.h"
 
 #include <cstddef>
 #include <cstdint>
@@ -20,7 +21,9 @@ class SceneState final {
 public:
     // Character
     void set_character_mesh(CharacterMesh mesh);
+    void set_default_character_bvh_data(MeshBvhData default_character_bvh_data);
     const CharacterMesh& character_mesh() const;
+    const MeshBvhData& default_character_bvh_data() const;
 
     // Garments
     std::uint32_t add_garment_mesh(GarmentMesh mesh);
@@ -37,6 +40,7 @@ public:
 private:
     // Character
     CharacterMesh character_mesh_;
+    MeshBvhData default_character_bvh_data_;
 
     // Garments
     std::vector<GarmentObject> garments_;

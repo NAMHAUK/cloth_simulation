@@ -5,6 +5,7 @@
 #include <iostream>
 #include <limits>
 
+#include <glm/common.hpp>
 #include <glm/geometric.hpp>
 #include <glm/vec3.hpp>
 #include <glm/vec4.hpp>
@@ -58,20 +59,14 @@ std::vector<CharacterTriangleTarget> build_character_triangle_targets(
     const std::vector<std::uint32_t>& character_triangle_indices)
 {
     std::vector<CharacterTriangleTarget> targets;
-    targets.reserve(character_triangle_indices.size() / 3u);
+    const auto triangle_count = static_cast<std::uint32_t>(character_triangle_indices.size() / 3u);
+    targets.reserve(triangle_count);
 
-    for (std::uint32_t triangle_index = 0;
-         triangle_index < static_cast<std::uint32_t>(character_triangle_indices.size() / 3u);
-         ++triangle_index) {
+    for (std::uint32_t triangle_index = 0; triangle_index < triangle_count; ++triangle_index) {
         const std::size_t index_base = static_cast<std::size_t>(triangle_index) * 3u;
         const std::uint32_t vertex_a = character_triangle_indices[index_base];
         const std::uint32_t vertex_b = character_triangle_indices[index_base + 1u];
         const std::uint32_t vertex_c = character_triangle_indices[index_base + 2u];
-        if (vertex_a >= character_mesh.vertex_count ||
-            vertex_b >= character_mesh.vertex_count ||
-            vertex_c >= character_mesh.vertex_count) {
-            continue;
-        }
 
         targets.push_back({
             get_character_position(character_mesh, character_frame_index, vertex_a),
@@ -82,6 +77,12 @@ std::vector<CharacterTriangleTarget> build_character_triangle_targets(
     }
 
     return targets;
+}
+
+float squared_distance_to_bounds(const glm::vec3& point, const glm::vec3& min_bounds, const glm::vec3& max_bounds)
+{
+    const glm::vec3 clamped_point = glm::clamp(point, min_bounds, max_bounds);
+    return glm::dot(point - clamped_point, point - clamped_point);
 }
 
 ClosestTrianglePoint closest_point_on_triangle(const glm::vec3& point,
@@ -150,6 +151,61 @@ ClosestTrianglePoint closest_point_on_triangle(const glm::vec3& point,
     const float w = vc * denom;
     return make_valid_closest_point(point, a + ab * v + ac * w, {1.0f - v - w, v, w});
 }
+
+ClosestTrianglePoint find_closest_triangle_with_bvh(const glm::vec3& cloth_position,
+                                                    const std::vector<CharacterTriangleTarget>& character_triangles,
+                                                    const std::vector<MeshBvhNode>& bvh_nodes,
+                                                    std::uint32_t& best_triangle_index)
+{
+    ClosestTrianglePoint best_point;
+    std::uint32_t node_index = 0;
+
+    while (node_index < bvh_nodes.size()) {
+        const MeshBvhNode& node = bvh_nodes[node_index];
+        const std::uint32_t next_node = node.metadata.z;
+        if (squared_distance_to_bounds(cloth_position, node.min_bounds, node.max_bounds) > best_point.distance_sq) {
+            node_index = next_node;
+            continue;
+        }
+
+        if (node.metadata.w > 0u) {
+            const std::uint32_t first_triangle = node.metadata.x;
+            const std::uint32_t triangle_count = node.metadata.y;
+            for (std::uint32_t triangle_offset = 0; triangle_offset < triangle_count; ++triangle_offset) {
+                const std::uint32_t triangle_index = first_triangle + triangle_offset;
+                if (triangle_index >= character_triangles.size()) {
+                    continue;
+                }
+
+                const CharacterTriangleTarget& triangle = character_triangles[triangle_index];
+                const ClosestTrianglePoint candidate = closest_point_on_triangle(
+                    cloth_position,
+                    triangle.a,
+                    triangle.b,
+                    triangle.c
+                );
+                if (candidate.valid && candidate.distance_sq < best_point.distance_sq) {
+                    best_point = candidate;
+                    best_triangle_index = triangle.triangle_index;
+                }
+            }
+            node_index = next_node;
+            continue;
+        }
+
+        const std::uint32_t left_child = node.metadata.x;
+        const std::uint32_t right_child = node.metadata.y;
+        if (left_child < bvh_nodes.size()) {
+            node_index = left_child;
+        } else if (right_child < bvh_nodes.size()) {
+            node_index = right_child;
+        } else {
+            node_index = next_node;
+        }
+    }
+
+    return best_point;
+}
 }
 
 namespace attachment_builder {
@@ -158,7 +214,8 @@ std::vector<GarmentAttachmentConstraint> build_garment_attachment_targets(
     const GarmentObject& garment,
     const CharacterMesh& character_mesh,
     std::uint32_t character_frame_index,
-    const std::vector<std::uint32_t>& character_triangle_indices)
+    const std::vector<std::uint32_t>& character_triangle_indices,
+    const std::vector<MeshBvhNode>& character_bvh_nodes)
 {
     std::vector<GarmentAttachmentConstraint> targets;
     targets.reserve(garment.mesh.attachment_vertex_indices.size());
@@ -166,7 +223,8 @@ std::vector<GarmentAttachmentConstraint> build_garment_attachment_targets(
     if (garment.mesh.attachment_vertex_indices.empty() ||
         character_mesh.vertex_count == 0u ||
         character_triangle_indices.empty() ||
-        character_triangle_indices.size() % 3u != 0u) {
+        character_triangle_indices.size() % 3u != 0u ||
+        character_bvh_nodes.empty()) {
         return targets;
     }
 
@@ -187,20 +245,13 @@ std::vector<GarmentAttachmentConstraint> build_garment_attachment_targets(
         }
 
         const glm::vec3 cloth_position = get_vertex_position(garment.mesh.vertices, cloth_vertex_index);
-        ClosestTrianglePoint best_point;
         std::uint32_t best_triangle_index = 0;
-        for (const CharacterTriangleTarget& triangle : character_triangles) {
-            const ClosestTrianglePoint candidate = closest_point_on_triangle(
-                cloth_position,
-                triangle.a,
-                triangle.b,
-                triangle.c
-            );
-            if (candidate.valid && candidate.distance_sq < best_point.distance_sq) {
-                best_point = candidate;
-                best_triangle_index = triangle.triangle_index;
-            }
-        }
+        const ClosestTrianglePoint best_point = find_closest_triangle_with_bvh(
+            cloth_position,
+            character_triangles,
+            character_bvh_nodes,
+            best_triangle_index
+        );
 
         if (!best_point.valid) {
             std::cerr << "Skipping garment attachment vertex without a valid character target.\n";

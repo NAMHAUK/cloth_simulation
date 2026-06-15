@@ -1,10 +1,8 @@
 #include "gpu/body/CharacterGpuResources.h"
 
 #include "asset/MeshGeometryUtils.h"
-#include "gpu/collision/MeshBvhBuilder.h"
 #include <cstddef>
 #include <iostream>
-#include <utility>
 
 namespace {
 constexpr std::size_t position_component_per_vertex = 3;
@@ -57,7 +55,9 @@ void CharacterGpuResources::initialize_gpu_resources(QOpenGLFunctions_4_5_Core& 
     gl.glVertexArrayElementBuffer(vao_, index_buffer_);
 }
 
-void CharacterGpuResources::upload_mesh(const CharacterMesh& character_mesh, QOpenGLFunctions_4_5_Core& gl)
+void CharacterGpuResources::upload_mesh(const CharacterMesh& character_mesh,
+                                        const MeshBvhData& default_character_bvh_data,
+                                        QOpenGLFunctions_4_5_Core& gl)
 {
     if (!is_uploadable_mesh(character_mesh)) {
         release(gl);
@@ -66,20 +66,14 @@ void CharacterGpuResources::upload_mesh(const CharacterMesh& character_mesh, QOp
 
     // 각 vertex에 인접한 triangle 정보 생성
     const std::uint32_t source_triangle_count = static_cast<std::uint32_t>(character_mesh.indices.size() / 3u);
-    MeshBvhBuilder bvh_builder(
-        character_mesh.vertex_count,
-        character_mesh.indices,
-        character_mesh.vertices
-    );
-    MeshBvhBuildResult bvh_result = bvh_builder.build_mesh_bvh();
-    if (!bvh_result.is_valid(source_triangle_count)) {
-        std::cerr << "Failed to build character BVH.\n";
+    if (!default_character_bvh_data.is_valid(source_triangle_count)) {
+        std::cerr << "Invalid default character BVH.\n";
         release(gl);
         return;
     }
 
     VertexFaceAdjacency adjacency;
-    if (!build_vertex_face_adjacency(character_mesh.vertex_count, bvh_result.triangle_indices, adjacency)) {
+    if (!build_vertex_face_adjacency(character_mesh.vertex_count, default_character_bvh_data.triangle_indices, adjacency)) {
         release(gl);
         return;
     }
@@ -88,8 +82,8 @@ void CharacterGpuResources::upload_mesh(const CharacterMesh& character_mesh, QOp
 
     // GPU buffer 공간 생성 & 초기값 설정
     const GLsizeiptr position_bytes = static_cast<GLsizeiptr>(frame_position_component_count(character_mesh) * sizeof(float));
-    const GLsizeiptr index_bytes = static_cast<GLsizeiptr>(bvh_result.triangle_indices.size() * sizeof(std::uint32_t));
-    const GLsizeiptr bvh_node_bytes = static_cast<GLsizeiptr>(bvh_result.nodes.size() * sizeof(MeshBvhNode));
+    const GLsizeiptr index_bytes = static_cast<GLsizeiptr>(default_character_bvh_data.triangle_indices.size() * sizeof(std::uint32_t));
+    const GLsizeiptr bvh_node_bytes = static_cast<GLsizeiptr>(default_character_bvh_data.nodes.size() * sizeof(MeshBvhNode));
     const GLsizeiptr adjacent_triangle_offsets_bytes = static_cast<GLsizeiptr>(adjacency.offsets.size() * sizeof(std::uint32_t));
     const GLsizeiptr adjacent_triangle_indices_bytes = static_cast<GLsizeiptr>(adjacency.face_indices.size() * sizeof(std::uint32_t));
     const GLsizeiptr triangle_geometry_bytes = static_cast<GLsizeiptr>(
@@ -98,8 +92,8 @@ void CharacterGpuResources::upload_mesh(const CharacterMesh& character_mesh, QOp
     const GLsizeiptr vertex_normals_bytes = static_cast<GLsizeiptr>(character_mesh.vertex_count * 4u * sizeof(float));
 
     gl.glNamedBufferData(all_frame_vertex_buffer_, position_bytes, character_mesh.vertices.data(), GL_STATIC_DRAW);
-    gl.glNamedBufferData(index_buffer_, index_bytes, bvh_result.triangle_indices.data(), GL_STATIC_DRAW);
-    gl.glNamedBufferData(character_bvh_node_buffer_, bvh_node_bytes, bvh_result.nodes.data(), GL_DYNAMIC_DRAW);
+    gl.glNamedBufferData(index_buffer_, index_bytes, default_character_bvh_data.triangle_indices.data(), GL_STATIC_DRAW);
+    gl.glNamedBufferData(character_bvh_node_buffer_, bvh_node_bytes, default_character_bvh_data.nodes.data(), GL_DYNAMIC_DRAW);
     gl.glNamedBufferData(adjacent_triangle_offsets_, adjacent_triangle_offsets_bytes, adjacency.offsets.data(), GL_STATIC_DRAW);
     gl.glNamedBufferData(adjacent_triangle_indices_, adjacent_triangle_indices_bytes, adjacency.face_indices.data(), GL_STATIC_DRAW);
     gl.glNamedBufferData(character_triangle_geometry_buffer_, triangle_geometry_bytes, nullptr, GL_DYNAMIC_DRAW);
@@ -109,12 +103,10 @@ void CharacterGpuResources::upload_mesh(const CharacterMesh& character_mesh, QOp
     frame_count_ = character_mesh.frame_count;
     vertex_count_ = character_mesh.vertex_count;
     triangle_count_ = adjacency.face_count;
-    bvh_node_count_ = static_cast<std::uint32_t>(bvh_result.nodes.size());
-    bvh_root_node_index_ = bvh_result.root_node_index;
-    bvh_node_ranges_by_level_ = std::move(bvh_result.node_ranges_by_level);
-    bvh_triangle_indices_ = std::move(bvh_result.triangle_indices);
+    bvh_node_count_ = static_cast<std::uint32_t>(default_character_bvh_data.nodes.size());
+    bvh_root_node_index_ = default_character_bvh_data.root_node_index;
     current_frame_index_ = 0;
-    index_count_ = static_cast<GLsizei>(bvh_triangle_indices_.size());
+    index_count_ = static_cast<GLsizei>(default_character_bvh_data.triangle_indices.size());
 }
 
 void CharacterGpuResources::set_current_frame(std::uint32_t frame_index)
@@ -152,11 +144,6 @@ std::uint32_t CharacterGpuResources::current_frame_index() const
 std::uint32_t CharacterGpuResources::vertex_count() const
 {
     return vertex_count_;
-}
-
-const std::vector<std::uint32_t>& CharacterGpuResources::bvh_triangle_indices() const
-{
-    return bvh_triangle_indices_;
 }
 
 void CharacterGpuResources::draw(QOpenGLFunctions_4_5_Core& gl) const
@@ -208,11 +195,6 @@ MeshBvhResources CharacterGpuResources::character_bvh_resources() const
     return resources;
 }
 
-const std::vector<BvhNodeRange>& CharacterGpuResources::bvh_node_ranges_by_level() const
-{
-    return bvh_node_ranges_by_level_;
-}
-
 void CharacterGpuResources::release(QOpenGLFunctions_4_5_Core& gl)
 {
     if (vertex_normal_buffer_ != 0) {
@@ -258,8 +240,6 @@ void CharacterGpuResources::reset_resources() noexcept
     triangle_count_ = 0;
     bvh_node_count_ = 0;
     bvh_root_node_index_ = 0;
-    bvh_node_ranges_by_level_.clear();
-    bvh_triangle_indices_.clear();
     current_frame_index_ = 0;
     index_count_ = 0;
 }

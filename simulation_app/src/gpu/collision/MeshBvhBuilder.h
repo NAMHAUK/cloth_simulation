@@ -14,7 +14,7 @@ public:
                    const std::vector<std::uint32_t>& triangle_indices,
                    const std::vector<float>& vertices);
 
-    MeshBvhBuildResult build_mesh_bvh();
+    MeshBvhData build_mesh_bvh();
 
 private:
     struct TriangleBuildItem final {
@@ -50,7 +50,7 @@ private:
     void write_leaf_node_data(BvhBuildNode& node, std::size_t begin, std::size_t end, std::vector<std::uint32_t>& triangle_indices) const;
     void compute_node_bounds(std::size_t begin, std::size_t end, glm::vec3& min_bounds, glm::vec3& max_bounds) const;
 
-    void write_level_ordered_bvh_data(std::uint32_t root_node_index, MeshBvhBuildResult& result) const;
+    void write_level_ordered_bvh_data(std::uint32_t root_node_index, MeshBvhData& result) const;
     void append_bvh_node(std::vector<MeshBvhNode>& result_nodes,
                          std::uint32_t build_node_index,
                          NextBvhLevel& next_level,

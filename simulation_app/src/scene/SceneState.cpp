@@ -16,9 +16,19 @@ void SceneState::set_character_mesh(CharacterMesh mesh)
     current_character_frame_ = 0;
 }
 
+void SceneState::set_default_character_bvh_data(MeshBvhData default_character_bvh_data)
+{
+    default_character_bvh_data_ = std::move(default_character_bvh_data);
+}
+
 const CharacterMesh& SceneState::character_mesh() const
 {
     return character_mesh_;
+}
+
+const MeshBvhData& SceneState::default_character_bvh_data() const
+{
+    return default_character_bvh_data_;
 }
 
 // Garments //
