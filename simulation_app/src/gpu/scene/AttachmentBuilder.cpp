@@ -10,7 +10,7 @@
 #include <glm/vec4.hpp>
 
 namespace {
-constexpr float attachment_surface_offset = 0.01f;
+constexpr float attachment_surface_offset = 0.005f;
 constexpr float degenerate_triangle_epsilon = 1.0e-12f;
 
 struct ClosestTrianglePoint final {

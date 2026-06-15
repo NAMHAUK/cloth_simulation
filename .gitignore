@@ -20,6 +20,7 @@ envs/
 
 # Local datasets/cache
 data/
+image/
 
 # Generated binaries and debug files
 *.exe
