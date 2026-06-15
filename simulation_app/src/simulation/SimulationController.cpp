@@ -1,6 +1,7 @@
 #include "simulation/SimulationController.h"
 
 #include "app/ProjectPaths.h"
+#include "gpu/collision/MeshBvhBuilder.h"
 #include "simulation/SimulationSettings.h"
 
 #include <cassert>
@@ -41,7 +42,7 @@ bool SimulationController::initialize_gpu(const ShaderPaths& shader_paths, QOpen
     return true;
 }
 
-// rendering //
+// Rendering //
 
 void SimulationController::draw(const glm::mat4& mvp, QOpenGLFunctions_4_5_Core& gl)
 {
@@ -76,6 +77,19 @@ void SimulationController::tick_frame()
 
 void SimulationController::load_default_character_mesh(CharacterMesh mesh, QOpenGLFunctions_4_5_Core& gl)
 {
+    const std::uint32_t source_triangle_count = static_cast<std::uint32_t>(mesh.indices.size() / 3u);
+    MeshBvhBuilder bvh_builder(
+        mesh.vertex_count,
+        mesh.indices,
+        mesh.vertices
+    );
+    MeshBvhData default_character_bvh_data = bvh_builder.build_mesh_bvh();
+    if (!default_character_bvh_data.is_valid(source_triangle_count)) {
+        std::cerr << "Failed to build default character BVH.\n";
+        return;
+    }
+
+    scene_.set_default_character_bvh_data(std::move(default_character_bvh_data));
     default_character_mesh_ = std::move(mesh);
     set_character_mesh_state(default_character_mesh_, gl);
     is_default_pose_ = true;
@@ -191,6 +205,7 @@ void SimulationController::confirm_garment_placement()
     viewport_callbacks_.run_with_gl_context([this](QOpenGLFunctions_4_5_Core& gl) {
         set_current_garment_placement(gl);
         simulation_pipeline_.prefit_garments(scene_, gpu_state_, gl);
+        gpu_state_.build_garment_attachment_targets(scene_, garment_placement_.garment_id, gl);
         garment_placement_.clear();
     });
 

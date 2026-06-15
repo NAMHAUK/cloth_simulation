@@ -4,6 +4,7 @@
 #include "simulation/forces/ExternalForceSolver.h"
 #include "simulation/constraints/StretchConstraintSolver.h"
 #include "simulation/constraints/BendingConstraintSolver.h"
+#include "simulation/constraints/AttachmentConstraintSolver.h"
 #include "simulation/collision/GroundCollisionSolver.h"
 #include "simulation/collision/CharacterCollisionSolver.h"
 #include "simulation/collision/GarmentPrefitSolver.h"
@@ -39,8 +40,10 @@ private:
     ExternalForceSolver external_force_solver_;
     StretchConstraintSolver stretch_constraint_solver_;
     BendingConstraintSolver bending_constraint_solver_;
+    AttachmentConstraintSolver attachment_constraint_solver_;
     GroundCollisionSolver ground_collision_solver_;
     CharacterCollisionSolver character_collision_solver_;
     GarmentPrefitSolver garment_prefit_solver_;
+    float substep_dt_ = 0.0f;
     bool initialized_ = false;
 };

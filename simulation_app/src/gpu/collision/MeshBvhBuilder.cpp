@@ -40,9 +40,9 @@ MeshBvhBuilder::MeshBvhBuilder(std::uint32_t vertex_count,
 }
 
 // 호출 함수 //
-MeshBvhBuildResult MeshBvhBuilder::build_mesh_bvh()
+MeshBvhData MeshBvhBuilder::build_mesh_bvh()
 {
-    MeshBvhBuildResult result;
+    MeshBvhData result;
 
     if (!build_triangle_items()) {
         return result;
@@ -183,7 +183,7 @@ void MeshBvhBuilder::compute_node_bounds(std::size_t begin, std::size_t end, glm
 }
 
 // dfs 순서로 build된 bvh tree node를 bfs 순서로 바꿔서 전달 //
-void MeshBvhBuilder::write_level_ordered_bvh_data(std::uint32_t root_node_index, MeshBvhBuildResult& result) const
+void MeshBvhBuilder::write_level_ordered_bvh_data(std::uint32_t root_node_index, MeshBvhData& result) const
 {
     std::vector<BvhNodeRange> level_order_node_ranges;
     level_order_node_ranges.reserve(build_nodes_.size());
@@ -285,7 +285,7 @@ void MeshBvhBuilder::write_node_metadata(
     write_node_metadata(build_node.right_child, next_build_node_index, result_nodes, result_node_indices);
 }
 
-bool MeshBvhBuildResult::is_valid(std::uint32_t triangle_count) const
+bool MeshBvhData::is_valid(std::uint32_t triangle_count) const
 {
     return triangle_count > 0 &&
            root_node_index < nodes.size() &&

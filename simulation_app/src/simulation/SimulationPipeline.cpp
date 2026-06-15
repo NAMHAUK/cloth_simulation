@@ -17,6 +17,7 @@ struct SimulationGpuViews final {
     MeshBvhResources character_bvh;
     DistanceConstraintBufferView stretch_constraints;
     DistanceConstraintBufferView bending_constraints;
+    AttachmentConstraintBufferView attachment_constraints;
 };
 
 SimulationGpuViews collect_gpu_views(const SceneGpuState& gpu_state)
@@ -27,6 +28,7 @@ SimulationGpuViews collect_gpu_views(const SceneGpuState& gpu_state)
     views.character_bvh = gpu_state.character_gpu_state().character_bvh_resources();
     views.stretch_constraints = gpu_state.cloth_gpu_state().stretch_constraint_buffer_view();
     views.bending_constraints = gpu_state.cloth_gpu_state().bending_constraint_buffer_view();
+    views.attachment_constraints = gpu_state.cloth_gpu_state().attachment_constraint_buffer_view();
     return views;
 }
 
@@ -39,12 +41,15 @@ bool SimulationPipeline::is_initialized() const
 
 bool SimulationPipeline::initialize(const ShaderPaths& shader_paths, QOpenGLFunctions_4_5_Core& gl)
 {
+    substep_dt_ = simulation_settings::fixed_dt / static_cast<float>(simulation_settings::substep_count);
+
     const float floor_height = simulation_settings::ground_y + simulation_settings::ground_collision_offset;
     
     const bool solvers_initialized =
         external_force_solver_.initialize(shader_paths.cloth_external_force_compute, gl) &&
-        stretch_constraint_solver_.initialize(shader_paths.cloth_stretch_constraint_compute, gl) &&
-        bending_constraint_solver_.initialize(shader_paths.cloth_bending_constraint_compute, gl) &&
+        stretch_constraint_solver_.initialize(shader_paths.cloth_stretch_constraint_compute, simulation_settings::stretch_stiffness, gl) &&
+        bending_constraint_solver_.initialize(shader_paths.cloth_bending_constraint_compute, simulation_settings::bending_stiffness, gl) &&
+        attachment_constraint_solver_.initialize(shader_paths.cloth_attachment_constraint_compute, simulation_settings::attachment_stiffness, gl) &&
         ground_collision_solver_.initialize(shader_paths.cloth_ground_collision_compute, floor_height, gl) &&
         character_collision_solver_.initialize(shader_paths.cloth_character_collision_compute,
                                                simulation_settings::character_collision_search_radius,
@@ -103,13 +108,13 @@ bool SimulationPipeline::step(SceneState& scene, SceneGpuState& gpu_state, std::
     }
 
     const glm::vec3 external_acceleration = force_field_.external_acceleration();
-    const float substep_dt = simulation_settings::fixed_dt / static_cast<float>(simulation_settings::substep_count);
     for (std::uint32_t substep = 0; substep < simulation_settings::substep_count; ++substep) {
-        external_force_solver_.solve(views.cloth_position, substep_dt, external_acceleration, gl);
+        external_force_solver_.solve(views.cloth_position, substep_dt_, external_acceleration, gl);
 
         for (std::uint32_t iteration = 0; iteration < simulation_settings::solver_iteration_count; ++iteration) {
-            stretch_constraint_solver_.solve(views.cloth_position, views.stretch_constraints, simulation_settings::stretch_stiffness, gl);
-            bending_constraint_solver_.solve(views.cloth_position, views.bending_constraints, simulation_settings::bending_stiffness, gl);
+            stretch_constraint_solver_.solve(views.cloth_position, views.stretch_constraints, gl);
+            bending_constraint_solver_.solve(views.cloth_position, views.bending_constraints, gl);
+            attachment_constraint_solver_.solve(views.cloth_position, views.attachment_constraints, views.character_geometry, gl);
             character_collision_solver_.solve(views.cloth_position, views.character_geometry, views.character_bvh, gl);
             ground_collision_solver_.solve(views.cloth_position, gl);
         }
@@ -124,9 +129,11 @@ void SimulationPipeline::release(QOpenGLFunctions_4_5_Core& gl)
     garment_prefit_solver_.release(gl);
     character_collision_solver_.release(gl);
     ground_collision_solver_.release(gl);
+    attachment_constraint_solver_.release(gl);
     bending_constraint_solver_.release(gl);
     stretch_constraint_solver_.release(gl);
     external_force_solver_.release(gl);
+    substep_dt_ = 0.0f;
     initialized_ = false;
 }
 
@@ -136,8 +143,8 @@ bool SimulationPipeline::can_solve_constraint_iteration(const ClothPositionBuffe
                                                         const TriangleGeometryResources& character_geometry,
                                                         const MeshBvhResources& character_bvh) const
 {
-    return stretch_constraint_solver_.can_solve(position_view, stretch_constraint_view, simulation_settings::stretch_stiffness) &&
-           bending_constraint_solver_.can_solve(position_view, bending_constraint_view, simulation_settings::bending_stiffness) &&
+    return stretch_constraint_solver_.can_solve(position_view, stretch_constraint_view) &&
+           bending_constraint_solver_.can_solve(position_view, bending_constraint_view) &&
            character_collision_solver_.can_solve(position_view, character_geometry, character_bvh) &&
            ground_collision_solver_.can_solve(position_view);
 }

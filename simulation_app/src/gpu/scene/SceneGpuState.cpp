@@ -1,7 +1,10 @@
 #include "gpu/scene/SceneGpuState.h"
 
 #include "app/ProjectPaths.h"
+#include "gpu/scene/AttachmentBuilder.h"
 #include "scene/SceneState.h"
+
+#include <iostream>
 
 bool SceneGpuState::is_initialized() const
 {
@@ -62,9 +65,9 @@ void SceneGpuState::set_character_mesh(const SceneState& scene, QOpenGLFunctions
 {
     // 새 character mesh가 들어오면 전체 frame character mesh를 GPU에 올리고 frame 상태 설정
     const CharacterMesh& character_mesh = scene.character_mesh();
-    character_gpu_state_.upload_mesh(character_mesh, gl);
+    character_gpu_state_.upload_mesh(character_mesh, scene.default_character_bvh_data(), gl);
     character_gpu_state_.set_current_frame(0);
-    update_character_triangle_geometry(gl);
+    update_character_triangle_geometry(scene, gl);
     normal_updater_.update_character_normals(character_gpu_state_.mesh_topology_resources(),
                                              character_gpu_state_.mesh_normal_resources(),
                                              gl);
@@ -83,17 +86,17 @@ void SceneGpuState::update_character_frame(const SceneState& scene, QOpenGLFunct
     }
 
     character_gpu_state_.set_current_frame(scene_frame);
-    update_character_triangle_geometry(gl);
+    update_character_triangle_geometry(scene, gl);
 }
 
-void SceneGpuState::update_character_triangle_geometry(QOpenGLFunctions_4_5_Core& gl)
+void SceneGpuState::update_character_triangle_geometry(const SceneState& scene, QOpenGLFunctions_4_5_Core& gl)
 {
     triangle_geometry_updater_.update(character_gpu_state_.mesh_topology_resources(),
                                       character_gpu_state_.character_triangle_geometry_resources(),
                                       gl);
     bvh_bounds_updater_.update(character_gpu_state_.character_triangle_geometry_resources(),
                                character_gpu_state_.character_bvh_resources(),
-                               character_gpu_state_.bvh_node_ranges_by_level(),
+                               scene.default_character_bvh_data().node_ranges_by_level,
                                gl);
 }
 
@@ -124,4 +127,26 @@ bool SceneGpuState::update_garment_placement(const GarmentObject& garment,
                                          cloth_gpu_state_.mesh_normal_resources(),
                                          gl);
     return true;
+}
+
+void SceneGpuState::build_garment_attachment_targets(SceneState& scene,
+                                                     std::uint32_t garment_id,
+                                                     QOpenGLFunctions_4_5_Core& gl)
+{
+    GarmentObject* garment = scene.find_garment(garment_id);
+    if (garment == nullptr) {
+        return;
+    }
+
+    garment->attachment_constraints = attachment_builder::build_garment_attachment_targets(
+        *garment,
+        scene.character_mesh(),
+        scene.current_character_frame(),
+        scene.default_character_bvh_data().triangle_indices,
+        scene.default_character_bvh_data().nodes
+    );
+
+    if (!cloth_gpu_state_.update_garment_attachment_targets(*garment, gl)) {
+        std::cerr << "Failed to upload garment attachment targets.\n";
+    }
 }

@@ -34,6 +34,8 @@ add_executable(simulation_app
     src/simulation/constraints/StretchConstraintSolver.h
     src/simulation/constraints/BendingConstraintSolver.cpp
     src/simulation/constraints/BendingConstraintSolver.h
+    src/simulation/constraints/AttachmentConstraintSolver.cpp
+    src/simulation/constraints/AttachmentConstraintSolver.h
     src/simulation/collision/GroundCollisionSolver.cpp
     src/simulation/collision/GroundCollisionSolver.h
     src/simulation/collision/CharacterCollisionSolver.cpp
@@ -61,6 +63,8 @@ add_executable(simulation_app
     src/rendering/GroundGridMesh.h
     src/gpu/scene/SceneGpuState.cpp
     src/gpu/scene/SceneGpuState.h
+    src/gpu/scene/AttachmentBuilder.cpp
+    src/gpu/scene/AttachmentBuilder.h
     src/gpu/scene/NormalUpdater.cpp
     src/gpu/scene/NormalUpdater.h
     src/rendering/RenderPipeline.cpp
@@ -95,6 +99,7 @@ add_executable(simulation_app
     shaders/simulation/cloth_external_force.comp
     shaders/simulation/cloth_stretch_constraint.comp
     shaders/simulation/cloth_bending_constraint.comp
+    shaders/simulation/cloth_attachment_constraint.comp
     shaders/simulation/cloth_ground_collision.comp
     shaders/simulation/cloth_character_collision.comp
     shaders/simulation/garment_prefit.comp

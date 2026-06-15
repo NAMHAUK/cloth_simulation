@@ -1,24 +1,28 @@
 #pragma once
 
+#include "gpu/body/CharacterGpuDataTypes.h"
+#include "gpu/cloth/ClothGpuDataTypes.h"
+
 #include <filesystem>
 
 #include <QOpenGLFunctions_4_5_Core>
 
 struct ClothPositionBufferView;
-struct DistanceConstraintBufferView;
 
-class BendingConstraintSolver final {
+class AttachmentConstraintSolver final {
 public:
-    BendingConstraintSolver() = default;
-    BendingConstraintSolver(const BendingConstraintSolver&) = delete;
-    BendingConstraintSolver& operator=(const BendingConstraintSolver&) = delete;
+    AttachmentConstraintSolver() = default;
+    AttachmentConstraintSolver(const AttachmentConstraintSolver&) = delete;
+    AttachmentConstraintSolver& operator=(const AttachmentConstraintSolver&) = delete;
 
     bool is_initialized() const;
     bool initialize(const std::filesystem::path& shader_path, float stiffness, QOpenGLFunctions_4_5_Core& gl);
     bool can_solve(const ClothPositionBufferView& position_view,
-                   const DistanceConstraintBufferView& constraint_view) const;
+                   const AttachmentConstraintBufferView& constraint_view,
+                   const TriangleGeometryResources& character_geometry) const;
     void solve(const ClothPositionBufferView& position_view,
-               const DistanceConstraintBufferView& constraint_view,
+               const AttachmentConstraintBufferView& constraint_view,
+               const TriangleGeometryResources& character_geometry,
                QOpenGLFunctions_4_5_Core& gl) const;
     void release(QOpenGLFunctions_4_5_Core& gl);
 

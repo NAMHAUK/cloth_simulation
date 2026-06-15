@@ -15,6 +15,7 @@ struct ShaderPaths {
     std::filesystem::path cloth_external_force_compute;
     std::filesystem::path cloth_stretch_constraint_compute;
     std::filesystem::path cloth_bending_constraint_compute;
+    std::filesystem::path cloth_attachment_constraint_compute;
     std::filesystem::path cloth_ground_collision_compute;
     std::filesystem::path cloth_character_collision_compute;
     std::filesystem::path garment_prefit_compute;
@@ -49,6 +50,7 @@ inline ShaderPaths make_shader_paths(const std::filesystem::path& project_root)
         shader_dir / "simulation" / "cloth_external_force.comp",
         shader_dir / "simulation" / "cloth_stretch_constraint.comp",
         shader_dir / "simulation" / "cloth_bending_constraint.comp",
+        shader_dir / "simulation" / "cloth_attachment_constraint.comp",
         shader_dir / "simulation" / "cloth_ground_collision.comp",
         shader_dir / "simulation" / "cloth_character_collision.comp",
         shader_dir / "simulation" / "garment_prefit.comp",

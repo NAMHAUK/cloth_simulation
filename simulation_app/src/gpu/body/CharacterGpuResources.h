@@ -5,7 +5,6 @@
 #include "gpu/collision/BvhDataTypes.h"
 
 #include <cstdint>
-#include <vector>
 
 #include <QOpenGLFunctions_4_5_Core>
 
@@ -19,7 +18,9 @@ public:
     bool is_initialized() const;
 
     // Mesh upload and playback
-    void upload_mesh(const CharacterMesh& character_mesh, QOpenGLFunctions_4_5_Core& gl);
+    void upload_mesh(const CharacterMesh& character_mesh,
+                     const MeshBvhData& default_character_bvh_data,
+                     QOpenGLFunctions_4_5_Core& gl);
     void set_current_frame(std::uint32_t frame_index);
     std::uint32_t current_frame_index() const;
     std::uint32_t vertex_count() const;
@@ -34,7 +35,6 @@ public:
     TriangleGeometryResources character_triangle_geometry_resources() const;
     CharacterNormalResources mesh_normal_resources() const;
     MeshBvhResources character_bvh_resources() const;
-    const std::vector<BvhNodeRange>& bvh_node_ranges_by_level() const;
 
     // GPU resource lifetime
     void release(QOpenGLFunctions_4_5_Core& gl);
@@ -62,7 +62,6 @@ private:
     GLuint character_bvh_node_buffer_ = 0;
     std::uint32_t bvh_node_count_ = 0;
     std::uint32_t bvh_root_node_index_ = 0;
-    std::vector<BvhNodeRange> bvh_node_ranges_by_level_;
 
     // Normal update buffers
     GLuint adjacent_triangle_offsets_ = 0;

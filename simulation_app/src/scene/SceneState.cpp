@@ -16,9 +16,19 @@ void SceneState::set_character_mesh(CharacterMesh mesh)
     current_character_frame_ = 0;
 }
 
+void SceneState::set_default_character_bvh_data(MeshBvhData default_character_bvh_data)
+{
+    default_character_bvh_data_ = std::move(default_character_bvh_data);
+}
+
 const CharacterMesh& SceneState::character_mesh() const
 {
     return character_mesh_;
+}
+
+const MeshBvhData& SceneState::default_character_bvh_data() const
+{
+    return default_character_bvh_data_;
 }
 
 // Garments //
@@ -37,6 +47,7 @@ std::uint32_t SceneState::add_garment_mesh(GarmentMesh mesh)
         garment_id,
         std::move(source_mesh),
         std::move(mesh),
+        {},
         true,
     });
     return garment_id;
@@ -82,6 +93,7 @@ GarmentObject* SceneState::update_garment_placement(std::uint32_t garment_id, co
         }
 
         garment.mesh = std::move(next_mesh);
+        garment.attachment_constraints.clear();
         return &garment;
     }
 
@@ -102,6 +114,21 @@ bool SceneState::remove_garment(std::uint32_t garment_id)
 
     garments_.erase(iter);
     return true;
+}
+
+GarmentObject* SceneState::find_garment(std::uint32_t garment_id)
+{
+    const auto iter = std::find_if(garments_.begin(), garments_.end(),
+        [garment_id](const GarmentObject& garment) {
+            return garment.id == garment_id;
+        }
+    );
+
+    if (iter == garments_.end()) {
+        return nullptr;
+    }
+
+    return &(*iter);
 }
 
 void SceneState::clear_garments()

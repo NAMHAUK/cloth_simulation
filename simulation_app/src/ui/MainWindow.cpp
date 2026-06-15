@@ -18,6 +18,7 @@
 #include <QEvent>
 #include <QFileDialog>
 #include <QIcon>
+#include <QInputDialog>
 #include <QMessageBox>
 #include <QPainter>
 #include <QPushButton>
@@ -121,6 +122,29 @@ std::optional<ConverterCommand> validate_conversion_command(QWidget* parent, Ass
     std::cerr << command.error_message << '\n';
     show_conversion_failure(parent, mode);
     return std::nullopt;
+}
+
+std::optional<QString> select_garment_attachment_type(QWidget* parent)
+{
+    const QStringList attachment_types{"None", "Waistband"};
+    bool accepted = false;
+    const QString selected_type = QInputDialog::getItem(
+        parent,
+        "Garment Attachment",
+        "Attachment Type",
+        attachment_types,
+        0,
+        false,
+        &accepted
+    );
+
+    if (!accepted) {
+        return std::nullopt;
+    }
+    if (selected_type == "Waistband") {
+        return QString{"waistband"};
+    }
+    return QString{"none"};
 }
 }
 
@@ -546,7 +570,17 @@ std::optional<ConverterCommand> MainWindow::prepare_garment_conversion()
         return std::nullopt;
     }
 
-    const auto command = asset_converter_commands::make_garment_command(project_paths_, garment_obj_path, garment_asset_path);
+    const std::optional<QString> attachment_type = select_garment_attachment_type(this);
+    if (!attachment_type) {
+        return std::nullopt;
+    }
+
+    const auto command = asset_converter_commands::make_garment_command(
+        project_paths_,
+        garment_obj_path,
+        garment_asset_path,
+        *attachment_type
+    );
     return validate_conversion_command(
         this,
         AssetPanelMode::Garments,

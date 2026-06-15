@@ -33,9 +33,12 @@ public:
     bool update_garment_placement(const GarmentObject& garment,
                                   bool update_rest_lengths,
                                   QOpenGLFunctions_4_5_Core& gl);
+    void build_garment_attachment_targets(SceneState& scene,
+                                          std::uint32_t garment_id,
+                                          QOpenGLFunctions_4_5_Core& gl);
 
 private:
-    void update_character_triangle_geometry(QOpenGLFunctions_4_5_Core& gl);
+    void update_character_triangle_geometry(const SceneState& scene, QOpenGLFunctions_4_5_Core& gl);
 
     CharacterGpuResources character_gpu_state_;
     ClothGpuResources cloth_gpu_state_;

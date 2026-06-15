@@ -1,0 +1,92 @@
+#version 430 core
+
+layout(local_size_x = 128) in;
+
+layout(std430, binding = 0) buffer CurrentPositions {
+    float current_positions[];
+};
+
+layout(std430, binding = 1) buffer PreviousPositions {
+    float previous_positions[];
+};
+
+layout(std430, binding = 2) readonly buffer AttachmentIndices {
+    uvec2 attachment_indices[];
+};
+
+layout(std430, binding = 3) readonly buffer AttachmentBarycentricOffsets {
+    vec4 barycentric_offsets[];
+};
+
+struct CharacterTriangleGeometry {
+    vec4 a;
+    vec4 b;
+    vec4 c;
+    vec4 face_normal;
+    vec4 unit_face_normal;
+};
+
+layout(std430, binding = 4) readonly buffer CharacterTriangleGeometryBuffer {
+    CharacterTriangleGeometry triangle_geometry[];
+};
+
+uniform uint uConstraintOffset;
+uniform uint uConstraintCount;
+uniform float uStiffness;
+
+vec3 load_current_position(uint vertex_index)
+{
+    uint base = vertex_index * 3u;
+    return vec3(current_positions[base], current_positions[base + 1u], current_positions[base + 2u]);
+}
+
+vec3 load_previous_position(uint vertex_index)
+{
+    uint base = vertex_index * 3u;
+    return vec3(previous_positions[base], previous_positions[base + 1u], previous_positions[base + 2u]);
+}
+
+void store_current_position(uint vertex_index, vec3 position)
+{
+    uint base = vertex_index * 3u;
+    current_positions[base] = position.x;
+    current_positions[base + 1u] = position.y;
+    current_positions[base + 2u] = position.z;
+}
+
+void store_previous_position(uint vertex_index, vec3 position)
+{
+    uint base = vertex_index * 3u;
+    previous_positions[base] = position.x;
+    previous_positions[base + 1u] = position.y;
+    previous_positions[base + 2u] = position.z;
+}
+
+void main()
+{
+    uint local_index = gl_GlobalInvocationID.x;
+    if (local_index >= uConstraintCount) {
+        return;
+    }
+
+    uint constraint_index = uConstraintOffset + local_index;
+    uvec2 attachment_index = attachment_indices[constraint_index];
+    uint cloth_vertex = attachment_index.x;
+    uint character_triangle = attachment_index.y;
+    vec4 barycentric_offset = barycentric_offsets[constraint_index];
+
+    CharacterTriangleGeometry triangle = triangle_geometry[character_triangle];
+    vec3 target = triangle.a.xyz * barycentric_offset.x +
+                  triangle.b.xyz * barycentric_offset.y +
+                  triangle.c.xyz * barycentric_offset.z;
+    if (triangle.unit_face_normal.w > 0.0) {
+        target += triangle.unit_face_normal.xyz * barycentric_offset.w;
+    }
+
+    vec3 current = load_current_position(cloth_vertex);
+    vec3 previous = load_previous_position(cloth_vertex);
+    vec3 correction = (target - current) * uStiffness;
+
+    store_current_position(cloth_vertex, current + correction);
+    store_previous_position(cloth_vertex, previous + correction);
+}

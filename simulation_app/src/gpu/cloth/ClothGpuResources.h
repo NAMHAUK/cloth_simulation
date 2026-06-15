@@ -24,10 +24,12 @@ public:
     bool update_garment_placement(const GarmentObject& garment,
                                   bool update_rest_lengths,
                                   QOpenGLFunctions_4_5_Core& gl);
+    bool update_garment_attachment_targets(const GarmentObject& garment, QOpenGLFunctions_4_5_Core& gl);
     ClothPositionBufferView position_buffer_view() const;
     void copy_current_positions_to_previous(QOpenGLFunctions_4_5_Core& gl) const;
     DistanceConstraintBufferView stretch_constraint_buffer_view() const;
     DistanceConstraintBufferView bending_constraint_buffer_view() const;
+    AttachmentConstraintBufferView attachment_constraint_buffer_view() const;
     ClothMeshTopologyResources mesh_topology_resources() const;
     ClothNormalResources mesh_normal_resources() const;
     void bind_vertex_normals(GLuint binding_index, QOpenGLFunctions_4_5_Core& gl) const;
@@ -40,6 +42,7 @@ private:
                                       std::vector<GarmentBufferRanges> rebuild_ranges,
                                       std::vector<ConstraintRange> rebuild_stretch_color_ranges,
                                       std::vector<ConstraintRange> rebuild_bending_color_ranges,
+                                      std::vector<ConstraintRange> rebuild_attachment_ranges,
                                       const ClothBufferElementCounts& rebuild_element_counts,
                                       QOpenGLFunctions_4_5_Core& gl);
     bool append_garment(const GarmentObject& garment, QOpenGLFunctions_4_5_Core& gl);
@@ -57,6 +60,7 @@ private:
     std::vector<GarmentBufferRanges> garments_;
     std::vector<ConstraintRange> stretch_color_ranges_;
     std::vector<ConstraintRange> bending_color_ranges_;
+    std::vector<ConstraintRange> attachment_ranges_;
     ClothBufferElementCounts used_elements_;
     ClothBufferElementCounts allocated_elements_;
 };

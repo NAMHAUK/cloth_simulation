@@ -16,6 +16,8 @@ struct ClothBufferSet final {
     GLuint stretch_rest_length = 0;
     GLuint bending_edge_index = 0;
     GLuint bending_rest_length = 0;
+    GLuint attachment_indices = 0;
+    GLuint attachment_barycentric_offset = 0;
     GLuint triangle_normal = 0;
     GLuint vertex_normal = 0;
 };
@@ -32,6 +34,7 @@ struct ClothBufferElementCounts final {
     std::uint32_t adjacency_entry = 0;
     std::uint32_t stretch_constraint = 0;
     std::uint32_t bending_constraint = 0;
+    std::uint32_t attachment_constraint = 0;
 };
 
 struct ClothPositionBufferView final {
@@ -62,6 +65,13 @@ struct DistanceConstraintBufferView final {
     const std::vector<ConstraintRange>* color_ranges = nullptr;
 };
 
+struct AttachmentConstraintBufferView final {
+    GLuint attachment_index_buffer = 0;
+    GLuint barycentric_offset_buffer = 0;
+    std::uint32_t constraint_count = 0;
+    const std::vector<ConstraintRange>* ranges = nullptr;
+};
+
 struct GarmentBufferRanges final {
     std::uint32_t id = 0;
     std::uint32_t vertex_offset = 0;
@@ -76,4 +86,6 @@ struct GarmentBufferRanges final {
     std::uint32_t stretch_constraint_count = 0;
     std::uint32_t bending_constraint_offset = 0;
     std::uint32_t bending_constraint_count = 0;
+    std::uint32_t attachment_constraint_offset = 0;
+    std::uint32_t attachment_constraint_count = 0;
 };

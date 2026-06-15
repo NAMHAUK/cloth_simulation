@@ -9,6 +9,9 @@
 #include <limits>
 #include <utility>
 
+#include <glm/vec2.hpp>
+#include <glm/vec4.hpp>
+
 namespace {
 constexpr std::uint32_t position_components = 3;
 constexpr std::uint32_t normal_components = 4;
@@ -53,6 +56,8 @@ ClothBufferElementCounts make_expanded_capacity(const ClothBufferElementCounts& 
                                                               required_elements.stretch_constraint);
     next_allocated_elements.bending_constraint = expand_count(allocated_elements.bending_constraint,
                                                               required_elements.bending_constraint);
+    next_allocated_elements.attachment_constraint = expand_count(allocated_elements.attachment_constraint,
+                                                                 required_elements.attachment_constraint);
     return next_allocated_elements;
 }
 
@@ -69,6 +74,16 @@ bool is_uploadable_mesh(const GarmentMesh& garment_mesh)
            garment_mesh.bending_constraints.is_valid();
 }
 
+bool is_valid_attachment_targets(const GarmentObject& garment)
+{
+    const auto vertex_count = static_cast<std::uint32_t>(garment.mesh.vertices.size() / position_components);
+    return std::all_of(garment.attachment_constraints.begin(), garment.attachment_constraints.end(),
+        [vertex_count](const GarmentAttachmentConstraint& constraint) {
+            return constraint.cloth_vertex_index < vertex_count;
+        }
+    );
+}
+
 // garment range //
 struct BufferRebuildGarmentData final {
     const GarmentObject* garment = nullptr;
@@ -78,7 +93,8 @@ struct BufferRebuildGarmentData final {
 GarmentBufferRanges make_garment_buffer_ranges(const GarmentObject& garment,
                                                const ClothBufferElementCounts& offsets,
                                                std::uint32_t stretch_constraint_count,
-                                               std::uint32_t bending_constraint_count)
+                                               std::uint32_t bending_constraint_count,
+                                               std::uint32_t attachment_constraint_count)
 {
     const VertexFaceAdjacency& adjacency = garment.mesh.adjacency;
 
@@ -96,6 +112,8 @@ GarmentBufferRanges make_garment_buffer_ranges(const GarmentObject& garment,
     buffer_ranges.stretch_constraint_count = stretch_constraint_count;
     buffer_ranges.bending_constraint_offset = offsets.bending_constraint;
     buffer_ranges.bending_constraint_count = bending_constraint_count;
+    buffer_ranges.attachment_constraint_offset = offsets.attachment_constraint;
+    buffer_ranges.attachment_constraint_count = attachment_constraint_count;
     return buffer_ranges;
 }
 
@@ -109,6 +127,7 @@ ClothBufferElementCounts make_next_used_elements(const ClothBufferElementCounts&
     next_used_elements.adjacency_entry += appended_ranges.adjacency_entry_count;
     next_used_elements.stretch_constraint += appended_ranges.stretch_constraint_count;
     next_used_elements.bending_constraint += appended_ranges.bending_constraint_count;
+    next_used_elements.attachment_constraint += appended_ranges.attachment_constraint_count;
     return next_used_elements;
 }
 
@@ -131,6 +150,7 @@ bool assign_buffer_rebuild_ranges(const std::vector<GarmentObject>& garments,
 
         const GarmentDistanceConstraints& stretch_constraints = garment.mesh.stretch_constraints;
         const GarmentDistanceConstraints& bending_constraints = garment.mesh.bending_constraints;
+        const auto attachment_constraint_count = static_cast<std::uint32_t>(garment.mesh.attachment_vertex_indices.size());
 
         BufferRebuildGarmentData rebuild_garment;
         rebuild_garment.garment = &garment;
@@ -138,7 +158,8 @@ bool assign_buffer_rebuild_ranges(const std::vector<GarmentObject>& garments,
             garment,
             rebuild_element_counts,
             static_cast<std::uint32_t>(stretch_constraints.colorized_edges.size()),
-            static_cast<std::uint32_t>(bending_constraints.colorized_edges.size())
+            static_cast<std::uint32_t>(bending_constraints.colorized_edges.size()),
+            attachment_constraint_count
         );
 
         rebuild_element_counts.vertex += rebuild_garment.buffer_ranges.vertex_count;
@@ -147,6 +168,7 @@ bool assign_buffer_rebuild_ranges(const std::vector<GarmentObject>& garments,
         rebuild_element_counts.adjacency_entry += rebuild_garment.buffer_ranges.adjacency_entry_count;
         rebuild_element_counts.stretch_constraint += rebuild_garment.buffer_ranges.stretch_constraint_count;
         rebuild_element_counts.bending_constraint += rebuild_garment.buffer_ranges.bending_constraint_count;
+        rebuild_element_counts.attachment_constraint += rebuild_garment.buffer_ranges.attachment_constraint_count;
 
         rebuild_garments.push_back(std::move(rebuild_garment));
     }
@@ -219,6 +241,11 @@ struct DistanceConstraintUploadData final {
     std::vector<float> rest_lengths;
 };
 
+struct AttachmentConstraintUploadData final {
+    std::vector<glm::uvec2> attachment_indices;
+    std::vector<glm::vec4> barycentric_offsets;
+};
+
 void build_stretch_constraint_upload_data(const GarmentDistanceConstraints& stretch_constraints,
                                           const GarmentBufferRanges& buffer_ranges,
                                           DistanceConstraintUploadData& data)
@@ -233,21 +260,6 @@ void build_stretch_constraint_upload_data(const GarmentDistanceConstraints& stre
                              stretch_constraints.rest_lengths.end());
 }
 
-void build_bending_constraint_upload_data(const GarmentDistanceConstraints& bending_constraints,
-                                          const GarmentBufferRanges& buffer_ranges,
-                                          DistanceConstraintUploadData& data)
-{
-    for (const MeshEdge& edge : bending_constraints.colorized_edges) {
-        data.edge_indices.push_back(buffer_ranges.vertex_offset + edge.vertex_a);
-        data.edge_indices.push_back(buffer_ranges.vertex_offset + edge.vertex_b);
-    }
-
-    data.rest_lengths.insert(data.rest_lengths.end(),
-                             bending_constraints.rest_lengths.begin(),
-                             bending_constraints.rest_lengths.end());
-}
-
-// stretch_constraints를 GPU buffer에 upload
 void upload_stretch_constraints_data(const ClothBufferSet& buffers,
                                      std::uint32_t constraint_offset,
                                      const DistanceConstraintUploadData& data,
@@ -262,6 +274,20 @@ void upload_stretch_constraints_data(const ClothBufferSet& buffers,
                             scalar_byte_size(constraint_offset, sizeof(float)),
                             scalar_byte_size(static_cast<std::uint32_t>(data.rest_lengths.size()), sizeof(float)),
                             data.rest_lengths.data());
+}
+
+void build_bending_constraint_upload_data(const GarmentDistanceConstraints& bending_constraints,
+                                          const GarmentBufferRanges& buffer_ranges,
+                                          DistanceConstraintUploadData& data)
+{
+    for (const MeshEdge& edge : bending_constraints.colorized_edges) {
+        data.edge_indices.push_back(buffer_ranges.vertex_offset + edge.vertex_a);
+        data.edge_indices.push_back(buffer_ranges.vertex_offset + edge.vertex_b);
+    }
+
+    data.rest_lengths.insert(data.rest_lengths.end(),
+                             bending_constraints.rest_lengths.begin(),
+                             bending_constraints.rest_lengths.end());
 }
 
 void upload_bending_constraints_data(const ClothBufferSet& buffers,
@@ -280,6 +306,64 @@ void upload_bending_constraints_data(const ClothBufferSet& buffers,
                             data.rest_lengths.data());
 }
 
+void build_attachment_constraint_upload_data(const std::vector<GarmentAttachmentConstraint>& attachment_constraints,
+                                             const GarmentBufferRanges& buffer_ranges,
+                                             AttachmentConstraintUploadData& data)
+{
+    for (const GarmentAttachmentConstraint& constraint : attachment_constraints) {
+        data.attachment_indices.push_back({
+            buffer_ranges.vertex_offset + constraint.cloth_vertex_index,
+            constraint.character_triangle_index
+        });
+        data.barycentric_offsets.push_back(constraint.barycentric_and_offset);
+    }
+}
+
+void upload_attachment_constraints_data(const ClothBufferSet& buffers,
+                                        std::uint32_t constraint_offset,
+                                        const AttachmentConstraintUploadData& data,
+                                        QOpenGLFunctions_4_5_Core& gl)
+{
+    if (data.attachment_indices.empty()) {
+        return;
+    }
+
+    gl.glNamedBufferSubData(buffers.attachment_indices,
+                            scalar_byte_size(constraint_offset, sizeof(glm::uvec2)),
+                            scalar_byte_size(static_cast<std::uint32_t>(data.attachment_indices.size()), sizeof(glm::uvec2)),
+                            data.attachment_indices.data());
+
+    gl.glNamedBufferSubData(buffers.attachment_barycentric_offset,
+                            scalar_byte_size(constraint_offset, sizeof(glm::vec4)),
+                            scalar_byte_size(static_cast<std::uint32_t>(data.barycentric_offsets.size()), sizeof(glm::vec4)),
+                            data.barycentric_offsets.data());
+}
+
+void set_attachment_range(std::uint32_t constraint_offset,
+                          std::uint32_t constraint_count,
+                          std::vector<ConstraintRange>& attachment_ranges)
+{
+    const auto iter = std::find_if(attachment_ranges.begin(), attachment_ranges.end(),
+        [constraint_offset](const ConstraintRange& range) {
+            return range.offset == constraint_offset;
+        }
+    );
+
+    if (constraint_count == 0u) {
+        if (iter != attachment_ranges.end()) {
+            attachment_ranges.erase(iter);
+        }
+        return;
+    }
+
+    if (iter != attachment_ranges.end()) {
+        iter->count = constraint_count;
+        return;
+    }
+
+    attachment_ranges.push_back({constraint_offset, constraint_count});
+}
+
 void append_color_ranges(const std::vector<MeshEdgeRange>& local_ranges,
                          std::uint32_t constraint_offset,
                          std::vector<ConstraintRange>& color_ranges)
@@ -294,6 +378,7 @@ struct GarmentUploadData final {
     TopologyUploadData topology;
     DistanceConstraintUploadData stretch_constraints;
     DistanceConstraintUploadData bending_constraints;
+    AttachmentConstraintUploadData attachment_constraints;
 };
 
 GarmentUploadData prepare_garment_upload_data(const GarmentObject& garment,
@@ -307,6 +392,8 @@ GarmentUploadData prepare_garment_upload_data(const GarmentObject& garment,
     data.stretch_constraints.rest_lengths.reserve(buffer_ranges.stretch_constraint_count);
     data.bending_constraints.edge_indices.reserve(buffer_ranges.bending_constraint_count * 2u);
     data.bending_constraints.rest_lengths.reserve(buffer_ranges.bending_constraint_count);
+    data.attachment_constraints.attachment_indices.reserve(garment.attachment_constraints.size());
+    data.attachment_constraints.barycentric_offsets.reserve(garment.attachment_constraints.size());
     return data;
 }
 
@@ -317,6 +404,7 @@ void build_garment_upload_data(const GarmentObject& garment,
     build_topology_upload_data(garment, buffer_ranges, 0, data.topology);
     build_stretch_constraint_upload_data(garment.mesh.stretch_constraints, buffer_ranges, data.stretch_constraints);
     build_bending_constraint_upload_data(garment.mesh.bending_constraints, buffer_ranges, data.bending_constraints);
+    build_attachment_constraint_upload_data(garment.attachment_constraints, buffer_ranges, data.attachment_constraints);
 }
 
 void upload_position_data(const ClothBufferSet& buffers,
@@ -355,8 +443,10 @@ struct BufferRebuildUploadData final {
     TopologyUploadData topology;
     DistanceConstraintUploadData stretch_constraints;
     DistanceConstraintUploadData bending_constraints;
+    AttachmentConstraintUploadData attachment_constraints;
     std::vector<ConstraintRange> stretch_color_ranges;
     std::vector<ConstraintRange> bending_color_ranges;
+    std::vector<ConstraintRange> attachment_ranges;
 };
 
 BufferRebuildUploadData prepare_buffer_rebuild_upload_data(const ClothBufferElementCounts& element_counts, std::size_t garment_count)
@@ -369,8 +459,11 @@ BufferRebuildUploadData prepare_buffer_rebuild_upload_data(const ClothBufferElem
     data.stretch_constraints.rest_lengths.reserve(element_counts.stretch_constraint);
     data.bending_constraints.edge_indices.reserve(element_counts.bending_constraint * 2u);
     data.bending_constraints.rest_lengths.reserve(element_counts.bending_constraint);
+    data.attachment_constraints.attachment_indices.reserve(element_counts.attachment_constraint);
+    data.attachment_constraints.barycentric_offsets.reserve(element_counts.attachment_constraint);
     data.stretch_color_ranges.reserve(garment_count * 8u);
     data.bending_color_ranges.reserve(garment_count * 8u);
+    data.attachment_ranges.reserve(garment_count);
     return data;
 }
 
@@ -384,6 +477,7 @@ void build_buffer_rebuild_upload_data(const GarmentObject& garment,
     build_topology_upload_data(garment, buffer_ranges, buffer_ranges.vertex_offset, data.topology);
     build_stretch_constraint_upload_data(stretch_constraints, buffer_ranges, data.stretch_constraints);
     build_bending_constraint_upload_data(bending_constraints, buffer_ranges, data.bending_constraints);
+    build_attachment_constraint_upload_data(garment.attachment_constraints, buffer_ranges, data.attachment_constraints);
 
     append_color_ranges(stretch_constraints.color_ranges,
                         buffer_ranges.stretch_constraint_offset,
@@ -391,12 +485,20 @@ void build_buffer_rebuild_upload_data(const GarmentObject& garment,
     append_color_ranges(bending_constraints.color_ranges,
                         buffer_ranges.bending_constraint_offset,
                         data.bending_color_ranges);
+    if (!garment.attachment_constraints.empty()) {
+        data.attachment_ranges.push_back({
+            buffer_ranges.attachment_constraint_offset,
+            static_cast<std::uint32_t>(garment.attachment_constraints.size())
+        });
+    }
 }
 
 // buffer object //
 ClothBufferSet create_buffer_set(const ClothBufferElementCounts& allocated_elements, QOpenGLFunctions_4_5_Core& gl)
 {
     ClothBufferSet buffers;
+    const std::uint32_t allocated_attachment_constraints = std::max(allocated_elements.attachment_constraint, 1u);
+
     gl.glCreateVertexArrays(1, &buffers.vao);
     gl.glCreateBuffers(1, &buffers.current_position);
     gl.glCreateBuffers(1, &buffers.previous_position);
@@ -407,6 +509,8 @@ ClothBufferSet create_buffer_set(const ClothBufferElementCounts& allocated_eleme
     gl.glCreateBuffers(1, &buffers.stretch_rest_length);
     gl.glCreateBuffers(1, &buffers.bending_edge_index);
     gl.glCreateBuffers(1, &buffers.bending_rest_length);
+    gl.glCreateBuffers(1, &buffers.attachment_indices);
+    gl.glCreateBuffers(1, &buffers.attachment_barycentric_offset);
     gl.glCreateBuffers(1, &buffers.triangle_normal);
     gl.glCreateBuffers(1, &buffers.vertex_normal);
 
@@ -446,6 +550,14 @@ ClothBufferSet create_buffer_set(const ClothBufferElementCounts& allocated_eleme
                          scalar_byte_size(allocated_elements.bending_constraint, sizeof(float)),
                          nullptr,
                          GL_STATIC_DRAW);
+    gl.glNamedBufferData(buffers.attachment_indices,
+                         scalar_byte_size(allocated_attachment_constraints, sizeof(glm::uvec2)),
+                         nullptr,
+                         GL_DYNAMIC_DRAW);
+    gl.glNamedBufferData(buffers.attachment_barycentric_offset,
+                         scalar_byte_size(allocated_attachment_constraints, sizeof(glm::vec4)),
+                         nullptr,
+                         GL_DYNAMIC_DRAW);
     gl.glNamedBufferData(buffers.triangle_normal,
                          byte_size(allocated_elements.triangle, normal_components , sizeof(float)),
                          nullptr,
@@ -475,6 +587,8 @@ void copy_used_buffer_data(const ClothBufferSet& old_buffers,
     const GLsizeiptr stretch_rest_length_bytes = scalar_byte_size(used_elements.stretch_constraint, sizeof(float));
     const GLsizeiptr bending_edge_index_bytes = scalar_byte_size(used_elements.bending_constraint * 2u, sizeof(std::uint32_t));
     const GLsizeiptr bending_rest_length_bytes = scalar_byte_size(used_elements.bending_constraint, sizeof(float));
+    const GLsizeiptr attachment_index_bytes = scalar_byte_size(used_elements.attachment_constraint, sizeof(glm::uvec2));
+    const GLsizeiptr attachment_barycentric_offset_bytes = scalar_byte_size(used_elements.attachment_constraint, sizeof(glm::vec4));
 
     if (position_bytes > 0) {
         gl.glCopyNamedBufferSubData(old_buffers.current_position, next_buffers.current_position, 0, 0, position_bytes);
@@ -524,6 +638,20 @@ void copy_used_buffer_data(const ClothBufferSet& old_buffers,
                                     0,
                                     0,
                                     bending_rest_length_bytes);
+    }
+    if (attachment_index_bytes > 0 && old_buffers.attachment_indices != 0) {
+        gl.glCopyNamedBufferSubData(old_buffers.attachment_indices,
+                                    next_buffers.attachment_indices,
+                                    0,
+                                    0,
+                                    attachment_index_bytes);
+    }
+    if (attachment_barycentric_offset_bytes > 0 && old_buffers.attachment_barycentric_offset != 0) {
+        gl.glCopyNamedBufferSubData(old_buffers.attachment_barycentric_offset,
+                                    next_buffers.attachment_barycentric_offset,
+                                    0,
+                                    0,
+                                    attachment_barycentric_offset_bytes);
     }
 }
 
@@ -602,6 +730,7 @@ ClothGpuResources::ClothGpuResources(ClothGpuResources&& other) noexcept
     garments_ = std::move(other.garments_);
     stretch_color_ranges_ = std::move(other.stretch_color_ranges_);
     bending_color_ranges_ = std::move(other.bending_color_ranges_);
+    attachment_ranges_ = std::move(other.attachment_ranges_);
     used_elements_ = other.used_elements_;
     allocated_elements_ = other.allocated_elements_;
 
@@ -620,6 +749,7 @@ void ClothGpuResources::reset_resources() noexcept
     garments_.clear();
     stretch_color_ranges_.clear();
     bending_color_ranges_.clear();
+    attachment_ranges_.clear();
     used_elements_ = {};
     allocated_elements_ = {};
 }
@@ -678,6 +808,28 @@ bool ClothGpuResources::update_garment_placement(const GarmentObject& garment,
     return true;
 }
 
+bool ClothGpuResources::update_garment_attachment_targets(const GarmentObject& garment, QOpenGLFunctions_4_5_Core& gl)
+{
+    const GarmentBufferRanges* buffer_ranges = find_garment_buffer_ranges(garment.id);
+    if (!is_initialized() || buffer_ranges == nullptr || !is_valid_attachment_targets(garment)) {
+        return false;
+    }
+
+    const auto attachment_constraint_count = static_cast<std::uint32_t>(garment.attachment_constraints.size());
+    if (attachment_constraint_count > buffer_ranges->attachment_constraint_count) {
+        std::cerr << "Too many attachment targets for garment id " << garment.id << ".\n";
+        return false;
+    }
+
+    AttachmentConstraintUploadData upload_data;
+    upload_data.attachment_indices.reserve(attachment_constraint_count);
+    upload_data.barycentric_offsets.reserve(attachment_constraint_count);
+    build_attachment_constraint_upload_data(garment.attachment_constraints, *buffer_ranges, upload_data);
+    upload_attachment_constraints_data(buffers_, buffer_ranges->attachment_constraint_offset, upload_data, gl);
+    set_attachment_range(buffer_ranges->attachment_constraint_offset, attachment_constraint_count, attachment_ranges_);
+    return true;
+}
+
 void ClothGpuResources::rebuild_garment_buffers(const std::vector<GarmentObject>& garments, QOpenGLFunctions_4_5_Core& gl)
 {
     std::vector<BufferRebuildGarmentData> rebuild_garments;
@@ -705,11 +857,13 @@ void ClothGpuResources::rebuild_garment_buffers(const std::vector<GarmentObject>
     upload_topology_data(rebuild_buffer_set, TopologyUploadOffsets{}, rebuild_upload_data.topology, gl);
     upload_stretch_constraints_data(rebuild_buffer_set, 0, rebuild_upload_data.stretch_constraints, gl);
     upload_bending_constraints_data(rebuild_buffer_set, 0, rebuild_upload_data.bending_constraints, gl);
+    upload_attachment_constraints_data(rebuild_buffer_set, 0, rebuild_upload_data.attachment_constraints, gl);
 
     replace_with_rebuild_buffers(rebuild_buffer_set,
                                  make_buffer_rebuild_ranges(rebuild_garments),
                                  std::move(rebuild_upload_data.stretch_color_ranges),
                                  std::move(rebuild_upload_data.bending_color_ranges),
+                                 std::move(rebuild_upload_data.attachment_ranges),
                                  rebuild_element_counts,
                                  gl);
 }
@@ -718,6 +872,7 @@ void ClothGpuResources::replace_with_rebuild_buffers(ClothBufferSet rebuild_buff
                                                      std::vector<GarmentBufferRanges> rebuild_ranges,
                                                      std::vector<ConstraintRange> rebuild_stretch_color_ranges,
                                                      std::vector<ConstraintRange> rebuild_bending_color_ranges,
+                                                     std::vector<ConstraintRange> rebuild_attachment_ranges,
                                                      const ClothBufferElementCounts& rebuild_element_counts,
                                                      QOpenGLFunctions_4_5_Core& gl)
 {
@@ -726,6 +881,7 @@ void ClothGpuResources::replace_with_rebuild_buffers(ClothBufferSet rebuild_buff
     garments_ = std::move(rebuild_ranges);
     stretch_color_ranges_ = std::move(rebuild_stretch_color_ranges);
     bending_color_ranges_ = std::move(rebuild_bending_color_ranges);
+    attachment_ranges_ = std::move(rebuild_attachment_ranges);
     used_elements_ = rebuild_element_counts;
     allocated_elements_ = rebuild_element_counts;
 
@@ -747,11 +903,13 @@ bool ClothGpuResources::append_garment(const GarmentObject& garment, QOpenGLFunc
 
     const GarmentDistanceConstraints& stretch_constraints = garment.mesh.stretch_constraints;
     const GarmentDistanceConstraints& bending_constraints = garment.mesh.bending_constraints;
+    const auto attachment_constraint_count = static_cast<std::uint32_t>(garment.mesh.attachment_vertex_indices.size());
     GarmentBufferRanges buffer_ranges = make_garment_buffer_ranges(
         garment,
         used_elements_,
         static_cast<std::uint32_t>(stretch_constraints.colorized_edges.size()),
-        static_cast<std::uint32_t>(bending_constraints.colorized_edges.size())
+        static_cast<std::uint32_t>(bending_constraints.colorized_edges.size()),
+        attachment_constraint_count
     );
     const ClothBufferElementCounts next_used_elements = make_next_used_elements(used_elements_, buffer_ranges);
 
@@ -780,11 +938,21 @@ bool ClothGpuResources::append_garment(const GarmentObject& garment, QOpenGLFunc
                                     buffer_ranges.bending_constraint_offset,
                                     upload_data.bending_constraints,
                                     gl);
+    upload_attachment_constraints_data(buffers_,
+                                       buffer_ranges.attachment_constraint_offset,
+                                       upload_data.attachment_constraints,
+                                       gl);
 
     // 3. garment GPU data 등록, buffer 사용량 update
     garments_.push_back(buffer_ranges);
     append_color_ranges(stretch_constraints.color_ranges, buffer_ranges.stretch_constraint_offset, stretch_color_ranges_);
     append_color_ranges(bending_constraints.color_ranges, buffer_ranges.bending_constraint_offset, bending_color_ranges_);
+    if (!garment.attachment_constraints.empty()) {
+        attachment_ranges_.push_back({
+            buffer_ranges.attachment_constraint_offset,
+            static_cast<std::uint32_t>(garment.attachment_constraints.size())
+        });
+    }
     used_elements_ = next_used_elements;
     return true;
 }
@@ -797,7 +965,8 @@ bool ClothGpuResources::has_enough_capacity(const ClothBufferElementCounts& requ
            required_elements.triangle <= allocated_elements_.triangle &&
            required_elements.adjacency_entry <= allocated_elements_.adjacency_entry &&
            required_elements.stretch_constraint <= allocated_elements_.stretch_constraint &&
-           required_elements.bending_constraint <= allocated_elements_.bending_constraint;
+           required_elements.bending_constraint <= allocated_elements_.bending_constraint &&
+           required_elements.attachment_constraint <= allocated_elements_.attachment_constraint;
 }
 // GPU buffer 공간이 충분한지 확인 -> 부족하면 더 큰 buffer로 교체
 void ClothGpuResources::ensure_capacity(const ClothBufferElementCounts& required_elements, QOpenGLFunctions_4_5_Core& gl)
@@ -847,6 +1016,12 @@ void ClothGpuResources::delete_buffer_set(ClothBufferSet& buffers, QOpenGLFuncti
     }
     if (buffers.bending_edge_index != 0) {
         gl.glDeleteBuffers(1, &buffers.bending_edge_index);
+    }
+    if (buffers.attachment_barycentric_offset != 0) {
+        gl.glDeleteBuffers(1, &buffers.attachment_barycentric_offset);
+    }
+    if (buffers.attachment_indices != 0) {
+        gl.glDeleteBuffers(1, &buffers.attachment_indices);
     }
     if (buffers.index != 0) {
         gl.glDeleteBuffers(1, &buffers.index);
@@ -938,6 +1113,8 @@ bool ClothGpuResources::has_gpu_objects() const
            buffers_.stretch_rest_length != 0 &&
            buffers_.bending_edge_index != 0 &&
            buffers_.bending_rest_length != 0 &&
+           buffers_.attachment_indices != 0 &&
+           buffers_.attachment_barycentric_offset != 0 &&
            buffers_.triangle_normal != 0 &&
            buffers_.vertex_normal != 0;
 }
@@ -1002,6 +1179,16 @@ DistanceConstraintBufferView ClothGpuResources::bending_constraint_buffer_view()
     view.rest_length_buffer = buffers_.bending_rest_length;
     view.constraint_count = used_elements_.bending_constraint;
     view.color_ranges = &bending_color_ranges_;
+    return view;
+}
+
+AttachmentConstraintBufferView ClothGpuResources::attachment_constraint_buffer_view() const
+{
+    AttachmentConstraintBufferView view;
+    view.attachment_index_buffer = buffers_.attachment_indices;
+    view.barycentric_offset_buffer = buffers_.attachment_barycentric_offset;
+    view.constraint_count = used_elements_.attachment_constraint;
+    view.ranges = &attachment_ranges_;
     return view;
 }
 
