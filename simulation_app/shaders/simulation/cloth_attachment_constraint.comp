@@ -22,8 +22,7 @@ struct CharacterTriangleGeometry {
     vec4 a;
     vec4 b;
     vec4 c;
-    vec4 face_normal;
-    vec4 unit_face_normal;
+    vec4 normal;
 };
 
 layout(std430, binding = 4) readonly buffer CharacterTriangleGeometryBuffer {
@@ -79,8 +78,8 @@ void main()
     vec3 target = triangle.a.xyz * barycentric_offset.x +
                   triangle.b.xyz * barycentric_offset.y +
                   triangle.c.xyz * barycentric_offset.z;
-    if (triangle.unit_face_normal.w > 0.0) {
-        target += triangle.unit_face_normal.xyz * barycentric_offset.w;
+    if (triangle.normal.w > 0.0) {
+        target += triangle.normal.xyz * barycentric_offset.w;
     }
 
     vec3 current = load_current_position(cloth_vertex);

@@ -1,5 +1,7 @@
 #pragma once
 
+#include "gpu/body/CharacterGpuDataTypes.h"
+#include "gpu/cloth/ClothGpuDataTypes.h"
 #include "simulation/forces/SimulationForceField.h"
 #include "simulation/forces/ExternalForceSolver.h"
 #include "simulation/constraints/StretchConstraintSolver.h"
@@ -26,15 +28,21 @@ public:
     bool is_initialized() const;
     bool initialize(const ShaderPaths& shader_paths, QOpenGLFunctions_4_5_Core& gl);
     bool prefit_garments(SceneState& scene, SceneGpuState& gpu_state, QOpenGLFunctions_4_5_Core& gl);
-    bool step(SceneState& scene, SceneGpuState& gpu_state, std::uint64_t motion_step_count, QOpenGLFunctions_4_5_Core& gl);
+    bool step(SceneState& scene, SceneGpuState& gpu_state, std::uint64_t motion_step_index, QOpenGLFunctions_4_5_Core& gl);
     void release(QOpenGLFunctions_4_5_Core& gl);
 
 private:
-    bool can_solve_constraint_iteration(const ClothPositionBufferView& position_view,
-                                        const DistanceConstraintBufferView& stretch_constraint_view,
-                                        const DistanceConstraintBufferView& bending_constraint_view,
-                                        const TriangleGeometryResources& character_geometry,
-                                        const MeshBvhResources& character_bvh) const;
+    struct SimulationGpuViews final {
+        ClothPositionBufferView cloth_position;
+        TriangleGeometryResources character_geometry;
+        MeshBvhResources character_bvh;
+        DistanceConstraintBufferView stretch_constraints;
+        DistanceConstraintBufferView bending_constraints;
+        AttachmentConstraintBufferView attachment_constraints;
+    };
+
+    static SimulationGpuViews collect_gpu_views(const SceneGpuState& gpu_state);
+    bool can_solve_constraint_iteration(const SimulationGpuViews& views) const;
 
     SimulationForceField force_field_;
     ExternalForceSolver external_force_solver_;

@@ -36,8 +36,10 @@ bool TriangleGeometryUpdater::initialize(const std::filesystem::path& shader_pat
     }
 
     triangle_count_location_ = gl.glGetUniformLocation(program_, "uTriangleCount");
-    position_component_offset_location_ = gl.glGetUniformLocation(program_, "uPositionComponentOffset");
-    if (triangle_count_location_ < 0 || position_component_offset_location_ < 0) {
+    current_frame_begin_location_ = gl.glGetUniformLocation(program_, "uCurrentFramePositionBeginIndex");
+    next_frame_begin_location_ = gl.glGetUniformLocation(program_, "uNextFramePositionBeginIndex");
+    frame_alpha_location_ = gl.glGetUniformLocation(program_, "uFrameAlpha");
+    if (triangle_count_location_ < 0 ||current_frame_begin_location_ < 0 ||next_frame_begin_location_ < 0 ||frame_alpha_location_ < 0) {
         std::cerr << "Character triangle geometry update compute shader missing required uniforms.\n";
         release(gl);
         return false;
@@ -48,6 +50,9 @@ bool TriangleGeometryUpdater::initialize(const std::filesystem::path& shader_pat
 
 void TriangleGeometryUpdater::update(const CharacterMeshTopologyResources& topology,
                                      const TriangleGeometryResources& triangle_geometry,
+                                     std::uint32_t current_frame_position_begin_index,
+                                     std::uint32_t next_frame_position_begin_index,
+                                     float frame_alpha,
                                      QOpenGLFunctions_4_5_Core& gl) const
 {
     if (!is_initialized() || !is_valid_update_input(topology, triangle_geometry)) {
@@ -59,7 +64,9 @@ void TriangleGeometryUpdater::update(const CharacterMeshTopologyResources& topol
     gl.glBindBufferBase(GL_SHADER_STORAGE_BUFFER, indices_binding, topology.index_buffer);
     gl.glBindBufferBase(GL_SHADER_STORAGE_BUFFER, triangle_geometry_binding, triangle_geometry.triangle_geometry_buffer);
     gl.glProgramUniform1ui(program_, triangle_count_location_, topology.triangle_count);
-    gl.glProgramUniform1ui(program_, position_component_offset_location_, topology.position_component_offset);
+    gl.glProgramUniform1ui(program_, current_frame_begin_location_, current_frame_position_begin_index);
+    gl.glProgramUniform1ui(program_, next_frame_begin_location_, next_frame_position_begin_index);
+    gl.glProgramUniform1f(program_, frame_alpha_location_, frame_alpha);
 
     gl.glDispatchCompute(compute_group_count(topology.triangle_count, triangle_geometry_local_size), 1, 1);
     gl.glMemoryBarrier(GL_SHADER_STORAGE_BARRIER_BIT);
@@ -73,5 +80,7 @@ void TriangleGeometryUpdater::release(QOpenGLFunctions_4_5_Core& gl)
 
     program_ = 0;
     triangle_count_location_ = -1;
-    position_component_offset_location_ = -1;
+    current_frame_begin_location_ = -1;
+    next_frame_begin_location_ = -1;
+    frame_alpha_location_ = -1;
 }

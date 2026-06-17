@@ -42,7 +42,8 @@ void main()
     for (uint entry_index = begin; entry_index < end; ++entry_index) {
         uint triangle_index = adjacent_triangle_indices[entry_index];
         uint normal_index = triangle_index * uTriangleNormalStride + uTriangleNormalOffset;
-        normal_sum += triangle_normals[normal_index].xyz;
+        vec4 triangle_normal = triangle_normals[normal_index];
+        normal_sum += triangle_normal.xyz * triangle_normal.w;
     }
 
     vertex_normals[vertex_index] = vec4(safe_normalize(normal_sum), 0.0);

@@ -6,12 +6,11 @@ struct CharacterTriangleGeometry {
     vec4 a;
     vec4 b;
     vec4 c;
-    vec4 face_normal;
-    vec4 unit_face_normal;
+    vec4 normal;
 };
 
-layout(std430, binding = 0) readonly buffer CharacterPositions {
-    float character_positions[];
+layout(std430, binding = 0) readonly buffer CharacterVertexPositions {
+    float character_vertex_positions[];
 };
 
 layout(std430, binding = 1) readonly buffer CharacterIndices {
@@ -23,14 +22,23 @@ layout(std430, binding = 2) writeonly buffer CharacterTriangleGeometryBuffer {
 };
 
 uniform uint uTriangleCount;
-uniform uint uPositionComponentOffset;
+uniform uint uCurrentFramePositionBeginIndex;
+uniform uint uNextFramePositionBeginIndex;
+uniform float uFrameAlpha;
 
 const float epsilon = 1.0e-20;
 
-vec3 load_character_position(uint vertex_index)
+vec3 load_character_position(uint position_begin_index, uint vertex_index)
 {
-    uint base = uPositionComponentOffset + vertex_index * 3u;
-    return vec3(character_positions[base], character_positions[base + 1u], character_positions[base + 2u]);
+    uint base = position_begin_index + vertex_index * 3u;
+    return vec3(character_vertex_positions[base], character_vertex_positions[base + 1u], character_vertex_positions[base + 2u]);
+}
+
+vec3 load_interpolated_position(uint vertex_index)
+{
+    vec3 current_position = load_character_position(uCurrentFramePositionBeginIndex, vertex_index);
+    vec3 next_position = load_character_position(uNextFramePositionBeginIndex, vertex_index);
+    return mix(current_position, next_position, uFrameAlpha);
 }
 
 void main()
@@ -41,20 +49,19 @@ void main()
     }
 
     uint index_base = triangle_index * 3u;
-    vec3 a = load_character_position(triangle_indices[index_base]);
-    vec3 b = load_character_position(triangle_indices[index_base + 1u]);
-    vec3 c = load_character_position(triangle_indices[index_base + 2u]);
+    vec3 a = load_interpolated_position(triangle_indices[index_base]);
+    vec3 b = load_interpolated_position(triangle_indices[index_base + 1u]);
+    vec3 c = load_interpolated_position(triangle_indices[index_base + 2u]);
 
     vec3 face_normal = cross(b - a, c - a);
     float normal_length_sq = dot(face_normal, face_normal);
     float inv_normal_length = normal_length_sq > epsilon ? inversesqrt(normal_length_sq) : 0.0;
+    float normal_length = inv_normal_length > 0.0 ? 1.0 / inv_normal_length : 0.0;
 
     triangle_geometry[triangle_index].a = vec4(a, 0.0);
     triangle_geometry[triangle_index].b = vec4(b, 0.0);
     triangle_geometry[triangle_index].c = vec4(c, 0.0);
-    triangle_geometry[triangle_index].face_normal = vec4(inv_normal_length > 0.0 ? face_normal : vec3(0.0), 0.0);
-    triangle_geometry[triangle_index].unit_face_normal = vec4(
-        inv_normal_length > 0.0 ? face_normal * inv_normal_length : vec3(0.0),
-        inv_normal_length > 0.0 ? 1.0 : 0.0
-    );
+    triangle_geometry[triangle_index].normal = vec4(inv_normal_length > 0.0 ? 
+                                                    face_normal * inv_normal_length : vec3(0.0),
+                                                    normal_length);
 }
