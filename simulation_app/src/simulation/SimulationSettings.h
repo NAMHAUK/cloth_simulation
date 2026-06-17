@@ -3,7 +3,7 @@
 #include <cstdint>
 
 namespace simulation_settings {
-inline constexpr std::uint32_t character_motion_fps = 30;
+inline constexpr std::uint32_t character_motion_fps = 60;
 inline constexpr std::uint32_t cloth_simulation_fps = 60;
 inline constexpr std::uint32_t character_frame_stride = cloth_simulation_fps / character_motion_fps;
 inline constexpr int simulation_tick_ms = 1000 / static_cast<int>(cloth_simulation_fps);
@@ -14,7 +14,7 @@ inline constexpr float gravity = -9.8f;
 inline constexpr float ground_y = 0.0f;
 inline constexpr float ground_collision_offset = 0.001f;
 inline constexpr float character_collision_thickness = 0.005f;
-inline constexpr float character_collision_search_radius = 0.2f;
+inline constexpr float character_collision_search_radius = 0.12f;
 
 inline constexpr float prefit_pushout_margin = 0.02f;
 inline constexpr float prefit_search_radius = 0.15f;

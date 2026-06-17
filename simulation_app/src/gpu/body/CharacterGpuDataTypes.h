@@ -10,7 +10,6 @@ struct CharacterMeshTopologyResources final {
     GLuint adjacent_triangle_offsets_buffer = 0;
     GLuint adjacent_triangle_indices_buffer = 0;
 
-    std::uint32_t position_component_offset = 0;
     std::uint32_t vertex_count = 0;
     std::uint32_t triangle_count = 0;
 };

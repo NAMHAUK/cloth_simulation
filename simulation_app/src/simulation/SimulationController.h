@@ -103,7 +103,7 @@ private:
     // Rendering orchestration //
     RenderPipeline render_pipeline_;
 
-    std::uint64_t motion_step_count_ = 0;
+    std::uint64_t motion_step_index_ = 0;
     GarmentPlacementState garment_placement_;
     bool simulation_running_ = false;
     bool is_default_pose_ = false;

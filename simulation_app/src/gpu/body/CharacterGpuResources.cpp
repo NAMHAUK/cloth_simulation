@@ -6,7 +6,7 @@
 
 namespace {
 constexpr std::size_t position_component_per_vertex = 3;
-constexpr std::size_t character_triangle_geometry_components = 20;
+constexpr std::size_t character_triangle_geometry_components = 16;
 
 std::size_t frame_position_component_count(const CharacterMesh& character_mesh)
 {
@@ -141,6 +141,15 @@ std::uint32_t CharacterGpuResources::current_frame_index() const
     return current_frame_index_;
 }
 
+std::uint32_t CharacterGpuResources::frame_position_begin_index(std::uint32_t frame_index) const
+{
+    if (!is_initialized() || frame_index >= frame_count_) {
+        return 0;
+    }
+
+    return frame_index * vertex_count_ * 3u;
+}
+
 std::uint32_t CharacterGpuResources::vertex_count() const
 {
     return vertex_count_;
@@ -163,7 +172,6 @@ CharacterMeshTopologyResources CharacterGpuResources::mesh_topology_resources() 
     topology.index_buffer = index_buffer_;
     topology.adjacent_triangle_offsets_buffer = adjacent_triangle_offsets_;
     topology.adjacent_triangle_indices_buffer = adjacent_triangle_indices_;
-    topology.position_component_offset = current_frame_index_ * vertex_count_ * 3u;
     topology.vertex_count = vertex_count_;
     topology.triangle_count = triangle_count_;
     return topology;

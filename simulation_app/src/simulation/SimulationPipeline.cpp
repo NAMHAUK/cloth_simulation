@@ -5,33 +5,38 @@
 #include "scene/SceneState.h"
 #include "simulation/SimulationSettings.h"
 
+#include <algorithm>
 #include <iostream>
 
 #include <glm/vec3.hpp>
 
 namespace {
 
-struct SimulationGpuViews final {
-    ClothPositionBufferView cloth_position;
-    TriangleGeometryResources character_geometry;
-    MeshBvhResources character_bvh;
-    DistanceConstraintBufferView stretch_constraints;
-    DistanceConstraintBufferView bending_constraints;
-    AttachmentConstraintBufferView attachment_constraints;
-};
-
-SimulationGpuViews collect_gpu_views(const SceneGpuState& gpu_state)
+float character_frame_time(std::uint64_t motion_step_index, std::uint32_t substep)
 {
-    SimulationGpuViews views;
-    views.cloth_position = gpu_state.cloth_gpu_state().position_buffer_view();
-    views.character_geometry = gpu_state.character_gpu_state().character_triangle_geometry_resources();
-    views.character_bvh = gpu_state.character_gpu_state().character_bvh_resources();
-    views.stretch_constraints = gpu_state.cloth_gpu_state().stretch_constraint_buffer_view();
-    views.bending_constraints = gpu_state.cloth_gpu_state().bending_constraint_buffer_view();
-    views.attachment_constraints = gpu_state.cloth_gpu_state().attachment_constraint_buffer_view();
-    return views;
+    if (simulation_settings::character_frame_stride == 0 || simulation_settings::substep_count == 0) {
+        return 0.0f;
+    }
+
+    const float substep_fraction =
+        static_cast<float>(std::min(substep + 1u, simulation_settings::substep_count)) /
+        simulation_settings::substep_count;
+
+    return (static_cast<float>(motion_step_index) + substep_fraction) /
+           simulation_settings::character_frame_stride;
 }
 
+void update_character_substep_frame(const SceneState& scene,
+                                    SceneGpuState& gpu_state,
+                                    std::uint64_t motion_step_index,
+                                    std::uint32_t substep,
+                                    QOpenGLFunctions_4_5_Core& gl)
+{
+    const float frame_time = character_frame_time(motion_step_index, substep);
+    const CharacterFrameInterpolation interpolation = scene.character_frame_interpolation(frame_time);
+
+    gpu_state.update_character_frame_interpolation(scene, interpolation, gl);
+}
 }
 
 bool SimulationPipeline::is_initialized() const
@@ -76,6 +81,7 @@ bool SimulationPipeline::prefit_garments(SceneState& scene, SceneGpuState& gpu_s
         return false;
     }
 
+    scene.update_character_frame(0, simulation_settings::character_frame_stride);
     gpu_state.update_character_frame(scene, gl);
 
     const auto views = collect_gpu_views(gpu_state);
@@ -93,22 +99,21 @@ bool SimulationPipeline::prefit_garments(SceneState& scene, SceneGpuState& gpu_s
     return true;
 }
 
-bool SimulationPipeline::step(SceneState& scene, SceneGpuState& gpu_state, std::uint64_t motion_step_count, QOpenGLFunctions_4_5_Core& gl)
+bool SimulationPipeline::step(SceneState& scene, SceneGpuState& gpu_state, std::uint64_t motion_step_index, QOpenGLFunctions_4_5_Core& gl)
 {
     if (!initialized_) {
         return false;
     }
 
-    scene.update_character_frame(motion_step_count, simulation_settings::character_frame_stride);
-    gpu_state.update_character_frame(scene, gl);
-
     const auto views = collect_gpu_views(gpu_state);
-    if (!can_solve_constraint_iteration(views.cloth_position, views.stretch_constraints, views.bending_constraints, views.character_geometry, views.character_bvh)) {
+    if (!can_solve_constraint_iteration(views)) {
         return false;
     }
 
     const glm::vec3 external_acceleration = force_field_.external_acceleration();
     for (std::uint32_t substep = 0; substep < simulation_settings::substep_count; ++substep) {
+        update_character_substep_frame(scene, gpu_state, motion_step_index, substep, gl);
+
         external_force_solver_.solve(views.cloth_position, substep_dt_, external_acceleration, gl);
 
         for (std::uint32_t iteration = 0; iteration < simulation_settings::solver_iteration_count; ++iteration) {
@@ -137,14 +142,22 @@ void SimulationPipeline::release(QOpenGLFunctions_4_5_Core& gl)
     initialized_ = false;
 }
 
-bool SimulationPipeline::can_solve_constraint_iteration(const ClothPositionBufferView& position_view,
-                                                        const DistanceConstraintBufferView& stretch_constraint_view,
-                                                        const DistanceConstraintBufferView& bending_constraint_view,
-                                                        const TriangleGeometryResources& character_geometry,
-                                                        const MeshBvhResources& character_bvh) const
+SimulationPipeline::SimulationGpuViews SimulationPipeline::collect_gpu_views(const SceneGpuState& gpu_state)
 {
-    return stretch_constraint_solver_.can_solve(position_view, stretch_constraint_view) &&
-           bending_constraint_solver_.can_solve(position_view, bending_constraint_view) &&
-           character_collision_solver_.can_solve(position_view, character_geometry, character_bvh) &&
-           ground_collision_solver_.can_solve(position_view);
+    SimulationGpuViews views;
+    views.cloth_position = gpu_state.cloth_gpu_state().position_buffer_view();
+    views.character_geometry = gpu_state.character_gpu_state().character_triangle_geometry_resources();
+    views.character_bvh = gpu_state.character_gpu_state().character_bvh_resources();
+    views.stretch_constraints = gpu_state.cloth_gpu_state().stretch_constraint_buffer_view();
+    views.bending_constraints = gpu_state.cloth_gpu_state().bending_constraint_buffer_view();
+    views.attachment_constraints = gpu_state.cloth_gpu_state().attachment_constraint_buffer_view();
+    return views;
+}
+
+bool SimulationPipeline::can_solve_constraint_iteration(const SimulationGpuViews& views) const
+{
+    return stretch_constraint_solver_.can_solve(views.cloth_position, views.stretch_constraints) &&
+           bending_constraint_solver_.can_solve(views.cloth_position, views.bending_constraints) &&
+           character_collision_solver_.can_solve(views.cloth_position, views.character_geometry, views.character_bvh) &&
+           ground_collision_solver_.can_solve(views.cloth_position);
 }

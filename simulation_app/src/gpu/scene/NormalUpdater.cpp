@@ -23,8 +23,8 @@ constexpr GLuint vertex_normals_binding = 3;
 constexpr std::uint32_t normal_update_local_size = 128;
 constexpr std::uint32_t triangle_normal_buffer_stride = 1;
 constexpr std::uint32_t triangle_normal_buffer_offset = 0;
-constexpr std::uint32_t triangle_geometry_face_normal_stride = 5;
-constexpr std::uint32_t triangle_geometry_face_normal_offset = 3;
+constexpr std::uint32_t triangle_geometry_normal_stride = 4;
+constexpr std::uint32_t triangle_geometry_normal_offset = 3;
 
 bool has_valid_vertex_normal_inputs(GLuint adjacent_triangle_offsets_buffer,
                                     GLuint adjacent_triangle_indices_buffer,
@@ -145,8 +145,8 @@ void NormalUpdater::update_character_normals(const CharacterMeshTopologyResource
                           topology.adjacent_triangle_indices_buffer,
                           normals.vertex_normal_buffer,
                           topology.vertex_count,
-                          triangle_geometry_face_normal_stride,
-                          triangle_geometry_face_normal_offset,
+                          triangle_geometry_normal_stride,
+                          triangle_geometry_normal_offset,
                           gl);
 }
 
