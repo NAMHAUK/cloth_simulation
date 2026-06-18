@@ -197,6 +197,28 @@ void SimulationController::reset_scene_to_default()
     viewport_callbacks_.request_update();
 }
 
+void SimulationController::return_to_default_pose()
+{
+    if (!is_viewport_ready()) {
+        std::cerr << "Cannot return to default pose before OpenGL initialization.\n";
+        return;
+    }
+
+    viewport_callbacks_.run_with_gl_context([this](QOpenGLFunctions_4_5_Core& gl) {
+        if (!has_base_positions_ || !gpu_state_.restore_base_positions(gl)) {
+            return;
+        }
+
+        simulation_running_ = false;
+        motion_step_index_ = 0;
+        garment_placement_.clear();
+        set_character_mesh_state(default_character_mesh_, gl);
+        is_default_pose_ = true;
+    });
+
+    viewport_callbacks_.request_update();
+}
+
 // garment placement panel //
 void SimulationController::set_garment_placement(const glm::vec3& position_offset, float scale)
 {
@@ -279,6 +301,11 @@ bool SimulationController::is_simulation_running() const
 bool SimulationController::is_default_pose() const
 {
     return is_default_pose_;
+}
+
+bool SimulationController::has_base_positions() const
+{
+    return has_base_positions_;
 }
 
 bool SimulationController::has_garments() const

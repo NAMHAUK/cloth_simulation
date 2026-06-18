@@ -43,6 +43,7 @@ constexpr int placement_panel_height = 210;
 enum class SimulationControlIcon {
     Play,
     Pause,
+    DefaultPose,
     Reset,
 };
 
@@ -67,6 +68,18 @@ QIcon make_simulation_control_icon(SimulationControlIcon icon_type, const QColor
         painter.drawRect(QRectF{6.0, 4.0, 4.5, 14.0});
         painter.drawRect(QRectF{13.5, 4.0, 4.5, 14.0});
         break;
+    case SimulationControlIcon::DefaultPose: {
+        painter.setBrush(Qt::NoBrush);
+        painter.setPen(QPen{icon_color, 3.0, Qt::SolidLine, Qt::RoundCap, Qt::RoundJoin});
+        painter.drawArc(QRectF{4.0, 3.5, 14.0, 14.0}, -35 * 16, 285 * 16);
+
+        painter.setPen(Qt::NoPen);
+        painter.setBrush(icon_color);
+        QPolygonF arrow;
+        arrow << QPointF{4.2, 7.0} << QPointF{4.2, 2.5} << QPointF{8.6, 6.8};
+        painter.drawPolygon(arrow);
+        break;
+    }
     case SimulationControlIcon::Reset:
         painter.drawRect(QRectF{5.0, 5.0, 12.0, 12.0});
         break;
@@ -171,9 +184,9 @@ MainWindow::MainWindow(const std::filesystem::path& project_root, QWidget* paren
                                 "Run",
                                 QColor{"#43a047"});
     configure_simulation_button(stop_button_,
-                                SimulationControlIcon::Pause,
-                                "Stop",
-                                QColor{"#f4b400"});
+                                SimulationControlIcon::DefaultPose,
+                                "Default Pose",
+                                QColor{"#1e88e5"});
     configure_simulation_button(reset_button_,
                                 SimulationControlIcon::Reset,
                                 "Reset",
@@ -306,12 +319,16 @@ void MainWindow::setup_browser_callbacks()
     );
 
     connect(run_button_, &QPushButton::clicked, this, [this]() {
-        simulation_controller_->start_simulation();
+        if (simulation_controller_->is_simulation_running()) {
+            simulation_controller_->stop_simulation();
+        } else {
+            simulation_controller_->start_simulation();
+        }
         update_simulation_controls();
     });
 
     connect(stop_button_, &QPushButton::clicked, this, [this]() {
-        simulation_controller_->stop_simulation();
+        simulation_controller_->return_to_default_pose();
         update_simulation_controls();
     });
 
@@ -345,6 +362,7 @@ void MainWindow::setup_asset_loader_callbacks()
         [this](const std::filesystem::path&, CharacterMesh mesh) {
             has_editable_garment_ = false;
             simulation_controller_->set_character_mesh(std::move(mesh));
+            simulation_controller_->start_simulation();
             update_simulation_controls();
         }
     );
@@ -473,8 +491,13 @@ void MainWindow::update_simulation_controls()
 
     const bool placement_panel_visible = has_editable_garment_;
 
-    run_button_->setEnabled(!simulation_running && !placement_panel_visible);
-    stop_button_->setEnabled(simulation_running);
+    run_button_->setIcon(make_simulation_control_icon(
+        simulation_running ? SimulationControlIcon::Pause : SimulationControlIcon::Play,
+        simulation_running ? QColor{"#f4b400"} : QColor{"#43a047"}
+    ));
+    run_button_->setToolTip(simulation_running ? "Pause" : "Run");
+    run_button_->setEnabled(simulation_running || !placement_panel_visible);
+    stop_button_->setEnabled(simulation_controller_->has_base_positions() && !placement_panel_visible);
     reset_button_->setEnabled(true);
     garment_placement_panel_->setVisible(placement_panel_visible);
     garment_placement_panel_->setEnabled(placement_available);
