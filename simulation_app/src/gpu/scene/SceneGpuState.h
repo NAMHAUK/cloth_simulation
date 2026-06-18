@@ -40,6 +40,9 @@ public:
     void build_garment_attachment_targets(SceneState& scene,
                                           std::uint32_t garment_id,
                                           QOpenGLFunctions_4_5_Core& gl);
+    bool save_base_positions(QOpenGLFunctions_4_5_Core& gl);
+    bool restore_base_positions(QOpenGLFunctions_4_5_Core& gl);
+    void clear_base_positions(QOpenGLFunctions_4_5_Core& gl);
 
 private:
     void update_character_triangle_geometry(const CharacterFrameInterpolation& interpolation,

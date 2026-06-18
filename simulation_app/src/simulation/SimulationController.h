@@ -53,6 +53,7 @@ public:
     void stop_simulation();
     bool is_simulation_running() const;
     bool is_default_pose() const;
+    bool has_garments() const;
     void draw(const glm::mat4& mvp, QOpenGLFunctions_4_5_Core& gl);
     void release_gpu();
 
@@ -107,6 +108,7 @@ private:
     GarmentPlacementState garment_placement_;
     bool simulation_running_ = false;
     bool is_default_pose_ = false;
+    bool has_base_positions_ = false;
     QTimer frame_timer_;
 
     ViewportCallbacks viewport_callbacks_;

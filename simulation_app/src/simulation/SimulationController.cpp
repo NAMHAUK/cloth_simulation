@@ -108,6 +108,16 @@ void SimulationController::set_character_mesh(CharacterMesh mesh)
     }
 
     viewport_callbacks_.run_with_gl_context([this, &mesh](QOpenGLFunctions_4_5_Core& gl) {
+        if (!scene_.garments().empty()) {
+            if (!has_base_positions_) {
+                has_base_positions_ = gpu_state_.save_base_positions(gl);
+            }
+
+            if (has_base_positions_) {
+                gpu_state_.restore_base_positions(gl);
+            }
+        }
+
         set_character_mesh_state(std::move(mesh), gl);
     });
 
@@ -140,6 +150,8 @@ void SimulationController::add_garment_mesh(GarmentMesh mesh)
         garment_placement_.clear();
         garment_placement_.garment_id = scene_.add_garment_mesh(std::move(mesh));
         gpu_state_.update_garment_meshes(scene_, gl);
+        gpu_state_.clear_base_positions(gl);
+        has_base_positions_ = false;
     });
 
     viewport_callbacks_.request_update();
@@ -176,6 +188,8 @@ void SimulationController::reset_scene_to_default()
 
         scene_.clear_garments();
         gpu_state_.update_garment_meshes(scene_, gl);
+        gpu_state_.clear_base_positions(gl);
+        has_base_positions_ = false;
         set_character_mesh_state(default_character_mesh_, gl);
         is_default_pose_ = true;
     });
@@ -212,6 +226,8 @@ void SimulationController::confirm_garment_placement()
         simulation_pipeline_.prefit_garments(scene_, gpu_state_, gl);
         gpu_state_.build_garment_attachment_targets(scene_, garment_placement_.garment_id, gl);
         garment_placement_.clear();
+        gpu_state_.clear_base_positions(gl);
+        has_base_positions_ = false;
     });
 
     viewport_callbacks_.request_update();
@@ -230,6 +246,8 @@ void SimulationController::cancel_garment_placement()
         }
 
         garment_placement_.clear();
+        gpu_state_.clear_base_positions(gl);
+        has_base_positions_ = false;
     });
 
     viewport_callbacks_.request_update();
@@ -261,6 +279,11 @@ bool SimulationController::is_simulation_running() const
 bool SimulationController::is_default_pose() const
 {
     return is_default_pose_;
+}
+
+bool SimulationController::has_garments() const
+{
+    return !scene_.garments().empty();
 }
 
 bool SimulationController::has_garment_placement_update() const
