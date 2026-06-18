@@ -90,10 +90,10 @@ bool validate_motion_asset(std::ifstream& input, const std::filesystem::path& mo
         return false;
     }
 
-    std::array<char, 8> cache_signature = {};
-    input.read(cache_signature.data(), cache_signature.size());
-    if (!input || std::string(cache_signature.data(), cache_signature.size()) != "SMPLCACH") {
-        std::cerr << "Invalid motion asset cache signature: " << motion_asset_path << '\n';
+    std::array<char, 8> motion_signature = {};
+    input.read(motion_signature.data(), motion_signature.size());
+    if (!input || std::string(motion_signature.data(), motion_signature.size()) != "SMPLMOTN") {
+        std::cerr << "Invalid motion asset signature: " << motion_asset_path << '\n';
         return false;
     }
 
@@ -440,7 +440,7 @@ std::vector<std::filesystem::path> scan_motion_asset_paths(const ProjectPaths& p
     }
 
     for (const auto& file : std::filesystem::recursive_directory_iterator(project_paths.motion_asset_dir)) {
-        if (!file.is_regular_file() || file.path().extension() != ".cache") {
+        if (!file.is_regular_file() || file.path().extension() != ".motion") {
             continue;
         }
 
@@ -455,7 +455,7 @@ std::vector<std::filesystem::path> scan_motion_asset_paths(const ProjectPaths& p
 
 std::filesystem::path make_motion_asset_path(const ProjectPaths& project_paths, const std::filesystem::path& amass_motion_path)
 {
-    const std::string motion_asset_file_name = amass_motion_path.stem().string() + ".cache";
+    const std::string motion_asset_file_name = amass_motion_path.stem().string() + ".motion";
 
     if (is_path_inside(amass_motion_path, project_paths.amass_dir)) {
         std::error_code error;
