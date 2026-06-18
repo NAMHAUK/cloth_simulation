@@ -6,8 +6,8 @@ from pathlib import Path
 import numpy as np
 import torch
 
-CACHE_SIGNATURE = b"SMPLCACH"
-CACHE_HEADER_FORMAT = "<fIII"
+MOTION_SIGNATURE = b"SMPLMOTN"
+MOTION_HEADER_FORMAT = "<fIII"
 PRELUDE_FRAME_COUNT = 30
 SMPL_POSE_COMPONENT_COUNT = 72
 SMPL_JOINT_COUNT = 24
@@ -222,12 +222,12 @@ def compute_pose_ground_y_offset(model, pose, beta_values, device):
     return -min_y
 
 
-def write_cache_header(out_file, fps, faces, frame_count, vertex_count):
+def write_motion_header(out_file, fps, faces, frame_count, vertex_count):
     indices = np.asarray(faces, dtype=np.uint32).reshape(-1)
-    out_file.write(CACHE_SIGNATURE)
+    out_file.write(MOTION_SIGNATURE)
     out_file.write(
         struct.pack(
-            CACHE_HEADER_FORMAT,
+            MOTION_HEADER_FORMAT,
             float(fps),
             frame_count,
             vertex_count,
@@ -354,7 +354,7 @@ def convert(input_path, model_dir, output_path, target_fps, batch_size):
                     # 첫 batch면 header에 metadata 작성
                     if vertex_count is None:
                         vertex_count = batch_vertices.shape[1]
-                        root_positions_offset = write_cache_header(
+                        root_positions_offset = write_motion_header(
                             out_file,
                             effective_fps,
                             model.faces,
@@ -376,7 +376,7 @@ def convert(input_path, model_dir, output_path, target_fps, batch_size):
             root_positions = np.concatenate(converted_root_positions, axis=0).astype(np.float32, copy=False)
             write_root_positions(out_file, root_positions_offset, root_positions)
 
-        # 모든 batch가 성공하면 최종 cache 파일로 교체
+        # 모든 batch가 성공하면 최종 motion 파일로 교체
         temp_output_path.replace(output_path)
     except Exception:
         try:
@@ -393,14 +393,14 @@ def convert(input_path, model_dir, output_path, target_fps, batch_size):
     print(f"Init ground Y offset: {init_ground_y_offset}")
     print(f"Device: {device}")
     print(f"Source FPS: {source_fps}")
-    print(f"Cache FPS: {effective_fps}")
+    print(f"Motion FPS: {effective_fps}")
     print(f"Frames: {poses.shape[0]} -> {len(frame_indices)} + {PRELUDE_FRAME_COUNT} prelude = {len(conversion_poses)}")
     print(f"Output: {output_path}")
     print()
 
 
 def main():
-    parser = argparse.ArgumentParser(description="Convert AMASS SMPL motion to a binary OpenGL mesh cache.")
+    parser = argparse.ArgumentParser(description="Convert AMASS SMPL motion to a binary OpenGL mesh motion asset.")
     parser.add_argument("--input", required=True, type=Path)
     parser.add_argument("--model-dir", required=True, type=Path)
     parser.add_argument("--output", required=True, type=Path)
