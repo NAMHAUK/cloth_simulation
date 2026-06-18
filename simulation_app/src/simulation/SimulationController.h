@@ -45,6 +45,7 @@ public:
     void confirm_garment_placement();
     void cancel_garment_placement();
     void reset_scene_to_default();
+    void return_to_default_pose();
 
     // GPU / rendering //
     bool initialize_gpu(const ShaderPaths& shader_paths, QOpenGLFunctions_4_5_Core& gl);
@@ -53,6 +54,7 @@ public:
     void stop_simulation();
     bool is_simulation_running() const;
     bool is_default_pose() const;
+    bool has_base_positions() const;
     bool has_garments() const;
     void draw(const glm::mat4& mvp, QOpenGLFunctions_4_5_Core& gl);
     void release_gpu();
