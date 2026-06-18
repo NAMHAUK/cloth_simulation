@@ -191,3 +191,25 @@ void SceneGpuState::build_garment_attachment_targets(SceneState& scene,
         std::cerr << "Failed to upload garment attachment targets.\n";
     }
 }
+
+bool SceneGpuState::save_base_positions(QOpenGLFunctions_4_5_Core& gl)
+{
+    return cloth_gpu_state_.save_base_positions(gl);
+}
+
+bool SceneGpuState::restore_base_positions(QOpenGLFunctions_4_5_Core& gl)
+{
+    if (!cloth_gpu_state_.restore_base_positions(gl)) {
+        return false;
+    }
+
+    normal_updater_.update_cloth_normals(cloth_gpu_state_.mesh_topology_resources(),
+                                         cloth_gpu_state_.mesh_normal_resources(),
+                                         gl);
+    return true;
+}
+
+void SceneGpuState::clear_base_positions(QOpenGLFunctions_4_5_Core& gl)
+{
+    cloth_gpu_state_.clear_base_positions(gl);
+}
