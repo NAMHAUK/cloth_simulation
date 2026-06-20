@@ -12,8 +12,16 @@ struct CharacterTriangleGeometry {
 struct MeshBvhNode {
     vec4 min_bounds;
     vec4 max_bounds;
-    uvec4 metadata;
+    uint left_child;
+    uint right_child;
+    uint first_triangle;
+    uint triangle_count;
 };
+
+bool is_leaf_node(MeshBvhNode node)
+{
+    return node.triangle_count > 0u;
+}
 
 layout(std430, binding = 0) readonly buffer CharacterTriangleGeometryBuffer {
     CharacterTriangleGeometry triangle_geometry[];
@@ -26,15 +34,12 @@ layout(std430, binding = 1) buffer MeshBvhNodeBuffer {
 uniform uint uFirstNode;
 uniform uint uNodeCount;
 
-void update_leaf_bounds(uint node_index, uvec4 metadata)
+void update_leaf_bounds(uint node_index, MeshBvhNode node)
 {
-    uint first_triangle = metadata.x;
-    uint triangle_count = metadata.y;
-
     vec3 min_bounds = vec3(3.402823e+38);
     vec3 max_bounds = vec3(-3.402823e+38);
-    for (uint triangle_offset = 0u; triangle_offset < triangle_count; ++triangle_offset) {
-        uint triangle_index = first_triangle + triangle_offset;
+    for (uint triangle_offset = 0u; triangle_offset < node.triangle_count; ++triangle_offset) {
+        uint triangle_index = node.first_triangle + triangle_offset;
         vec3 a = triangle_geometry[triangle_index].a.xyz;
         vec3 b = triangle_geometry[triangle_index].b.xyz;
         vec3 c = triangle_geometry[triangle_index].c.xyz;
@@ -46,13 +51,10 @@ void update_leaf_bounds(uint node_index, uvec4 metadata)
     bvh_nodes[node_index].max_bounds = vec4(max_bounds, 0.0);
 }
 
-void update_internal_bounds(uint node_index, uvec4 metadata)
+void update_internal_bounds(uint node_index, MeshBvhNode node)
 {
-    uint left_child_index = metadata.x;
-    uint right_child_index = metadata.y;
-
-    vec3 min_bounds = min(bvh_nodes[left_child_index].min_bounds.xyz, bvh_nodes[right_child_index].min_bounds.xyz);
-    vec3 max_bounds = max(bvh_nodes[left_child_index].max_bounds.xyz, bvh_nodes[right_child_index].max_bounds.xyz);
+    vec3 min_bounds = min(bvh_nodes[node.left_child].min_bounds.xyz, bvh_nodes[node.right_child].min_bounds.xyz);
+    vec3 max_bounds = max(bvh_nodes[node.left_child].max_bounds.xyz, bvh_nodes[node.right_child].max_bounds.xyz);
 
     bvh_nodes[node_index].min_bounds = vec4(min_bounds, 0.0);
     bvh_nodes[node_index].max_bounds = vec4(max_bounds, 0.0);
@@ -66,10 +68,10 @@ void main()
     }
 
     uint node_index = uFirstNode + local_node_index;
-    uvec4 metadata = bvh_nodes[node_index].metadata;
-    if (metadata.w > 0u) {
-        update_leaf_bounds(node_index, metadata);
+    MeshBvhNode node = bvh_nodes[node_index];
+    if (is_leaf_node(node)) {
+        update_leaf_bounds(node_index, node);
     } else {
-        update_internal_bounds(node_index, metadata);
+        update_internal_bounds(node_index, node);
     }
 }

@@ -20,8 +20,16 @@ struct CharacterTriangleGeometry {
 struct MeshBvhNode {
     vec4 min_bounds;
     vec4 max_bounds;
-    uvec4 metadata;
+    uint left_child;
+    uint right_child;
+    uint first_triangle;
+    uint triangle_count;
 };
+
+bool is_leaf_node(MeshBvhNode node)
+{
+    return node.triangle_count > 0u;
+}
 
 layout(std430, binding = 2) readonly buffer CharacterTriangleGeometryBuffer {
     CharacterTriangleGeometry triangle_geometry[];
@@ -34,8 +42,10 @@ layout(std430, binding = 3) readonly buffer MeshBvhNodeBuffer {
 uniform uint uClothVertexCount;
 uniform uint uBvhNodeCount;
 uniform uint uRootNodeIndex;
-uniform float uSearchRadius;
+uniform float uSearchRadiusSquared;
 uniform float uCollisionThickness;
+
+const uint max_bvh_stack_depth = 32u;
 
 float length_squared(vec3 value)
 {
@@ -114,7 +124,6 @@ vec3 closest_point_on_triangle(vec3 point, vec3 a, vec3 b, vec3 c, vec3 ab, vec3
 
 void test_character_triangle(uint triangle_index,
                              vec3 cloth_position,
-                             float search_radius_sq,
                              inout vec3 best_closest_point,
                              inout vec3 best_normal,
                              inout float best_distance_sq,
@@ -133,7 +142,7 @@ void test_character_triangle(uint triangle_index,
     vec3 unit_normal = normal.xyz;
 
     float plane_distance = dot(cloth_position - a, unit_normal);
-    if (plane_distance * plane_distance > search_radius_sq) {
+    if (plane_distance * plane_distance > best_distance_sq) {
         return;
     }
 
@@ -157,47 +166,95 @@ void main()
     }
 
     vec3 cloth_position = load_cloth_position(cloth_vertex_index);
-    float search_radius_sq = uSearchRadius * uSearchRadius;
     vec3 best_closest_point = vec3(0.0);
     vec3 best_normal = vec3(0.0, 1.0, 0.0);
-    float best_distance_sq = search_radius_sq;
+    float best_distance_sq = uSearchRadiusSquared;
     bool has_candidate = false;
 
+    uint node_stack[32];
+    float node_distance_stack[32];
+    uint stack_count = 0u;
     uint node_index = uRootNodeIndex;
+    float node_distance_sq = 0.0;
+    if (node_index < uBvhNodeCount) {
+        MeshBvhNode root_node = bvh_nodes[node_index];
+        node_distance_sq = squared_distance_to_bounds(cloth_position, root_node.min_bounds.xyz, root_node.max_bounds.xyz);
+    }
+
     while (node_index < uBvhNodeCount) {
-        MeshBvhNode node = bvh_nodes[node_index];
-        uint next_node = node.metadata.z;
-        float node_search_radius_sq = best_distance_sq;
-        if (squared_distance_to_bounds(cloth_position, node.min_bounds.xyz, node.max_bounds.xyz) > node_search_radius_sq) {
-            node_index = next_node;
+        if (node_distance_sq > best_distance_sq) {
+            if (stack_count == 0u) {
+                break;
+            }
+            --stack_count;
+            node_index = node_stack[stack_count];
+            node_distance_sq = node_distance_stack[stack_count];
             continue;
         }
 
-        if (node.metadata.w > 0u) {
-            uint first_triangle = node.metadata.x;
-            uint triangle_count = node.metadata.y;
+        MeshBvhNode node = bvh_nodes[node_index];
+        if (is_leaf_node(node)) {
+            uint first_triangle = node.first_triangle;
+            uint triangle_count = node.triangle_count;
             for (uint triangle_offset = 0u; triangle_offset < triangle_count; ++triangle_offset) {
                 test_character_triangle(first_triangle + triangle_offset,
                                         cloth_position,
-                                        search_radius_sq,
                                         best_closest_point,
                                         best_normal,
                                         best_distance_sq,
                                         has_candidate);
             }
-            node_index = next_node;
+            if (stack_count == 0u) {
+                break;
+            }
+            --stack_count;
+            node_index = node_stack[stack_count];
+            node_distance_sq = node_distance_stack[stack_count];
             continue;
         }
 
-        uint left_child = node.metadata.x;
-        uint right_child = node.metadata.y;
-        if (left_child < uBvhNodeCount) {
-            node_index = left_child;
-        } else if (right_child < uBvhNodeCount) {
-            node_index = right_child;
-        } else {
-            node_index = next_node;
+        uint left_child = node.left_child;
+        uint right_child = node.right_child;
+        bool has_left_child = left_child < uBvhNodeCount;
+        bool has_right_child = right_child < uBvhNodeCount;
+        if (has_left_child && has_right_child) {
+            MeshBvhNode left_node = bvh_nodes[left_child];
+            MeshBvhNode right_node = bvh_nodes[right_child];
+            float left_distance_sq = squared_distance_to_bounds(cloth_position, left_node.min_bounds.xyz, left_node.max_bounds.xyz);
+            float right_distance_sq = squared_distance_to_bounds(cloth_position, right_node.min_bounds.xyz, right_node.max_bounds.xyz);
+            uint visit_child = left_distance_sq <= right_distance_sq ? left_child : right_child;
+            uint deferred_child = left_distance_sq <= right_distance_sq ? right_child : left_child;
+            float visit_distance_sq = min(left_distance_sq, right_distance_sq);
+            float deferred_distance_sq = max(left_distance_sq, right_distance_sq);
+
+            if (deferred_distance_sq <= best_distance_sq && stack_count < max_bvh_stack_depth) {
+                node_stack[stack_count] = deferred_child;
+                node_distance_stack[stack_count] = deferred_distance_sq;
+                ++stack_count;
+            }
+
+            if (visit_distance_sq <= best_distance_sq) {
+                node_index = visit_child;
+                node_distance_sq = visit_distance_sq;
+                continue;
+            }
+        } else if (has_left_child || has_right_child) {
+            uint child = has_left_child ? left_child : right_child;
+            MeshBvhNode child_node = bvh_nodes[child];
+            float child_distance_sq = squared_distance_to_bounds(cloth_position, child_node.min_bounds.xyz, child_node.max_bounds.xyz);
+            if (child_distance_sq <= best_distance_sq) {
+                node_index = child;
+                node_distance_sq = child_distance_sq;
+                continue;
+            }
         }
+
+        if (stack_count == 0u) {
+            break;
+        }
+        --stack_count;
+        node_index = node_stack[stack_count];
+        node_distance_sq = node_distance_stack[stack_count];
     }
 
     if (!has_candidate) {

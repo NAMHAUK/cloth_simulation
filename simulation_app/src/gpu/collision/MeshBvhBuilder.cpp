@@ -189,7 +189,6 @@ void MeshBvhBuilder::write_level_ordered_bvh_data(std::uint32_t root_node_index,
     level_order_node_ranges.reserve(build_nodes_.size());
     result.nodes.clear();
     result.nodes.reserve(build_nodes_.size());
-    std::vector<std::uint32_t> result_node_indices(build_nodes_.size(), invalid_mesh_bvh_node);
 
     std::vector<std::uint32_t> current_level_node_indices{root_node_index};
 
@@ -204,13 +203,12 @@ void MeshBvhBuilder::write_level_ordered_bvh_data(std::uint32_t root_node_index,
 
         // 현재 level의 node를 탐색하며 result node에 값 저장
         for (const std::uint32_t build_node_index : current_level_node_indices) {
-            append_bvh_node(result.nodes, build_node_index, next_level, result_node_indices);
+            append_bvh_node(result.nodes, build_node_index, next_level);
         }
 
         current_level_node_indices = std::move(next_level.node_indices);
     }
 
-    write_node_metadata(root_node_index, invalid_mesh_bvh_node, result.nodes, result_node_indices);
 
     // shader update 순서에 맞게 leaf->root 순서로 반전해서 저장
     result.node_ranges_by_level.clear();
@@ -222,25 +220,18 @@ void MeshBvhBuilder::write_level_ordered_bvh_data(std::uint32_t root_node_index,
 
 void MeshBvhBuilder::append_bvh_node(std::vector<MeshBvhNode>& result_nodes,
                                      std::uint32_t build_node_index,
-                                     NextBvhLevel& next_level,
-                                     std::vector<std::uint32_t>& result_node_indices) const
+                                     NextBvhLevel& next_level) const
 {
     const BvhBuildNode& build_node = build_nodes_[build_node_index];
-    const std::uint32_t result_node_index = static_cast<std::uint32_t>(result_nodes.size());
     MeshBvhNode& node = result_nodes.emplace_back();
-    result_node_indices[build_node_index] = result_node_index;
     node.min_bounds = glm::vec4(build_node.min_bounds, 0.0f);
     node.max_bounds = glm::vec4(build_node.max_bounds, 0.0f);
 
-    // metadata에 node 정보 저장
+    // node reference 정보 저장
     if (build_node.triangle_count > 0) {
         // leaf node인 경우, triangle 정보 저장
-        node.metadata = glm::uvec4(
-            invalid_mesh_bvh_node,
-            invalid_mesh_bvh_node,
-            build_node.first_triangle,
-            build_node.triangle_count
-        );
+        node.first_triangle = build_node.first_triangle;
+        node.triangle_count = build_node.triangle_count;
     } else {
         // internal node인 경우, 자식 node index 저장
         const auto left_node_index =
@@ -251,38 +242,9 @@ void MeshBvhBuilder::append_bvh_node(std::vector<MeshBvhNode>& result_nodes,
             next_level.first_node + static_cast<std::uint32_t>(next_level.node_indices.size());
         next_level.node_indices.push_back(build_node.right_child);
 
-        node.metadata = glm::uvec4(left_node_index, right_node_index, 0u, 0u);
+        node.left_child = left_node_index;
+        node.right_child = right_node_index;
     }
-}
-
-void MeshBvhBuilder::write_node_metadata(
-    std::uint32_t build_node_index,
-    std::uint32_t next_build_node_index,
-    std::vector<MeshBvhNode>& result_nodes,
-    const std::vector<std::uint32_t>& result_node_indices) const
-{
-    const std::uint32_t result_node_index = result_node_indices[build_node_index];
-    const std::uint32_t next_node_index = (next_build_node_index == invalid_mesh_bvh_node)
-        ? invalid_mesh_bvh_node
-        : result_node_indices[next_build_node_index];
-    const BvhBuildNode& build_node = build_nodes_[build_node_index];
-
-    if (build_node.triangle_count > 0) {
-        result_nodes[result_node_index].metadata = glm::uvec4(
-            build_node.first_triangle,
-            build_node.triangle_count,
-            next_node_index,
-            1u
-        );
-        return;
-    }
-
-    const std::uint32_t left_node_index = result_node_indices[build_node.left_child];
-    const std::uint32_t right_node_index = result_node_indices[build_node.right_child];
-    result_nodes[result_node_index].metadata = glm::uvec4(left_node_index, right_node_index, next_node_index, 0u);
-
-    write_node_metadata(build_node.left_child, build_node.right_child, result_nodes, result_node_indices);
-    write_node_metadata(build_node.right_child, next_build_node_index, result_nodes, result_node_indices);
 }
 
 bool MeshBvhData::is_valid(std::uint32_t triangle_count) const

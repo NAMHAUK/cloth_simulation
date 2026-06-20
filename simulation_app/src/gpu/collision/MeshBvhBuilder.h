@@ -53,12 +53,7 @@ private:
     void write_level_ordered_bvh_data(std::uint32_t root_node_index, MeshBvhData& result) const;
     void append_bvh_node(std::vector<MeshBvhNode>& result_nodes,
                          std::uint32_t build_node_index,
-                         NextBvhLevel& next_level,
-                         std::vector<std::uint32_t>& result_node_indices) const;
-    void write_node_metadata(std::uint32_t build_node_index,
-                             std::uint32_t next_build_node_index,
-                             std::vector<MeshBvhNode>& result_nodes,
-                             const std::vector<std::uint32_t>& result_node_indices) const;
+                         NextBvhLevel& next_level) const;
 
     std::uint32_t vertex_count_ = 0;
     const std::vector<std::uint32_t>& source_triangle_indices_;

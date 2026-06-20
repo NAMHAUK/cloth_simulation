@@ -2,8 +2,10 @@
 
 #include "asset/MeshGeometryUtils.h"
 
+#include <algorithm>
 #include <iostream>
 #include <limits>
+#include <vector>
 
 #include <glm/common.hpp>
 #include <glm/geometric.hpp>
@@ -27,6 +29,16 @@ struct CharacterTriangleTarget final {
     glm::vec3 c{};
     std::uint32_t triangle_index = 0;
 };
+
+struct BvhNodeVisit final {
+    std::uint32_t node_index = 0;
+    float distance_sq = 0.0f;
+};
+
+bool is_leaf_node(const MeshBvhNode& node)
+{
+    return node.triangle_count > 0u;
+}
 
 ClosestTrianglePoint make_valid_closest_point(const glm::vec3& query,
                                               const glm::vec3& closest_point,
@@ -158,19 +170,26 @@ ClosestTrianglePoint find_closest_triangle_with_bvh(const glm::vec3& cloth_posit
                                                     std::uint32_t& best_triangle_index)
 {
     ClosestTrianglePoint best_point;
-    std::uint32_t node_index = 0;
+    std::vector<BvhNodeVisit> node_stack;
+    node_stack.reserve(64);
+    if (!bvh_nodes.empty()) {
+        node_stack.push_back({
+            0u,
+            squared_distance_to_bounds(cloth_position, bvh_nodes[0].min_bounds, bvh_nodes[0].max_bounds)
+        });
+    }
 
-    while (node_index < bvh_nodes.size()) {
-        const MeshBvhNode& node = bvh_nodes[node_index];
-        const std::uint32_t next_node = node.metadata.z;
-        if (squared_distance_to_bounds(cloth_position, node.min_bounds, node.max_bounds) > best_point.distance_sq) {
-            node_index = next_node;
+    while (!node_stack.empty()) {
+        const BvhNodeVisit visit = node_stack.back();
+        node_stack.pop_back();
+        if (visit.node_index >= bvh_nodes.size() || visit.distance_sq > best_point.distance_sq) {
             continue;
         }
 
-        if (node.metadata.w > 0u) {
-            const std::uint32_t first_triangle = node.metadata.x;
-            const std::uint32_t triangle_count = node.metadata.y;
+        const MeshBvhNode& node = bvh_nodes[visit.node_index];
+        if (is_leaf_node(node)) {
+            const std::uint32_t first_triangle = node.first_triangle;
+            const std::uint32_t triangle_count = node.triangle_count;
             for (std::uint32_t triangle_offset = 0; triangle_offset < triangle_count; ++triangle_offset) {
                 const std::uint32_t triangle_index = first_triangle + triangle_offset;
                 if (triangle_index >= character_triangles.size()) {
@@ -189,18 +208,45 @@ ClosestTrianglePoint find_closest_triangle_with_bvh(const glm::vec3& cloth_posit
                     best_triangle_index = triangle.triangle_index;
                 }
             }
-            node_index = next_node;
             continue;
         }
 
-        const std::uint32_t left_child = node.metadata.x;
-        const std::uint32_t right_child = node.metadata.y;
-        if (left_child < bvh_nodes.size()) {
-            node_index = left_child;
-        } else if (right_child < bvh_nodes.size()) {
-            node_index = right_child;
-        } else {
-            node_index = next_node;
+        const std::uint32_t left_child = node.left_child;
+        const std::uint32_t right_child = node.right_child;
+        const bool has_left_child = left_child < bvh_nodes.size();
+        const bool has_right_child = right_child < bvh_nodes.size();
+        if (has_left_child && has_right_child) {
+            const float left_distance_sq = squared_distance_to_bounds(
+                cloth_position,
+                bvh_nodes[left_child].min_bounds,
+                bvh_nodes[left_child].max_bounds
+            );
+            const float right_distance_sq = squared_distance_to_bounds(
+                cloth_position,
+                bvh_nodes[right_child].min_bounds,
+                bvh_nodes[right_child].max_bounds
+            );
+            const std::uint32_t near_child = left_distance_sq <= right_distance_sq ? left_child : right_child;
+            const std::uint32_t far_child = left_distance_sq <= right_distance_sq ? right_child : left_child;
+            const float near_distance_sq = std::min(left_distance_sq, right_distance_sq);
+            const float far_distance_sq = std::max(left_distance_sq, right_distance_sq);
+
+            if (far_distance_sq <= best_point.distance_sq) {
+                node_stack.push_back({far_child, far_distance_sq});
+            }
+            if (near_distance_sq <= best_point.distance_sq) {
+                node_stack.push_back({near_child, near_distance_sq});
+            }
+        } else if (has_left_child || has_right_child) {
+            const std::uint32_t child = has_left_child ? left_child : right_child;
+            const float child_distance_sq = squared_distance_to_bounds(
+                cloth_position,
+                bvh_nodes[child].min_bounds,
+                bvh_nodes[child].max_bounds
+            );
+            if (child_distance_sq <= best_point.distance_sq) {
+                node_stack.push_back({child, child_distance_sq});
+            }
         }
     }
 
