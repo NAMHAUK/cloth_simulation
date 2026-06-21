@@ -6,9 +6,8 @@ from pathlib import Path
 import numpy as np
 import torch
 
-CACHE_MAGIC = b"SMPLCACH"
-CACHE_VERSION = 1
-CACHE_HEADER_FORMAT = "<IfIIIffff"
+MOTION_SIGNATURE = b"SMPLMOTN"
+MOTION_HEADER_FORMAT = "<fIII"
 LEFT_SHOULDER_BODY_POSE_INDEX = (16 - 1) * 3
 RIGHT_SHOULDER_BODY_POSE_INDEX = (17 - 1) * 3
 DEFAULT_A_POSE_ARM_ANGLE_DEG = 80.0
@@ -27,20 +26,14 @@ def set_smpl_compatibility():
         inspect.getargspec = inspect.getfullargspec
 
 
-def compute_bounds_fit(vertices):
-    bounds_min = vertices.min(axis=0)
-    bounds_max = vertices.max(axis=0)
-    bounds_center = ((bounds_min + bounds_max) * 0.5).astype(np.float32, copy=False)
-    extents = np.maximum(bounds_max - bounds_min, 0.001)
-    bounds_radius = float(np.max(extents) * 0.5)
-    return bounds_center, bounds_radius
-
-
-def align_vertices_min_y_to_ground(vertices, ground_clearance):
+def align_init_pose_to_ground(vertices, root_position, ground_clearance):
     aligned_vertices = np.asarray(vertices, dtype=np.float32).copy()
+    aligned_root_position = np.asarray(root_position, dtype=np.float32).copy()
     min_y = float(aligned_vertices[:, 1].min())
-    aligned_vertices[:, 1] += float(ground_clearance) - min_y
-    return aligned_vertices
+    y_offset = float(ground_clearance) - min_y
+    aligned_vertices[:, 1] += y_offset
+    aligned_root_position[1] += y_offset
+    return aligned_vertices, aligned_root_position
 
 
 def make_body_pose(pose_name, arm_angle_deg, shoulder_axis):
@@ -55,7 +48,7 @@ def make_body_pose(pose_name, arm_angle_deg, shoulder_axis):
     return body_pose
 
 
-def write_init_pose_cache(output_path, fps, faces, vertices):
+def write_default_pose_motion(output_path, fps, faces, vertices, root_position):
     if fps <= 0.0:
         raise ValueError(f"Invalid FPS: {fps}")
     if vertices.ndim != 2 or vertices.shape[1] != 3:
@@ -65,27 +58,23 @@ def write_init_pose_cache(output_path, fps, faces, vertices):
 
     indices = np.asarray(faces, dtype=np.uint32).reshape(-1)
     vertices = np.asarray(vertices, dtype=np.float32)
-    bounds_center, bounds_radius = compute_bounds_fit(vertices)
+    root_position = np.asarray(root_position, dtype=np.float32).reshape(1, 3)
 
     temp_output_path = output_path.with_name(output_path.name + ".tmp")
     try:
         with temp_output_path.open("wb") as out_file:
-            out_file.write(CACHE_MAGIC)
+            out_file.write(MOTION_SIGNATURE)
             out_file.write(
                 struct.pack(
-                    CACHE_HEADER_FORMAT,
-                    CACHE_VERSION,
+                    MOTION_HEADER_FORMAT,
                     float(fps),
                     1,
                     vertices.shape[0],
                     indices.size,
-                    float(bounds_center[0]),
-                    float(bounds_center[1]),
-                    float(bounds_center[2]),
-                    bounds_radius,
                 )
             )
             indices.tofile(out_file)
+            root_position.tofile(out_file)
             vertices.tofile(out_file)
 
         temp_output_path.replace(output_path)
@@ -98,7 +87,7 @@ def write_init_pose_cache(output_path, fps, faces, vertices):
 
 
 def main():
-    parser = argparse.ArgumentParser(description="Convert a neutral SMPL init pose to a one-frame mesh cache.")
+    parser = argparse.ArgumentParser(description="Convert a neutral SMPL default pose to a one-frame mesh motion asset.")
     parser.add_argument("--model", required=True, type=Path)
     parser.add_argument("--output", required=True, type=Path)
     parser.add_argument("--pose", default="a", choices=("a", "t"))
@@ -126,8 +115,9 @@ def main():
         )
 
     vertices = output.vertices.detach().cpu().numpy()[0]
-    vertices = align_vertices_min_y_to_ground(vertices, args.ground_clearance)
-    write_init_pose_cache(args.output, args.fps, model.faces, vertices)
+    root_position = output.joints[:, 0, :].detach().cpu().numpy()[0]
+    vertices, root_position = align_init_pose_to_ground(vertices, root_position, args.ground_clearance)
+    write_default_pose_motion(args.output, args.fps, model.faces, vertices, root_position)
 
     print()
     print(f"Converted neutral SMPL {args.pose.upper()}-pose: {args.model}")

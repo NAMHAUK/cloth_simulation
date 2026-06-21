@@ -25,7 +25,8 @@ public:
         std::function<bool()> is_ready;
         std::function<void(GlContextTask)> run_with_gl_context;
         std::function<void()> request_update;
-        std::function<void(const CharacterMesh&)> reset_camera_to_character;
+        std::function<void(const glm::vec3&)> reset_camera_to_character_root;
+        std::function<void(const glm::vec3&)> set_camera_target;
     };
 
     SimulationController();
@@ -44,6 +45,7 @@ public:
     void confirm_garment_placement();
     void cancel_garment_placement();
     void reset_scene_to_default();
+    void return_to_default_pose();
 
     // GPU / rendering //
     bool initialize_gpu(const ShaderPaths& shader_paths, QOpenGLFunctions_4_5_Core& gl);
@@ -52,6 +54,8 @@ public:
     void stop_simulation();
     bool is_simulation_running() const;
     bool is_default_pose() const;
+    bool has_base_positions() const;
+    bool has_garments() const;
     void draw(const glm::mat4& mvp, QOpenGLFunctions_4_5_Core& gl);
     void release_gpu();
 
@@ -102,10 +106,11 @@ private:
     // Rendering orchestration //
     RenderPipeline render_pipeline_;
 
-    std::uint64_t motion_step_count_ = 0;
+    std::uint64_t motion_step_index_ = 0;
     GarmentPlacementState garment_placement_;
     bool simulation_running_ = false;
     bool is_default_pose_ = false;
+    bool has_base_positions_ = false;
     QTimer frame_timer_;
 
     ViewportCallbacks viewport_callbacks_;

@@ -14,8 +14,7 @@ struct CharacterTriangleGeometry {
     vec4 a;
     vec4 b;
     vec4 c;
-    vec4 face_normal;
-    vec4 unit_face_normal;
+    vec4 normal;
 };
 
 struct MeshBvhNode {
@@ -121,8 +120,8 @@ void test_character_triangle(uint triangle_index,
                              inout float best_distance_sq,
                              inout bool has_candidate)
 {
-    vec4 unit_face_normal = triangle_geometry[triangle_index].unit_face_normal;
-    if (unit_face_normal.w == 0.0) {
+    vec4 normal = triangle_geometry[triangle_index].normal;
+    if (normal.w == 0.0) {
         return;
     }
 
@@ -131,7 +130,7 @@ void test_character_triangle(uint triangle_index,
     vec3 c = triangle_geometry[triangle_index].c.xyz;
     vec3 ab = b - a;
     vec3 ac = c - a;
-    vec3 unit_normal = unit_face_normal.xyz;
+    vec3 unit_normal = normal.xyz;
 
     float plane_distance = dot(cloth_position - a, unit_normal);
     if (plane_distance * plane_distance > search_radius_sq) {

@@ -143,22 +143,55 @@ const std::vector<GarmentObject>& SceneState::garments() const
 }
 
 // Playback // 
-
-// cloth 60fps, character 30fps 기준, 2step마다 character frame update
 void SceneState::update_character_frame(std::uint64_t simulation_step_count,
                                         std::uint32_t character_frame_stride)
 {
-    if (character_mesh_.frame_count == 0) {
+    if (character_mesh_.frame_count == 0 || character_frame_stride == 0) {
         return;
     }
 
-    const std::uint64_t character_step = simulation_step_count / character_frame_stride;
-    const std::uint32_t next_frame = static_cast<std::uint32_t>(character_step % character_mesh_.frame_count);
+    const std::uint64_t frame_index = simulation_step_count / character_frame_stride;
+    const std::uint32_t last_frame_index = character_mesh_.frame_count - 1u;
 
-    current_character_frame_ = next_frame;
+    current_character_frame_ = static_cast<std::uint32_t>(
+        std::min<std::uint64_t>(frame_index, last_frame_index)
+    );
+}
+
+CharacterFrameInterpolation SceneState::character_frame_interpolation(float character_frame_time) const
+{
+    if (character_mesh_.frame_count == 0) {
+        return {};
+    }
+
+    // motion이 종료된 경우 값 고정
+    const std::uint32_t last_frame_index = character_mesh_.frame_count - 1u;
+    if (character_frame_time >= last_frame_index) {
+        return {last_frame_index, last_frame_index, 0.0f};
+    }
+
+    const std::uint32_t current_frame_index = static_cast<std::uint32_t>(character_frame_time);
+    const std::uint32_t next_frame_index = current_frame_index + 1u;
+    const float frame_alpha = character_frame_time - current_frame_index;
+    return {current_frame_index, next_frame_index, frame_alpha};
 }
 
 std::uint32_t SceneState::current_character_frame() const
 {
     return current_character_frame_;
+}
+
+glm::vec3 SceneState::character_root_position(std::uint32_t frame_index) const
+{
+    if (frame_index >= character_mesh_.frame_count ||
+        character_mesh_.root_positions.size() < (static_cast<std::size_t>(frame_index) + 1u) * 3u) {
+        return glm::vec3{0.0f};
+    }
+
+    const std::size_t root_base = static_cast<std::size_t>(frame_index) * 3u;
+    return {
+        character_mesh_.root_positions[root_base],
+        character_mesh_.root_positions[root_base + 1u],
+        character_mesh_.root_positions[root_base + 2u],
+    };
 }

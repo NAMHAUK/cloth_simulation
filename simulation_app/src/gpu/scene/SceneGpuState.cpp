@@ -6,6 +6,13 @@
 
 #include <iostream>
 
+namespace {
+CharacterFrameInterpolation make_single_frame_interpolation(std::uint32_t frame_index)
+{
+    return {frame_index, frame_index, 0.0f};
+}
+}
+
 bool SceneGpuState::is_initialized() const
 {
     return initialized_;
@@ -67,7 +74,8 @@ void SceneGpuState::set_character_mesh(const SceneState& scene, QOpenGLFunctions
     const CharacterMesh& character_mesh = scene.character_mesh();
     character_gpu_state_.upload_mesh(character_mesh, scene.default_character_bvh_data(), gl);
     character_gpu_state_.set_current_frame(0);
-    update_character_triangle_geometry(scene, gl);
+    update_character_triangle_geometry(make_single_frame_interpolation(0), gl);
+    update_character_bvh_bounds(scene, gl);
     normal_updater_.update_character_normals(character_gpu_state_.mesh_topology_resources(),
                                              character_gpu_state_.mesh_normal_resources(),
                                              gl);
@@ -81,19 +89,52 @@ void SceneGpuState::update_character_frame(const SceneState& scene, QOpenGLFunct
 
     const std::uint32_t scene_frame = scene.current_character_frame();
 
-    if (character_gpu_state_.current_frame_index() == scene_frame) {
+    character_gpu_state_.set_current_frame(scene_frame);
+    update_character_triangle_geometry(make_single_frame_interpolation(scene_frame), gl);
+    update_character_bvh_bounds(scene, gl);
+}
+
+void SceneGpuState::update_character_frame_interpolation(const SceneState& scene,
+                                                         const CharacterFrameInterpolation& interpolation,
+                                                         QOpenGLFunctions_4_5_Core& gl)
+{
+    if (!is_initialized() || !character_gpu_state_.is_initialized()) {
         return;
     }
 
-    character_gpu_state_.set_current_frame(scene_frame);
-    update_character_triangle_geometry(scene, gl);
+    update_character_triangle_geometry(interpolation, gl);
+    update_character_bvh_bounds(scene, gl);
 }
 
-void SceneGpuState::update_character_triangle_geometry(const SceneState& scene, QOpenGLFunctions_4_5_Core& gl)
+void SceneGpuState::update_character_render_frame(const SceneState& scene, QOpenGLFunctions_4_5_Core& gl)
 {
+    if (!is_initialized() || !character_gpu_state_.is_initialized()) {
+        return;
+    }
+
+    const std::uint32_t scene_frame = scene.current_character_frame();
+    character_gpu_state_.set_current_frame(scene_frame);
+    update_character_triangle_geometry(make_single_frame_interpolation(scene_frame), gl);
+}
+
+void SceneGpuState::update_character_triangle_geometry(const CharacterFrameInterpolation& interpolation,
+                                                       QOpenGLFunctions_4_5_Core& gl)
+{
+    const std::uint32_t current_frame_position_begin_index =
+        character_gpu_state_.frame_position_begin_index(interpolation.current_frame_index);
+    const std::uint32_t next_frame_position_begin_index =
+        character_gpu_state_.frame_position_begin_index(interpolation.next_frame_index);
+
     triangle_geometry_updater_.update(character_gpu_state_.mesh_topology_resources(),
                                       character_gpu_state_.character_triangle_geometry_resources(),
+                                      current_frame_position_begin_index,
+                                      next_frame_position_begin_index,
+                                      interpolation.frame_alpha,
                                       gl);
+}
+
+void SceneGpuState::update_character_bvh_bounds(const SceneState& scene, QOpenGLFunctions_4_5_Core& gl)
+{
     bvh_bounds_updater_.update(character_gpu_state_.character_triangle_geometry_resources(),
                                character_gpu_state_.character_bvh_resources(),
                                scene.default_character_bvh_data().node_ranges_by_level,
@@ -149,4 +190,26 @@ void SceneGpuState::build_garment_attachment_targets(SceneState& scene,
     if (!cloth_gpu_state_.update_garment_attachment_targets(*garment, gl)) {
         std::cerr << "Failed to upload garment attachment targets.\n";
     }
+}
+
+bool SceneGpuState::save_base_positions(QOpenGLFunctions_4_5_Core& gl)
+{
+    return cloth_gpu_state_.save_base_positions(gl);
+}
+
+bool SceneGpuState::restore_base_positions(QOpenGLFunctions_4_5_Core& gl)
+{
+    if (!cloth_gpu_state_.restore_base_positions(gl)) {
+        return false;
+    }
+
+    normal_updater_.update_cloth_normals(cloth_gpu_state_.mesh_topology_resources(),
+                                         cloth_gpu_state_.mesh_normal_resources(),
+                                         gl);
+    return true;
+}
+
+void SceneGpuState::clear_base_positions(QOpenGLFunctions_4_5_Core& gl)
+{
+    cloth_gpu_state_.clear_base_positions(gl);
 }

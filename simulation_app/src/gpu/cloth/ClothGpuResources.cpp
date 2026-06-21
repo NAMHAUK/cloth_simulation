@@ -734,6 +734,9 @@ ClothGpuResources::ClothGpuResources(ClothGpuResources&& other) noexcept
     used_elements_ = other.used_elements_;
     allocated_elements_ = other.allocated_elements_;
 
+    base_positions_ = other.base_positions_;
+    base_position_vertex_count_ = other.base_position_vertex_count_;
+
     other.reset_resources();
 }
 
@@ -752,6 +755,9 @@ void ClothGpuResources::reset_resources() noexcept
     attachment_ranges_.clear();
     used_elements_ = {};
     allocated_elements_ = {};
+
+    base_positions_ = 0;
+    base_position_vertex_count_ = 0;
 }
 
 // garment buffer updates //
@@ -828,6 +834,68 @@ bool ClothGpuResources::update_garment_attachment_targets(const GarmentObject& g
     upload_attachment_constraints_data(buffers_, buffer_ranges->attachment_constraint_offset, upload_data, gl);
     set_attachment_range(buffer_ranges->attachment_constraint_offset, attachment_constraint_count, attachment_ranges_);
     return true;
+}
+
+bool ClothGpuResources::save_base_positions(QOpenGLFunctions_4_5_Core& gl)
+{
+    if (buffers_.current_position == 0 || used_elements_.vertex == 0) {
+        return false;
+    }
+
+    clear_base_positions(gl);
+
+    const GLsizeiptr position_bytes = byte_size(used_elements_.vertex, position_components, sizeof(float));
+    gl.glCreateBuffers(1, &base_positions_);
+    gl.glNamedBufferData(base_positions_, position_bytes, nullptr, GL_DYNAMIC_COPY);
+
+    gl.glMemoryBarrier(GL_SHADER_STORAGE_BARRIER_BIT | GL_BUFFER_UPDATE_BARRIER_BIT);
+    gl.glCopyNamedBufferSubData(buffers_.current_position,
+                                base_positions_,
+                                0,
+                                0,
+                                position_bytes);
+    gl.glMemoryBarrier(GL_SHADER_STORAGE_BARRIER_BIT | GL_BUFFER_UPDATE_BARRIER_BIT);
+
+    base_position_vertex_count_ = used_elements_.vertex;
+    return true;
+}
+
+bool ClothGpuResources::restore_base_positions(QOpenGLFunctions_4_5_Core& gl) const
+{
+    if (base_positions_ == 0 ||
+        buffers_.current_position == 0 ||
+        buffers_.previous_position == 0 ||
+        used_elements_.vertex == 0 ||
+        base_position_vertex_count_ != used_elements_.vertex) {
+        return false;
+    }
+
+    const GLsizeiptr position_bytes = byte_size(used_elements_.vertex, position_components, sizeof(float));
+
+    gl.glMemoryBarrier(GL_SHADER_STORAGE_BARRIER_BIT | GL_BUFFER_UPDATE_BARRIER_BIT);
+    gl.glCopyNamedBufferSubData(base_positions_,
+                                buffers_.current_position,
+                                0,
+                                0,
+                                position_bytes);
+    gl.glCopyNamedBufferSubData(base_positions_,
+                                buffers_.previous_position,
+                                0,
+                                0,
+                                position_bytes);
+    gl.glMemoryBarrier(GL_SHADER_STORAGE_BARRIER_BIT | GL_BUFFER_UPDATE_BARRIER_BIT);
+
+    return true;
+}
+
+void ClothGpuResources::clear_base_positions(QOpenGLFunctions_4_5_Core& gl)
+{
+    if (base_positions_ != 0) {
+        gl.glDeleteBuffers(1, &base_positions_);
+    }
+
+    base_positions_ = 0;
+    base_position_vertex_count_ = 0;
 }
 
 void ClothGpuResources::rebuild_garment_buffers(const std::vector<GarmentObject>& garments, QOpenGLFunctions_4_5_Core& gl)
@@ -1042,6 +1110,7 @@ void ClothGpuResources::delete_buffer_set(ClothBufferSet& buffers, QOpenGLFuncti
 void ClothGpuResources::delete_gpu_objects(QOpenGLFunctions_4_5_Core& gl)
 {
     delete_buffer_set(buffers_, gl);
+    clear_base_positions(gl);
 }
 
 void ClothGpuResources::configure_vao(QOpenGLFunctions_4_5_Core& gl)

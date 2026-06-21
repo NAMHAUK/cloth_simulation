@@ -23,6 +23,10 @@ public:
     bool initialize(const ShaderPaths& shader_paths, QOpenGLFunctions_4_5_Core& gl);
     void release(QOpenGLFunctions_4_5_Core& gl);
     void update_character_frame(const SceneState& scene, QOpenGLFunctions_4_5_Core& gl);
+    void update_character_frame_interpolation(const SceneState& scene,
+                                              const CharacterFrameInterpolation& interpolation,
+                                              QOpenGLFunctions_4_5_Core& gl);
+    void update_character_render_frame(const SceneState& scene, QOpenGLFunctions_4_5_Core& gl);
     void update_mesh_normals(QOpenGLFunctions_4_5_Core& gl);
 
     const CharacterGpuResources& character_gpu_state() const;
@@ -36,9 +40,14 @@ public:
     void build_garment_attachment_targets(SceneState& scene,
                                           std::uint32_t garment_id,
                                           QOpenGLFunctions_4_5_Core& gl);
+    bool save_base_positions(QOpenGLFunctions_4_5_Core& gl);
+    bool restore_base_positions(QOpenGLFunctions_4_5_Core& gl);
+    void clear_base_positions(QOpenGLFunctions_4_5_Core& gl);
 
 private:
-    void update_character_triangle_geometry(const SceneState& scene, QOpenGLFunctions_4_5_Core& gl);
+    void update_character_triangle_geometry(const CharacterFrameInterpolation& interpolation,
+                                            QOpenGLFunctions_4_5_Core& gl);
+    void update_character_bvh_bounds(const SceneState& scene, QOpenGLFunctions_4_5_Core& gl);
 
     CharacterGpuResources character_gpu_state_;
     ClothGpuResources cloth_gpu_state_;

@@ -37,9 +37,8 @@ struct CharacterMesh {
     std::uint32_t vertex_count = 0;
     std::uint32_t index_count = 0;
     std::vector<std::uint32_t> indices;
+    std::vector<float> root_positions;
     std::vector<float> vertices;
-    glm::vec3 bounds_center{};
-    float bounds_radius = 1.0f;
 };
 
 struct MotionAsset {

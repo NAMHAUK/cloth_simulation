@@ -6,8 +6,7 @@ struct CharacterTriangleGeometry {
     vec4 a;
     vec4 b;
     vec4 c;
-    vec4 face_normal;
-    vec4 unit_face_normal;
+    vec4 normal;
 };
 
 struct MeshBvhNode {

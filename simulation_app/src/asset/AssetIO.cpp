@@ -90,10 +90,10 @@ bool validate_motion_asset(std::ifstream& input, const std::filesystem::path& mo
         return false;
     }
 
-    std::array<char, 8> magic = {};
-    input.read(magic.data(), magic.size());
-    if (!input || std::string(magic.data(), magic.size()) != "SMPLCACH") {
-        std::cerr << "Invalid motion asset magic: " << motion_asset_path << '\n';
+    std::array<char, 8> motion_signature = {};
+    input.read(motion_signature.data(), motion_signature.size());
+    if (!input || std::string(motion_signature.data(), motion_signature.size()) != "SMPLMOTN") {
+        std::cerr << "Invalid motion asset signature: " << motion_asset_path << '\n';
         return false;
     }
 
@@ -362,28 +362,41 @@ bool read_character_mesh_asset(const std::filesystem::path& motion_asset_path, C
         return false;
     }
 
-    std::uint32_t version = 0;
-    if (!read_binary_value(input, version) ||
-        !read_binary_value(input, character_mesh.fps) ||
+    if (!read_binary_value(input, character_mesh.fps) ||
         !read_binary_value(input, character_mesh.frame_count) ||
         !read_binary_value(input, character_mesh.vertex_count) ||
-        !read_binary_value(input, character_mesh.index_count) ||
-        !read_binary_value(input, character_mesh.bounds_center.x) ||
-        !read_binary_value(input, character_mesh.bounds_center.y) ||
-        !read_binary_value(input, character_mesh.bounds_center.z) ||
-        !read_binary_value(input, character_mesh.bounds_radius)) {
+        !read_binary_value(input, character_mesh.index_count)) {
         std::cerr << "Invalid motion asset header: " << motion_asset_path << '\n';
         return false;
     }
 
-    if (version != 1 || character_mesh.fps <= 0.0f ||
+    if (character_mesh.fps <= 0.0f ||
         character_mesh.frame_count == 0 || character_mesh.vertex_count == 0 ||
-        character_mesh.index_count == 0 || character_mesh.bounds_radius <= 0.0f) {
+        character_mesh.index_count == 0 || character_mesh.index_count % 3u != 0u) {
         std::cerr << "Unsupported motion asset header values: " << motion_asset_path << '\n';
         return false;
     }
 
+    std::error_code file_size_error;
+    const std::uintmax_t file_size = std::filesystem::file_size(motion_asset_path, file_size_error);
+    const std::uintmax_t expected_file_size =
+        8u +
+        sizeof(float) +
+        sizeof(std::uint32_t) * 3u +
+        static_cast<std::uintmax_t>(character_mesh.index_count) * sizeof(std::uint32_t) +
+        static_cast<std::uintmax_t>(character_mesh.frame_count) * position_components * sizeof(float) +
+        static_cast<std::uintmax_t>(character_mesh.frame_count) *
+            static_cast<std::uintmax_t>(character_mesh.vertex_count) * position_components * sizeof(float);
+
+    if (file_size_error || file_size != expected_file_size) {
+        std::cerr << "Unsupported motion asset payload size: " << motion_asset_path << '\n';
+        return false;
+    }
+
     character_mesh.indices.resize(character_mesh.index_count);
+    character_mesh.root_positions.resize(
+        static_cast<std::size_t>(character_mesh.frame_count) * position_components
+    );
     character_mesh.vertices.resize(
         static_cast<std::size_t>(character_mesh.frame_count) *
         static_cast<std::size_t>(character_mesh.vertex_count) * position_components
@@ -394,12 +407,20 @@ bool read_character_mesh_asset(const std::filesystem::path& motion_asset_path, C
         static_cast<std::streamsize>(character_mesh.indices.size() * sizeof(std::uint32_t))
     );
     input.read(
+        reinterpret_cast<char*>(character_mesh.root_positions.data()),
+        static_cast<std::streamsize>(character_mesh.root_positions.size() * sizeof(float))
+    );
+    input.read(
         reinterpret_cast<char*>(character_mesh.vertices.data()),
         static_cast<std::streamsize>(character_mesh.vertices.size() * sizeof(float))
     );
 
     if (!input) {
         std::cerr << "Failed to read full motion asset payload: " << motion_asset_path << '\n';
+        return false;
+    }
+    if (!is_finite_values(character_mesh.root_positions) || !is_finite_values(character_mesh.vertices)) {
+        std::cerr << "Invalid motion asset numeric values: " << motion_asset_path << '\n';
         return false;
     }
 
@@ -419,7 +440,7 @@ std::vector<std::filesystem::path> scan_motion_asset_paths(const ProjectPaths& p
     }
 
     for (const auto& file : std::filesystem::recursive_directory_iterator(project_paths.motion_asset_dir)) {
-        if (!file.is_regular_file() || file.path().extension() != ".cache") {
+        if (!file.is_regular_file() || file.path().extension() != ".motion") {
             continue;
         }
 
@@ -434,7 +455,7 @@ std::vector<std::filesystem::path> scan_motion_asset_paths(const ProjectPaths& p
 
 std::filesystem::path make_motion_asset_path(const ProjectPaths& project_paths, const std::filesystem::path& amass_motion_path)
 {
-    const std::string motion_asset_file_name = amass_motion_path.stem().string() + ".cache";
+    const std::string motion_asset_file_name = amass_motion_path.stem().string() + ".motion";
 
     if (is_path_inside(amass_motion_path, project_paths.amass_dir)) {
         std::error_code error;

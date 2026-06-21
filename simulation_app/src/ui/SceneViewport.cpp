@@ -26,15 +26,7 @@ constexpr float default_camera_distance = 4.0f;
 
 constexpr float character_camera_yaw = 0.5f * pi;
 constexpr float character_camera_pitch = 10.0f * pi / 180.0f;
-
-constexpr float character_camera_distance_min = 1.5f;
-constexpr float character_camera_distance_scale = 3.0f;
-
-constexpr float character_camera_near_min = 0.05f;
-constexpr float character_camera_near_scale = 0.15f;
-
-constexpr float character_camera_far_min = 10.0f;
-constexpr float character_camera_far_scale = 12.0f;
+constexpr glm::vec3 camera_target_offset{0.0f, 0.0f, 0.0f};
 
 // Camera control parameters
 constexpr float orbit_sensitivity    = 0.006f;
@@ -226,16 +218,23 @@ void SceneViewport::draw_display_fps()
 }
 
 // Camera //
-// 현재 motion character bounds 기준으로 camera 초기화
-void SceneViewport::reset_camera_to_character(const CharacterMesh& character_mesh)
+// 현재 character root 기준으로 camera 초기화
+void SceneViewport::reset_camera_to_character_root(const glm::vec3& root_position)
 {
-    camera_.target = character_mesh.bounds_center;
+    camera_.target = root_position + camera_target_offset;
     camera_.yaw_radians = character_camera_yaw;
     camera_.pitch_radians = character_camera_pitch;
-    camera_.distance = std::max(character_camera_distance_min, character_mesh.bounds_radius * character_camera_distance_scale);
-    camera_.min_distance = std::max(character_camera_near_min, character_mesh.bounds_radius * character_camera_near_scale);
-    camera_.max_distance = std::max(character_camera_far_min, character_mesh.bounds_radius * character_camera_far_scale);
+    camera_.distance = default_camera_distance;
+    camera_.min_distance = 0.25f;
+    camera_.max_distance = 50.0f;
     camera_.has_last_mouse = false;
+}
+
+void SceneViewport::set_camera_target(const glm::vec3& root_position)
+{
+    const glm::vec3 next_target = root_position + camera_target_offset;
+    camera_.target.x = next_target.x;
+    camera_.target.z = next_target.z;
 }
 
 // Mouse Event //
