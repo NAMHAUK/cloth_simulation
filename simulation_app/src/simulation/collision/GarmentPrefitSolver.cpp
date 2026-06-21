@@ -29,13 +29,11 @@ bool GarmentPrefitSolver::initialize(const std::filesystem::path& shader_path,
     }
 
     cloth_vertex_count_location_ = gl.glGetUniformLocation(program_, "uClothVertexCount");
-    bvh_node_count_location_ = gl.glGetUniformLocation(program_, "uBvhNodeCount");
     root_node_index_location_ = gl.glGetUniformLocation(program_, "uRootNodeIndex");
     search_radius_location_ = gl.glGetUniformLocation(program_, "uSearchRadius");
     pushout_margin_location_ = gl.glGetUniformLocation(program_, "uPushoutMargin");
 
     if (cloth_vertex_count_location_ < 0 ||
-        bvh_node_count_location_ < 0 ||
         root_node_index_location_ < 0 ||
         search_radius_location_ < 0 ||
         pushout_margin_location_ < 0) {
@@ -74,7 +72,6 @@ void GarmentPrefitSolver::solve(const ClothPositionBufferView& position_view,
     gl.glBindBufferBase(GL_SHADER_STORAGE_BUFFER, character_bvh_node_binding, character_bvh.node_buffer);
 
     gl.glProgramUniform1ui(program_, cloth_vertex_count_location_, position_view.vertex_count);
-    gl.glProgramUniform1ui(program_, bvh_node_count_location_, character_bvh.node_count);
     gl.glProgramUniform1ui(program_, root_node_index_location_, character_bvh.root_node_index);
     gl.glProgramUniform1f(program_, search_radius_location_, search_radius_);
     gl.glProgramUniform1f(program_, pushout_margin_location_, pushout_margin_);
@@ -91,7 +88,6 @@ void GarmentPrefitSolver::release(QOpenGLFunctions_4_5_Core& gl)
 
     program_ = 0;
     cloth_vertex_count_location_ = -1;
-    bvh_node_count_location_ = -1;
     root_node_index_location_ = -1;
     search_radius_location_ = -1;
     pushout_margin_location_ = -1;

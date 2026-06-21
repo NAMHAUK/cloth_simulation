@@ -27,9 +27,9 @@ private:
     struct BvhBuildNode final {
         glm::vec3 min_bounds{};
         glm::vec3 max_bounds{};
-        std::uint32_t left_child = invalid_mesh_bvh_node;
-        std::uint32_t right_child = invalid_mesh_bvh_node;
-        std::uint32_t first_triangle = 0;
+        std::uint32_t left_child_index = invalid_mesh_bvh_node;
+        std::uint32_t right_child_index = invalid_mesh_bvh_node;
+        std::uint32_t first_triangle_index = 0;
         std::uint32_t triangle_count = 0;
     };
 

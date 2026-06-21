@@ -19,6 +19,7 @@ struct ShaderPaths {
     std::filesystem::path cloth_ground_collision_compute;
     std::filesystem::path cloth_character_collision_compute;
     std::filesystem::path garment_prefit_compute;
+    std::filesystem::path garment_attachment_target_build_compute;
 };
 
 struct ProjectPaths {
@@ -54,6 +55,7 @@ inline ShaderPaths make_shader_paths(const std::filesystem::path& project_root)
         shader_dir / "simulation" / "cloth_ground_collision.comp",
         shader_dir / "simulation" / "cloth_character_collision.comp",
         shader_dir / "simulation" / "garment_prefit.comp",
+        shader_dir / "simulation" / "garment_attachment_target_build.comp",
     };
 }
 

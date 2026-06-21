@@ -11,6 +11,7 @@
 namespace {
 constexpr std::uint32_t triangle_vertex_count = 3;
 constexpr std::uint32_t mesh_bvh_leaf_size = 8;
+constexpr std::size_t shader_max_bvh_stack_depth = 32u;
 
 bool is_valid_bounds(const glm::vec3& min_bounds, const glm::vec3& max_bounds)
 {
@@ -27,6 +28,56 @@ std::uint32_t find_longest_axis(const glm::vec3& extent)
         return 1;
     }
     return 2;
+}
+
+bool is_leaf_node(const MeshBvhNode& node)
+{
+    return node.triangle_count > 0u;
+}
+
+bool is_valid_leaf_node(const MeshBvhNode& node, std::uint32_t source_triangle_count)
+{
+    return node.triangle_count > 0u &&
+           node.left_child_index == invalid_mesh_bvh_node &&
+           node.right_child_index == invalid_mesh_bvh_node &&
+           node.first_triangle_index <= source_triangle_count &&
+           node.triangle_count <= source_triangle_count - node.first_triangle_index;
+}
+
+bool is_valid_internal_node(const MeshBvhNode& node, std::size_t node_index, std::size_t node_count)
+{
+    return node.triangle_count == 0u &&
+           node.left_child_index > node_index &&
+           node.right_child_index > node_index &&
+           node.left_child_index != node.right_child_index &&
+           node.left_child_index < node_count &&
+           node.right_child_index < node_count;
+}
+
+bool has_valid_shader_stack_depth(const MeshBvhData& bvh)
+{
+    std::vector<std::uint32_t> node_stack;
+    node_stack.reserve(shader_max_bvh_stack_depth);
+    node_stack.push_back(bvh.root_node_index);
+
+    while (!node_stack.empty()) {
+        if (node_stack.size() > shader_max_bvh_stack_depth) {
+            return false;
+        }
+
+        const std::uint32_t node_index = node_stack.back();
+        node_stack.pop_back();
+
+        const MeshBvhNode& node = bvh.nodes[node_index];
+        if (is_leaf_node(node)) {
+            continue;
+        }
+
+        node_stack.push_back(node.right_child_index);
+        node_stack.push_back(node.left_child_index);
+    }
+
+    return true;
 }
 }
 
@@ -135,10 +186,10 @@ std::uint32_t MeshBvhBuilder::build_bvh_tree(std::size_t begin, std::size_t end,
     const std::size_t middle = partition_triangle_items(begin, end, node.max_bounds - node.min_bounds);
 
     // 재귀적으로 자식 node build
-    const std::uint32_t left_child = build_bvh_tree(begin, middle, triangle_indices);
-    const std::uint32_t right_child = build_bvh_tree(middle, end, triangle_indices);
-    build_nodes_[node_index].left_child = left_child;
-    build_nodes_[node_index].right_child = right_child;
+    const std::uint32_t left_child_index = build_bvh_tree(begin, middle, triangle_indices);
+    const std::uint32_t right_child_index = build_bvh_tree(middle, end, triangle_indices);
+    build_nodes_[node_index].left_child_index = left_child_index;
+    build_nodes_[node_index].right_child_index = right_child_index;
 
     return node_index;
 }
@@ -160,7 +211,7 @@ std::size_t MeshBvhBuilder::partition_triangle_items(std::size_t begin, std::siz
 
 void MeshBvhBuilder::write_leaf_node_data(BvhBuildNode& node, std::size_t begin, std::size_t end, std::vector<std::uint32_t>& triangle_indices) const
 {
-    node.first_triangle = static_cast<std::uint32_t>(triangle_indices.size() / triangle_vertex_count);
+    node.first_triangle_index = static_cast<std::uint32_t>(triangle_indices.size() / triangle_vertex_count);
     node.triangle_count = static_cast<std::uint32_t>(end - begin);
 
     for (std::size_t item_index = begin; item_index < end; ++item_index) {
@@ -230,28 +281,47 @@ void MeshBvhBuilder::append_bvh_node(std::vector<MeshBvhNode>& result_nodes,
     // node reference 정보 저장
     if (build_node.triangle_count > 0) {
         // leaf node인 경우, triangle 정보 저장
-        node.first_triangle = build_node.first_triangle;
+        node.first_triangle_index = build_node.first_triangle_index;
         node.triangle_count = build_node.triangle_count;
     } else {
         // internal node인 경우, 자식 node index 저장
         const auto left_node_index =
             next_level.first_node + static_cast<std::uint32_t>(next_level.node_indices.size());
-        next_level.node_indices.push_back(build_node.left_child);
+        next_level.node_indices.push_back(build_node.left_child_index);
 
         const auto right_node_index =
             next_level.first_node + static_cast<std::uint32_t>(next_level.node_indices.size());
-        next_level.node_indices.push_back(build_node.right_child);
+        next_level.node_indices.push_back(build_node.right_child_index);
 
-        node.left_child = left_node_index;
-        node.right_child = right_node_index;
+        node.left_child_index = left_node_index;
+        node.right_child_index = right_node_index;
     }
 }
 
 bool MeshBvhData::is_valid(std::uint32_t triangle_count) const
 {
-    return triangle_count > 0 &&
-           root_node_index < nodes.size() &&
-           !nodes.empty() &&
-           !node_ranges_by_level.empty() &&
-           triangle_indices.size() == static_cast<std::size_t>(triangle_count) * triangle_vertex_count;
+    if (triangle_count == 0 ||
+        nodes.empty() ||
+        node_ranges_by_level.empty() ||
+        root_node_index >= nodes.size() ||
+        triangle_indices.size() != static_cast<std::size_t>(triangle_count) * triangle_vertex_count) {
+        return false;
+    }
+
+    const std::size_t node_count = nodes.size();
+    for (std::size_t node_index = 0; node_index < node_count; ++node_index) {
+        const MeshBvhNode& node = nodes[node_index];
+        if (is_leaf_node(node)) {
+            if (!is_valid_leaf_node(node, triangle_count)) {
+                return false;
+            }
+            continue;
+        }
+
+        if (!is_valid_internal_node(node, node_index, node_count)) {
+            return false;
+        }
+    }
+
+    return has_valid_shader_stack_depth(*this);
 }

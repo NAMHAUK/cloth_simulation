@@ -30,7 +30,6 @@ public:
 private:
     GLuint program_ = 0;
     GLint cloth_vertex_count_location_ = -1;
-    GLint bvh_node_count_location_ = -1;
     GLint root_node_index_location_ = -1;
     GLint search_radius_location_ = -1;
     GLint pushout_margin_location_ = -1;

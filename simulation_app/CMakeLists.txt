@@ -63,8 +63,8 @@ add_executable(simulation_app
     src/rendering/GroundGridMesh.h
     src/gpu/scene/SceneGpuState.cpp
     src/gpu/scene/SceneGpuState.h
-    src/gpu/scene/AttachmentBuilder.cpp
-    src/gpu/scene/AttachmentBuilder.h
+    src/gpu/scene/AttachmentTargetBuilder.cpp
+    src/gpu/scene/AttachmentTargetBuilder.h
     src/gpu/scene/NormalUpdater.cpp
     src/gpu/scene/NormalUpdater.h
     src/rendering/RenderPipeline.cpp
@@ -103,6 +103,8 @@ add_executable(simulation_app
     shaders/simulation/cloth_ground_collision.comp
     shaders/simulation/cloth_character_collision.comp
     shaders/simulation/garment_prefit.comp
+    shaders/simulation/character_collision_common.glsl
+    shaders/simulation/garment_attachment_target_build.comp
 )
 
 add_executable(garment_converter

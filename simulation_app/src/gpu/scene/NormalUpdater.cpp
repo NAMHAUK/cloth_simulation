@@ -2,10 +2,7 @@
 
 #include "gpu/body/CharacterGpuDataTypes.h"
 #include "gpu/cloth/ClothGpuResources.h"
-#include "utils/FileUtils.h"
 #include "utils/ShaderUtils.h"
-
-#include <iostream>
 
 namespace {
 // Triangle pass bindings
@@ -47,12 +44,12 @@ bool NormalUpdater::initialize(const std::filesystem::path& triangle_normal_shad
                                const std::filesystem::path& vertex_normal_shader_path,
                                QOpenGLFunctions_4_5_Core& gl)
 {
-    triangle_program_ = load_compute_program(triangle_normal_shader_path, gl);
+    triangle_program_ = load_compute_program(triangle_normal_shader_path, "Triangle normal update", gl);
     if (triangle_program_ == 0) {
         return false;
     }
 
-    vertex_program_ = load_compute_program(vertex_normal_shader_path, gl);
+    vertex_program_ = load_compute_program(vertex_normal_shader_path, "Vertex normal update", gl);
     if (vertex_program_ == 0) {
         gl.glDeleteProgram(triangle_program_);
         triangle_program_ = 0;
@@ -185,56 +182,4 @@ void NormalUpdater::update_vertex_normals(GLuint triangle_normal_source_buffer,
     }
     gl.glDispatchCompute(compute_group_count(vertex_count, normal_update_local_size), 1, 1);
     gl.glMemoryBarrier(GL_SHADER_STORAGE_BARRIER_BIT);
-}
-
-// shader loading //
-GLuint NormalUpdater::load_compute_program(const std::filesystem::path& shader_path,
-                                           QOpenGLFunctions_4_5_Core& gl) const
-{
-    const auto shader_source = read_text_file(shader_path);
-    if (!shader_source) {
-        return 0;
-    }
-
-    const GLuint shader = compile_compute_shader(shader_source->c_str(), gl);
-    if (shader == 0) {
-        return 0;
-    }
-
-    const GLuint program = gl.glCreateProgram();
-    gl.glAttachShader(program, shader);
-    gl.glLinkProgram(program);
-
-    GLint success = 0;
-    gl.glGetProgramiv(program, GL_LINK_STATUS, &success);
-    if (!success) {
-        char log[1024] = {};
-        gl.glGetProgramInfoLog(program, sizeof(log), nullptr, log);
-        std::cerr << "Compute program link failed: " << log << '\n';
-        gl.glDeleteShader(shader);
-        gl.glDeleteProgram(program);
-        return 0;
-    }
-
-    gl.glDeleteShader(shader);
-    return program;
-}
-
-GLuint NormalUpdater::compile_compute_shader(const char* source, QOpenGLFunctions_4_5_Core& gl) const
-{
-    const GLuint shader = gl.glCreateShader(GL_COMPUTE_SHADER);
-    gl.glShaderSource(shader, 1, &source, nullptr);
-    gl.glCompileShader(shader);
-
-    GLint success = 0;
-    gl.glGetShaderiv(shader, GL_COMPILE_STATUS, &success);
-    if (!success) {
-        char log[1024] = {};
-        gl.glGetShaderInfoLog(shader, sizeof(log), nullptr, log);
-        std::cerr << "Compute shader compile failed: " << log << '\n';
-        gl.glDeleteShader(shader);
-        return 0;
-    }
-
-    return shader;
 }
