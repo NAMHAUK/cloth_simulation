@@ -11,8 +11,17 @@ MOTION_HEADER_FORMAT = "<fIII"
 LEFT_SHOULDER_BODY_POSE_INDEX = (16 - 1) * 3
 RIGHT_SHOULDER_BODY_POSE_INDEX = (17 - 1) * 3
 DEFAULT_A_POSE_ARM_ANGLE_DEG = 80.0
+LOW_CONFIDENCE_THRESHOLD = 0.60
 SHOULDER_AXIS_CHOICES = ("x", "y", "z")
 SHOULDER_AXIS_TO_OFFSET = {"x": 0, "y": 1, "z": 2}
+COARSE_PART_GROUPS = (
+    ("torso", (0, 3, 6, 9, 12, 13, 14)),
+    ("head", (15,)),
+    ("left_arm", (16, 18, 20, 22)),
+    ("right_arm", (17, 19, 21, 23)),
+    ("left_leg", (1, 4, 7, 10)),
+    ("right_leg", (2, 5, 8, 11)),
+)
 
 
 def set_smpl_compatibility():
@@ -48,7 +57,27 @@ def make_body_pose(pose_name, arm_angle_deg, shoulder_axis):
     return body_pose
 
 
-def write_default_pose_motion(output_path, fps, faces, vertices, root_position):
+def make_triangle_part_labels(faces, lbs_weights):
+    faces = np.asarray(faces, dtype=np.uint32)
+    weights = np.asarray(lbs_weights, dtype=np.float32)
+    if weights.ndim != 2 or weights.shape[1] < 24:
+        raise ValueError(f"Expected LBS weights shaped as [vertices, >=24], got {weights.shape}")
+
+    coarse_vertex_weights = np.stack(
+        [weights[:, joint_indices].sum(axis=1) for _, joint_indices in COARSE_PART_GROUPS],
+        axis=1,
+    )
+    triangle_part_scores = coarse_vertex_weights[faces].sum(axis=1)
+    triangle_part_labels = np.argmax(triangle_part_scores, axis=1).astype(np.uint8)
+    confidence = triangle_part_scores.max(axis=1) / np.maximum(
+        triangle_part_scores.sum(axis=1),
+        np.finfo(np.float32).eps,
+    )
+    low_confidence_count = int(np.count_nonzero(confidence < LOW_CONFIDENCE_THRESHOLD))
+    return triangle_part_labels, low_confidence_count
+
+
+def write_default_pose_motion(output_path, fps, faces, vertices, root_position, triangle_part_labels):
     if fps <= 0.0:
         raise ValueError(f"Invalid FPS: {fps}")
     if vertices.ndim != 2 or vertices.shape[1] != 3:
@@ -59,6 +88,12 @@ def write_default_pose_motion(output_path, fps, faces, vertices, root_position):
     indices = np.asarray(faces, dtype=np.uint32).reshape(-1)
     vertices = np.asarray(vertices, dtype=np.float32)
     root_position = np.asarray(root_position, dtype=np.float32).reshape(1, 3)
+    triangle_part_labels = np.asarray(triangle_part_labels, dtype=np.uint8).reshape(-1)
+    if triangle_part_labels.size != indices.size // 3:
+        raise ValueError(
+            "Triangle part label count does not match triangle count: "
+            f"{triangle_part_labels.size} != {indices.size // 3}"
+        )
 
     temp_output_path = output_path.with_name(output_path.name + ".tmp")
     try:
@@ -76,6 +111,8 @@ def write_default_pose_motion(output_path, fps, faces, vertices, root_position):
             indices.tofile(out_file)
             root_position.tofile(out_file)
             vertices.tofile(out_file)
+            out_file.write(struct.pack("<I", int(triangle_part_labels.size)))
+            triangle_part_labels.tofile(out_file)
 
         temp_output_path.replace(output_path)
     except Exception:
@@ -117,7 +154,11 @@ def main():
     vertices = output.vertices.detach().cpu().numpy()[0]
     root_position = output.joints[:, 0, :].detach().cpu().numpy()[0]
     vertices, root_position = align_init_pose_to_ground(vertices, root_position, args.ground_clearance)
-    write_default_pose_motion(args.output, args.fps, model.faces, vertices, root_position)
+    triangle_part_labels, low_confidence_count = make_triangle_part_labels(
+        model.faces,
+        model.lbs_weights.detach().cpu().numpy(),
+    )
+    write_default_pose_motion(args.output, args.fps, model.faces, vertices, root_position, triangle_part_labels)
 
     print()
     print(f"Converted neutral SMPL {args.pose.upper()}-pose: {args.model}")
@@ -130,6 +171,8 @@ def main():
     print(f"Frames: 1")
     print(f"Vertices: {vertices.shape[0]}")
     print(f"Indices: {model.faces.size}")
+    print(f"Triangle part labels: {triangle_part_labels.size}")
+    print(f"Low-confidence labels (< {LOW_CONFIDENCE_THRESHOLD:.2f}): {low_confidence_count}")
     print(f"Min Y: {vertices[:, 1].min():.6f}")
     print()
 

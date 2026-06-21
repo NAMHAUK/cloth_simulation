@@ -16,6 +16,7 @@
 
 namespace {
 constexpr std::array<char, 7> garment_asset_signature = {'N', 'A', 'M', 'H', 'A', 'U', 'K'};
+constexpr std::uint8_t max_character_part_label = 5u;
 
 struct GarmentAssetCounts final {
     std::uint32_t vertex_count = 0;
@@ -325,6 +326,82 @@ bool is_valid_header(const GarmentAssetCounts& counts, const GarmentMesh& garmen
            garment_mesh.bounds_radius > 0.0f &&
            is_finite_vec3(garment_mesh.color);
 }
+
+bool read_motion_base_payload(const std::filesystem::path& motion_asset_path,
+                              CharacterMesh& character_mesh,
+                              std::ifstream& input,
+                              std::uintmax_t& file_size,
+                              std::uintmax_t& base_file_size)
+{
+    input.open(motion_asset_path, std::ios::binary);
+    if (!validate_motion_asset(input, motion_asset_path)) {
+        return false;
+    }
+
+    if (!read_binary_value(input, character_mesh.fps) ||
+        !read_binary_value(input, character_mesh.frame_count) ||
+        !read_binary_value(input, character_mesh.vertex_count) ||
+        !read_binary_value(input, character_mesh.index_count)) {
+        std::cerr << "Invalid motion asset header: " << motion_asset_path << '\n';
+        return false;
+    }
+
+    if (character_mesh.fps <= 0.0f ||
+        character_mesh.frame_count == 0 || character_mesh.vertex_count == 0 ||
+        character_mesh.index_count == 0 || character_mesh.index_count % 3u != 0u) {
+        std::cerr << "Unsupported motion asset header values: " << motion_asset_path << '\n';
+        return false;
+    }
+
+    base_file_size =
+        8u +
+        sizeof(float) +
+        sizeof(std::uint32_t) * 3u +
+        static_cast<std::uintmax_t>(character_mesh.index_count) * sizeof(std::uint32_t) +
+        static_cast<std::uintmax_t>(character_mesh.frame_count) * asset_io::position_components * sizeof(float) +
+        static_cast<std::uintmax_t>(character_mesh.frame_count) *
+            static_cast<std::uintmax_t>(character_mesh.vertex_count) * asset_io::position_components * sizeof(float);
+
+    std::error_code file_size_error;
+    file_size = std::filesystem::file_size(motion_asset_path, file_size_error);
+    if (file_size_error || file_size < base_file_size) {
+        std::cerr << "Unsupported motion asset payload size: " << motion_asset_path << '\n';
+        return false;
+    }
+
+    character_mesh.indices.resize(character_mesh.index_count);
+    character_mesh.root_positions.resize(
+        static_cast<std::size_t>(character_mesh.frame_count) * asset_io::position_components
+    );
+    character_mesh.vertices.resize(
+        static_cast<std::size_t>(character_mesh.frame_count) *
+        static_cast<std::size_t>(character_mesh.vertex_count) * asset_io::position_components
+    );
+
+    input.read(
+        reinterpret_cast<char*>(character_mesh.indices.data()),
+        static_cast<std::streamsize>(character_mesh.indices.size() * sizeof(std::uint32_t))
+    );
+    input.read(
+        reinterpret_cast<char*>(character_mesh.root_positions.data()),
+        static_cast<std::streamsize>(character_mesh.root_positions.size() * sizeof(float))
+    );
+    input.read(
+        reinterpret_cast<char*>(character_mesh.vertices.data()),
+        static_cast<std::streamsize>(character_mesh.vertices.size() * sizeof(float))
+    );
+
+    if (!input) {
+        std::cerr << "Failed to read full motion asset payload: " << motion_asset_path << '\n';
+        return false;
+    }
+    if (!is_finite_values(character_mesh.root_positions) || !is_finite_values(character_mesh.vertices)) {
+        std::cerr << "Invalid motion asset numeric values: " << motion_asset_path << '\n';
+        return false;
+    }
+
+    return true;
+}
 }
 
 namespace asset_io {
@@ -357,70 +434,14 @@ bool is_valid_garment_mesh(const GarmentMesh& garment_mesh)
 
 bool read_character_mesh_asset(const std::filesystem::path& motion_asset_path, CharacterMesh& character_mesh)
 {
-    std::ifstream input(motion_asset_path, std::ios::binary);
-    if (!validate_motion_asset(input, motion_asset_path)) {
+    std::ifstream input;
+    std::uintmax_t file_size = 0u;
+    std::uintmax_t base_file_size = 0u;
+    if (!read_motion_base_payload(motion_asset_path, character_mesh, input, file_size, base_file_size)) {
         return false;
     }
-
-    if (!read_binary_value(input, character_mesh.fps) ||
-        !read_binary_value(input, character_mesh.frame_count) ||
-        !read_binary_value(input, character_mesh.vertex_count) ||
-        !read_binary_value(input, character_mesh.index_count)) {
-        std::cerr << "Invalid motion asset header: " << motion_asset_path << '\n';
-        return false;
-    }
-
-    if (character_mesh.fps <= 0.0f ||
-        character_mesh.frame_count == 0 || character_mesh.vertex_count == 0 ||
-        character_mesh.index_count == 0 || character_mesh.index_count % 3u != 0u) {
-        std::cerr << "Unsupported motion asset header values: " << motion_asset_path << '\n';
-        return false;
-    }
-
-    std::error_code file_size_error;
-    const std::uintmax_t file_size = std::filesystem::file_size(motion_asset_path, file_size_error);
-    const std::uintmax_t expected_file_size =
-        8u +
-        sizeof(float) +
-        sizeof(std::uint32_t) * 3u +
-        static_cast<std::uintmax_t>(character_mesh.index_count) * sizeof(std::uint32_t) +
-        static_cast<std::uintmax_t>(character_mesh.frame_count) * position_components * sizeof(float) +
-        static_cast<std::uintmax_t>(character_mesh.frame_count) *
-            static_cast<std::uintmax_t>(character_mesh.vertex_count) * position_components * sizeof(float);
-
-    if (file_size_error || file_size != expected_file_size) {
+    if (file_size != base_file_size) {
         std::cerr << "Unsupported motion asset payload size: " << motion_asset_path << '\n';
-        return false;
-    }
-
-    character_mesh.indices.resize(character_mesh.index_count);
-    character_mesh.root_positions.resize(
-        static_cast<std::size_t>(character_mesh.frame_count) * position_components
-    );
-    character_mesh.vertices.resize(
-        static_cast<std::size_t>(character_mesh.frame_count) *
-        static_cast<std::size_t>(character_mesh.vertex_count) * position_components
-    );
-
-    input.read(
-        reinterpret_cast<char*>(character_mesh.indices.data()),
-        static_cast<std::streamsize>(character_mesh.indices.size() * sizeof(std::uint32_t))
-    );
-    input.read(
-        reinterpret_cast<char*>(character_mesh.root_positions.data()),
-        static_cast<std::streamsize>(character_mesh.root_positions.size() * sizeof(float))
-    );
-    input.read(
-        reinterpret_cast<char*>(character_mesh.vertices.data()),
-        static_cast<std::streamsize>(character_mesh.vertices.size() * sizeof(float))
-    );
-
-    if (!input) {
-        std::cerr << "Failed to read full motion asset payload: " << motion_asset_path << '\n';
-        return false;
-    }
-    if (!is_finite_values(character_mesh.root_positions) || !is_finite_values(character_mesh.vertices)) {
-        std::cerr << "Invalid motion asset numeric values: " << motion_asset_path << '\n';
         return false;
     }
 
@@ -429,6 +450,61 @@ bool read_character_mesh_asset(const std::filesystem::path& motion_asset_path, C
               << " frames=" << character_mesh.frame_count
               << " vertices=" << character_mesh.vertex_count
               << " indices=" << character_mesh.index_count << '\n';
+    return true;
+}
+
+bool read_default_character_mesh_asset(const std::filesystem::path& motion_asset_path,
+                                       CharacterMesh& character_mesh,
+                                       std::vector<std::uint8_t>& triangle_part_labels)
+{
+    triangle_part_labels.clear();
+
+    std::ifstream input;
+    std::uintmax_t file_size = 0u;
+    std::uintmax_t base_file_size = 0u;
+    if (!read_motion_base_payload(motion_asset_path, character_mesh, input, file_size, base_file_size)) {
+        return false;
+    }
+
+    const std::uint32_t triangle_count = character_mesh.index_count / 3u;
+    const std::uintmax_t expected_file_size =
+        base_file_size +
+        sizeof(std::uint32_t) +
+        static_cast<std::uintmax_t>(triangle_count);
+    if (file_size != expected_file_size) {
+        std::cerr << "Unsupported default motion asset payload size: " << motion_asset_path << '\n';
+        return false;
+    }
+
+    std::uint32_t triangle_label_count = 0;
+    if (!input ||
+        !read_binary_value(input, triangle_label_count) ||
+        triangle_label_count != triangle_count ||
+        !read_binary_values(input, triangle_part_labels, triangle_label_count)) {
+        std::cerr << "Invalid default motion asset triangle part labels: " << motion_asset_path << '\n';
+        triangle_part_labels.clear();
+        return false;
+    }
+
+    const bool has_invalid_label = std::any_of(
+        triangle_part_labels.begin(),
+        triangle_part_labels.end(),
+        [](std::uint8_t label) {
+            return label > max_character_part_label;
+        }
+    );
+    if (has_invalid_label) {
+        std::cerr << "Default motion asset contains invalid triangle part labels: " << motion_asset_path << '\n';
+        triangle_part_labels.clear();
+        return false;
+    }
+
+    std::cout << "Loaded default motion asset: " << motion_asset_path << '\n';
+    std::cout << "  fps=" << character_mesh.fps
+              << " frames=" << character_mesh.frame_count
+              << " vertices=" << character_mesh.vertex_count
+              << " indices=" << character_mesh.index_count
+              << " triangle_part_labels=" << triangle_part_labels.size() << '\n';
     return true;
 }
 

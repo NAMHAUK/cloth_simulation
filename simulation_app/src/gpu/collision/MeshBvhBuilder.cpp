@@ -3,6 +3,7 @@
 #include "asset/MeshGeometryUtils.h"
 
 #include <algorithm>
+#include <array>
 #include <cmath>
 #include <cstddef>
 #include <limits>
@@ -12,6 +13,13 @@ namespace {
 constexpr std::uint32_t triangle_vertex_count = 3;
 constexpr std::uint32_t mesh_bvh_leaf_size = 8;
 constexpr std::size_t shader_max_bvh_stack_depth = 32u;
+constexpr std::size_t character_part_label_count = 6u;
+
+struct PartLabelStats final {
+    glm::vec3 min_bounds{std::numeric_limits<float>::max()};
+    glm::vec3 max_bounds{std::numeric_limits<float>::lowest()};
+    std::uint32_t triangle_count = 0;
+};
 
 bool is_valid_bounds(const glm::vec3& min_bounds, const glm::vec3& max_bounds)
 {
@@ -28,6 +36,19 @@ std::uint32_t find_longest_axis(const glm::vec3& extent)
         return 1;
     }
     return 2;
+}
+
+bool has_multiple_bits(std::uint32_t mask)
+{
+    return (mask & (mask - 1u)) != 0u;
+}
+
+double surface_area(const glm::vec3& min_bounds, const glm::vec3& max_bounds)
+{
+    const glm::vec3 extent = glm::max(max_bounds - min_bounds, glm::vec3{0.0f});
+    return 2.0 * (static_cast<double>(extent.x) * extent.y +
+                  static_cast<double>(extent.y) * extent.z +
+                  static_cast<double>(extent.z) * extent.x);
 }
 
 bool is_leaf_node(const MeshBvhNode& node)
@@ -90,6 +111,17 @@ MeshBvhBuilder::MeshBvhBuilder(std::uint32_t vertex_count,
 {
 }
 
+MeshBvhBuilder::MeshBvhBuilder(std::uint32_t vertex_count,
+                               const std::vector<std::uint32_t>& triangle_indices,
+                               const std::vector<float>& vertices,
+                               const std::vector<std::uint8_t>& triangle_part_labels)
+    : vertex_count_(vertex_count),
+      source_triangle_indices_(triangle_indices),
+      vertices_(vertices),
+      triangle_part_labels_(&triangle_part_labels)
+{
+}
+
 // 호출 함수 //
 MeshBvhData MeshBvhBuilder::build_mesh_bvh()
 {
@@ -126,6 +158,10 @@ bool MeshBvhBuilder::build_triangle_items()
     }
 
     const std::uint32_t triangle_count = static_cast<std::uint32_t>(source_triangle_indices_.size() / triangle_vertex_count);
+    if (has_part_labels() && triangle_part_labels_->size() != triangle_count) {
+        return false;
+    }
+
     triangle_items_.clear();
     triangle_items_.reserve(triangle_count);
 
@@ -158,7 +194,8 @@ bool MeshBvhBuilder::build_triangle_items()
             triangle_index,
             center_sum / static_cast<float>(triangle_vertex_count),
             min_bounds,
-            max_bounds
+            max_bounds,
+            has_part_labels() ? (*triangle_part_labels_)[triangle_index] : 0u
         });
     }
 
@@ -177,6 +214,20 @@ std::uint32_t MeshBvhBuilder::build_bvh_tree(std::size_t begin, std::size_t end,
 
     // leaf node인 경우 
     const std::size_t triangle_count = end - begin;
+    if (has_part_labels()) {
+        const std::uint32_t part_label_mask = compute_part_label_mask(begin, end);
+        if (has_multiple_bits(part_label_mask)) {
+            const std::uint32_t left_part_label_mask = find_best_part_label_split_mask(begin, end, part_label_mask);
+            const std::size_t middle = partition_triangle_items_by_part_labels(begin, end, left_part_label_mask);
+
+            const std::uint32_t left_child_index = build_bvh_tree(begin, middle, triangle_indices);
+            const std::uint32_t right_child_index = build_bvh_tree(middle, end, triangle_indices);
+            build_nodes_[node_index].left_child_index = left_child_index;
+            build_nodes_[node_index].right_child_index = right_child_index;
+
+            return node_index;
+        }
+    }
     if (triangle_count <= mesh_bvh_leaf_size) {
         write_leaf_node_data(node, begin, end, triangle_indices);
         return node_index;
@@ -192,6 +243,88 @@ std::uint32_t MeshBvhBuilder::build_bvh_tree(std::size_t begin, std::size_t end,
     build_nodes_[node_index].right_child_index = right_child_index;
 
     return node_index;
+}
+
+bool MeshBvhBuilder::has_part_labels() const
+{
+    return triangle_part_labels_ != nullptr && !triangle_part_labels_->empty();
+}
+
+std::uint32_t MeshBvhBuilder::compute_part_label_mask(std::size_t begin, std::size_t end) const
+{
+    std::uint32_t part_label_mask = 0u;
+    for (std::size_t item_index = begin; item_index < end; ++item_index) {
+        part_label_mask |= 1u << triangle_items_[item_index].part_label;
+    }
+    return part_label_mask;
+}
+
+std::uint32_t MeshBvhBuilder::find_best_part_label_split_mask(std::size_t begin,
+                                                              std::size_t end,
+                                                              std::uint32_t part_label_mask) const
+{
+    std::array<PartLabelStats, character_part_label_count> stats_by_label;
+    for (std::size_t item_index = begin; item_index < end; ++item_index) {
+        const TriangleBuildItem& item = triangle_items_[item_index];
+        PartLabelStats& stats = stats_by_label[item.part_label];
+        stats.min_bounds = glm::min(stats.min_bounds, item.min_bounds);
+        stats.max_bounds = glm::max(stats.max_bounds, item.max_bounds);
+        ++stats.triangle_count;
+    }
+
+    double best_cost = std::numeric_limits<double>::max();
+    std::uint32_t best_split_mask = 0u;
+    const std::uint32_t anchor_label_mask = part_label_mask & (~part_label_mask + 1u);
+
+    for (std::uint32_t split_mask = (part_label_mask - 1u) & part_label_mask;
+         split_mask != 0u;
+         split_mask = (split_mask - 1u) & part_label_mask) {
+        if ((split_mask & anchor_label_mask) == 0u) {
+            continue;
+        }
+
+        PartLabelStats left_stats;
+        PartLabelStats right_stats;
+        const std::uint32_t right_split_mask = part_label_mask ^ split_mask;
+        for (std::size_t label = 0; label < stats_by_label.size(); ++label) {
+            const std::uint32_t label_mask = 1u << label;
+            const PartLabelStats& source_stats = stats_by_label[label];
+            if (source_stats.triangle_count == 0u) {
+                continue;
+            }
+
+            PartLabelStats& target_stats = (split_mask & label_mask) != 0u ? left_stats : right_stats;
+            target_stats.min_bounds = glm::min(target_stats.min_bounds, source_stats.min_bounds);
+            target_stats.max_bounds = glm::max(target_stats.max_bounds, source_stats.max_bounds);
+            target_stats.triangle_count += source_stats.triangle_count;
+        }
+
+        if (left_stats.triangle_count == 0u || right_stats.triangle_count == 0u || right_split_mask == 0u) {
+            continue;
+        }
+
+        const double cost =
+            surface_area(left_stats.min_bounds, left_stats.max_bounds) * left_stats.triangle_count +
+            surface_area(right_stats.min_bounds, right_stats.max_bounds) * right_stats.triangle_count;
+        if (cost < best_cost) {
+            best_cost = cost;
+            best_split_mask = split_mask;
+        }
+    }
+
+    return best_split_mask;
+}
+
+std::size_t MeshBvhBuilder::partition_triangle_items_by_part_labels(std::size_t begin,
+                                                                    std::size_t end,
+                                                                    std::uint32_t left_part_label_mask)
+{
+    const auto middle = std::partition(triangle_items_.begin() + static_cast<std::ptrdiff_t>(begin),
+                                       triangle_items_.begin() + static_cast<std::ptrdiff_t>(end),
+                                       [left_part_label_mask](const TriangleBuildItem& item) {
+                                           return (left_part_label_mask & (1u << item.part_label)) != 0u;
+                                       });
+    return static_cast<std::size_t>(middle - triangle_items_.begin());
 }
 
 std::size_t MeshBvhBuilder::partition_triangle_items(std::size_t begin, std::size_t end, const glm::vec3& extent)

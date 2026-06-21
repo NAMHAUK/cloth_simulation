@@ -11,9 +11,11 @@
 #include "utils/QtUtils.h"
 
 #include <algorithm>
+#include <cstdint>
 #include <iostream>
 #include <memory>
 #include <utility>
+#include <vector>
 
 #include <QEvent>
 #include <QFileDialog>
@@ -218,7 +220,10 @@ MainWindow::~MainWindow()
 bool MainWindow::initialize_scene(QOpenGLFunctions_4_5_Core& gl)
 {
     CharacterMesh default_character_mesh;
-    if (!asset_io::read_character_mesh_asset(project_paths_.default_character_motion_path, default_character_mesh)) {
+    std::vector<std::uint8_t> default_triangle_part_labels;
+    if (!asset_io::read_default_character_mesh_asset(project_paths_.default_character_motion_path,
+                                                     default_character_mesh,
+                                                     default_triangle_part_labels)) {
         return false;
     }
 
@@ -226,7 +231,9 @@ bool MainWindow::initialize_scene(QOpenGLFunctions_4_5_Core& gl)
         return false;
     }
 
-    simulation_controller_->load_default_character_mesh(std::move(default_character_mesh), gl);
+    simulation_controller_->load_default_character_mesh(std::move(default_character_mesh),
+                                                        default_triangle_part_labels,
+                                                        gl);
     return true;
 }
 
