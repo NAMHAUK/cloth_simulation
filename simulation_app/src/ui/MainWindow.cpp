@@ -221,9 +221,9 @@ bool MainWindow::initialize_scene(QOpenGLFunctions_4_5_Core& gl)
 {
     CharacterMesh default_character_mesh;
     std::vector<std::uint8_t> default_triangle_part_labels;
-    if (!asset_io::read_default_character_mesh_asset(project_paths_.default_character_motion_path,
-                                                     default_character_mesh,
-                                                     default_triangle_part_labels)) {
+    if (!asset_io::read_default_character_mesh(project_paths_.default_character_motion_path,
+                                               default_character_mesh,
+                                               default_triangle_part_labels)) {
         return false;
     }
 
@@ -515,7 +515,7 @@ void MainWindow::refresh_motion_list()
 {
     browser_panel_->set_asset_paths(
         AssetPanelMode::Motions,
-        asset_io::scan_motion_asset_paths(project_paths_)
+        asset_io::scan_asset_paths(project_paths_.motion_asset_dir, ".motion")
     );
 }
 
@@ -523,7 +523,7 @@ void MainWindow::refresh_garment_list()
 {
     browser_panel_->set_asset_paths(
         AssetPanelMode::Garments,
-        asset_io::scan_garment_asset_paths(project_paths_)
+        asset_io::scan_asset_paths(project_paths_.garment_asset_dir, ".garment")
     );
 }
 
@@ -570,7 +570,8 @@ std::optional<ConverterCommand> MainWindow::prepare_amass_conversion()
     }
 
     const std::filesystem::path amass_motion_path = selected_file.toStdWString();
-    const std::filesystem::path motion_asset_path = asset_io::make_motion_asset_path(project_paths_, amass_motion_path);
+    const std::filesystem::path motion_asset_path =
+        project_paths_.motion_asset_dir / (amass_motion_path.stem().string() + ".motion");
 
     if (std::filesystem::exists(motion_asset_path)) {
         return std::nullopt;

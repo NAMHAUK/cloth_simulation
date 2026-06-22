@@ -7,6 +7,8 @@
 
 #include <glm/vec3.hpp>
 
+inline constexpr std::uint32_t vertex_position_components = 3;
+
 struct VertexFaceAdjacency final {
     std::vector<std::uint32_t> offsets;
     std::vector<std::uint32_t> face_indices;

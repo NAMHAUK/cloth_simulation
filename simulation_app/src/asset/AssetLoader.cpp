@@ -51,7 +51,7 @@ void AssetLoader::load_character_mesh(std::filesystem::path motion_asset_path)
         [motion_asset_path = std::move(motion_asset_path)]() mutable {
             CharacterMeshLoadResult result;
             result.source_path = std::move(motion_asset_path);
-            result.is_loaded = asset_io::read_character_mesh_asset(result.source_path, result.mesh);
+            result.is_loaded = asset_io::read_character_mesh(result.source_path, result.mesh);
             return result;
         }
     ));

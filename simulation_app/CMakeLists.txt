@@ -118,19 +118,6 @@ add_executable(garment_converter
     src/asset/MeshGeometryUtils.h
 )
 
-add_executable(bvh_motion_diagnostic
-    tools/bvh_motion_diagnostic/main.cpp
-    src/asset/AssetDataTypes.h
-    src/asset/AssetIO.cpp
-    src/asset/AssetIO.h
-    src/asset/MeshGeometryUtils.cpp
-    src/asset/MeshGeometryUtils.h
-    src/gpu/collision/BvhDataTypes.h
-    src/gpu/collision/MeshBvhBuilder.cpp
-    src/gpu/collision/MeshBvhBuilder.h
-    src/utils/NumericUtils.h
-)
-
 target_include_directories(simulation_app PRIVATE
     src
 )
@@ -139,15 +126,7 @@ target_include_directories(garment_converter PRIVATE
     src
 )
 
-target_include_directories(bvh_motion_diagnostic PRIVATE
-    src
-)
-
 target_compile_definitions(simulation_app PRIVATE
-    PROJECT_ROOT_DIR="${REPO_ROOT}"
-)
-
-target_compile_definitions(bvh_motion_diagnostic PRIVATE
     PROJECT_ROOT_DIR="${REPO_ROOT}"
 )
 
@@ -161,10 +140,6 @@ target_link_libraries(simulation_app PRIVATE
 )
 
 target_link_libraries(garment_converter PRIVATE
-    glm::glm
-)
-
-target_link_libraries(bvh_motion_diagnostic PRIVATE
     glm::glm
 )
 
