@@ -20,7 +20,7 @@ inline constexpr float prefit_pushout_margin = 0.02f;
 inline constexpr float prefit_search_radius = 0.15f;
 
 inline constexpr std::uint32_t substep_count = 8;
-inline constexpr std::uint32_t solver_iteration_count = 5;
+inline constexpr std::uint32_t solver_iteration_count = 4;
 inline constexpr std::uint32_t prefit_iteration_count = 32;
 inline constexpr float stretch_stiffness = 0.8f;
 inline constexpr float bending_stiffness = 0.25f;

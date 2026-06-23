@@ -58,10 +58,10 @@ ConverterCommand make_motion_command(
     command.arguments = {
         to_q_string(project_paths.converter_script),
         "--input", to_q_string(amass_motion_path),
-        "--model-dir", to_q_string(project_paths.smpl_model_dir),
+        "--model", to_q_string(project_paths.smpl_model_path),
         "--output", to_q_string(motion_asset_path),
         "--target-fps", QString::number(simulation_settings::character_motion_fps),
-        "--batch-size", "64",
+        "--batch-size", "128",
     };
     command.working_directory = to_q_string(project_paths.root);
 
