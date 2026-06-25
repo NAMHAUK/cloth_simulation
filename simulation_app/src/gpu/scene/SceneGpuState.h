@@ -4,6 +4,7 @@
 #include "gpu/collision/MeshBvhBoundsUpdater.h"
 #include "gpu/body/TriangleGeometryUpdater.h"
 #include "gpu/cloth/ClothGpuResources.h"
+#include "gpu/scene/AttachmentTargetBuilder.h"
 #include "gpu/scene/NormalUpdater.h"
 #include "scene/SceneState.h"
 
@@ -53,6 +54,7 @@ private:
     ClothGpuResources cloth_gpu_state_;
     TriangleGeometryUpdater triangle_geometry_updater_;
     MeshBvhBoundsUpdater bvh_bounds_updater_;
+    AttachmentTargetBuilder attachment_target_builder_;
     NormalUpdater normal_updater_;
 
     bool initialized_ = false;

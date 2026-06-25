@@ -8,6 +8,7 @@
 
 #include <functional>
 #include <cstdint>
+#include <vector>
 
 #include <glm/mat4x4.hpp>
 #include <glm/vec3.hpp>
@@ -39,7 +40,9 @@ public:
 
     // Scene editing //
     void set_character_mesh(CharacterMesh mesh);
-    void load_default_character_mesh(CharacterMesh mesh, QOpenGLFunctions_4_5_Core& gl);
+    void load_default_character_mesh(CharacterMesh mesh,
+                                     const std::vector<std::uint8_t>& triangle_part_labels,
+                                     QOpenGLFunctions_4_5_Core& gl);
     void add_garment_mesh(GarmentMesh mesh);
     void set_garment_placement(const glm::vec3& position_offset, float scale);
     void confirm_garment_placement();

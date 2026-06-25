@@ -13,7 +13,6 @@ struct GarmentObject {
     std::uint32_t id = 0;
     GarmentMesh source_mesh;
     GarmentMesh mesh;
-    std::vector<GarmentAttachmentConstraint> attachment_constraints;
     bool visible = true;
 };
 

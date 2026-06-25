@@ -66,14 +66,12 @@ void add_edge_opposite_vertex(std::vector<EdgeOppositeVertex>& edge_opposite_ver
     edge_opposite_vertices.push_back({make_edge(vertex_a, vertex_b), edge_opposite_vertex});
 }
 
-// vertex position //
-constexpr std::uint32_t position_components = 3;
 }
 
 // vertex position //
 glm::vec3 get_vertex_position(const std::vector<float>& vertices, std::uint32_t vertex_index)
 {
-    const std::size_t position_base = static_cast<std::size_t>(vertex_index) * position_components;
+    const std::size_t position_base = static_cast<std::size_t>(vertex_index) * vertex_position_components;
     return {
         vertices[position_base],
         vertices[position_base + 1u],

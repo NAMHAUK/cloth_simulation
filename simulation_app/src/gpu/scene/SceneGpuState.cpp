@@ -1,7 +1,6 @@
 #include "gpu/scene/SceneGpuState.h"
 
 #include "app/ProjectPaths.h"
-#include "gpu/scene/AttachmentBuilder.h"
 #include "scene/SceneState.h"
 
 #include <iostream>
@@ -32,6 +31,12 @@ bool SceneGpuState::initialize(const ShaderPaths& shader_paths, QOpenGLFunctions
         normal_updater_.release(gl);
         return false;
     }
+    if (!attachment_target_builder_.initialize(shader_paths.garment_attachment_target_build_compute, gl)) {
+        bvh_bounds_updater_.release(gl);
+        triangle_geometry_updater_.release(gl);
+        normal_updater_.release(gl);
+        return false;
+    }
 
     initialized_ = true;
     return true;
@@ -58,6 +63,7 @@ void SceneGpuState::release(QOpenGLFunctions_4_5_Core& gl)
     normal_updater_.release(gl);
     triangle_geometry_updater_.release(gl);
     bvh_bounds_updater_.release(gl);
+    attachment_target_builder_.release(gl);
 
     initialized_ = false;
 }
@@ -179,16 +185,33 @@ void SceneGpuState::build_garment_attachment_targets(SceneState& scene,
         return;
     }
 
-    garment->attachment_constraints = attachment_builder::build_garment_attachment_targets(
-        *garment,
-        scene.character_mesh(),
-        scene.current_character_frame(),
-        scene.default_character_bvh_data().triangle_indices,
-        scene.default_character_bvh_data().nodes
-    );
+    ConstraintRange target_range;
+    if (!cloth_gpu_state_.upload_garment_attachment_vertices(*garment, target_range, gl)) {
+        std::cerr << "Failed to upload garment attachment vertices.\n";
+        return;
+    }
 
-    if (!cloth_gpu_state_.update_garment_attachment_targets(*garment, gl)) {
-        std::cerr << "Failed to upload garment attachment targets.\n";
+    if (target_range.count == 0u) {
+        return;
+    }
+
+    const ClothPositionBufferView position_view = cloth_gpu_state_.position_buffer_view();
+    const AttachmentConstraintBufferView attachment_view = cloth_gpu_state_.attachment_constraint_buffer_view();
+    const TriangleGeometryResources character_geometry = character_gpu_state_.character_triangle_geometry_resources();
+    const MeshBvhResources character_bvh = character_gpu_state_.character_bvh_resources();
+    
+    if (!attachment_target_builder_.build(position_view,
+                                          attachment_view,
+                                          target_range,
+                                          character_geometry,
+                                          character_bvh,
+                                          gl)) {
+        std::cerr << "Cannot build garment attachment targets because required GPU buffers are missing.\n";
+        return;
+    }
+
+    if (!cloth_gpu_state_.activate_attachment_targets(target_range)) {
+        std::cerr << "Failed to activate garment attachment targets.\n";
     }
 }
 

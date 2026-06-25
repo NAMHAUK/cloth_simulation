@@ -39,10 +39,6 @@ private:
                                std::uint32_t triangle_normal_offset,
                                QOpenGLFunctions_4_5_Core& gl) const;
 
-    // Shader loading
-    GLuint load_compute_program(const std::filesystem::path& shader_path, QOpenGLFunctions_4_5_Core& gl) const;
-    GLuint compile_compute_shader(const char* source, QOpenGLFunctions_4_5_Core& gl) const;
-
     // Program objects
     GLuint triangle_program_ = 0;
     GLuint vertex_program_ = 0;

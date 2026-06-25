@@ -13,6 +13,10 @@ public:
     MeshBvhBuilder(std::uint32_t vertex_count,
                    const std::vector<std::uint32_t>& triangle_indices,
                    const std::vector<float>& vertices);
+    MeshBvhBuilder(std::uint32_t vertex_count,
+                   const std::vector<std::uint32_t>& triangle_indices,
+                   const std::vector<float>& vertices,
+                   const std::vector<std::uint8_t>& triangle_part_labels);
 
     MeshBvhData build_mesh_bvh();
 
@@ -22,14 +26,15 @@ private:
         glm::vec3 center{};
         glm::vec3 min_bounds{};
         glm::vec3 max_bounds{};
+        std::uint8_t part_label = 0;
     };
 
     struct BvhBuildNode final {
         glm::vec3 min_bounds{};
         glm::vec3 max_bounds{};
-        std::uint32_t left_child = invalid_mesh_bvh_node;
-        std::uint32_t right_child = invalid_mesh_bvh_node;
-        std::uint32_t first_triangle = 0;
+        std::uint32_t left_child_index = invalid_mesh_bvh_node;
+        std::uint32_t right_child_index = invalid_mesh_bvh_node;
+        std::uint32_t first_triangle_index = 0;
         std::uint32_t triangle_count = 0;
     };
 
@@ -46,6 +51,10 @@ private:
     bool build_triangle_items();
     
     std::uint32_t build_bvh_tree(std::size_t begin, std::size_t end, std::vector<std::uint32_t>& triangle_indices);
+    bool has_part_labels() const;
+    std::uint32_t compute_part_label_mask(std::size_t begin, std::size_t end) const;
+    std::uint32_t find_best_part_label_split_mask(std::size_t begin, std::size_t end, std::uint32_t part_label_mask) const;
+    std::size_t partition_triangle_items_by_part_labels(std::size_t begin, std::size_t end, std::uint32_t left_part_label_mask);
     std::size_t partition_triangle_items(std::size_t begin, std::size_t end, const glm::vec3& extent);
     void write_leaf_node_data(BvhBuildNode& node, std::size_t begin, std::size_t end, std::vector<std::uint32_t>& triangle_indices) const;
     void compute_node_bounds(std::size_t begin, std::size_t end, glm::vec3& min_bounds, glm::vec3& max_bounds) const;
@@ -53,16 +62,12 @@ private:
     void write_level_ordered_bvh_data(std::uint32_t root_node_index, MeshBvhData& result) const;
     void append_bvh_node(std::vector<MeshBvhNode>& result_nodes,
                          std::uint32_t build_node_index,
-                         NextBvhLevel& next_level,
-                         std::vector<std::uint32_t>& result_node_indices) const;
-    void write_node_metadata(std::uint32_t build_node_index,
-                             std::uint32_t next_build_node_index,
-                             std::vector<MeshBvhNode>& result_nodes,
-                             const std::vector<std::uint32_t>& result_node_indices) const;
+                         NextBvhLevel& next_level) const;
 
     std::uint32_t vertex_count_ = 0;
     const std::vector<std::uint32_t>& source_triangle_indices_;
     const std::vector<float>& vertices_;
+    const std::vector<std::uint8_t>* triangle_part_labels_ = nullptr;
     std::vector<TriangleBuildItem> triangle_items_;
     std::vector<BvhBuildNode> build_nodes_;
 };

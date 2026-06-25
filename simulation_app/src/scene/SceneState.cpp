@@ -47,7 +47,6 @@ std::uint32_t SceneState::add_garment_mesh(GarmentMesh mesh)
         garment_id,
         std::move(source_mesh),
         std::move(mesh),
-        {},
         true,
     });
     return garment_id;
@@ -93,7 +92,6 @@ GarmentObject* SceneState::update_garment_placement(std::uint32_t garment_id, co
         }
 
         garment.mesh = std::move(next_mesh);
-        garment.attachment_constraints.clear();
         return &garment;
     }
 
