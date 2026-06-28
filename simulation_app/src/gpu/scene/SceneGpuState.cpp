@@ -2,6 +2,7 @@
 
 #include "app/ProjectPaths.h"
 #include "scene/SceneState.h"
+#include "simulation/SimulationSettings.h"
 
 #include <iostream>
 
@@ -144,6 +145,7 @@ void SceneGpuState::update_character_bvh_bounds(const SceneState& scene, QOpenGL
     bvh_bounds_updater_.update(character_gpu_state_.character_triangle_geometry_resources(),
                                character_gpu_state_.character_bvh_resources(),
                                scene.default_character_bvh_data().node_ranges_by_level,
+                               simulation_settings::character_collision_thickness,
                                gl);
 }
 

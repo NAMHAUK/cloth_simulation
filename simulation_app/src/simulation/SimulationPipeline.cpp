@@ -57,9 +57,8 @@ bool SimulationPipeline::initialize(const ShaderPaths& shader_paths, QOpenGLFunc
         attachment_constraint_solver_.initialize(shader_paths.cloth_attachment_constraint_compute, simulation_settings::attachment_stiffness, gl) &&
         ground_collision_solver_.initialize(shader_paths.cloth_ground_collision_compute, floor_height, gl) &&
         character_collision_solver_.initialize(shader_paths.cloth_character_collision_compute,
-                                               simulation_settings::character_collision_search_radius,
-                                               simulation_settings::character_collision_thickness,
-                                               gl) &&
+                                                simulation_settings::character_collision_thickness,
+                                                gl) &&
         garment_prefit_solver_.initialize(shader_paths.garment_prefit_compute,
                                           simulation_settings::prefit_search_radius,
                                           simulation_settings::prefit_pushout_margin,
@@ -114,13 +113,17 @@ bool SimulationPipeline::step(SceneState& scene, SceneGpuState& gpu_state, std::
     for (std::uint32_t substep = 0; substep < simulation_settings::substep_count; ++substep) {
         update_character_substep_frame(scene, gpu_state, motion_step_index, substep, gl);
 
-        external_force_solver_.solve(views.cloth_position, substep_dt_, external_acceleration, gl);
+        external_force_solver_.solve(views.cloth_position,
+                                     substep_dt_,
+                                     external_acceleration,
+                                     simulation_settings::velocity_damping,
+                                     gl);
+        character_collision_solver_.solve(views.cloth_position, views.character_geometry, views.character_bvh, gl);
 
         for (std::uint32_t iteration = 0; iteration < simulation_settings::solver_iteration_count; ++iteration) {
             stretch_constraint_solver_.solve(views.cloth_position, views.stretch_constraints, gl);
             bending_constraint_solver_.solve(views.cloth_position, views.bending_constraints, gl);
             attachment_constraint_solver_.solve(views.cloth_position, views.attachment_constraints, views.character_geometry, gl);
-            character_collision_solver_.solve(views.cloth_position, views.character_geometry, views.character_bvh, gl);
             ground_collision_solver_.solve(views.cloth_position, gl);
         }
     }

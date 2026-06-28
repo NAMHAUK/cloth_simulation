@@ -16,11 +16,12 @@ public:
 
     bool is_initialized() const;
     bool initialize(const std::filesystem::path& shader_path, QOpenGLFunctions_4_5_Core& gl);
-    void solve(const ClothPositionBufferView& position_view, float dt, const glm::vec3& external_acceleration, QOpenGLFunctions_4_5_Core& gl) const;
+    void solve(const ClothPositionBufferView& position_view, float dt, const glm::vec3& external_acceleration, float velocity_damping, QOpenGLFunctions_4_5_Core& gl) const;
     void release(QOpenGLFunctions_4_5_Core& gl);
 
 private:
     GLuint program_ = 0;
     GLint vertex_count_location_ = -1;
     GLint acc_displacement_location_ = -1;
+    GLint velocity_damping_location_ = -1;
 };

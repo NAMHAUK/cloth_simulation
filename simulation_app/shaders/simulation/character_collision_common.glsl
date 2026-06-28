@@ -5,9 +5,28 @@ bool is_leaf_node(MeshBvhNode node)
 
 const uint max_bvh_stack_depth = 32u;
 
+struct Aabb {
+    vec3 min_bounds;
+    vec3 max_bounds;
+};
+
 float length_squared(vec3 value)
 {
     return dot(value, value);
+}
+
+Aabb build_swept_aabb(vec3 previous_position, vec3 current_position)
+{
+    Aabb result;
+    result.min_bounds = min(previous_position, current_position);
+    result.max_bounds = max(previous_position, current_position);
+    return result;
+}
+
+bool overlaps_bounds(Aabb query_bounds, in MeshBvhNode node)
+{
+    return all(lessThanEqual(query_bounds.min_bounds, node.max_bounds.xyz)) &&
+           all(greaterThanEqual(query_bounds.max_bounds, node.min_bounds.xyz));
 }
 
 float squared_distance_to_bounds(vec3 point, in MeshBvhNode node)

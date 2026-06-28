@@ -27,8 +27,9 @@ bool ExternalForceSolver::initialize(const std::filesystem::path& shader_path, Q
     // shader program 안의 uniform 변수들 위치 저장
     vertex_count_location_ = gl.glGetUniformLocation(program_, "uVertexCount");
     acc_displacement_location_ = gl.glGetUniformLocation(program_, "uAccelerationDisplacement");
+    velocity_damping_location_ = gl.glGetUniformLocation(program_, "uVelocityDamping");
 
-    if (vertex_count_location_ < 0 || acc_displacement_location_ < 0) {
+    if (vertex_count_location_ < 0 || acc_displacement_location_ < 0 || velocity_damping_location_ < 0) {
         std::cerr << "Cloth external force compute shader missing required uniforms.\n";
         release(gl);
         return false;
@@ -41,6 +42,7 @@ bool ExternalForceSolver::initialize(const std::filesystem::path& shader_path, Q
 void ExternalForceSolver::solve(const ClothPositionBufferView& position_view,
                                 float dt,
                                 const glm::vec3& external_acceleration,
+                                float velocity_damping,
                                 QOpenGLFunctions_4_5_Core& gl) const
 {
     if (!is_initialized() || !is_valid_position_view(position_view) || dt <= 0.0f) {
@@ -60,6 +62,7 @@ void ExternalForceSolver::solve(const ClothPositionBufferView& position_view,
                           acceleration_displacement.x,
                           acceleration_displacement.y,
                           acceleration_displacement.z);
+    gl.glProgramUniform1f(program_, velocity_damping_location_, velocity_damping);
 
     // shader가 외부 가속도에 따른 위치 변화량 계산 (GPU에서 바로 업데이트)
     gl.glDispatchCompute(compute_group_count(position_view.vertex_count, external_force_local_size), 1, 1);
@@ -75,4 +78,5 @@ void ExternalForceSolver::release(QOpenGLFunctions_4_5_Core& gl)
     program_ = 0;
     vertex_count_location_ = -1;
     acc_displacement_location_ = -1;
+    velocity_damping_location_ = -1;
 }
