@@ -3,11 +3,20 @@
 #include "gpu/body/CharacterGpuDataTypes.h"
 #include "gpu/cloth/ClothGpuResources.h"
 
-inline bool is_valid_position_view(const ClothPositionBufferView& position_view)
+inline bool is_valid_motion_view(const ClothMotionBufferView& motion_view)
 {
-    return position_view.current_position_buffer != 0 &&
-           position_view.previous_position_buffer != 0 &&
-           position_view.vertex_count != 0;
+    return motion_view.current_position_buffer != 0 &&
+           motion_view.previous_position_buffer != 0 &&
+           motion_view.velocity_buffer != 0 &&
+           motion_view.vertex_count != 0;
+}
+
+inline bool is_valid_collision_state_view(const ClothCollisionStateBufferView& collision_view)
+{
+    return collision_view.collision_state_buffer != 0 &&
+           collision_view.contact_normal_buffer != 0 &&
+           collision_view.max_contacts_per_vertex != 0 &&
+           collision_view.vertex_count != 0;
 }
 
 inline bool is_valid_distance_constraint_view(const DistanceConstraintBufferView& constraint_view)

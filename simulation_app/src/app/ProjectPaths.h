@@ -52,8 +52,8 @@ inline ShaderPaths make_shader_paths(const std::filesystem::path& project_root)
         shader_dir / "simulation" / "cloth_stretch_constraint.comp",
         shader_dir / "simulation" / "cloth_bending_constraint.comp",
         shader_dir / "simulation" / "cloth_attachment_constraint.comp",
-        shader_dir / "simulation" / "cloth_ground_collision.comp",
-        shader_dir / "simulation" / "cloth_character_collision.comp",
+        shader_dir / "simulation" / "collision" / "cloth_ground_collision.comp",
+        shader_dir / "simulation" / "collision" / "cloth_character_collision.comp",
         shader_dir / "simulation" / "garment_prefit.comp",
         shader_dir / "simulation" / "garment_attachment_target_build.comp",
     };

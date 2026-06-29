@@ -4,7 +4,7 @@
 
 #include <QOpenGLFunctions_4_5_Core>
 
-struct ClothPositionBufferView;
+struct ClothMotionBufferView;
 struct DistanceConstraintBufferView;
 
 class BendingConstraintSolver final {
@@ -15,9 +15,9 @@ public:
 
     bool is_initialized() const;
     bool initialize(const std::filesystem::path& shader_path, float stiffness, QOpenGLFunctions_4_5_Core& gl);
-    bool can_solve(const ClothPositionBufferView& position_view,
+    bool can_solve(const ClothMotionBufferView& motion_view,
                    const DistanceConstraintBufferView& constraint_view) const;
-    void solve(const ClothPositionBufferView& position_view,
+    void solve(const ClothMotionBufferView& motion_view,
                const DistanceConstraintBufferView& constraint_view,
                QOpenGLFunctions_4_5_Core& gl) const;
     void release(QOpenGLFunctions_4_5_Core& gl);

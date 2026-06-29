@@ -100,10 +100,10 @@ add_executable(simulation_app
     shaders/simulation/cloth_stretch_constraint.comp
     shaders/simulation/cloth_bending_constraint.comp
     shaders/simulation/cloth_attachment_constraint.comp
-    shaders/simulation/cloth_ground_collision.comp
-    shaders/simulation/cloth_character_collision.comp
+    shaders/simulation/collision/cloth_ground_collision.comp
+    shaders/simulation/collision/cloth_character_collision.comp
     shaders/simulation/garment_prefit.comp
-    shaders/simulation/character_collision_common.glsl
+    shaders/simulation/collision/cloth_collision_common.glsl
     shaders/simulation/garment_attachment_target_build.comp
 )
 

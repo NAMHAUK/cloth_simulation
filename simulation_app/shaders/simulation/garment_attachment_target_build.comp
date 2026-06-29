@@ -42,11 +42,23 @@ uniform uint uRootNodeIndex;
 
 const float max_float = 3.402823466e+38;
 
-#include "character_collision_common.glsl"
-
 uniform uint uConstraintOffset;
 uniform uint uConstraintCount;
 uniform float uSurfaceOffset;
+
+const uint max_bvh_stack_depth = 32u;
+
+bool is_leaf_node(MeshBvhNode node)
+{
+    return node.triangle_count > 0u;
+}
+
+float length_squared(vec3 value)
+{
+    return dot(value, value);
+}
+
+#include "character_mesh_search.glsl"
 
 vec3 load_cloth_position(uint vertex_index)
 {

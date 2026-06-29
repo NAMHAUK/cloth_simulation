@@ -10,9 +10,31 @@ layout(std430, binding = 1) buffer PreviousPositions {
     float previous_positions[];
 };
 
+layout(std430, binding = 2) buffer Velocities {
+    float velocities[];
+};
+
+layout(std430, binding = 3) buffer CollisionStates {
+    vec4 collision_states[];
+};
+
+layout(std430, binding = 4) buffer ContactNormals {
+    vec4 contact_normals[];
+};
+
 uniform uint uVertexCount;
-uniform vec3 uAccelerationDisplacement;
+uniform uint uMaxContactsPerVertex;
+uniform float uDeltaTime;
+uniform vec3 uExternalAcceleration;
 uniform float uVelocityDamping;
+
+void remove_inward_contact_velocity(inout vec3 velocity, vec3 unit_normal)
+{
+    float normal_velocity = dot(velocity, unit_normal);
+    if (normal_velocity < 0.0) {
+        velocity -= unit_normal * normal_velocity;
+    }
+}
 
 void main()
 {
@@ -29,16 +51,32 @@ void main()
                         previous_positions[position_base + 1u],
                         previous_positions[position_base + 2u]);
 
-    // delta_s = v * dt + a * dt^2 = (current - previous) * uVelocityDamping + uAccelerationDisplacement
-    vec3 next = current +
-                (current - previous) * uVelocityDamping +
-                uAccelerationDisplacement;
+    // collsion solver velocity 제외
+    vec4 collision_state = collision_states[vertex_index];
+    vec3 solved_velocity = (current - previous - collision_state.xyz) / uDeltaTime;
+
+    // contact normal 안쪽 방향 속도 제거
+    uint stored_contact_count = min(uint(collision_state.w + 0.5), uMaxContactsPerVertex);
+    uint contact_base = vertex_index * uMaxContactsPerVertex;
+    for (uint contact_index = 0u; contact_index < stored_contact_count; ++contact_index) {
+        remove_inward_contact_velocity(solved_velocity, contact_normals[contact_base + contact_index].xyz);
+    }
+
+    collision_states[vertex_index] = vec4(0.0);
+     
+    // update pos, vel
+    vec3 velocity = solved_velocity * uVelocityDamping + uExternalAcceleration * uDeltaTime;
+    vec3 predicted_position = current + velocity * uDeltaTime;
 
     previous_positions[position_base] = current.x;
     previous_positions[position_base + 1u] = current.y;
     previous_positions[position_base + 2u] = current.z;
 
-    current_positions[position_base] = next.x;
-    current_positions[position_base + 1u] = next.y;
-    current_positions[position_base + 2u] = next.z;
+    current_positions[position_base] = predicted_position.x;
+    current_positions[position_base + 1u] = predicted_position.y;
+    current_positions[position_base + 2u] = predicted_position.z;
+
+    velocities[position_base] = velocity.x;
+    velocities[position_base + 1u] = velocity.y;
+    velocities[position_base + 2u] = velocity.z;
 }

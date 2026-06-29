@@ -6,12 +6,19 @@ layout(std430, binding = 0) buffer CurrentPositions {
     float current_positions[];
 };
 
-layout(std430, binding = 1) buffer PreviousPositions {
-    float previous_positions[];
+layout(std430, binding = 1) buffer CollisionStates {
+    vec4 collision_states[];
+};
+
+layout(std430, binding = 2) buffer ContactNormals {
+    vec4 contact_normals[];
 };
 
 uniform uint uVertexCount;
+uniform uint uMaxContactsPerVertex;
 uniform float uFloorHeight;
+
+#include "cloth_collision_common.glsl"
 
 void main()
 {
@@ -23,15 +30,13 @@ void main()
     uint position_base = vertex_index * 3u;
 
     float current_y = current_positions[position_base + 1u];
-    float previous_y = previous_positions[position_base + 1u];
 
     if (current_y < uFloorHeight) {
+        float pushout_depth = uFloorHeight - current_y;
         current_positions[position_base + 1u] = uFloorHeight;
-        previous_positions[position_base + 1u] = uFloorHeight;
-        return;
-    }
-
-    if (previous_y < uFloorHeight) {
-        previous_positions[position_base + 1u] = uFloorHeight;
+        vec4 collision_state = collision_states[vertex_index];
+        collision_state.y += pushout_depth;
+        collision_states[vertex_index] = collision_state;
+        store_contact(vertex_index, vec3(0.0, 1.0, 0.0), pushout_depth);
     }
 }

@@ -14,13 +14,17 @@ public:
 
     bool is_initialized() const;
     bool initialize(const std::filesystem::path& shader_path, float floor_height, QOpenGLFunctions_4_5_Core& gl);
-    bool can_solve(const ClothPositionBufferView& position_view) const;
-    void solve(const ClothPositionBufferView& position_view, QOpenGLFunctions_4_5_Core& gl) const;
+    bool can_solve(const ClothMotionBufferView& motion_view,
+                   const ClothCollisionStateBufferView& collision_view) const;
+    void solve(const ClothMotionBufferView& motion_view,
+               const ClothCollisionStateBufferView& collision_view,
+               QOpenGLFunctions_4_5_Core& gl) const;
     void release(QOpenGLFunctions_4_5_Core& gl);
 
 private:
     GLuint program_ = 0;
     GLint vertex_count_location_ = -1;
+    GLint max_contacts_per_vertex_location_ = -1;
     GLint floor_height_location_ = -1;
     float floor_height_ = 0.0f;
 };

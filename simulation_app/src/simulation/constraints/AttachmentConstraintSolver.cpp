@@ -10,10 +10,9 @@
 
 namespace {
 constexpr GLuint current_positions_binding = 0;
-constexpr GLuint previous_positions_binding = 1;
-constexpr GLuint attachment_indices_binding = 2;
-constexpr GLuint attachment_barycentric_offsets_binding = 3;
-constexpr GLuint character_triangle_geometry_binding = 4;
+constexpr GLuint attachment_indices_binding = 1;
+constexpr GLuint attachment_barycentric_offsets_binding = 2;
+constexpr GLuint character_triangle_geometry_binding = 3;
 constexpr std::uint32_t attachment_constraint_local_size = 128;
 
 bool has_attachment_constraints(const AttachmentConstraintBufferView& constraint_view)
@@ -57,18 +56,18 @@ bool AttachmentConstraintSolver::initialize(const std::filesystem::path& shader_
     return true;
 }
 
-bool AttachmentConstraintSolver::can_solve(const ClothPositionBufferView& position_view,
+bool AttachmentConstraintSolver::can_solve(const ClothMotionBufferView& motion_view,
                                            const AttachmentConstraintBufferView& constraint_view,
                                            const TriangleGeometryResources& character_geometry) const
 {
     return is_initialized() &&
-           is_valid_position_view(position_view) &&
+           is_valid_motion_view(motion_view) &&
            is_valid_attachment_constraint_view(constraint_view) &&
            is_valid_triangle_geometry_resource(character_geometry) &&
            stiffness_ > 0.0f;
 }
 
-void AttachmentConstraintSolver::solve(const ClothPositionBufferView& position_view,
+void AttachmentConstraintSolver::solve(const ClothMotionBufferView& motion_view,
                                        const AttachmentConstraintBufferView& constraint_view,
                                        const TriangleGeometryResources& character_geometry,
                                        QOpenGLFunctions_4_5_Core& gl) const
@@ -77,11 +76,10 @@ void AttachmentConstraintSolver::solve(const ClothPositionBufferView& position_v
         return;
     }
 
-    assert(can_solve(position_view, constraint_view, character_geometry));
+    assert(can_solve(motion_view, constraint_view, character_geometry));
 
     gl.glUseProgram(program_);
-    gl.glBindBufferBase(GL_SHADER_STORAGE_BUFFER, current_positions_binding, position_view.current_position_buffer);
-    gl.glBindBufferBase(GL_SHADER_STORAGE_BUFFER, previous_positions_binding, position_view.previous_position_buffer);
+    gl.glBindBufferBase(GL_SHADER_STORAGE_BUFFER, current_positions_binding, motion_view.current_position_buffer);
     gl.glBindBufferBase(GL_SHADER_STORAGE_BUFFER, attachment_indices_binding, constraint_view.attachment_index_buffer);
     gl.glBindBufferBase(GL_SHADER_STORAGE_BUFFER, attachment_barycentric_offsets_binding, constraint_view.barycentric_offset_buffer);
     gl.glBindBufferBase(GL_SHADER_STORAGE_BUFFER, character_triangle_geometry_binding, character_geometry.triangle_geometry_buffer);

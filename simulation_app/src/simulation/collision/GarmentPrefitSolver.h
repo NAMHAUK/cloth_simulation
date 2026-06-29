@@ -18,10 +18,10 @@ public:
                     float search_radius,
                     float pushout_margin,
                     QOpenGLFunctions_4_5_Core& gl);
-    bool can_solve(const ClothPositionBufferView& position_view,
+    bool can_solve(const ClothMotionBufferView& motion_view,
                    const TriangleGeometryResources& character_geometry,
                    const MeshBvhResources& character_bvh) const;
-    void solve(const ClothPositionBufferView& position_view,
+    void solve(const ClothMotionBufferView& motion_view,
                const TriangleGeometryResources& character_geometry,
                const MeshBvhResources& character_bvh,
                QOpenGLFunctions_4_5_Core& gl) const;

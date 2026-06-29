@@ -197,12 +197,12 @@ void SceneGpuState::build_garment_attachment_targets(SceneState& scene,
         return;
     }
 
-    const ClothPositionBufferView position_view = cloth_gpu_state_.position_buffer_view();
+    const ClothMotionBufferView motion_view = cloth_gpu_state_.motion_buffer_view();
     const AttachmentConstraintBufferView attachment_view = cloth_gpu_state_.attachment_constraint_buffer_view();
     const TriangleGeometryResources character_geometry = character_gpu_state_.character_triangle_geometry_resources();
     const MeshBvhResources character_bvh = character_gpu_state_.character_bvh_resources();
     
-    if (!attachment_target_builder_.build(position_view,
+    if (!attachment_target_builder_.build(motion_view,
                                           attachment_view,
                                           target_range,
                                           character_geometry,

@@ -6,15 +6,11 @@ layout(std430, binding = 0) buffer CurrentPositions {
     float current_positions[];
 };
 
-layout(std430, binding = 1) buffer PreviousPositions {
-    float previous_positions[];
-};
-
-layout(std430, binding = 2) readonly buffer AttachmentIndices {
+layout(std430, binding = 1) readonly buffer AttachmentIndices {
     uvec2 attachment_indices[];
 };
 
-layout(std430, binding = 3) readonly buffer AttachmentBarycentricOffsets {
+layout(std430, binding = 2) readonly buffer AttachmentBarycentricOffsets {
     vec4 barycentric_offsets[];
 };
 
@@ -25,7 +21,7 @@ struct CharacterTriangleGeometry {
     vec4 normal;
 };
 
-layout(std430, binding = 4) readonly buffer CharacterTriangleGeometryBuffer {
+layout(std430, binding = 3) readonly buffer CharacterTriangleGeometryBuffer {
     CharacterTriangleGeometry triangle_geometry[];
 };
 
@@ -39,26 +35,12 @@ vec3 load_current_position(uint vertex_index)
     return vec3(current_positions[base], current_positions[base + 1u], current_positions[base + 2u]);
 }
 
-vec3 load_previous_position(uint vertex_index)
-{
-    uint base = vertex_index * 3u;
-    return vec3(previous_positions[base], previous_positions[base + 1u], previous_positions[base + 2u]);
-}
-
 void store_current_position(uint vertex_index, vec3 position)
 {
     uint base = vertex_index * 3u;
     current_positions[base] = position.x;
     current_positions[base + 1u] = position.y;
     current_positions[base + 2u] = position.z;
-}
-
-void store_previous_position(uint vertex_index, vec3 position)
-{
-    uint base = vertex_index * 3u;
-    previous_positions[base] = position.x;
-    previous_positions[base + 1u] = position.y;
-    previous_positions[base + 2u] = position.z;
 }
 
 void main()
@@ -83,9 +65,7 @@ void main()
     }
 
     vec3 current = load_current_position(cloth_vertex);
-    vec3 previous = load_previous_position(cloth_vertex);
     vec3 correction = (target - current) * uStiffness;
 
     store_current_position(cloth_vertex, current + correction);
-    store_previous_position(cloth_vertex, previous + correction);
 }
