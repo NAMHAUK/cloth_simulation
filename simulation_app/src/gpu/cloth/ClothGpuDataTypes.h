@@ -15,6 +15,7 @@ struct ClothBufferSet final {
     GLuint index = 0;
     GLuint adjacent_triangle_offsets = 0;
     GLuint adjacent_triangle_indices = 0;
+    GLuint colorized_triangle_id = 0;
     GLuint stretch_edge_index = 0;
     GLuint stretch_rest_length = 0;
     GLuint bending_edge_index = 0;
@@ -25,7 +26,7 @@ struct ClothBufferSet final {
     GLuint vertex_normal = 0;
 };
 
-struct ConstraintRange final {
+struct ElementRange final {
     std::uint32_t offset = 0;
     std::uint32_t count = 0;
 };
@@ -56,12 +57,18 @@ struct ClothCollisionStateBufferView final {
 
 struct ClothMeshTopologyResources final {
     GLuint position_buffer = 0;
-    GLuint index_buffer = 0;
+    GLuint triangle_index_buffer = 0;
     GLuint adjacent_triangle_offsets_buffer = 0;
     GLuint adjacent_triangle_indices_buffer = 0;
 
     std::uint32_t vertex_count = 0;
     std::uint32_t triangle_count = 0;
+};
+
+struct ClothTriangleColorView final {
+    GLuint triangle_id_buffer = 0;
+    std::uint32_t triangle_count = 0;
+    const std::vector<ElementRange>* color_ranges = nullptr;
 };
 
 struct ClothNormalResources final {
@@ -73,14 +80,14 @@ struct DistanceConstraintBufferView final {
     GLuint edge_index_buffer = 0;
     GLuint rest_length_buffer = 0;
     std::uint32_t constraint_count = 0;
-    const std::vector<ConstraintRange>* color_ranges = nullptr;
+    const std::vector<ElementRange>* color_ranges = nullptr;
 };
 
 struct AttachmentConstraintBufferView final {
     GLuint attachment_index_buffer = 0;
     GLuint barycentric_offset_buffer = 0;
     std::uint32_t constraint_count = 0;
-    const std::vector<ConstraintRange>* ranges = nullptr;
+    const std::vector<ElementRange>* ranges = nullptr;
 };
 
 struct GarmentBufferRanges final {

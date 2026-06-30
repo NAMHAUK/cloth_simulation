@@ -7,7 +7,7 @@
 namespace {
 // Triangle pass bindings
 constexpr GLuint positions_binding = 0;
-constexpr GLuint indices_binding = 1;
+constexpr GLuint triangle_indices_binding = 1;
 constexpr GLuint triangle_normals_binding = 2;
 
 // Vertex pass bindings
@@ -88,7 +88,7 @@ void NormalUpdater::update_cloth_normals(const ClothMeshTopologyResources& topol
 {
     if (!is_initialized() ||
         topology.position_buffer == 0 ||
-        topology.index_buffer == 0 ||
+        topology.triangle_index_buffer == 0 ||
         topology.adjacent_triangle_offsets_buffer == 0 ||
         topology.adjacent_triangle_indices_buffer == 0 ||
         normals.triangle_normal_buffer == 0 ||
@@ -101,7 +101,7 @@ void NormalUpdater::update_cloth_normals(const ClothMeshTopologyResources& topol
     // triangle normal 계산
     gl.glUseProgram(triangle_program_);
     gl.glBindBufferBase(GL_SHADER_STORAGE_BUFFER, positions_binding, topology.position_buffer);
-    gl.glBindBufferBase(GL_SHADER_STORAGE_BUFFER, indices_binding, topology.index_buffer);
+    gl.glBindBufferBase(GL_SHADER_STORAGE_BUFFER, triangle_indices_binding, topology.triangle_index_buffer);
     gl.glBindBufferBase(GL_SHADER_STORAGE_BUFFER, triangle_normals_binding, normals.triangle_normal_buffer);
     if (triangle_count_location_ >= 0) {
         gl.glProgramUniform1ui(triangle_program_, triangle_count_location_, topology.triangle_count);

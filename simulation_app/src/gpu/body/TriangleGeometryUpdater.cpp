@@ -7,7 +7,7 @@
 
 namespace {
 constexpr GLuint positions_binding = 0;
-constexpr GLuint indices_binding = 1;
+constexpr GLuint triangle_indices_binding = 1;
 constexpr GLuint triangle_geometry_binding = 2;
 constexpr std::uint32_t triangle_geometry_local_size = 128;
 
@@ -15,7 +15,7 @@ bool is_valid_update_input(const CharacterMeshTopologyResources& topology,
                            const TriangleGeometryResources& triangle_geometry)
 {
     return topology.position_buffer != 0 &&
-           topology.index_buffer != 0 &&
+           topology.triangle_index_buffer != 0 &&
            topology.triangle_count != 0 &&
            triangle_geometry.triangle_geometry_buffer != 0 &&
            triangle_geometry.triangle_count != 0 &&
@@ -61,7 +61,7 @@ void TriangleGeometryUpdater::update(const CharacterMeshTopologyResources& topol
 
     gl.glUseProgram(program_);
     gl.glBindBufferBase(GL_SHADER_STORAGE_BUFFER, positions_binding, topology.position_buffer);
-    gl.glBindBufferBase(GL_SHADER_STORAGE_BUFFER, indices_binding, topology.index_buffer);
+    gl.glBindBufferBase(GL_SHADER_STORAGE_BUFFER, triangle_indices_binding, topology.triangle_index_buffer);
     gl.glBindBufferBase(GL_SHADER_STORAGE_BUFFER, triangle_geometry_binding, triangle_geometry.triangle_geometry_buffer);
     gl.glProgramUniform1ui(program_, triangle_count_location_, topology.triangle_count);
     gl.glProgramUniform1ui(program_, current_frame_begin_location_, current_frame_position_begin_index);

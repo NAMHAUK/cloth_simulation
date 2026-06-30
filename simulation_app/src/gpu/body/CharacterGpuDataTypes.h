@@ -6,7 +6,7 @@
 
 struct CharacterMeshTopologyResources final {
     GLuint position_buffer = 0;
-    GLuint index_buffer = 0;
+    GLuint triangle_index_buffer = 0;
     GLuint adjacent_triangle_offsets_buffer = 0;
     GLuint adjacent_triangle_indices_buffer = 0;
 

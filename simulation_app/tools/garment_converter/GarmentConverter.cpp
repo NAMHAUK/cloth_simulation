@@ -78,6 +78,13 @@ GarmentDistanceConstraints build_bending_constraints(const std::vector<std::uint
     return build_distance_constraints(triangle_indices, vertices, build_unique_bending_edges);
 }
 
+ColorizedMeshTriangles build_triangle_colors(const std::vector<std::uint32_t>& triangle_indices,
+                                             const std::vector<float>& vertices)
+{
+    const auto vertex_count = static_cast<std::uint32_t>(vertices.size() / vertex_position_components);
+    return colorize_mesh_triangles(vertex_count, triangle_indices);
+}
+
 std::vector<MeshEdge> build_boundary_edges(const std::vector<std::uint32_t>& triangle_indices,
                                            std::uint32_t vertex_count)
 {
@@ -122,7 +129,7 @@ std::vector<MeshEdge> build_boundary_edges(const std::vector<std::uint32_t>& tri
 std::vector<std::vector<std::uint32_t>> find_boundary_loops(const GarmentMesh& garment_mesh)
 {
     const auto vertex_count = static_cast<std::uint32_t>(garment_mesh.vertices.size() / vertex_position_components);
-    const std::vector<MeshEdge> boundary_edges = build_boundary_edges(garment_mesh.indices, vertex_count);
+    const std::vector<MeshEdge> boundary_edges = build_boundary_edges(garment_mesh.triangle_vertex_indices, vertex_count);
     if (boundary_edges.empty()) {
         return {};
     }
@@ -233,7 +240,7 @@ bool validate_garment_obj(const GarmentMesh& garment_mesh, std::uint32_t vertex_
         return false;
     }
 
-    if (garment_mesh.indices.empty() || garment_mesh.indices.size() % 3u != 0u) {
+    if (garment_mesh.triangle_vertex_indices.empty() || garment_mesh.triangle_vertex_indices.size() % 3u != 0u) {
         std::cerr << "Invalid garment OBJ triangle data.\n";
         return false;
     }
@@ -248,10 +255,10 @@ bool validate_garment_obj(const GarmentMesh& garment_mesh, std::uint32_t vertex_
         }
     }
 
-    for (std::size_t index = 0; index < garment_mesh.indices.size(); index += 3u) {
-        const std::uint32_t vertex_a = garment_mesh.indices[index];
-        const std::uint32_t vertex_b = garment_mesh.indices[index + 1u];
-        const std::uint32_t vertex_c = garment_mesh.indices[index + 2u];
+    for (std::size_t index = 0; index < garment_mesh.triangle_vertex_indices.size(); index += 3u) {
+        const std::uint32_t vertex_a = garment_mesh.triangle_vertex_indices[index];
+        const std::uint32_t vertex_b = garment_mesh.triangle_vertex_indices[index + 1u];
+        const std::uint32_t vertex_c = garment_mesh.triangle_vertex_indices[index + 2u];
 
         if (vertex_a >= vertex_count || vertex_b >= vertex_count || vertex_c >= vertex_count) {
             std::cerr << "Garment OBJ contains an out-of-range face index.\n";
@@ -390,9 +397,9 @@ bool parse_face_line(std::istringstream& line_stream,
         return false;
     }
 
-    garment_mesh.indices.push_back(face_indices[0]);
-    garment_mesh.indices.push_back(face_indices[1]);
-    garment_mesh.indices.push_back(face_indices[2]);
+    garment_mesh.triangle_vertex_indices.push_back(face_indices[0]);
+    garment_mesh.triangle_vertex_indices.push_back(face_indices[1]);
+    garment_mesh.triangle_vertex_indices.push_back(face_indices[2]);
     return true;
 }
 
@@ -432,18 +439,26 @@ bool build_garment_simulation_data(GarmentMesh& garment_mesh,
                                    std::uint32_t vertex_count,
                                    AttachmentType attachment_type)
 {
-    if (!build_vertex_face_adjacency(vertex_count, garment_mesh.indices, garment_mesh.adjacency)) {
+    if (!build_vertex_face_adjacency(vertex_count, garment_mesh.triangle_vertex_indices, garment_mesh.adjacency)) {
         std::cerr << "Invalid garment OBJ topology.\n";
         return false;
     }
 
-    garment_mesh.stretch_constraints = build_stretch_constraints(garment_mesh.indices, garment_mesh.vertices);
+    ColorizedMeshTriangles colorized_triangles = build_triangle_colors(garment_mesh.triangle_vertex_indices, garment_mesh.vertices);
+    if (colorized_triangles.triangle_ids.empty() || colorized_triangles.ranges.empty()) {
+        return false;
+    }
+
+    garment_mesh.colorized_triangle_ids = std::move(colorized_triangles.triangle_ids);
+    garment_mesh.triangle_color_ranges = std::move(colorized_triangles.ranges);
+
+    garment_mesh.stretch_constraints = build_stretch_constraints(garment_mesh.triangle_vertex_indices, garment_mesh.vertices);
     if (!garment_mesh.stretch_constraints.is_valid()) {
         std::cerr << "Invalid garment stretch constraints.\n";
         return false;
     }
 
-    garment_mesh.bending_constraints = build_bending_constraints(garment_mesh.indices, garment_mesh.vertices);
+    garment_mesh.bending_constraints = build_bending_constraints(garment_mesh.triangle_vertex_indices, garment_mesh.vertices);
     if (!garment_mesh.bending_constraints.is_valid()) {
         std::cerr << "Invalid garment bending constraints.\n";
         return false;
@@ -462,7 +477,8 @@ void print_garment_obj_summary(const std::filesystem::path& obj_path, const Garm
 {
     std::cout << "Read garment OBJ: " << obj_path << '\n';
     std::cout << "  vertices=" << garment_mesh.vertices.size() / vertex_position_components
-              << " triangles=" << garment_mesh.indices.size() / 3u
+              << " triangles=" << garment_mesh.triangle_vertex_indices.size() / 3u
+              << " triangle_color_groups=" << garment_mesh.triangle_color_ranges.size()
               << " stretch_constraints=" << garment_mesh.stretch_constraints.colorized_edges.size()
               << " bending_constraints=" << garment_mesh.bending_constraints.colorized_edges.size()
               << " attachment_vertices=" << garment_mesh.attachment_vertex_indices.size()
@@ -501,7 +517,7 @@ bool read_garment_obj(const std::filesystem::path& obj_path,
         return false;
     }
 
-    if (next_mesh.vertices.empty() || next_mesh.indices.empty()) {
+    if (next_mesh.vertices.empty() || next_mesh.triangle_vertex_indices.empty()) {
         return fail("Empty garment OBJ mesh.");
     }
 

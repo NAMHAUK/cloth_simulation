@@ -187,7 +187,7 @@ void SceneGpuState::build_garment_attachment_targets(SceneState& scene,
         return;
     }
 
-    ConstraintRange target_range;
+    ElementRange target_range;
     if (!cloth_gpu_state_.upload_garment_attachment_vertices(*garment, target_range, gl)) {
         std::cerr << "Failed to upload garment attachment vertices.\n";
         return;

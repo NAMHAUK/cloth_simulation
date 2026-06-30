@@ -16,7 +16,7 @@ constexpr std::uint32_t attachment_target_local_size = 128;
 constexpr float attachment_surface_offset = 0.005f;
 
 bool is_valid_attachment_target_range(const AttachmentConstraintBufferView& attachment_view,
-                                      const ConstraintRange& target_range)
+                                      const ElementRange& target_range)
 {
     return attachment_view.attachment_index_buffer != 0 &&
            attachment_view.barycentric_offset_buffer != 0 &&
@@ -57,7 +57,7 @@ bool AttachmentTargetBuilder::initialize(const std::filesystem::path& shader_pat
 
 bool AttachmentTargetBuilder::can_build(const ClothMotionBufferView& motion_view,
                                         const AttachmentConstraintBufferView& attachment_view,
-                                        const ConstraintRange& target_range,
+                                        const ElementRange& target_range,
                                         const TriangleGeometryResources& character_geometry,
                                         const MeshBvhResources& character_bvh) const
 {
@@ -70,7 +70,7 @@ bool AttachmentTargetBuilder::can_build(const ClothMotionBufferView& motion_view
 
 bool AttachmentTargetBuilder::build(const ClothMotionBufferView& motion_view,
                                     const AttachmentConstraintBufferView& attachment_view,
-                                    const ConstraintRange& target_range,
+                                    const ElementRange& target_range,
                                     const TriangleGeometryResources& character_geometry,
                                     const MeshBvhResources& character_bvh,
                                     QOpenGLFunctions_4_5_Core& gl) const

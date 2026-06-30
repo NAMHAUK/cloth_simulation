@@ -85,7 +85,7 @@ void AttachmentConstraintSolver::solve(const ClothMotionBufferView& motion_view,
     gl.glBindBufferBase(GL_SHADER_STORAGE_BUFFER, character_triangle_geometry_binding, character_geometry.triangle_geometry_buffer);
     gl.glProgramUniform1f(program_, stiffness_location_, std::clamp(stiffness_, 0.0f, 1.0f));
 
-    for (const ConstraintRange& range : *constraint_view.ranges) {
+    for (const ElementRange& range : *constraint_view.ranges) {
         if (range.count == 0) {
             continue;
         }

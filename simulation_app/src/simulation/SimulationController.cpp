@@ -84,15 +84,14 @@ void SimulationController::load_default_character_mesh(CharacterMesh mesh,
                                                        const std::vector<std::uint8_t>& triangle_part_labels,
                                                        QOpenGLFunctions_4_5_Core& gl)
 {
-    const std::uint32_t source_triangle_count = static_cast<std::uint32_t>(mesh.indices.size() / 3u);
     MeshBvhBuilder bvh_builder(
         mesh.vertex_count,
-        mesh.indices,
+        mesh.triangle_vertex_indices,
         mesh.vertices,
         triangle_part_labels
     );
     MeshBvhData default_character_bvh_data = bvh_builder.build_mesh_bvh();
-    if (!default_character_bvh_data.is_valid(source_triangle_count)) {
+    if (!default_character_bvh_data.is_valid(mesh.triangle_count)) {
         std::cerr << "Failed to build default character BVH.\n";
         return;
     }

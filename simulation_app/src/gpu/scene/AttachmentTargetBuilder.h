@@ -17,7 +17,7 @@ public:
     bool initialize(const std::filesystem::path& shader_path, QOpenGLFunctions_4_5_Core& gl);
     bool build(const ClothMotionBufferView& motion_view,
                const AttachmentConstraintBufferView& attachment_view,
-               const ConstraintRange& target_range,
+               const ElementRange& target_range,
                const TriangleGeometryResources& character_geometry,
                const MeshBvhResources& character_bvh,
                QOpenGLFunctions_4_5_Core& gl) const;
@@ -26,7 +26,7 @@ public:
 private:
     bool can_build(const ClothMotionBufferView& motion_view,
                    const AttachmentConstraintBufferView& attachment_view,
-                   const ConstraintRange& target_range,
+                   const ElementRange& target_range,
                    const TriangleGeometryResources& character_geometry,
                    const MeshBvhResources& character_bvh) const;
 

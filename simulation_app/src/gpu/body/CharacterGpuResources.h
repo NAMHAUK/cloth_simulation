@@ -55,8 +55,8 @@ private:
     std::uint32_t vertex_count_ = 0;
     std::uint32_t current_frame_index_ = 0;
 
-    // Mesh adjacent triangle data
-    GLuint index_buffer_ = 0;
+    // Mesh triangle and adjacent triangle data
+    GLuint triangle_index_buffer_ = 0;
     std::uint32_t triangle_count_ = 0;
 
     // Character BVH data

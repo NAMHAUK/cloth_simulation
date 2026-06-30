@@ -37,7 +37,7 @@ std::uint32_t SceneState::add_garment_mesh(GarmentMesh mesh)
 {
     const std::uint32_t vertex_count = static_cast<std::uint32_t>(mesh.vertices.size() / 3u);
     if (!mesh.adjacency.is_valid(vertex_count) &&
-        !build_vertex_face_adjacency(vertex_count, mesh.indices, mesh.adjacency)) {
+        !build_vertex_face_adjacency(vertex_count, mesh.triangle_vertex_indices, mesh.adjacency)) {
         std::cerr << "Cannot add garment mesh with invalid topology.\n";
     }
 
