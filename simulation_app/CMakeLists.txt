@@ -38,8 +38,10 @@ add_executable(simulation_app
     src/simulation/constraints/AttachmentConstraintSolver.h
     src/simulation/collision/GroundCollisionSolver.cpp
     src/simulation/collision/GroundCollisionSolver.h
-    src/simulation/collision/CharacterCollisionSolver.cpp
-    src/simulation/collision/CharacterCollisionSolver.h
+    src/simulation/collision/BodyVertexClothFaceCollisionSolver.cpp
+    src/simulation/collision/BodyVertexClothFaceCollisionSolver.h
+    src/simulation/collision/ClothVertexBodyFaceCollisionSolver.cpp
+    src/simulation/collision/ClothVertexBodyFaceCollisionSolver.h
     src/simulation/collision/GarmentPrefitSolver.cpp
     src/simulation/collision/GarmentPrefitSolver.h
     src/asset/MeshGeometryUtils.cpp
@@ -47,13 +49,13 @@ add_executable(simulation_app
     src/gpu/body/CharacterGpuResources.cpp
     src/gpu/body/CharacterGpuDataTypes.h
     src/gpu/body/CharacterGpuResources.h
-    src/gpu/collision/MeshBvhBuilder.cpp
-    src/gpu/collision/BvhDataTypes.h
-    src/gpu/collision/MeshBvhBuilder.h
-    src/gpu/collision/MeshBvhBoundsUpdater.cpp
-    src/gpu/collision/MeshBvhBoundsUpdater.h
-    src/gpu/body/TriangleGeometryUpdater.cpp
-    src/gpu/body/TriangleGeometryUpdater.h
+    src/gpu/body/bvh/MeshBvhBuilder.cpp
+    src/gpu/body/bvh/BvhDataTypes.h
+    src/gpu/body/bvh/MeshBvhBuilder.h
+    src/gpu/body/bvh/MeshBvhBoundsUpdater.cpp
+    src/gpu/body/bvh/MeshBvhBoundsUpdater.h
+    src/gpu/body/CharacterGpuStateUpdater.cpp
+    src/gpu/body/CharacterGpuStateUpdater.h
     src/gpu/cloth/ClothGpuResources.cpp
     src/gpu/cloth/ClothGpuDataTypes.h
     src/gpu/cloth/ClothGpuResources.h
@@ -94,6 +96,7 @@ add_executable(simulation_app
     shaders/rendering/background.frag
     shaders/gpu/triangle_normal.comp
     shaders/gpu/vertex_normal.comp
+    shaders/gpu/character_vertex_position_update.comp
     shaders/gpu/character_triangle_geometry_update.comp
     shaders/gpu/character_bvh_bounds_update.comp
     shaders/simulation/cloth_external_force.comp
@@ -101,7 +104,8 @@ add_executable(simulation_app
     shaders/simulation/cloth_bending_constraint.comp
     shaders/simulation/cloth_attachment_constraint.comp
     shaders/simulation/collision/cloth_ground_collision.comp
-    shaders/simulation/collision/cloth_character_collision.comp
+    shaders/simulation/collision/body_vertex_cloth_face_collision.comp
+    shaders/simulation/collision/cloth_vertex_body_face_collision.comp
     shaders/simulation/garment_prefit.comp
     shaders/simulation/collision/cloth_collision_common.glsl
     shaders/simulation/garment_attachment_target_build.comp

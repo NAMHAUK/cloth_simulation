@@ -2,7 +2,7 @@
 
 layout (location = 0) in vec3 aPosition;
 
-layout(std430, binding = 0) readonly buffer CharacterAnimationPositions {
+layout(std430, binding = 0) readonly buffer CharacterCurrentPositions {
     float positions[];
 };
 
@@ -16,16 +16,14 @@ out vec3 vertexNormalWorld;
 uniform mat4 uMVP;
 uniform bool uUseSolidColor;
 uniform vec3 uSolidColor;
-uniform bool uUseAnimationBuffer;
-uniform uint uAnimationFrameIndex;
-uniform uint uAnimationVertexCount;
+uniform bool uUsePositionBuffer;
 uniform bool uUseNormalLighting;
 
 void main()
 {
     vec3 position = aPosition;
-    if (uUseAnimationBuffer) {
-        uint base = (uAnimationFrameIndex * uAnimationVertexCount + uint(gl_VertexID)) * 3u;
+    if (uUsePositionBuffer) {
+        uint base = uint(gl_VertexID) * 3u;
         position = vec3(positions[base], positions[base + 1u], positions[base + 2u]);
     }
 

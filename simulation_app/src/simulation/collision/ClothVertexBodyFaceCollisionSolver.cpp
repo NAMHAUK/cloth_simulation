@@ -1,4 +1,4 @@
-#include "simulation/collision/CharacterCollisionSolver.h"
+#include "simulation/collision/ClothVertexBodyFaceCollisionSolver.h"
 
 #include "utils/BufferUtils.h"
 #include "utils/ShaderUtils.h"
@@ -13,20 +13,20 @@ constexpr GLuint character_triangle_geometry_binding = 2;
 constexpr GLuint character_bvh_node_binding = 3;
 constexpr GLuint collision_states_binding = 4;
 constexpr GLuint contact_normals_binding = 5;
-constexpr std::uint32_t character_collision_local_size = 128;
+constexpr std::uint32_t cloth_vertex_body_face_collision_local_size = 128;
 }
 
-bool CharacterCollisionSolver::is_initialized() const
+bool ClothVertexBodyFaceCollisionSolver::is_initialized() const
 {
     return program_ != 0;
 }
 
-bool CharacterCollisionSolver::initialize(const std::filesystem::path& shader_path,
-                                          float collision_thickness,
-                                          float max_correction_length,
-                                          QOpenGLFunctions_4_5_Core& gl)
+bool ClothVertexBodyFaceCollisionSolver::initialize(const std::filesystem::path& shader_path,
+                                                    float collision_thickness,
+                                                    float max_correction_length,
+                                                    QOpenGLFunctions_4_5_Core& gl)
 {
-    program_ = load_compute_program(shader_path, "Character collision", gl);
+    program_ = load_compute_program(shader_path, "Cloth vertex/body face collision", gl);
     if (program_ == 0) {
         return false;
     }
@@ -42,7 +42,7 @@ bool CharacterCollisionSolver::initialize(const std::filesystem::path& shader_pa
         max_contacts_per_vertex_location_ < 0 ||
         collision_thickness_location_ < 0 ||
         max_correction_length_location_ < 0) {
-        std::cerr << "Character collision compute shader missing required uniforms.\n";
+        std::cerr << "Cloth vertex/body face collision compute shader missing required uniforms.\n";
         release(gl);
         return false;
     }
@@ -52,10 +52,10 @@ bool CharacterCollisionSolver::initialize(const std::filesystem::path& shader_pa
     return true;
 }
 
-bool CharacterCollisionSolver::can_solve(const ClothMotionBufferView& motion_view,
-                                         const ClothCollisionStateBufferView& collision_view,
-                                         const TriangleGeometryResources& character_geometry,
-                                         const MeshBvhResources& character_bvh) const
+bool ClothVertexBodyFaceCollisionSolver::can_solve(const ClothMotionBufferView& motion_view,
+                                                   const ClothCollisionStateBufferView& collision_view,
+                                                   const TriangleGeometryResources& character_geometry,
+                                                   const MeshBvhResources& character_bvh) const
 {
     return is_initialized() &&
            is_valid_motion_view(motion_view) &&
@@ -67,11 +67,11 @@ bool CharacterCollisionSolver::can_solve(const ClothMotionBufferView& motion_vie
            max_correction_length_ > 0.0f;
 }
 
-void CharacterCollisionSolver::solve(const ClothMotionBufferView& motion_view,
-                                     const ClothCollisionStateBufferView& collision_view,
-                                     const TriangleGeometryResources& character_geometry,
-                                     const MeshBvhResources& character_bvh,
-                                     QOpenGLFunctions_4_5_Core& gl) const
+void ClothVertexBodyFaceCollisionSolver::solve(const ClothMotionBufferView& motion_view,
+                                               const ClothCollisionStateBufferView& collision_view,
+                                               const TriangleGeometryResources& character_geometry,
+                                               const MeshBvhResources& character_bvh,
+                                               QOpenGLFunctions_4_5_Core& gl) const
 {
     assert(can_solve(motion_view, collision_view, character_geometry, character_bvh));
 
@@ -89,11 +89,11 @@ void CharacterCollisionSolver::solve(const ClothMotionBufferView& motion_view,
     gl.glProgramUniform1f(program_, collision_thickness_location_, collision_thickness_);
     gl.glProgramUniform1f(program_, max_correction_length_location_, max_correction_length_);
 
-    gl.glDispatchCompute(compute_group_count(motion_view.vertex_count, character_collision_local_size), 1, 1);
+    gl.glDispatchCompute(compute_group_count(motion_view.vertex_count, cloth_vertex_body_face_collision_local_size), 1, 1);
     gl.glMemoryBarrier(GL_SHADER_STORAGE_BARRIER_BIT | GL_VERTEX_ATTRIB_ARRAY_BARRIER_BIT);
 }
 
-void CharacterCollisionSolver::release(QOpenGLFunctions_4_5_Core& gl)
+void ClothVertexBodyFaceCollisionSolver::release(QOpenGLFunctions_4_5_Core& gl)
 {
     if (program_ != 0) {
         gl.glDeleteProgram(program_);

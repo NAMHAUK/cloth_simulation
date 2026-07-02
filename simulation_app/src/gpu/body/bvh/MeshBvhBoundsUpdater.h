@@ -1,7 +1,7 @@
 #pragma once
 
 #include "gpu/body/CharacterGpuDataTypes.h"
-#include "gpu/collision/BvhDataTypes.h"
+#include "gpu/body/bvh/BvhDataTypes.h"
 
 #include <filesystem>
 #include <vector>

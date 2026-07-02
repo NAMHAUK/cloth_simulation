@@ -8,7 +8,8 @@
 #include "simulation/constraints/BendingConstraintSolver.h"
 #include "simulation/constraints/AttachmentConstraintSolver.h"
 #include "simulation/collision/GroundCollisionSolver.h"
-#include "simulation/collision/CharacterCollisionSolver.h"
+#include "simulation/collision/BodyVertexClothFaceCollisionSolver.h"
+#include "simulation/collision/ClothVertexBodyFaceCollisionSolver.h"
 #include "simulation/collision/GarmentPrefitSolver.h"
 
 #include <cstdint>
@@ -35,6 +36,10 @@ private:
     struct SimulationGpuViews final {
         ClothMotionBufferView cloth_motion;
         ClothCollisionStateBufferView cloth_collision;
+        ClothMeshTopologyResources cloth_topology;
+        ClothTriangleColorView cloth_triangle_colors;
+        CharacterVertexBufferView character_vertices;
+        CharacterMeshTopologyResources character_topology;
         TriangleGeometryResources character_geometry;
         MeshBvhResources character_bvh;
         DistanceConstraintBufferView stretch_constraints;
@@ -51,7 +56,8 @@ private:
     BendingConstraintSolver bending_constraint_solver_;
     AttachmentConstraintSolver attachment_constraint_solver_;
     GroundCollisionSolver ground_collision_solver_;
-    CharacterCollisionSolver character_collision_solver_;
+    BodyVertexClothFaceCollisionSolver body_vertex_cloth_face_collision_solver_;
+    ClothVertexBodyFaceCollisionSolver cloth_vertex_body_face_collision_solver_;
     GarmentPrefitSolver garment_prefit_solver_;
     float substep_dt_ = 0.0f;
     bool initialized_ = false;

@@ -1,4 +1,4 @@
-#include "gpu/collision/MeshBvhBoundsUpdater.h"
+#include "gpu/body/bvh/MeshBvhBoundsUpdater.h"
 
 #include "utils/BufferUtils.h"
 #include "utils/ShaderUtils.h"

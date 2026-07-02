@@ -7,11 +7,11 @@
 
 #include <QOpenGLFunctions_4_5_Core>
 
-class CharacterCollisionSolver final {
+class ClothVertexBodyFaceCollisionSolver final {
 public:
-    CharacterCollisionSolver() = default;
-    CharacterCollisionSolver(const CharacterCollisionSolver&) = delete;
-    CharacterCollisionSolver& operator=(const CharacterCollisionSolver&) = delete;
+    ClothVertexBodyFaceCollisionSolver() = default;
+    ClothVertexBodyFaceCollisionSolver(const ClothVertexBodyFaceCollisionSolver&) = delete;
+    ClothVertexBodyFaceCollisionSolver& operator=(const ClothVertexBodyFaceCollisionSolver&) = delete;
 
     bool is_initialized() const;
     bool initialize(const std::filesystem::path& shader_path,

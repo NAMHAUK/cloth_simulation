@@ -19,6 +19,36 @@ inline bool is_valid_collision_state_view(const ClothCollisionStateBufferView& c
            collision_view.vertex_count != 0;
 }
 
+inline bool is_valid_character_vertex_buffer_view(const CharacterVertexBufferView& vertex_view)
+{
+    return vertex_view.previous_position_buffer != 0 &&
+           vertex_view.current_position_buffer != 0 &&
+           vertex_view.vertex_normal_buffer != 0 &&
+           vertex_view.vertex_count != 0;
+}
+
+inline bool is_valid_cloth_mesh_topology_resource(const ClothMeshTopologyResources& topology)
+{
+    return topology.triangle_index_buffer != 0 &&
+           topology.vertex_count != 0 &&
+           topology.triangle_count != 0;
+}
+
+inline bool is_valid_cloth_triangle_color_view(const ClothTriangleColorView& triangle_color_view)
+{
+    return triangle_color_view.triangle_id_buffer != 0 &&
+           triangle_color_view.triangle_count != 0 &&
+           triangle_color_view.color_ranges != nullptr &&
+           !triangle_color_view.color_ranges->empty();
+}
+
+inline bool is_valid_character_mesh_topology_resource(const CharacterMeshTopologyResources& topology)
+{
+    return topology.triangle_index_buffer != 0 &&
+           topology.vertex_count != 0 &&
+           topology.triangle_count != 0;
+}
+
 inline bool is_valid_distance_constraint_view(const DistanceConstraintBufferView& constraint_view)
 {
     return constraint_view.edge_index_buffer != 0 &&

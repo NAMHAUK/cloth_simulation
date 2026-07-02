@@ -1,0 +1,403 @@
+#version 430 core
+
+layout(local_size_x = 128) in;
+
+layout(std430, binding = 0) buffer ClothCurrentPositions {
+    float cloth_current_positions[];
+};
+
+layout(std430, binding = 1) readonly buffer ClothPreviousPositions {
+    float cloth_previous_positions[];
+};
+
+layout(std430, binding = 2) readonly buffer ClothTriangleIndices {
+    uint cloth_triangle_indices[];
+};
+
+layout(std430, binding = 3) readonly buffer ColorizedClothTriangleIds {
+    uint colorized_cloth_triangle_ids[];
+};
+
+layout(std430, binding = 4) readonly buffer BodyPreviousPositions {
+    float body_previous_positions[];
+};
+
+layout(std430, binding = 5) readonly buffer BodyCurrentPositions {
+    float body_current_positions[];
+};
+
+layout(std430, binding = 6) readonly buffer BodyVertexNormals {
+    vec4 body_vertex_normals[];
+};
+
+layout(std430, binding = 7) readonly buffer BodyTriangleIndices {
+    uint body_triangle_indices[];
+};
+
+struct MeshBvhNode {
+    vec4 min_bounds;
+    vec4 max_bounds;
+    uint left_child_index;
+    uint right_child_index;
+    uint first_triangle_index;
+    uint triangle_count;
+};
+
+layout(std430, binding = 8) readonly buffer BodyBvhNodes {
+    MeshBvhNode body_bvh_nodes[];
+};
+
+layout(std430, binding = 9) buffer CollisionStates {
+    vec4 collision_states[];
+};
+
+layout(std430, binding = 10) buffer ContactNormals {
+    vec4 contact_normals[];
+};
+
+uniform uint uTriangleColorOffset;
+uniform uint uTriangleDispatchCount;
+uniform uint uRootNodeIndex;
+uniform uint uMaxContactsPerVertex;
+uniform float uCollisionThickness;
+uniform float uMaxCorrectionLength;
+
+const uint max_bvh_stack_depth = 32u;
+const float triangle_edge_tolerance = -1.0e-6;
+const float penetration_tolerance = 0.0005;
+const float ccd_parallel_epsilon = 1.0e-8;
+const float pbd_denominator_epsilon = 1.0e-8;
+const float contact_normal_store_epsilon = 1.0e-8;
+const uint local_contact_capacity = 8u;
+
+struct AcceptedContact {
+    uint body_vertex_id;
+    vec3 normal;
+    vec3 barycentric;
+    float depth;
+    float hit_time;
+};
+
+bool is_leaf_node(MeshBvhNode node)
+{
+    return node.triangle_count > 0u;
+}
+
+#include "cloth_collision_common.glsl"
+
+vec3 read_cloth_current_position(uint vertex_index)
+{
+    uint base_index = vertex_index * 3u;
+    return vec3(cloth_current_positions[base_index],
+                cloth_current_positions[base_index + 1u],
+                cloth_current_positions[base_index + 2u]);
+}
+
+vec3 read_cloth_previous_position(uint vertex_index)
+{
+    uint base_index = vertex_index * 3u;
+    return vec3(cloth_previous_positions[base_index],
+                cloth_previous_positions[base_index + 1u],
+                cloth_previous_positions[base_index + 2u]);
+}
+
+vec3 read_body_current_position(uint vertex_index)
+{
+    uint base_index = vertex_index * 3u;
+    return vec3(body_current_positions[base_index],
+                body_current_positions[base_index + 1u],
+                body_current_positions[base_index + 2u]);
+}
+
+vec3 read_body_previous_position(uint vertex_index)
+{
+    uint base_index = vertex_index * 3u;
+    return vec3(body_previous_positions[base_index],
+                body_previous_positions[base_index + 1u],
+                body_previous_positions[base_index + 2u]);
+}
+
+Aabb build_triangle_swept_aabb(vec3 previous_a,
+                               vec3 previous_b,
+                               vec3 previous_c,
+                               vec3 current_a,
+                               vec3 current_b,
+                               vec3 current_c)
+{
+    Aabb result;
+    result.min_bounds = min(min(previous_a, min(previous_b, previous_c)),
+                            min(current_a, min(current_b, current_c)));
+    result.max_bounds = max(max(previous_a, max(previous_b, previous_c)),
+                            max(current_a, max(current_b, current_c)));
+    return result;
+}
+
+bool compute_barycentric(vec3 point, vec3 a, vec3 b, vec3 c, out vec3 barycentric)
+{
+    vec3 ab = b - a;
+    vec3 ac = c - a;
+    vec3 ap = point - a;
+
+    float d00 = dot(ab, ab);
+    float d01 = dot(ab, ac);
+    float d11 = dot(ac, ac);
+    float d20 = dot(ap, ab);
+    float d21 = dot(ap, ac);
+    float denominator = d00 * d11 - d01 * d01;
+    if (abs(denominator) <= pbd_denominator_epsilon) {
+        barycentric = vec3(0.0);
+        return false;
+    }
+
+    barycentric.z = (d00 * d21 - d01 * d20) / denominator;
+    barycentric.y = (d11 * d20 - d01 * d21) / denominator;
+    barycentric.x = 1.0 - barycentric.y - barycentric.z;
+    return barycentric.x >= triangle_edge_tolerance &&
+           barycentric.y >= triangle_edge_tolerance &&
+           barycentric.z >= triangle_edge_tolerance;
+}
+
+bool compute_body_vertex_cloth_face_contact(uint body_vertex_id,
+                                            vec3 previous_a,
+                                            vec3 previous_b,
+                                            vec3 previous_c,
+                                            vec3 current_a,
+                                            vec3 current_b,
+                                            vec3 current_c,
+                                            vec3 cloth_normal,
+                                            out AcceptedContact contact)
+{
+    contact.body_vertex_id = body_vertex_id;
+    contact.normal = body_vertex_normals[body_vertex_id].xyz;
+    contact.barycentric = vec3(0.0);
+    contact.depth = 0.0;
+    contact.hit_time = 0.0;
+
+    vec3 previous_body_contact = read_body_previous_position(body_vertex_id) + contact.normal * uCollisionThickness;
+    vec3 current_body_contact = read_body_current_position(body_vertex_id) + contact.normal * uCollisionThickness;
+
+    float previous_signed_distance = dot(previous_body_contact - previous_a, cloth_normal);
+    float current_signed_distance = dot(current_body_contact - current_a, cloth_normal);
+    if (previous_signed_distance <= 0.0 || current_signed_distance > 0.0) {
+        return false;
+    }
+
+    float denominator = current_signed_distance - previous_signed_distance;
+    if (abs(denominator) <= ccd_parallel_epsilon) {
+        return false;
+    }
+
+    float hit_time = -previous_signed_distance / denominator;
+    if (hit_time < 0.0 || hit_time > 1.0) {
+        return false;
+    }
+
+    vec3 hit_body_contact = mix(previous_body_contact, current_body_contact, hit_time);
+    vec3 hit_a = mix(previous_a, current_a, hit_time);
+    vec3 hit_b = mix(previous_b, current_b, hit_time);
+    vec3 hit_c = mix(previous_c, current_c, hit_time);
+    if (!compute_barycentric(hit_body_contact, hit_a, hit_b, hit_c, contact.barycentric)) {
+        return false;
+    }
+
+    vec3 current_cloth_contact =
+        current_a * contact.barycentric.x +
+        current_b * contact.barycentric.y +
+        current_c * contact.barycentric.z;
+    float depth = dot(current_body_contact - current_cloth_contact, contact.normal) - penetration_tolerance;
+    if (depth <= 0.0) {
+        return false;
+    }
+
+    contact.depth = depth;
+    contact.hit_time = hit_time;
+    return true;
+}
+
+bool is_stronger_contact(AcceptedContact candidate, AcceptedContact retained)
+{
+    return candidate.depth > retained.depth ||
+           (candidate.depth == retained.depth && candidate.hit_time < retained.hit_time);
+}
+
+void retain_contact(inout AcceptedContact contacts[local_contact_capacity],
+                    inout uint retained_count,
+                    AcceptedContact contact)
+{
+    for (uint contact_index = 0u; contact_index < retained_count; ++contact_index) {
+        if (contacts[contact_index].body_vertex_id == contact.body_vertex_id) {
+            if (is_stronger_contact(contact, contacts[contact_index])) {
+                contacts[contact_index] = contact;
+            }
+            return;
+        }
+    }
+
+    if (retained_count < local_contact_capacity) {
+        contacts[retained_count] = contact;
+        ++retained_count;
+        return;
+    }
+
+    uint weakest_index = 0u;
+    for (uint contact_index = 1u; contact_index < local_contact_capacity; ++contact_index) {
+        if (is_stronger_contact(contacts[weakest_index], contacts[contact_index])) {
+            weakest_index = contact_index;
+        }
+    }
+
+    if (is_stronger_contact(contact, contacts[weakest_index])) {
+        contacts[weakest_index] = contact;
+    }
+}
+
+vec3 clamp_correction(vec3 correction)
+{
+    float correction_length_sq = dot(correction, correction);
+    float max_correction_length_sq = uMaxCorrectionLength * uMaxCorrectionLength;
+    if (correction_length_sq > max_correction_length_sq) {
+        return correction * (uMaxCorrectionLength * inversesqrt(correction_length_sq));
+    }
+    return correction;
+}
+
+void apply_position_correction(uint vertex_index, vec3 current_position, vec3 correction)
+{
+    uint base_index = vertex_index * 3u;
+    vec3 corrected_position = current_position + correction;
+    cloth_current_positions[base_index] = corrected_position.x;
+    cloth_current_positions[base_index + 1u] = corrected_position.y;
+    cloth_current_positions[base_index + 2u] = corrected_position.z;
+
+    vec4 collision_state = collision_states[vertex_index];
+    collision_state.xyz += correction;
+    collision_states[vertex_index] = collision_state;
+}
+
+void store_applied_contact(uint vertex_index, AcceptedContact contact, float vertex_weight, float clamp_scale)
+{
+    float denominator = dot(contact.barycentric, contact.barycentric);
+    if (denominator <= pbd_denominator_epsilon || vertex_weight <= 0.0 || clamp_scale <= 0.0) {
+        return;
+    }
+
+    vec3 applied_pushout = contact.normal * contact.depth * (vertex_weight / denominator) * clamp_scale;
+    float applied_pushout_length_sq = dot(applied_pushout, applied_pushout);
+    if (applied_pushout_length_sq > contact_normal_store_epsilon * contact_normal_store_epsilon) {
+        store_contact(vertex_index, contact.normal, sqrt(applied_pushout_length_sq));
+    }
+}
+
+void main()
+{
+    uint local_triangle_index = gl_GlobalInvocationID.x;
+    if (local_triangle_index >= uTriangleDispatchCount) {
+        return;
+    }
+
+    uint cloth_triangle_id = colorized_cloth_triangle_ids[uTriangleColorOffset + local_triangle_index];
+    uint cloth_triangle_base = cloth_triangle_id * 3u;
+    uint cloth_vertex_a = cloth_triangle_indices[cloth_triangle_base];
+    uint cloth_vertex_b = cloth_triangle_indices[cloth_triangle_base + 1u];
+    uint cloth_vertex_c = cloth_triangle_indices[cloth_triangle_base + 2u];
+
+    vec3 previous_a = read_cloth_previous_position(cloth_vertex_a);
+    vec3 previous_b = read_cloth_previous_position(cloth_vertex_b);
+    vec3 previous_c = read_cloth_previous_position(cloth_vertex_c);
+    vec3 current_a = read_cloth_current_position(cloth_vertex_a);
+    vec3 current_b = read_cloth_current_position(cloth_vertex_b);
+    vec3 current_c = read_cloth_current_position(cloth_vertex_c);
+
+    vec3 cloth_normal_unnormalized = cross(current_b - current_a, current_c - current_a);
+    float cloth_normal_length_sq = dot(cloth_normal_unnormalized, cloth_normal_unnormalized);
+    if (cloth_normal_length_sq <= pbd_denominator_epsilon) {
+        return;
+    }
+
+    vec3 cloth_normal = cloth_normal_unnormalized * inversesqrt(cloth_normal_length_sq);
+    Aabb query_bounds = build_triangle_swept_aabb(previous_a, previous_b, previous_c, current_a, current_b, current_c);
+
+    AcceptedContact retained_contacts[local_contact_capacity];
+    uint retained_contact_count = 0u;
+
+    uint node_index_stack[max_bvh_stack_depth];
+    uint stack_count = 0u;
+    node_index_stack[stack_count++] = uRootNodeIndex;
+
+    while (stack_count > 0u) {
+        --stack_count;
+        uint current_node_index = node_index_stack[stack_count];
+        MeshBvhNode current_node = body_bvh_nodes[current_node_index];
+        if (!overlaps_bounds(query_bounds, current_node.min_bounds, current_node.max_bounds)) {
+            continue;
+        }
+
+        if (is_leaf_node(current_node)) {
+            for (uint triangle_offset = 0u; triangle_offset < current_node.triangle_count; ++triangle_offset) {
+                uint body_triangle_index = current_node.first_triangle_index + triangle_offset;
+                uint body_triangle_base = body_triangle_index * 3u;
+                for (uint vertex_offset = 0u; vertex_offset < 3u; ++vertex_offset) {
+                    uint body_vertex_id = body_triangle_indices[body_triangle_base + vertex_offset];
+                    AcceptedContact contact;
+                    if (compute_body_vertex_cloth_face_contact(body_vertex_id,
+                                                               previous_a,
+                                                               previous_b,
+                                                               previous_c,
+                                                               current_a,
+                                                               current_b,
+                                                               current_c,
+                                                               cloth_normal,
+                                                               contact)) {
+                        retain_contact(retained_contacts, retained_contact_count, contact);
+                    }
+                }
+            }
+        } else {
+            node_index_stack[stack_count++] = current_node.left_child_index;
+            node_index_stack[stack_count++] = current_node.right_child_index;
+        }
+    }
+
+    if (retained_contact_count == 0u) {
+        return;
+    }
+
+    vec3 accumulated_correction_a = vec3(0.0);
+    vec3 accumulated_correction_b = vec3(0.0);
+    vec3 accumulated_correction_c = vec3(0.0);
+
+    for (uint contact_index = 0u; contact_index < retained_contact_count; ++contact_index) {
+        AcceptedContact contact = retained_contacts[contact_index];
+        float denominator = dot(contact.barycentric, contact.barycentric);
+        if (denominator <= pbd_denominator_epsilon) {
+            continue;
+        }
+
+        vec3 contact_pushout = contact.normal * contact.depth / denominator;
+        accumulated_correction_a += contact_pushout * contact.barycentric.x;
+        accumulated_correction_b += contact_pushout * contact.barycentric.y;
+        accumulated_correction_c += contact_pushout * contact.barycentric.z;
+    }
+
+    vec3 final_correction_a = clamp_correction(accumulated_correction_a);
+    vec3 final_correction_b = clamp_correction(accumulated_correction_b);
+    vec3 final_correction_c = clamp_correction(accumulated_correction_c);
+
+    float clamp_scale_a = dot(accumulated_correction_a, accumulated_correction_a) > 0.0 ?
+        length(final_correction_a) / length(accumulated_correction_a) : 0.0;
+    float clamp_scale_b = dot(accumulated_correction_b, accumulated_correction_b) > 0.0 ?
+        length(final_correction_b) / length(accumulated_correction_b) : 0.0;
+    float clamp_scale_c = dot(accumulated_correction_c, accumulated_correction_c) > 0.0 ?
+        length(final_correction_c) / length(accumulated_correction_c) : 0.0;
+
+    apply_position_correction(cloth_vertex_a, current_a, final_correction_a);
+    apply_position_correction(cloth_vertex_b, current_b, final_correction_b);
+    apply_position_correction(cloth_vertex_c, current_c, final_correction_c);
+
+    for (uint contact_index = 0u; contact_index < retained_contact_count; ++contact_index) {
+        AcceptedContact contact = retained_contacts[contact_index];
+        store_applied_contact(cloth_vertex_a, contact, contact.barycentric.x, clamp_scale_a);
+        store_applied_contact(cloth_vertex_b, contact, contact.barycentric.y, clamp_scale_b);
+        store_applied_contact(cloth_vertex_c, contact, contact.barycentric.z, clamp_scale_c);
+    }
+}

@@ -1,4 +1,4 @@
-#include "gpu/collision/MeshBvhBuilder.h"
+#include "gpu/body/bvh/MeshBvhBuilder.h"
 
 #include "asset/MeshGeometryUtils.h"
 

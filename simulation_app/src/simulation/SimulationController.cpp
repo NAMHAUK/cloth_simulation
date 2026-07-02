@@ -1,7 +1,7 @@
 #include "simulation/SimulationController.h"
 
 #include "app/ProjectPaths.h"
-#include "gpu/collision/MeshBvhBuilder.h"
+#include "gpu/body/bvh/MeshBvhBuilder.h"
 #include "simulation/SimulationSettings.h"
 
 #include <cassert>
@@ -65,7 +65,6 @@ void SimulationController::tick_frame()
                 if (simulation_step_finished) {
                     ++motion_step_index_;
                     scene_.update_character_frame(motion_step_index_, simulation_settings::character_frame_stride);
-                    gpu_state_.update_character_frame(scene_, gl);
                 }
             }
         });

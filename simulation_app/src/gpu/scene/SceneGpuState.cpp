@@ -13,6 +13,11 @@ CharacterFrameInterpolation make_single_frame_interpolation(std::uint32_t frame_
 }
 }
 
+SceneGpuState::SceneGpuState()
+    : character_gpu_state_updater_(character_gpu_state_, bvh_bounds_updater_, normal_updater_)
+{
+}
+
 bool SceneGpuState::is_initialized() const
 {
     return initialized_;
@@ -23,18 +28,20 @@ bool SceneGpuState::initialize(const ShaderPaths& shader_paths, QOpenGLFunctions
     if (!normal_updater_.initialize(shader_paths.triangle_normal_compute, shader_paths.vertex_normal_compute, gl)) {
         return false;
     }
-    if (!triangle_geometry_updater_.initialize(shader_paths.character_triangle_geometry_update_compute, gl)) {
+    if (!bvh_bounds_updater_.initialize(shader_paths.character_bvh_bounds_update_compute, gl)) {
         normal_updater_.release(gl);
         return false;
     }
-    if (!bvh_bounds_updater_.initialize(shader_paths.character_bvh_bounds_update_compute, gl)) {
-        triangle_geometry_updater_.release(gl);
+    if (!character_gpu_state_updater_.initialize(shader_paths.character_vertex_position_update_compute,
+                                                 shader_paths.character_triangle_geometry_update_compute,
+                                                 gl)) {
+        bvh_bounds_updater_.release(gl);
         normal_updater_.release(gl);
         return false;
     }
     if (!attachment_target_builder_.initialize(shader_paths.garment_attachment_target_build_compute, gl)) {
+        character_gpu_state_updater_.release(gl);
         bvh_bounds_updater_.release(gl);
-        triangle_geometry_updater_.release(gl);
         normal_updater_.release(gl);
         return false;
     }
@@ -61,8 +68,8 @@ void SceneGpuState::release(QOpenGLFunctions_4_5_Core& gl)
 {
     cloth_gpu_state_.release(gl);
     character_gpu_state_.release(gl);
+    character_gpu_state_updater_.release(gl);
     normal_updater_.release(gl);
-    triangle_geometry_updater_.release(gl);
     bvh_bounds_updater_.release(gl);
     attachment_target_builder_.release(gl);
 
@@ -81,24 +88,10 @@ void SceneGpuState::set_character_mesh(const SceneState& scene, QOpenGLFunctions
     const CharacterMesh& character_mesh = scene.character_mesh();
     character_gpu_state_.upload_mesh(character_mesh, scene.default_character_bvh_data(), gl);
     character_gpu_state_.set_current_frame(0);
-    update_character_triangle_geometry(make_single_frame_interpolation(0), gl);
-    update_character_bvh_bounds(scene, gl);
-    normal_updater_.update_character_normals(character_gpu_state_.mesh_topology_resources(),
-                                             character_gpu_state_.mesh_normal_resources(),
-                                             gl);
-}
-
-void SceneGpuState::update_character_frame(const SceneState& scene, QOpenGLFunctions_4_5_Core& gl)
-{
-    if (!is_initialized() || !character_gpu_state_.is_initialized()) {
-        return;
-    }
-
-    const std::uint32_t scene_frame = scene.current_character_frame();
-
-    character_gpu_state_.set_current_frame(scene_frame);
-    update_character_triangle_geometry(make_single_frame_interpolation(scene_frame), gl);
-    update_character_bvh_bounds(scene, gl);
+    character_gpu_state_updater_.initialize_character_pose_state(make_single_frame_interpolation(0),
+                                                                 scene.default_character_bvh_data().node_ranges_by_level,
+                                                                 simulation_settings::character_collision_thickness,
+                                                                 gl);
 }
 
 void SceneGpuState::update_character_frame_interpolation(const SceneState& scene,
@@ -109,44 +102,10 @@ void SceneGpuState::update_character_frame_interpolation(const SceneState& scene
         return;
     }
 
-    update_character_triangle_geometry(interpolation, gl);
-    update_character_bvh_bounds(scene, gl);
-}
-
-void SceneGpuState::update_character_render_frame(const SceneState& scene, QOpenGLFunctions_4_5_Core& gl)
-{
-    if (!is_initialized() || !character_gpu_state_.is_initialized()) {
-        return;
-    }
-
-    const std::uint32_t scene_frame = scene.current_character_frame();
-    character_gpu_state_.set_current_frame(scene_frame);
-    update_character_triangle_geometry(make_single_frame_interpolation(scene_frame), gl);
-}
-
-void SceneGpuState::update_character_triangle_geometry(const CharacterFrameInterpolation& interpolation,
-                                                       QOpenGLFunctions_4_5_Core& gl)
-{
-    const std::uint32_t current_frame_position_begin_index =
-        character_gpu_state_.frame_position_begin_index(interpolation.current_frame_index);
-    const std::uint32_t next_frame_position_begin_index =
-        character_gpu_state_.frame_position_begin_index(interpolation.next_frame_index);
-
-    triangle_geometry_updater_.update(character_gpu_state_.mesh_topology_resources(),
-                                      character_gpu_state_.character_triangle_geometry_resources(),
-                                      current_frame_position_begin_index,
-                                      next_frame_position_begin_index,
-                                      interpolation.frame_alpha,
-                                      gl);
-}
-
-void SceneGpuState::update_character_bvh_bounds(const SceneState& scene, QOpenGLFunctions_4_5_Core& gl)
-{
-    bvh_bounds_updater_.update(character_gpu_state_.character_triangle_geometry_resources(),
-                               character_gpu_state_.character_bvh_resources(),
-                               scene.default_character_bvh_data().node_ranges_by_level,
-                               simulation_settings::character_collision_thickness,
-                               gl);
+    character_gpu_state_updater_.update_character_pose_state(interpolation,
+                                                             scene.default_character_bvh_data().node_ranges_by_level,
+                                                             simulation_settings::character_collision_thickness,
+                                                             gl);
 }
 
 // Garments //
@@ -202,12 +161,7 @@ void SceneGpuState::build_garment_attachment_targets(SceneState& scene,
     const TriangleGeometryResources character_geometry = character_gpu_state_.character_triangle_geometry_resources();
     const MeshBvhResources character_bvh = character_gpu_state_.character_bvh_resources();
     
-    if (!attachment_target_builder_.build(motion_view,
-                                          attachment_view,
-                                          target_range,
-                                          character_geometry,
-                                          character_bvh,
-                                          gl)) {
+    if (!attachment_target_builder_.build(motion_view, attachment_view, target_range, character_geometry, character_bvh, gl)) {
         std::cerr << "Cannot build garment attachment targets because required GPU buffers are missing.\n";
         return;
     }
