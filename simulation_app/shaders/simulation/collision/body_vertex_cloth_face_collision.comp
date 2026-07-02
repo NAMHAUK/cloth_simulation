@@ -30,21 +30,21 @@ layout(std430, binding = 6) readonly buffer BodyVertexNormals {
     vec4 body_vertex_normals[];
 };
 
-layout(std430, binding = 7) readonly buffer BodyTriangleIndices {
-    uint body_triangle_indices[];
+layout(std430, binding = 7) readonly buffer BodyVertexIds {
+    uint body_vertex_ids[];
 };
 
-struct MeshBvhNode {
+struct BodyVertexBvhNode {
     vec4 min_bounds;
     vec4 max_bounds;
     uint left_child_index;
     uint right_child_index;
-    uint first_triangle_index;
-    uint triangle_count;
+    uint first_vertex_index;
+    uint vertex_count;
 };
 
-layout(std430, binding = 8) readonly buffer BodyBvhNodes {
-    MeshBvhNode body_bvh_nodes[];
+layout(std430, binding = 8) readonly buffer BodyVertexBvhNodes {
+    BodyVertexBvhNode body_vertex_bvh_nodes[];
 };
 
 layout(std430, binding = 9) buffer CollisionStates {
@@ -78,9 +78,9 @@ struct AcceptedContact {
     float hit_time;
 };
 
-bool is_leaf_node(MeshBvhNode node)
+bool is_leaf_node(BodyVertexBvhNode node)
 {
-    return node.triangle_count > 0u;
+    return node.vertex_count > 0u;
 }
 
 #include "cloth_collision_common.glsl"
@@ -308,13 +308,13 @@ void main()
     vec3 current_b = read_cloth_current_position(cloth_vertex_b);
     vec3 current_c = read_cloth_current_position(cloth_vertex_c);
 
-    vec3 cloth_normal_unnormalized = cross(current_b - current_a, current_c - current_a);
-    float cloth_normal_length_sq = dot(cloth_normal_unnormalized, cloth_normal_unnormalized);
-    if (cloth_normal_length_sq <= pbd_denominator_epsilon) {
+    vec3 cloth_normal = cross(current_b - current_a, current_c - current_a);
+    float normal_length_sq = dot(cloth_normal, cloth_normal);
+    if (normal_length_sq <= pbd_denominator_epsilon) {
         return;
     }
+    cloth_normal *= inversesqrt(normal_length_sq);
 
-    vec3 cloth_normal = cloth_normal_unnormalized * inversesqrt(cloth_normal_length_sq);
     Aabb query_bounds = build_triangle_swept_aabb(previous_a, previous_b, previous_c, current_a, current_b, current_c);
 
     AcceptedContact retained_contacts[local_contact_capacity];
@@ -327,29 +327,25 @@ void main()
     while (stack_count > 0u) {
         --stack_count;
         uint current_node_index = node_index_stack[stack_count];
-        MeshBvhNode current_node = body_bvh_nodes[current_node_index];
+        BodyVertexBvhNode current_node = body_vertex_bvh_nodes[current_node_index];
         if (!overlaps_bounds(query_bounds, current_node.min_bounds, current_node.max_bounds)) {
             continue;
         }
 
         if (is_leaf_node(current_node)) {
-            for (uint triangle_offset = 0u; triangle_offset < current_node.triangle_count; ++triangle_offset) {
-                uint body_triangle_index = current_node.first_triangle_index + triangle_offset;
-                uint body_triangle_base = body_triangle_index * 3u;
-                for (uint vertex_offset = 0u; vertex_offset < 3u; ++vertex_offset) {
-                    uint body_vertex_id = body_triangle_indices[body_triangle_base + vertex_offset];
-                    AcceptedContact contact;
-                    if (compute_body_vertex_cloth_face_contact(body_vertex_id,
-                                                               previous_a,
-                                                               previous_b,
-                                                               previous_c,
-                                                               current_a,
-                                                               current_b,
-                                                               current_c,
-                                                               cloth_normal,
-                                                               contact)) {
-                        retain_contact(retained_contacts, retained_contact_count, contact);
-                    }
+            for (uint vertex_offset = 0u; vertex_offset < current_node.vertex_count; ++vertex_offset) {
+                uint body_vertex_id = body_vertex_ids[current_node.first_vertex_index + vertex_offset];
+                AcceptedContact contact;
+                if (compute_body_vertex_cloth_face_contact(body_vertex_id,
+                                                           previous_a,
+                                                           previous_b,
+                                                           previous_c,
+                                                           current_a,
+                                                           current_b,
+                                                           current_c,
+                                                           cloth_normal,
+                                                           contact)) {
+                    retain_contact(retained_contacts, retained_contact_count, contact);
                 }
             }
         } else {

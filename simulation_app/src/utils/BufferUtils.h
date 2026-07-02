@@ -70,3 +70,11 @@ inline bool is_valid_mesh_bvh_resource(const MeshBvhResources& mesh_bvh)
            mesh_bvh.node_count != 0 &&
            mesh_bvh.root_node_index < mesh_bvh.node_count;
 }
+
+inline bool is_valid_body_vertex_bvh_resource(const BodyVertexBvhResources& body_vertex_bvh)
+{
+    return body_vertex_bvh.node_buffer != 0 &&
+           body_vertex_bvh.vertex_id_buffer != 0 &&
+           body_vertex_bvh.node_count != 0 &&
+           body_vertex_bvh.root_node_index < body_vertex_bvh.node_count;
+}

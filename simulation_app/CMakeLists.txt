@@ -52,8 +52,12 @@ add_executable(simulation_app
     src/gpu/body/bvh/MeshBvhBuilder.cpp
     src/gpu/body/bvh/BvhDataTypes.h
     src/gpu/body/bvh/MeshBvhBuilder.h
+    src/gpu/body/bvh/VertexBvhBuilder.cpp
+    src/gpu/body/bvh/VertexBvhBuilder.h
     src/gpu/body/bvh/MeshBvhBoundsUpdater.cpp
     src/gpu/body/bvh/MeshBvhBoundsUpdater.h
+    src/gpu/body/bvh/VertexBvhBoundsUpdater.cpp
+    src/gpu/body/bvh/VertexBvhBoundsUpdater.h
     src/gpu/body/CharacterGpuStateUpdater.cpp
     src/gpu/body/CharacterGpuStateUpdater.h
     src/gpu/cloth/ClothGpuResources.cpp
@@ -99,6 +103,7 @@ add_executable(simulation_app
     shaders/gpu/character_vertex_position_update.comp
     shaders/gpu/character_triangle_geometry_update.comp
     shaders/gpu/character_bvh_bounds_update.comp
+    shaders/gpu/character_vertex_bvh_bounds_update.comp
     shaders/simulation/cloth_external_force.comp
     shaders/simulation/cloth_stretch_constraint.comp
     shaders/simulation/cloth_bending_constraint.comp

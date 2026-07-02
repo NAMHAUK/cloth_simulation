@@ -10,6 +10,7 @@
 
 class CharacterGpuResources;
 class MeshBvhBoundsUpdater;
+class VertexBvhBoundsUpdater;
 class NormalUpdater;
 struct CharacterFrameInterpolation;
 struct CharacterMeshTopologyResources;
@@ -20,6 +21,7 @@ class CharacterGpuStateUpdater final {
 public:
     CharacterGpuStateUpdater(CharacterGpuResources& character_gpu_state,
                              MeshBvhBoundsUpdater& bvh_bounds_updater,
+                             VertexBvhBoundsUpdater& vertex_bvh_bounds_updater,
                              NormalUpdater& normal_updater);
     CharacterGpuStateUpdater(const CharacterGpuStateUpdater&) = delete;
     CharacterGpuStateUpdater& operator=(const CharacterGpuStateUpdater&) = delete;
@@ -32,10 +34,12 @@ public:
 
     void initialize_character_pose_state(const CharacterFrameInterpolation& interpolation,
                                          const std::vector<BvhNodeRange>& node_ranges_by_level,
+                                         const std::vector<BvhNodeRange>& body_vertex_node_ranges_by_level,
                                          float collision_thickness,
                                          QOpenGLFunctions_4_5_Core& gl) const;
     void update_character_pose_state(const CharacterFrameInterpolation& interpolation,
                                      const std::vector<BvhNodeRange>& node_ranges_by_level,
+                                     const std::vector<BvhNodeRange>& body_vertex_node_ranges_by_level,
                                      float collision_thickness,
                                      QOpenGLFunctions_4_5_Core& gl) const;
 
@@ -50,11 +54,13 @@ private:
                                   const TriangleGeometryResources& triangle_geometry,
                                   QOpenGLFunctions_4_5_Core& gl) const;
     void update_derived_pose_state(const std::vector<BvhNodeRange>& node_ranges_by_level,
+                                   const std::vector<BvhNodeRange>& body_vertex_node_ranges_by_level,
                                    float collision_thickness,
                                    QOpenGLFunctions_4_5_Core& gl) const;
 
     CharacterGpuResources& character_gpu_state_;
     MeshBvhBoundsUpdater& bvh_bounds_updater_;
+    VertexBvhBoundsUpdater& vertex_bvh_bounds_updater_;
     NormalUpdater& normal_updater_;
 
     GLuint position_program_ = 0;

@@ -39,9 +39,9 @@ private:
         ClothMeshTopologyResources cloth_topology;
         ClothTriangleColorView cloth_triangle_colors;
         CharacterVertexBufferView character_vertices;
-        CharacterMeshTopologyResources character_topology;
         TriangleGeometryResources character_geometry;
         MeshBvhResources character_bvh;
+        BodyVertexBvhResources body_vertex_bvh;
         DistanceConstraintBufferView stretch_constraints;
         DistanceConstraintBufferView bending_constraints;
         AttachmentConstraintBufferView attachment_constraints;

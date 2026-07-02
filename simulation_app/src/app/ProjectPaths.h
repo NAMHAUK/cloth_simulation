@@ -13,6 +13,7 @@ struct ShaderPaths {
     std::filesystem::path character_vertex_position_update_compute;
     std::filesystem::path character_triangle_geometry_update_compute;
     std::filesystem::path character_bvh_bounds_update_compute;
+    std::filesystem::path character_vertex_bvh_bounds_update_compute;
     std::filesystem::path cloth_external_force_compute;
     std::filesystem::path cloth_stretch_constraint_compute;
     std::filesystem::path cloth_bending_constraint_compute;
@@ -51,6 +52,7 @@ inline ShaderPaths make_shader_paths(const std::filesystem::path& project_root)
         shader_dir / "gpu" / "character_vertex_position_update.comp",
         shader_dir / "gpu" / "character_triangle_geometry_update.comp",
         shader_dir / "gpu" / "character_bvh_bounds_update.comp",
+        shader_dir / "gpu" / "character_vertex_bvh_bounds_update.comp",
         shader_dir / "simulation" / "cloth_external_force.comp",
         shader_dir / "simulation" / "cloth_stretch_constraint.comp",
         shader_dir / "simulation" / "cloth_bending_constraint.comp",

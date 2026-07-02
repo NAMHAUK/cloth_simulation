@@ -2,6 +2,7 @@
 
 #include "app/ProjectPaths.h"
 #include "gpu/body/bvh/MeshBvhBuilder.h"
+#include "gpu/body/bvh/VertexBvhBuilder.h"
 #include "simulation/SimulationSettings.h"
 
 #include <cassert>
@@ -95,7 +96,15 @@ void SimulationController::load_default_character_mesh(CharacterMesh mesh,
         return;
     }
 
+    VertexBvhBuilder vertex_bvh_builder(mesh.vertex_count, mesh.vertices);
+    BodyVertexBvhData default_body_vertex_bvh_data = vertex_bvh_builder.build_body_vertex_bvh();
+    if (!default_body_vertex_bvh_data.is_valid(mesh.vertex_count)) {
+        std::cerr << "Failed to build default body vertex BVH.\n";
+        return;
+    }
+
     scene_.set_default_character_bvh_data(std::move(default_character_bvh_data));
+    scene_.set_default_body_vertex_bvh_data(std::move(default_body_vertex_bvh_data));
     default_character_mesh_ = std::move(mesh);
     set_character_mesh_state(default_character_mesh_, gl);
     is_default_pose_ = true;

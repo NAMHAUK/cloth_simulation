@@ -131,8 +131,7 @@ bool SimulationPipeline::step(SceneState& scene, SceneGpuState& gpu_state, std::
                                                            views.cloth_topology,
                                                            views.cloth_triangle_colors,
                                                            views.character_vertices,
-                                                           views.character_topology,
-                                                           views.character_bvh,
+                                                           views.body_vertex_bvh,
                                                            gl);
             cloth_vertex_body_face_collision_solver_.solve(views.cloth_motion,
                                                            views.cloth_collision,
@@ -169,9 +168,9 @@ SimulationPipeline::SimulationGpuViews SimulationPipeline::collect_gpu_views(con
     views.cloth_topology = gpu_state.cloth_gpu_state().mesh_topology_resources();
     views.cloth_triangle_colors = gpu_state.cloth_gpu_state().triangle_color_view();
     views.character_vertices = gpu_state.character_gpu_state().character_vertex_buffer_view();
-    views.character_topology = gpu_state.character_gpu_state().mesh_topology_resources();
     views.character_geometry = gpu_state.character_gpu_state().character_triangle_geometry_resources();
     views.character_bvh = gpu_state.character_gpu_state().character_bvh_resources();
+    views.body_vertex_bvh = gpu_state.character_gpu_state().body_vertex_bvh_resources();
     views.stretch_constraints = gpu_state.cloth_gpu_state().stretch_constraint_buffer_view();
     views.bending_constraints = gpu_state.cloth_gpu_state().bending_constraint_buffer_view();
     views.attachment_constraints = gpu_state.cloth_gpu_state().attachment_constraint_buffer_view();
@@ -187,8 +186,7 @@ bool SimulationPipeline::can_solve_constraint_iteration(const SimulationGpuViews
                                                               views.cloth_topology,
                                                               views.cloth_triangle_colors,
                                                               views.character_vertices,
-                                                              views.character_topology,
-                                                              views.character_bvh) &&
+                                                              views.body_vertex_bvh) &&
            cloth_vertex_body_face_collision_solver_.can_solve(views.cloth_motion,
                                                               views.cloth_collision,
                                                               views.character_geometry,

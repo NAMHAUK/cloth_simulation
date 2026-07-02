@@ -3,6 +3,7 @@
 #include "gpu/body/CharacterGpuStateUpdater.h"
 #include "gpu/body/CharacterGpuResources.h"
 #include "gpu/body/bvh/MeshBvhBoundsUpdater.h"
+#include "gpu/body/bvh/VertexBvhBoundsUpdater.h"
 #include "gpu/cloth/ClothGpuResources.h"
 #include "gpu/scene/AttachmentTargetBuilder.h"
 #include "gpu/scene/NormalUpdater.h"
@@ -46,6 +47,7 @@ public:
 private:
     CharacterGpuResources character_gpu_state_;
     MeshBvhBoundsUpdater bvh_bounds_updater_;
+    VertexBvhBoundsUpdater vertex_bvh_bounds_updater_;
     NormalUpdater normal_updater_;
     CharacterGpuStateUpdater character_gpu_state_updater_;
     ClothGpuResources cloth_gpu_state_;

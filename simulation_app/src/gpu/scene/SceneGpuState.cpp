@@ -14,7 +14,7 @@ CharacterFrameInterpolation make_single_frame_interpolation(std::uint32_t frame_
 }
 
 SceneGpuState::SceneGpuState()
-    : character_gpu_state_updater_(character_gpu_state_, bvh_bounds_updater_, normal_updater_)
+    : character_gpu_state_updater_(character_gpu_state_, bvh_bounds_updater_, vertex_bvh_bounds_updater_, normal_updater_)
 {
 }
 
@@ -32,15 +32,22 @@ bool SceneGpuState::initialize(const ShaderPaths& shader_paths, QOpenGLFunctions
         normal_updater_.release(gl);
         return false;
     }
+    if (!vertex_bvh_bounds_updater_.initialize(shader_paths.character_vertex_bvh_bounds_update_compute, gl)) {
+        bvh_bounds_updater_.release(gl);
+        normal_updater_.release(gl);
+        return false;
+    }
     if (!character_gpu_state_updater_.initialize(shader_paths.character_vertex_position_update_compute,
                                                  shader_paths.character_triangle_geometry_update_compute,
                                                  gl)) {
+        vertex_bvh_bounds_updater_.release(gl);
         bvh_bounds_updater_.release(gl);
         normal_updater_.release(gl);
         return false;
     }
     if (!attachment_target_builder_.initialize(shader_paths.garment_attachment_target_build_compute, gl)) {
         character_gpu_state_updater_.release(gl);
+        vertex_bvh_bounds_updater_.release(gl);
         bvh_bounds_updater_.release(gl);
         normal_updater_.release(gl);
         return false;
@@ -70,6 +77,7 @@ void SceneGpuState::release(QOpenGLFunctions_4_5_Core& gl)
     character_gpu_state_.release(gl);
     character_gpu_state_updater_.release(gl);
     normal_updater_.release(gl);
+    vertex_bvh_bounds_updater_.release(gl);
     bvh_bounds_updater_.release(gl);
     attachment_target_builder_.release(gl);
 
@@ -86,10 +94,14 @@ void SceneGpuState::set_character_mesh(const SceneState& scene, QOpenGLFunctions
 {
     // 새 character mesh가 들어오면 전체 frame character mesh를 GPU에 올리고 frame 상태 설정
     const CharacterMesh& character_mesh = scene.character_mesh();
-    character_gpu_state_.upload_mesh(character_mesh, scene.default_character_bvh_data(), gl);
+    character_gpu_state_.upload_mesh(character_mesh,
+                                     scene.default_character_bvh_data(),
+                                     scene.default_body_vertex_bvh_data(),
+                                     gl);
     character_gpu_state_.set_current_frame(0);
     character_gpu_state_updater_.initialize_character_pose_state(make_single_frame_interpolation(0),
                                                                  scene.default_character_bvh_data().node_ranges_by_level,
+                                                                 scene.default_body_vertex_bvh_data().node_ranges_by_level,
                                                                  simulation_settings::character_collision_thickness,
                                                                  gl);
 }
@@ -104,6 +116,7 @@ void SceneGpuState::update_character_frame_interpolation(const SceneState& scene
 
     character_gpu_state_updater_.update_character_pose_state(interpolation,
                                                              scene.default_character_bvh_data().node_ranges_by_level,
+                                                             scene.default_body_vertex_bvh_data().node_ranges_by_level,
                                                              simulation_settings::character_collision_thickness,
                                                              gl);
 }
