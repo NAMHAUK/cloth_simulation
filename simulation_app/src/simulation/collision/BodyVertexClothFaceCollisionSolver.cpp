@@ -3,56 +3,98 @@
 #include "utils/BufferUtils.h"
 #include "utils/ShaderUtils.h"
 
+#include <algorithm>
 #include <cassert>
 #include <iostream>
 
 namespace {
-constexpr GLuint cloth_current_positions_binding = 0;
-constexpr GLuint cloth_previous_positions_binding = 1;
-constexpr GLuint cloth_triangle_indices_binding = 2;
-constexpr GLuint colorized_cloth_triangle_ids_binding = 3;
-constexpr GLuint body_previous_positions_binding = 4;
-constexpr GLuint body_current_positions_binding = 5;
-constexpr GLuint body_vertex_normals_binding = 6;
-constexpr GLuint body_vertex_ids_binding = 7;
-constexpr GLuint body_vertex_bvh_nodes_binding = 8;
-constexpr GLuint collision_states_binding = 9;
-constexpr GLuint contact_normals_binding = 10;
-constexpr std::uint32_t body_vertex_cloth_face_collision_local_size = 128;
-#if CLOTH_SIM_TEMP_BODY_VERTEX_CLOTH_FACE_GPU_TIMING
+constexpr std::uint32_t pair_generate_local_size = 128;
+constexpr std::uint32_t pair_accumulate_local_size = 128;
+constexpr std::uint32_t pair_apply_local_size = 128;
+constexpr std::uint32_t pair_capacity_multiplier = 32;
+constexpr GLuint pair_generate_cloth_current_positions_binding = 0;
+constexpr GLuint pair_generate_cloth_previous_positions_binding = 1;
+constexpr GLuint pair_generate_cloth_triangle_indices_binding = 2;
+constexpr GLuint pair_generate_body_vertex_ids_binding = 3;
+constexpr GLuint pair_generate_body_vertex_bvh_nodes_binding = 4;
+constexpr GLuint pair_generate_pair_records_binding = 5;
+constexpr GLuint pair_generate_pair_count_binding = 6;
+constexpr GLuint pair_accumulate_cloth_current_positions_binding = 0;
+constexpr GLuint pair_accumulate_cloth_previous_positions_binding = 1;
+constexpr GLuint pair_accumulate_cloth_triangle_indices_binding = 2;
+constexpr GLuint pair_accumulate_body_previous_positions_binding = 3;
+constexpr GLuint pair_accumulate_body_current_positions_binding = 4;
+constexpr GLuint pair_accumulate_body_vertex_normals_binding = 5;
+constexpr GLuint pair_accumulate_pair_records_binding = 6;
+constexpr GLuint pair_accumulate_pair_count_binding = 7;
+constexpr GLuint pair_accumulate_correction_sums_binding = 8;
+constexpr GLuint pair_accumulate_correction_counts_binding = 9;
+constexpr GLuint pair_accumulate_contact_candidate_counts_binding = 10;
+constexpr GLuint pair_accumulate_contact_candidates_binding = 11;
+constexpr GLuint pair_apply_cloth_current_positions_binding = 0;
+constexpr GLuint pair_apply_collision_states_binding = 1;
+constexpr GLuint pair_apply_contact_normals_binding = 2;
+constexpr GLuint pair_apply_correction_sums_binding = 3;
+constexpr GLuint pair_apply_correction_counts_binding = 4;
+constexpr GLuint pair_apply_contact_candidate_counts_binding = 5;
+constexpr GLuint pair_apply_contact_candidates_binding = 6;
+#if CLOTH_SIM_BODY_VERTEX_CLOTH_FACE_GPU_TIMING
 constexpr std::uint32_t gpu_timing_log_interval = 512u;
-constexpr double gpu_timing_nanoseconds_to_milliseconds = 1.0e-6;
 #endif
 }
 
 bool BodyVertexClothFaceCollisionSolver::is_initialized() const
 {
-    return program_ != 0;
+    return has_pair_programs();
 }
 
-bool BodyVertexClothFaceCollisionSolver::initialize(const std::filesystem::path& shader_path,
+bool BodyVertexClothFaceCollisionSolver::initialize(const std::filesystem::path& pair_generate_shader_path,
+                                                    const std::filesystem::path& pair_accumulate_shader_path,
+                                                    const std::filesystem::path& pair_apply_shader_path,
                                                     float collision_thickness,
                                                     float max_correction_length,
                                                     QOpenGLFunctions_4_5_Core& gl)
 {
-    program_ = load_compute_program(shader_path, "Body vertex/cloth face collision", gl);
-    if (program_ == 0) {
+    pair_generate_program_ = load_compute_program(pair_generate_shader_path,
+                                                  "Body vertex/cloth face pair generation",
+                                                  gl);
+    pair_accumulate_program_ = load_compute_program(pair_accumulate_shader_path,
+                                                    "Body vertex/cloth face pair accumulation",
+                                                    gl);
+    pair_apply_program_ = load_compute_program(pair_apply_shader_path,
+                                               "Body vertex/cloth face pair apply",
+                                               gl);
+    if (!has_pair_programs()) {
+        release(gl);
         return false;
     }
 
-    triangle_color_offset_location_ = gl.glGetUniformLocation(program_, "uTriangleColorOffset");
-    triangle_dispatch_count_location_ = gl.glGetUniformLocation(program_, "uTriangleDispatchCount");
-    root_node_index_location_ = gl.glGetUniformLocation(program_, "uRootNodeIndex");
-    max_contacts_per_vertex_location_ = gl.glGetUniformLocation(program_, "uMaxContactsPerVertex");
-    collision_thickness_location_ = gl.glGetUniformLocation(program_, "uCollisionThickness");
-    max_correction_length_location_ = gl.glGetUniformLocation(program_, "uMaxCorrectionLength");
+    pair_generate_triangle_count_location_ = gl.glGetUniformLocation(pair_generate_program_, "uTriangleCount");
+    pair_generate_root_node_index_location_ = gl.glGetUniformLocation(pair_generate_program_, "uRootNodeIndex");
+    pair_generate_max_pair_count_location_ = gl.glGetUniformLocation(pair_generate_program_, "uMaxPairCount");
+    pair_accumulate_max_pair_count_location_ = gl.glGetUniformLocation(pair_accumulate_program_, "uMaxPairCount");
+    pair_accumulate_collision_thickness_location_ =
+        gl.glGetUniformLocation(pair_accumulate_program_, "uCollisionThickness");
+    pair_accumulate_contact_candidate_capacity_location_ =
+        gl.glGetUniformLocation(pair_accumulate_program_, "uContactCandidateCapacityPerVertex");
+    pair_apply_vertex_count_location_ = gl.glGetUniformLocation(pair_apply_program_, "uVertexCount");
+    pair_apply_max_contacts_per_vertex_location_ =
+        gl.glGetUniformLocation(pair_apply_program_, "uMaxContactsPerVertex");
+    pair_apply_contact_candidate_capacity_location_ =
+        gl.glGetUniformLocation(pair_apply_program_, "uContactCandidateCapacityPerVertex");
+    pair_apply_max_correction_length_location_ =
+        gl.glGetUniformLocation(pair_apply_program_, "uMaxCorrectionLength");
 
-    if (triangle_color_offset_location_ < 0 ||
-        triangle_dispatch_count_location_ < 0 ||
-        root_node_index_location_ < 0 ||
-        max_contacts_per_vertex_location_ < 0 ||
-        collision_thickness_location_ < 0 ||
-        max_correction_length_location_ < 0) {
+    if (pair_generate_triangle_count_location_ < 0 ||
+        pair_generate_root_node_index_location_ < 0 ||
+        pair_generate_max_pair_count_location_ < 0 ||
+        pair_accumulate_max_pair_count_location_ < 0 ||
+        pair_accumulate_collision_thickness_location_ < 0 ||
+        pair_accumulate_contact_candidate_capacity_location_ < 0 ||
+        pair_apply_vertex_count_location_ < 0 ||
+        pair_apply_max_contacts_per_vertex_location_ < 0 ||
+        pair_apply_contact_candidate_capacity_location_ < 0 ||
+        pair_apply_max_correction_length_location_ < 0) {
         std::cerr << "Body vertex/cloth face collision compute shader missing required uniforms.\n";
         release(gl);
         return false;
@@ -60,8 +102,8 @@ bool BodyVertexClothFaceCollisionSolver::initialize(const std::filesystem::path&
 
     collision_thickness_ = collision_thickness;
     max_correction_length_ = max_correction_length;
-#if CLOTH_SIM_TEMP_BODY_VERTEX_CLOTH_FACE_GPU_TIMING
-    initialize_gpu_timing_queries(gl);
+#if CLOTH_SIM_BODY_VERTEX_CLOTH_FACE_GPU_TIMING
+    gpu_timer_.initialize("BodyVertexClothFaceCollisionSolver::solve", gpu_timing_log_interval, gl);
 #endif
     return true;
 }
@@ -69,7 +111,6 @@ bool BodyVertexClothFaceCollisionSolver::initialize(const std::filesystem::path&
 bool BodyVertexClothFaceCollisionSolver::can_solve(const ClothMotionBufferView& motion_view,
                                                    const ClothCollisionStateBufferView& collision_view,
                                                    const ClothMeshTopologyResources& cloth_topology,
-                                                   const ClothTriangleColorView& triangle_color_view,
                                                    const CharacterVertexBufferView& character_vertex_view,
                                                    const BodyVertexBvhResources& body_vertex_bvh) const
 {
@@ -78,8 +119,6 @@ bool BodyVertexClothFaceCollisionSolver::can_solve(const ClothMotionBufferView& 
            is_valid_collision_state_view(collision_view) &&
            motion_view.vertex_count == collision_view.vertex_count &&
            is_valid_cloth_mesh_topology_resource(cloth_topology) &&
-           is_valid_cloth_triangle_color_view(triangle_color_view) &&
-           cloth_topology.triangle_count == triangle_color_view.triangle_count &&
            is_valid_character_vertex_buffer_view(character_vertex_view) &&
            is_valid_body_vertex_bvh_resource(body_vertex_bvh) &&
            collision_thickness_ > 0.0f &&
@@ -89,7 +128,6 @@ bool BodyVertexClothFaceCollisionSolver::can_solve(const ClothMotionBufferView& 
 void BodyVertexClothFaceCollisionSolver::solve(const ClothMotionBufferView& motion_view,
                                                const ClothCollisionStateBufferView& collision_view,
                                                const ClothMeshTopologyResources& cloth_topology,
-                                               const ClothTriangleColorView& triangle_color_view,
                                                const CharacterVertexBufferView& character_vertex_view,
                                                const BodyVertexBvhResources& body_vertex_bvh,
                                                QOpenGLFunctions_4_5_Core& gl) const
@@ -97,161 +135,305 @@ void BodyVertexClothFaceCollisionSolver::solve(const ClothMotionBufferView& moti
     assert(can_solve(motion_view,
                      collision_view,
                      cloth_topology,
-                     triangle_color_view,
                      character_vertex_view,
                      body_vertex_bvh));
 
-#if CLOTH_SIM_TEMP_BODY_VERTEX_CLOTH_FACE_GPU_TIMING
-    const bool gpu_timing_started = begin_gpu_timing(gl);
+#if CLOTH_SIM_BODY_VERTEX_CLOTH_FACE_GPU_TIMING
+    const bool gpu_timing_started = gpu_timer_.begin(gl);
 #endif
 
-    gl.glUseProgram(program_);
-    gl.glBindBufferBase(GL_SHADER_STORAGE_BUFFER, cloth_current_positions_binding, motion_view.current_position_buffer);
-    gl.glBindBufferBase(GL_SHADER_STORAGE_BUFFER, cloth_previous_positions_binding, motion_view.previous_position_buffer);
-    gl.glBindBufferBase(GL_SHADER_STORAGE_BUFFER, cloth_triangle_indices_binding, cloth_topology.triangle_index_buffer);
-    gl.glBindBufferBase(GL_SHADER_STORAGE_BUFFER, colorized_cloth_triangle_ids_binding, triangle_color_view.triangle_id_buffer);
-    gl.glBindBufferBase(GL_SHADER_STORAGE_BUFFER, body_previous_positions_binding, character_vertex_view.previous_position_buffer);
-    gl.glBindBufferBase(GL_SHADER_STORAGE_BUFFER, body_current_positions_binding, character_vertex_view.current_position_buffer);
-    gl.glBindBufferBase(GL_SHADER_STORAGE_BUFFER, body_vertex_normals_binding, character_vertex_view.vertex_normal_buffer);
-    gl.glBindBufferBase(GL_SHADER_STORAGE_BUFFER, body_vertex_ids_binding, body_vertex_bvh.vertex_id_buffer);
-    gl.glBindBufferBase(GL_SHADER_STORAGE_BUFFER, body_vertex_bvh_nodes_binding, body_vertex_bvh.node_buffer);
-    gl.glBindBufferBase(GL_SHADER_STORAGE_BUFFER, collision_states_binding, collision_view.collision_state_buffer);
-    gl.glBindBufferBase(GL_SHADER_STORAGE_BUFFER, contact_normals_binding, collision_view.contact_normal_buffer);
-    gl.glProgramUniform1ui(program_, root_node_index_location_, body_vertex_bvh.root_node_index);
-    gl.glProgramUniform1ui(program_, max_contacts_per_vertex_location_, collision_view.max_contacts_per_vertex);
-    gl.glProgramUniform1f(program_, collision_thickness_location_, collision_thickness_);
-    gl.glProgramUniform1f(program_, max_correction_length_location_, max_correction_length_);
+    solve_pair_path(motion_view, collision_view, cloth_topology, character_vertex_view, body_vertex_bvh, gl);
 
-    for (const ElementRange& range : *triangle_color_view.color_ranges) {
-        if (range.count == 0) {
-            continue;
-        }
-
-        gl.glProgramUniform1ui(program_, triangle_color_offset_location_, range.offset);
-        gl.glProgramUniform1ui(program_, triangle_dispatch_count_location_, range.count);
-        gl.glDispatchCompute(compute_group_count(range.count, body_vertex_cloth_face_collision_local_size), 1, 1);
-        gl.glMemoryBarrier(GL_SHADER_STORAGE_BARRIER_BIT | GL_VERTEX_ATTRIB_ARRAY_BARRIER_BIT);
-    }
-
-#if CLOTH_SIM_TEMP_BODY_VERTEX_CLOTH_FACE_GPU_TIMING
+#if CLOTH_SIM_BODY_VERTEX_CLOTH_FACE_GPU_TIMING
     if (gpu_timing_started) {
-        end_gpu_timing(gl);
+        gpu_timer_.end(gl);
     }
 #endif
+}
+
+bool BodyVertexClothFaceCollisionSolver::solve_pair_path(const ClothMotionBufferView& motion_view,
+                                                         const ClothCollisionStateBufferView& collision_view,
+                                                         const ClothMeshTopologyResources& cloth_topology,
+                                                         const CharacterVertexBufferView& character_vertex_view,
+                                                         const BodyVertexBvhResources& body_vertex_bvh,
+                                                         QOpenGLFunctions_4_5_Core& gl) const
+{
+    if (!ensure_pair_scratch_buffers(motion_view.vertex_count,
+                                     cloth_topology.triangle_count,
+                                     collision_view.max_contacts_per_vertex,
+                                     gl)) {
+        return false;
+    }
+
+    clear_pair_scratch_buffers(gl);
+
+    gl.glUseProgram(pair_generate_program_);
+    gl.glBindBufferBase(GL_SHADER_STORAGE_BUFFER,
+                        pair_generate_cloth_current_positions_binding,
+                        motion_view.current_position_buffer);
+    gl.glBindBufferBase(GL_SHADER_STORAGE_BUFFER,
+                        pair_generate_cloth_previous_positions_binding,
+                        motion_view.previous_position_buffer);
+    gl.glBindBufferBase(GL_SHADER_STORAGE_BUFFER,
+                        pair_generate_cloth_triangle_indices_binding,
+                        cloth_topology.triangle_index_buffer);
+    gl.glBindBufferBase(GL_SHADER_STORAGE_BUFFER,
+                        pair_generate_body_vertex_ids_binding,
+                        body_vertex_bvh.vertex_id_buffer);
+    gl.glBindBufferBase(GL_SHADER_STORAGE_BUFFER,
+                        pair_generate_body_vertex_bvh_nodes_binding,
+                        body_vertex_bvh.node_buffer);
+    gl.glBindBufferBase(GL_SHADER_STORAGE_BUFFER,
+                        pair_generate_pair_records_binding,
+                        pair_scratch_buffers_.pair_record);
+    gl.glBindBufferBase(GL_SHADER_STORAGE_BUFFER,
+                        pair_generate_pair_count_binding,
+                        pair_scratch_buffers_.pair_count);
+    gl.glProgramUniform1ui(pair_generate_program_,
+                           pair_generate_triangle_count_location_,
+                           cloth_topology.triangle_count);
+    gl.glProgramUniform1ui(pair_generate_program_,
+                           pair_generate_root_node_index_location_,
+                           body_vertex_bvh.root_node_index);
+    gl.glProgramUniform1ui(pair_generate_program_,
+                           pair_generate_max_pair_count_location_,
+                           pair_scratch_buffers_.pair_capacity);
+    gl.glDispatchCompute(compute_group_count(cloth_topology.triangle_count, pair_generate_local_size), 1, 1);
+    gl.glMemoryBarrier(GL_SHADER_STORAGE_BARRIER_BIT);
+
+    gl.glUseProgram(pair_accumulate_program_);
+    gl.glBindBufferBase(GL_SHADER_STORAGE_BUFFER,
+                        pair_accumulate_cloth_current_positions_binding,
+                        motion_view.current_position_buffer);
+    gl.glBindBufferBase(GL_SHADER_STORAGE_BUFFER,
+                        pair_accumulate_cloth_previous_positions_binding,
+                        motion_view.previous_position_buffer);
+    gl.glBindBufferBase(GL_SHADER_STORAGE_BUFFER,
+                        pair_accumulate_cloth_triangle_indices_binding,
+                        cloth_topology.triangle_index_buffer);
+    gl.glBindBufferBase(GL_SHADER_STORAGE_BUFFER,
+                        pair_accumulate_body_previous_positions_binding,
+                        character_vertex_view.previous_position_buffer);
+    gl.glBindBufferBase(GL_SHADER_STORAGE_BUFFER,
+                        pair_accumulate_body_current_positions_binding,
+                        character_vertex_view.current_position_buffer);
+    gl.glBindBufferBase(GL_SHADER_STORAGE_BUFFER,
+                        pair_accumulate_body_vertex_normals_binding,
+                        character_vertex_view.vertex_normal_buffer);
+    gl.glBindBufferBase(GL_SHADER_STORAGE_BUFFER,
+                        pair_accumulate_pair_records_binding,
+                        pair_scratch_buffers_.pair_record);
+    gl.glBindBufferBase(GL_SHADER_STORAGE_BUFFER,
+                        pair_accumulate_pair_count_binding,
+                        pair_scratch_buffers_.pair_count);
+    gl.glBindBufferBase(GL_SHADER_STORAGE_BUFFER,
+                        pair_accumulate_correction_sums_binding,
+                        pair_scratch_buffers_.correction_sum);
+    gl.glBindBufferBase(GL_SHADER_STORAGE_BUFFER,
+                        pair_accumulate_correction_counts_binding,
+                        pair_scratch_buffers_.correction_count);
+    gl.glBindBufferBase(GL_SHADER_STORAGE_BUFFER,
+                        pair_accumulate_contact_candidate_counts_binding,
+                        pair_scratch_buffers_.contact_candidate_count);
+    gl.glBindBufferBase(GL_SHADER_STORAGE_BUFFER,
+                        pair_accumulate_contact_candidates_binding,
+                        pair_scratch_buffers_.contact_candidate);
+    gl.glProgramUniform1ui(pair_accumulate_program_,
+                           pair_accumulate_max_pair_count_location_,
+                           pair_scratch_buffers_.pair_capacity);
+    gl.glProgramUniform1f(pair_accumulate_program_,
+                          pair_accumulate_collision_thickness_location_,
+                          collision_thickness_);
+    gl.glProgramUniform1ui(pair_accumulate_program_,
+                           pair_accumulate_contact_candidate_capacity_location_,
+                           pair_scratch_buffers_.contact_candidate_capacity_per_vertex);
+    gl.glDispatchCompute(compute_group_count(pair_scratch_buffers_.pair_capacity, pair_accumulate_local_size), 1, 1);
+    gl.glMemoryBarrier(GL_SHADER_STORAGE_BARRIER_BIT);
+
+    gl.glUseProgram(pair_apply_program_);
+    gl.glBindBufferBase(GL_SHADER_STORAGE_BUFFER,
+                        pair_apply_cloth_current_positions_binding,
+                        motion_view.current_position_buffer);
+    gl.glBindBufferBase(GL_SHADER_STORAGE_BUFFER,
+                        pair_apply_collision_states_binding,
+                        collision_view.collision_state_buffer);
+    gl.glBindBufferBase(GL_SHADER_STORAGE_BUFFER,
+                        pair_apply_contact_normals_binding,
+                        collision_view.contact_normal_buffer);
+    gl.glBindBufferBase(GL_SHADER_STORAGE_BUFFER,
+                        pair_apply_correction_sums_binding,
+                        pair_scratch_buffers_.correction_sum);
+    gl.glBindBufferBase(GL_SHADER_STORAGE_BUFFER,
+                        pair_apply_correction_counts_binding,
+                        pair_scratch_buffers_.correction_count);
+    gl.glBindBufferBase(GL_SHADER_STORAGE_BUFFER,
+                        pair_apply_contact_candidate_counts_binding,
+                        pair_scratch_buffers_.contact_candidate_count);
+    gl.glBindBufferBase(GL_SHADER_STORAGE_BUFFER,
+                        pair_apply_contact_candidates_binding,
+                        pair_scratch_buffers_.contact_candidate);
+    gl.glProgramUniform1ui(pair_apply_program_, pair_apply_vertex_count_location_, motion_view.vertex_count);
+    gl.glProgramUniform1ui(pair_apply_program_,
+                           pair_apply_max_contacts_per_vertex_location_,
+                           collision_view.max_contacts_per_vertex);
+    gl.glProgramUniform1ui(pair_apply_program_,
+                           pair_apply_contact_candidate_capacity_location_,
+                           pair_scratch_buffers_.contact_candidate_capacity_per_vertex);
+    gl.glProgramUniform1f(pair_apply_program_, pair_apply_max_correction_length_location_, max_correction_length_);
+    gl.glDispatchCompute(compute_group_count(motion_view.vertex_count, pair_apply_local_size), 1, 1);
+    gl.glMemoryBarrier(GL_SHADER_STORAGE_BARRIER_BIT | GL_VERTEX_ATTRIB_ARRAY_BARRIER_BIT);
+    return true;
 }
 
 void BodyVertexClothFaceCollisionSolver::release(QOpenGLFunctions_4_5_Core& gl)
 {
-#if CLOTH_SIM_TEMP_BODY_VERTEX_CLOTH_FACE_GPU_TIMING
-    release_gpu_timing_queries(gl);
+#if CLOTH_SIM_BODY_VERTEX_CLOTH_FACE_GPU_TIMING
+    gpu_timer_.release(gl);
 #endif
 
-    if (program_ != 0) {
-        gl.glDeleteProgram(program_);
+    release_pair_scratch_buffers(gl);
+
+    if (pair_generate_program_ != 0) {
+        gl.glDeleteProgram(pair_generate_program_);
+    }
+    if (pair_accumulate_program_ != 0) {
+        gl.glDeleteProgram(pair_accumulate_program_);
+    }
+    if (pair_apply_program_ != 0) {
+        gl.glDeleteProgram(pair_apply_program_);
     }
 
-    program_ = 0;
-    triangle_color_offset_location_ = -1;
-    triangle_dispatch_count_location_ = -1;
-    root_node_index_location_ = -1;
-    max_contacts_per_vertex_location_ = -1;
-    collision_thickness_location_ = -1;
-    max_correction_length_location_ = -1;
+    pair_generate_program_ = 0;
+    pair_accumulate_program_ = 0;
+    pair_apply_program_ = 0;
+    pair_generate_triangle_count_location_ = -1;
+    pair_generate_root_node_index_location_ = -1;
+    pair_generate_max_pair_count_location_ = -1;
+    pair_accumulate_max_pair_count_location_ = -1;
+    pair_accumulate_collision_thickness_location_ = -1;
+    pair_accumulate_contact_candidate_capacity_location_ = -1;
+    pair_apply_vertex_count_location_ = -1;
+    pair_apply_max_contacts_per_vertex_location_ = -1;
+    pair_apply_contact_candidate_capacity_location_ = -1;
+    pair_apply_max_correction_length_location_ = -1;
     collision_thickness_ = 0.0f;
     max_correction_length_ = 0.0f;
 }
 
-#if CLOTH_SIM_TEMP_BODY_VERTEX_CLOTH_FACE_GPU_TIMING
-void BodyVertexClothFaceCollisionSolver::initialize_gpu_timing_queries(QOpenGLFunctions_4_5_Core& gl)
+bool BodyVertexClothFaceCollisionSolver::ensure_pair_scratch_buffers(std::uint32_t vertex_count,
+                                                                     std::uint32_t triangle_count,
+                                                                     std::uint32_t max_contacts_per_vertex,
+                                                                     QOpenGLFunctions_4_5_Core& gl) const
 {
-    gl.glGenQueries(static_cast<GLsizei>(gpu_timing_queries_.size()), gpu_timing_queries_.data());
-    gpu_timing_query_pending_.fill(false);
-    next_gpu_timing_query_ = 0u;
-    gpu_timing_active_ = false;
-    gpu_timing_sample_count_ = 0u;
-    gpu_timing_window_sample_count_ = 0u;
-    gpu_timing_window_total_ms_ = 0.0;
-
-    std::cerr << "[TEMP GPU TIMING] BodyVertexClothFaceCollisionSolver GL_TIME_ELAPSED enabled. "
-              << "Remove blocks marked CLOTH_SIM_TEMP_BODY_VERTEX_CLOTH_FACE_GPU_TIMING after profiling.\n";
-}
-
-void BodyVertexClothFaceCollisionSolver::release_gpu_timing_queries(QOpenGLFunctions_4_5_Core& gl)
-{
-    if (gpu_timing_active_) {
-        gl.glEndQuery(GL_TIME_ELAPSED);
-        gpu_timing_active_ = false;
+    const std::uint32_t pair_capacity = std::max(triangle_count, triangle_count * pair_capacity_multiplier);
+    const std::uint32_t contact_candidate_capacity_per_vertex = std::max(max_contacts_per_vertex, 1u);
+    if (pair_scratch_buffers_.pair_record != 0 &&
+        pair_scratch_buffers_.vertex_capacity >= vertex_count &&
+        pair_scratch_buffers_.pair_capacity >= pair_capacity &&
+        pair_scratch_buffers_.contact_candidate_capacity_per_vertex >= contact_candidate_capacity_per_vertex) {
+        return true;
     }
 
-    if (gpu_timing_queries_[0] != 0u) {
-        gl.glDeleteQueries(static_cast<GLsizei>(gpu_timing_queries_.size()), gpu_timing_queries_.data());
-    }
+    release_pair_scratch_buffers(gl);
 
-    gpu_timing_queries_.fill(0u);
-    gpu_timing_query_pending_.fill(false);
-    next_gpu_timing_query_ = 0u;
-    gpu_timing_sample_count_ = 0u;
-    gpu_timing_window_sample_count_ = 0u;
-    gpu_timing_window_total_ms_ = 0.0;
+    pair_scratch_buffers_.vertex_capacity = vertex_count;
+    pair_scratch_buffers_.pair_capacity = pair_capacity;
+    pair_scratch_buffers_.contact_candidate_capacity_per_vertex = contact_candidate_capacity_per_vertex;
+
+    gl.glCreateBuffers(1, &pair_scratch_buffers_.pair_record);
+    gl.glCreateBuffers(1, &pair_scratch_buffers_.pair_count);
+    gl.glCreateBuffers(1, &pair_scratch_buffers_.correction_sum);
+    gl.glCreateBuffers(1, &pair_scratch_buffers_.correction_count);
+    gl.glCreateBuffers(1, &pair_scratch_buffers_.contact_candidate_count);
+    gl.glCreateBuffers(1, &pair_scratch_buffers_.contact_candidate);
+
+    gl.glNamedBufferData(pair_scratch_buffers_.pair_record,
+                         static_cast<GLsizeiptr>(pair_capacity * sizeof(std::uint32_t) * 2u),
+                         nullptr,
+                         GL_DYNAMIC_DRAW);
+    gl.glNamedBufferData(pair_scratch_buffers_.pair_count,
+                         static_cast<GLsizeiptr>(sizeof(std::uint32_t)),
+                         nullptr,
+                         GL_DYNAMIC_DRAW);
+    gl.glNamedBufferData(pair_scratch_buffers_.correction_sum,
+                         static_cast<GLsizeiptr>(vertex_count * sizeof(std::int32_t) * 4u),
+                         nullptr,
+                         GL_DYNAMIC_DRAW);
+    gl.glNamedBufferData(pair_scratch_buffers_.correction_count,
+                         static_cast<GLsizeiptr>(vertex_count * sizeof(std::uint32_t)),
+                         nullptr,
+                         GL_DYNAMIC_DRAW);
+    gl.glNamedBufferData(pair_scratch_buffers_.contact_candidate_count,
+                         static_cast<GLsizeiptr>(vertex_count * sizeof(std::uint32_t)),
+                         nullptr,
+                         GL_DYNAMIC_DRAW);
+    gl.glNamedBufferData(pair_scratch_buffers_.contact_candidate,
+                         static_cast<GLsizeiptr>(vertex_count *
+                                                 contact_candidate_capacity_per_vertex *
+                                                 sizeof(float) *
+                                                 4u),
+                         nullptr,
+                         GL_DYNAMIC_DRAW);
+    return pair_scratch_buffers_.pair_record != 0 &&
+           pair_scratch_buffers_.pair_count != 0 &&
+           pair_scratch_buffers_.correction_sum != 0 &&
+           pair_scratch_buffers_.correction_count != 0 &&
+           pair_scratch_buffers_.contact_candidate_count != 0 &&
+           pair_scratch_buffers_.contact_candidate != 0;
 }
 
-void BodyVertexClothFaceCollisionSolver::collect_gpu_timing_results(QOpenGLFunctions_4_5_Core& gl) const
+void BodyVertexClothFaceCollisionSolver::clear_pair_scratch_buffers(QOpenGLFunctions_4_5_Core& gl) const
 {
-    for (std::size_t query_index = 0u; query_index < gpu_timing_queries_.size(); ++query_index) {
-        if (!gpu_timing_query_pending_[query_index]) {
-            continue;
-        }
-
-        GLuint is_available = GL_FALSE;
-        gl.glGetQueryObjectuiv(gpu_timing_queries_[query_index], GL_QUERY_RESULT_AVAILABLE, &is_available);
-        if (is_available == GL_FALSE) {
-            continue;
-        }
-
-        GLuint64 elapsed_nanoseconds = 0u;
-        gl.glGetQueryObjectui64v(gpu_timing_queries_[query_index], GL_QUERY_RESULT, &elapsed_nanoseconds);
-        gpu_timing_query_pending_[query_index] = false;
-
-        const double elapsed_ms =
-            static_cast<double>(elapsed_nanoseconds) * gpu_timing_nanoseconds_to_milliseconds;
-        ++gpu_timing_sample_count_;
-        ++gpu_timing_window_sample_count_;
-        gpu_timing_window_total_ms_ += elapsed_ms;
-
-        if (gpu_timing_window_sample_count_ >= gpu_timing_log_interval) {
-            const double average_ms =
-                gpu_timing_window_total_ms_ / static_cast<double>(gpu_timing_window_sample_count_);
-            std::cerr << "[TEMP GPU TIMING] BodyVertexClothFaceCollisionSolver::solve average "
-                      << average_ms << " ms over " << gpu_timing_window_sample_count_
-                      << " samples, total samples " << gpu_timing_sample_count_ << ".\n";
-            gpu_timing_window_sample_count_ = 0u;
-            gpu_timing_window_total_ms_ = 0.0;
-        }
-    }
+    const std::uint32_t zero_uint[4] = {};
+    const std::int32_t zero_int[4] = {};
+    gl.glClearNamedBufferData(pair_scratch_buffers_.pair_count,
+                              GL_R32UI,
+                              GL_RED_INTEGER,
+                              GL_UNSIGNED_INT,
+                              zero_uint);
+    gl.glClearNamedBufferData(pair_scratch_buffers_.correction_sum,
+                              GL_RGBA32I,
+                              GL_RGBA_INTEGER,
+                              GL_INT,
+                              zero_int);
+    gl.glClearNamedBufferData(pair_scratch_buffers_.correction_count,
+                              GL_R32UI,
+                              GL_RED_INTEGER,
+                              GL_UNSIGNED_INT,
+                              zero_uint);
+    gl.glClearNamedBufferData(pair_scratch_buffers_.contact_candidate_count,
+                              GL_R32UI,
+                              GL_RED_INTEGER,
+                              GL_UNSIGNED_INT,
+                              zero_uint);
 }
 
-bool BodyVertexClothFaceCollisionSolver::begin_gpu_timing(QOpenGLFunctions_4_5_Core& gl) const
+void BodyVertexClothFaceCollisionSolver::release_pair_scratch_buffers(QOpenGLFunctions_4_5_Core& gl) const
 {
-    collect_gpu_timing_results(gl);
-    if (gpu_timing_queries_[0] == 0u || gpu_timing_active_) {
-        return false;
+    if (pair_scratch_buffers_.pair_record != 0) {
+        gl.glDeleteBuffers(1, &pair_scratch_buffers_.pair_record);
     }
-
-    const std::size_t query_index = next_gpu_timing_query_;
-    if (gpu_timing_query_pending_[query_index]) {
-        return false;
+    if (pair_scratch_buffers_.pair_count != 0) {
+        gl.glDeleteBuffers(1, &pair_scratch_buffers_.pair_count);
     }
-
-    gl.glBeginQuery(GL_TIME_ELAPSED, gpu_timing_queries_[query_index]);
-    gpu_timing_query_pending_[query_index] = true;
-    gpu_timing_active_ = true;
-    next_gpu_timing_query_ = (next_gpu_timing_query_ + 1u) % gpu_timing_queries_.size();
-    return true;
+    if (pair_scratch_buffers_.correction_sum != 0) {
+        gl.glDeleteBuffers(1, &pair_scratch_buffers_.correction_sum);
+    }
+    if (pair_scratch_buffers_.correction_count != 0) {
+        gl.glDeleteBuffers(1, &pair_scratch_buffers_.correction_count);
+    }
+    if (pair_scratch_buffers_.contact_candidate_count != 0) {
+        gl.glDeleteBuffers(1, &pair_scratch_buffers_.contact_candidate_count);
+    }
+    if (pair_scratch_buffers_.contact_candidate != 0) {
+        gl.glDeleteBuffers(1, &pair_scratch_buffers_.contact_candidate);
+    }
+    pair_scratch_buffers_ = {};
 }
 
-void BodyVertexClothFaceCollisionSolver::end_gpu_timing(QOpenGLFunctions_4_5_Core& gl) const
+bool BodyVertexClothFaceCollisionSolver::has_pair_programs() const
 {
-    gl.glEndQuery(GL_TIME_ELAPSED);
-    gpu_timing_active_ = false;
+    return pair_generate_program_ != 0 &&
+           pair_accumulate_program_ != 0 &&
+           pair_apply_program_ != 0;
 }
-#endif

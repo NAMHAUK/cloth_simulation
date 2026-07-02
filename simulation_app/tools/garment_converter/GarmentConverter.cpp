@@ -78,13 +78,6 @@ GarmentDistanceConstraints build_bending_constraints(const std::vector<std::uint
     return build_distance_constraints(triangle_indices, vertices, build_unique_bending_edges);
 }
 
-ColorizedMeshTriangles build_triangle_colors(const std::vector<std::uint32_t>& triangle_indices,
-                                             const std::vector<float>& vertices)
-{
-    const auto vertex_count = static_cast<std::uint32_t>(vertices.size() / vertex_position_components);
-    return colorize_mesh_triangles(vertex_count, triangle_indices);
-}
-
 std::vector<MeshEdge> build_boundary_edges(const std::vector<std::uint32_t>& triangle_indices,
                                            std::uint32_t vertex_count)
 {
@@ -444,14 +437,6 @@ bool build_garment_simulation_data(GarmentMesh& garment_mesh,
         return false;
     }
 
-    ColorizedMeshTriangles colorized_triangles = build_triangle_colors(garment_mesh.triangle_vertex_indices, garment_mesh.vertices);
-    if (colorized_triangles.triangle_ids.empty() || colorized_triangles.ranges.empty()) {
-        return false;
-    }
-
-    garment_mesh.colorized_triangle_ids = std::move(colorized_triangles.triangle_ids);
-    garment_mesh.triangle_color_ranges = std::move(colorized_triangles.ranges);
-
     garment_mesh.stretch_constraints = build_stretch_constraints(garment_mesh.triangle_vertex_indices, garment_mesh.vertices);
     if (!garment_mesh.stretch_constraints.is_valid()) {
         std::cerr << "Invalid garment stretch constraints.\n";
@@ -478,7 +463,6 @@ void print_garment_obj_summary(const std::filesystem::path& obj_path, const Garm
     std::cout << "Read garment OBJ: " << obj_path << '\n';
     std::cout << "  vertices=" << garment_mesh.vertices.size() / vertex_position_components
               << " triangles=" << garment_mesh.triangle_vertex_indices.size() / 3u
-              << " triangle_color_groups=" << garment_mesh.triangle_color_ranges.size()
               << " stretch_constraints=" << garment_mesh.stretch_constraints.colorized_edges.size()
               << " bending_constraints=" << garment_mesh.bending_constraints.colorized_edges.size()
               << " attachment_vertices=" << garment_mesh.attachment_vertex_indices.size()

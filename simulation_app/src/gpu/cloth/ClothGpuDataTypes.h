@@ -15,7 +15,6 @@ struct ClothBufferSet final {
     GLuint index = 0;
     GLuint adjacent_triangle_offsets = 0;
     GLuint adjacent_triangle_indices = 0;
-    GLuint colorized_triangle_id = 0;
     GLuint stretch_edge_index = 0;
     GLuint stretch_rest_length = 0;
     GLuint bending_edge_index = 0;
@@ -63,12 +62,6 @@ struct ClothMeshTopologyResources final {
 
     std::uint32_t vertex_count = 0;
     std::uint32_t triangle_count = 0;
-};
-
-struct ClothTriangleColorView final {
-    GLuint triangle_id_buffer = 0;
-    std::uint32_t triangle_count = 0;
-    const std::vector<ElementRange>* color_ranges = nullptr;
 };
 
 struct ClothNormalResources final {

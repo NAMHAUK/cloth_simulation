@@ -96,7 +96,12 @@ void SimulationController::load_default_character_mesh(CharacterMesh mesh,
         return;
     }
 
-    VertexBvhBuilder vertex_bvh_builder(mesh.vertex_count, mesh.vertices);
+    VertexBvhBuilder vertex_bvh_builder(
+        mesh.vertex_count,
+        mesh.triangle_vertex_indices,
+        mesh.vertices,
+        triangle_part_labels
+    );
     BodyVertexBvhData default_body_vertex_bvh_data = vertex_bvh_builder.build_body_vertex_bvh();
     if (!default_body_vertex_bvh_data.is_valid(mesh.vertex_count)) {
         std::cerr << "Failed to build default body vertex BVH.\n";

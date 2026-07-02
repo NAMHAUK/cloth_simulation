@@ -22,8 +22,5 @@ std::vector<MeshEdge> build_unique_bending_edges(std::uint32_t vertex_count,
 ColorizedMeshEdges colorize_mesh_edges(std::uint32_t vertex_count,
                                        const std::vector<MeshEdge>& edges);
 
-ColorizedMeshTriangles colorize_mesh_triangles(std::uint32_t vertex_count,
-                                               const std::vector<std::uint32_t>& triangle_indices);
-
 std::vector<float> compute_mesh_edge_lengths(const std::vector<MeshEdge>& edges,
                                              const std::vector<float>& vertices);

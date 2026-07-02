@@ -32,11 +32,6 @@ struct ColorizedMeshEdges final {
     std::vector<MeshElementRange> ranges;
 };
 
-struct ColorizedMeshTriangles final {
-    std::vector<std::uint32_t> triangle_ids;
-    std::vector<MeshElementRange> ranges;
-};
-
 struct CharacterMesh {
     float fps = 0.0f;
     std::uint32_t frame_count = 0;
@@ -69,8 +64,6 @@ struct GarmentMesh {
     std::vector<float> vertices;
     std::vector<std::uint32_t> triangle_vertex_indices;
     VertexFaceAdjacency adjacency;
-    std::vector<std::uint32_t> colorized_triangle_ids;
-    std::vector<MeshElementRange> triangle_color_ranges;
     GarmentDistanceConstraints stretch_constraints;
     GarmentDistanceConstraints bending_constraints;
     std::vector<std::uint32_t> attachment_vertex_indices;

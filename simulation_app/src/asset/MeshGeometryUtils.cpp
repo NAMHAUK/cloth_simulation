@@ -41,16 +41,6 @@ struct EdgeOppositeVertex final {
     std::uint32_t edge_opposite_vertex = 0;
 };
 
-struct MeshTriangleColorGroup final {
-    std::vector<std::uint32_t> triangle_indices;
-    std::vector<std::uint8_t> used_vertices;
-};
-
-struct MeshTriangleCandidate final {
-    std::uint32_t triangle_index = 0;
-    std::uint32_t degree_score = 0;
-};
-
 bool can_add_edge(const MeshEdgeGroup& group, const MeshEdge& edge)
 {
     return group.used_vertices[edge.vertex_a] == 0u &&
@@ -62,28 +52,6 @@ void add_edge(MeshEdgeGroup& group, const MeshEdge& edge)
     group.edges.push_back(edge);
     group.used_vertices[edge.vertex_a] = 1u;
     group.used_vertices[edge.vertex_b] = 1u;
-}
-
-bool can_add_triangle(const MeshTriangleColorGroup& group,
-                      std::uint32_t vertex_a,
-                      std::uint32_t vertex_b,
-                      std::uint32_t vertex_c)
-{
-    return group.used_vertices[vertex_a] == 0u &&
-           group.used_vertices[vertex_b] == 0u &&
-           group.used_vertices[vertex_c] == 0u;
-}
-
-void add_triangle(MeshTriangleColorGroup& group,
-                  std::uint32_t triangle_index,
-                  std::uint32_t vertex_a,
-                  std::uint32_t vertex_b,
-                  std::uint32_t vertex_c)
-{
-    group.triangle_indices.push_back(triangle_index);
-    group.used_vertices[vertex_a] = 1u;
-    group.used_vertices[vertex_b] = 1u;
-    group.used_vertices[vertex_c] = 1u;
 }
 
 void add_edge_opposite_vertex(std::vector<EdgeOppositeVertex>& edge_opposite_vertices,
@@ -309,101 +277,6 @@ ColorizedMeshEdges colorize_mesh_edges(std::uint32_t vertex_count,
     }
 
     return colorized_edges;
-}
-
-ColorizedMeshTriangles colorize_mesh_triangles(std::uint32_t vertex_count,
-                                               const std::vector<std::uint32_t>& triangle_indices)
-{
-    if (vertex_count == 0u || triangle_indices.empty() || triangle_indices.size() % 3u != 0u) {
-        return {};
-    }
-
-    const std::uint32_t triangle_count = static_cast<std::uint32_t>(triangle_indices.size() / 3u);
-    std::vector<std::uint32_t> incident_triangle_counts(vertex_count, 0u);
-    for (std::uint32_t triangle_index = 0; triangle_index < triangle_count; ++triangle_index) {
-        const std::size_t index_base = static_cast<std::size_t>(triangle_index) * 3u;
-        const std::uint32_t vertex_a = triangle_indices[index_base];
-        const std::uint32_t vertex_b = triangle_indices[index_base + 1u];
-        const std::uint32_t vertex_c = triangle_indices[index_base + 2u];
-        if (vertex_a >= vertex_count || vertex_b >= vertex_count || vertex_c >= vertex_count ||
-            vertex_a == vertex_b || vertex_b == vertex_c || vertex_c == vertex_a) {
-            return {};
-        }
-
-        ++incident_triangle_counts[vertex_a];
-        ++incident_triangle_counts[vertex_b];
-        ++incident_triangle_counts[vertex_c];
-    }
-
-    std::vector<MeshTriangleCandidate> candidates;
-    candidates.reserve(triangle_count);
-    for (std::uint32_t triangle_index = 0; triangle_index < triangle_count; ++triangle_index) {
-        const std::size_t index_base = static_cast<std::size_t>(triangle_index) * 3u;
-        const std::uint32_t vertex_a = triangle_indices[index_base];
-        const std::uint32_t vertex_b = triangle_indices[index_base + 1u];
-        const std::uint32_t vertex_c = triangle_indices[index_base + 2u];
-        candidates.push_back({
-            triangle_index,
-            incident_triangle_counts[vertex_a] +
-                incident_triangle_counts[vertex_b] +
-                incident_triangle_counts[vertex_c],
-        });
-    }
-
-    std::sort(candidates.begin(),
-              candidates.end(),
-              [](const MeshTriangleCandidate& lhs, const MeshTriangleCandidate& rhs) {
-                  if (lhs.degree_score != rhs.degree_score) {
-                      return lhs.degree_score > rhs.degree_score;
-                  }
-                  return lhs.triangle_index < rhs.triangle_index;
-              });
-
-    std::vector<MeshTriangleColorGroup> triangle_groups;
-    for (const MeshTriangleCandidate& candidate : candidates) {
-        const std::size_t index_base = static_cast<std::size_t>(candidate.triangle_index) * 3u;
-        const std::uint32_t vertex_a = triangle_indices[index_base];
-        const std::uint32_t vertex_b = triangle_indices[index_base + 1u];
-        const std::uint32_t vertex_c = triangle_indices[index_base + 2u];
-
-        bool inserted = false;
-        for (MeshTriangleColorGroup& triangle_group : triangle_groups) {
-            if (!can_add_triangle(triangle_group, vertex_a, vertex_b, vertex_c)) {
-                continue;
-            }
-
-            add_triangle(triangle_group, candidate.triangle_index, vertex_a, vertex_b, vertex_c);
-            inserted = true;
-            break;
-        }
-
-        if (!inserted) {
-            MeshTriangleColorGroup triangle_group;
-            triangle_group.used_vertices.resize(vertex_count, 0u);
-            add_triangle(triangle_group, candidate.triangle_index, vertex_a, vertex_b, vertex_c);
-            triangle_groups.push_back(std::move(triangle_group));
-        }
-    }
-
-    ColorizedMeshTriangles colorized_triangles;
-    colorized_triangles.triangle_ids.reserve(triangle_count);
-    colorized_triangles.ranges.reserve(triangle_groups.size());
-    for (const MeshTriangleColorGroup& triangle_group : triangle_groups) {
-        if (triangle_group.triangle_indices.empty()) {
-            continue;
-        }
-
-        MeshElementRange range;
-        range.offset = static_cast<std::uint32_t>(colorized_triangles.triangle_ids.size());
-        range.count = static_cast<std::uint32_t>(triangle_group.triangle_indices.size());
-        colorized_triangles.ranges.push_back(range);
-
-        colorized_triangles.triangle_ids.insert(colorized_triangles.triangle_ids.end(),
-                                                triangle_group.triangle_indices.begin(),
-                                                triangle_group.triangle_indices.end());
-    }
-
-    return colorized_triangles;
 }
 
 // rest length //

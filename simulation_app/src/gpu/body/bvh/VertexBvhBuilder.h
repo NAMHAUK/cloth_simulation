@@ -11,6 +11,10 @@
 class VertexBvhBuilder final {
 public:
     VertexBvhBuilder(std::uint32_t vertex_count, const std::vector<float>& vertices);
+    VertexBvhBuilder(std::uint32_t vertex_count,
+                     const std::vector<std::uint32_t>& triangle_indices,
+                     const std::vector<float>& vertices,
+                     const std::vector<std::uint8_t>& triangle_part_labels);
 
     BodyVertexBvhData build_body_vertex_bvh();
 
@@ -20,6 +24,7 @@ private:
         glm::vec3 center{};
         glm::vec3 min_bounds{};
         glm::vec3 max_bounds{};
+        std::uint8_t part_label = 0;
     };
 
     struct BvhBuildNode final {
@@ -42,7 +47,14 @@ private:
     };
 
     bool build_vertex_items();
+    bool has_part_labels() const;
+    bool build_vertex_part_labels(std::vector<std::uint8_t>& vertex_part_labels) const;
     std::uint32_t build_bvh_tree(std::size_t begin, std::size_t end, std::vector<std::uint32_t>& vertex_ids);
+    std::uint32_t compute_part_label_mask(std::size_t begin, std::size_t end) const;
+    std::uint32_t find_best_part_label_split_mask(std::size_t begin,
+                                                  std::size_t end,
+                                                  std::uint32_t part_label_mask) const;
+    std::size_t partition_vertex_items_by_part_labels(std::size_t begin, std::size_t end, std::uint32_t left_part_label_mask);
     std::size_t partition_vertex_items(std::size_t begin, std::size_t end, const glm::vec3& extent);
     void write_leaf_node_data(BvhBuildNode& node, std::size_t begin, std::size_t end, std::vector<std::uint32_t>& vertex_ids) const;
     void compute_node_bounds(std::size_t begin, std::size_t end, glm::vec3& min_bounds, glm::vec3& max_bounds) const;
@@ -53,7 +65,9 @@ private:
                          NextBvhLevel& next_level) const;
 
     std::uint32_t vertex_count_ = 0;
+    const std::vector<std::uint32_t>* source_triangle_indices_ = nullptr;
     const std::vector<float>& vertices_;
+    const std::vector<std::uint8_t>* triangle_part_labels_ = nullptr;
     std::vector<VertexBuildItem> vertex_items_;
     std::vector<BvhBuildNode> build_nodes_;
 };

@@ -1,0 +1,147 @@
+#version 430 core
+
+layout(local_size_x = 128) in;
+
+layout(std430, binding = 0) readonly buffer ClothCurrentPositions {
+    float cloth_current_positions[];
+};
+
+layout(std430, binding = 1) readonly buffer ClothPreviousPositions {
+    float cloth_previous_positions[];
+};
+
+layout(std430, binding = 2) readonly buffer ClothTriangleIndices {
+    uint cloth_triangle_indices[];
+};
+
+layout(std430, binding = 3) readonly buffer BodyVertexIds {
+    uint body_vertex_ids[];
+};
+
+struct BodyVertexBvhNode {
+    vec4 min_bounds;
+    vec4 max_bounds;
+    uint left_child_index;
+    uint right_child_index;
+    uint first_vertex_index;
+    uint vertex_count;
+};
+
+layout(std430, binding = 4) readonly buffer BodyVertexBvhNodes {
+    BodyVertexBvhNode body_vertex_bvh_nodes[];
+};
+
+layout(std430, binding = 5) buffer PairRecords {
+    uvec2 pair_records[];
+};
+
+layout(std430, binding = 6) buffer PairCount {
+    uint pair_count;
+};
+
+uniform uint uTriangleCount;
+uniform uint uRootNodeIndex;
+uniform uint uMaxPairCount;
+
+const uint max_bvh_stack_depth = 32u;
+
+struct Aabb {
+    vec3 min_bounds;
+    vec3 max_bounds;
+};
+
+bool is_leaf_node(BodyVertexBvhNode node)
+{
+    return node.vertex_count > 0u;
+}
+
+vec3 read_cloth_current_position(uint vertex_index)
+{
+    uint base_index = vertex_index * 3u;
+    return vec3(cloth_current_positions[base_index],
+                cloth_current_positions[base_index + 1u],
+                cloth_current_positions[base_index + 2u]);
+}
+
+vec3 read_cloth_previous_position(uint vertex_index)
+{
+    uint base_index = vertex_index * 3u;
+    return vec3(cloth_previous_positions[base_index],
+                cloth_previous_positions[base_index + 1u],
+                cloth_previous_positions[base_index + 2u]);
+}
+
+Aabb build_triangle_swept_aabb(vec3 previous_a,
+                               vec3 previous_b,
+                               vec3 previous_c,
+                               vec3 current_a,
+                               vec3 current_b,
+                               vec3 current_c)
+{
+    Aabb result;
+    result.min_bounds = min(min(previous_a, min(previous_b, previous_c)),
+                            min(current_a, min(current_b, current_c)));
+    result.max_bounds = max(max(previous_a, max(previous_b, previous_c)),
+                            max(current_a, max(current_b, current_c)));
+    return result;
+}
+
+bool overlaps_bounds(Aabb query_bounds, vec4 min_bounds, vec4 max_bounds)
+{
+    return all(lessThanEqual(query_bounds.min_bounds, max_bounds.xyz)) &&
+           all(greaterThanEqual(query_bounds.max_bounds, min_bounds.xyz));
+}
+
+void append_pair(uint cloth_triangle_id, uint body_vertex_id)
+{
+    uint pair_index = atomicAdd(pair_count, 1u);
+    if (pair_index >= uMaxPairCount) {
+        return;
+    }
+
+    pair_records[pair_index] = uvec2(cloth_triangle_id, body_vertex_id);
+}
+
+void main()
+{
+    uint cloth_triangle_id = gl_GlobalInvocationID.x;
+    if (cloth_triangle_id >= uTriangleCount) {
+        return;
+    }
+
+    uint cloth_triangle_base = cloth_triangle_id * 3u;
+    uint cloth_vertex_a = cloth_triangle_indices[cloth_triangle_base];
+    uint cloth_vertex_b = cloth_triangle_indices[cloth_triangle_base + 1u];
+    uint cloth_vertex_c = cloth_triangle_indices[cloth_triangle_base + 2u];
+
+    vec3 previous_a = read_cloth_previous_position(cloth_vertex_a);
+    vec3 previous_b = read_cloth_previous_position(cloth_vertex_b);
+    vec3 previous_c = read_cloth_previous_position(cloth_vertex_c);
+    vec3 current_a = read_cloth_current_position(cloth_vertex_a);
+    vec3 current_b = read_cloth_current_position(cloth_vertex_b);
+    vec3 current_c = read_cloth_current_position(cloth_vertex_c);
+    Aabb query_bounds = build_triangle_swept_aabb(previous_a, previous_b, previous_c, current_a, current_b, current_c);
+
+    uint node_index_stack[max_bvh_stack_depth];
+    uint stack_count = 0u;
+    node_index_stack[stack_count++] = uRootNodeIndex;
+
+    while (stack_count > 0u) {
+        --stack_count;
+        uint current_node_index = node_index_stack[stack_count];
+        BodyVertexBvhNode current_node = body_vertex_bvh_nodes[current_node_index];
+        if (!overlaps_bounds(query_bounds, current_node.min_bounds, current_node.max_bounds)) {
+            continue;
+        }
+
+        if (is_leaf_node(current_node)) {
+            for (uint vertex_offset = 0u; vertex_offset < current_node.vertex_count; ++vertex_offset) {
+                uint body_vertex_id = body_vertex_ids[current_node.first_vertex_index + vertex_offset];
+                append_pair(cloth_triangle_id, body_vertex_id);
+            }
+        } else {
+            node_index_stack[stack_count++] = current_node.left_child_index;
+            node_index_stack[stack_count++] = current_node.right_child_index;
+        }
+    }
+}

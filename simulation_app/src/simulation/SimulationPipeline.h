@@ -37,7 +37,6 @@ private:
         ClothMotionBufferView cloth_motion;
         ClothCollisionStateBufferView cloth_collision;
         ClothMeshTopologyResources cloth_topology;
-        ClothTriangleColorView cloth_triangle_colors;
         CharacterVertexBufferView character_vertices;
         TriangleGeometryResources character_geometry;
         MeshBvhResources character_bvh;

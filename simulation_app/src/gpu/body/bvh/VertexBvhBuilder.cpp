@@ -3,6 +3,7 @@
 #include "asset/MeshGeometryUtils.h"
 
 #include <algorithm>
+#include <array>
 #include <cmath>
 #include <cstddef>
 #include <limits>
@@ -10,8 +11,16 @@
 
 namespace {
 constexpr std::uint32_t vertex_position_component_count = 3;
+constexpr std::uint32_t triangle_vertex_count = 3;
 constexpr std::uint32_t vertex_bvh_leaf_size = 8;
 constexpr std::size_t shader_max_bvh_stack_depth = 32u;
+constexpr std::size_t character_part_label_count = 6u;
+
+struct PartLabelStats final {
+    glm::vec3 min_bounds{std::numeric_limits<float>::max()};
+    glm::vec3 max_bounds{std::numeric_limits<float>::lowest()};
+    std::uint32_t vertex_count = 0;
+};
 
 bool is_valid_bounds(const glm::vec3& min_bounds, const glm::vec3& max_bounds)
 {
@@ -28,6 +37,19 @@ std::uint32_t find_longest_axis(const glm::vec3& extent)
         return 1;
     }
     return 2;
+}
+
+bool has_multiple_bits(std::uint32_t mask)
+{
+    return (mask & (mask - 1u)) != 0u;
+}
+
+double surface_area(const glm::vec3& min_bounds, const glm::vec3& max_bounds)
+{
+    const glm::vec3 extent = glm::max(max_bounds - min_bounds, glm::vec3{0.0f});
+    return 2.0 * (static_cast<double>(extent.x) * extent.y +
+                  static_cast<double>(extent.y) * extent.z +
+                  static_cast<double>(extent.z) * extent.x);
 }
 
 bool is_leaf_node(const BodyVertexBvhNode& node)
@@ -87,6 +109,17 @@ VertexBvhBuilder::VertexBvhBuilder(std::uint32_t vertex_count, const std::vector
 {
 }
 
+VertexBvhBuilder::VertexBvhBuilder(std::uint32_t vertex_count,
+                                   const std::vector<std::uint32_t>& triangle_indices,
+                                   const std::vector<float>& vertices,
+                                   const std::vector<std::uint8_t>& triangle_part_labels)
+    : vertex_count_(vertex_count),
+      source_triangle_indices_(&triangle_indices),
+      vertices_(vertices),
+      triangle_part_labels_(&triangle_part_labels)
+{
+}
+
 BodyVertexBvhData VertexBvhBuilder::build_body_vertex_bvh()
 {
     BodyVertexBvhData result;
@@ -113,6 +146,11 @@ bool VertexBvhBuilder::build_vertex_items()
         return false;
     }
 
+    std::vector<std::uint8_t> vertex_part_labels;
+    if (has_part_labels() && !build_vertex_part_labels(vertex_part_labels)) {
+        return false;
+    }
+
     vertex_items_.clear();
     vertex_items_.reserve(vertex_count_);
 
@@ -126,8 +164,69 @@ bool VertexBvhBuilder::build_vertex_items()
             vertex_id,
             position,
             position,
-            position
+            position,
+            has_part_labels() ? vertex_part_labels[vertex_id] : 0u
         });
+    }
+
+    return true;
+}
+
+bool VertexBvhBuilder::has_part_labels() const
+{
+    return source_triangle_indices_ != nullptr &&
+           triangle_part_labels_ != nullptr &&
+           !triangle_part_labels_->empty();
+}
+
+bool VertexBvhBuilder::build_vertex_part_labels(std::vector<std::uint8_t>& vertex_part_labels) const
+{
+    if (source_triangle_indices_ == nullptr ||
+        source_triangle_indices_->empty() ||
+        source_triangle_indices_->size() % triangle_vertex_count != 0u) {
+        return false;
+    }
+
+    const std::uint32_t triangle_count =
+        static_cast<std::uint32_t>(source_triangle_indices_->size() / triangle_vertex_count);
+    if (triangle_part_labels_ == nullptr || triangle_part_labels_->size() != triangle_count) {
+        return false;
+    }
+
+    std::vector<std::array<std::uint32_t, character_part_label_count>> label_counts(vertex_count_);
+    for (auto& counts : label_counts) {
+        counts.fill(0u);
+    }
+
+    for (std::uint32_t triangle_index = 0; triangle_index < triangle_count; ++triangle_index) {
+        const std::uint8_t part_label = (*triangle_part_labels_)[triangle_index];
+        if (part_label >= character_part_label_count) {
+            return false;
+        }
+
+        const std::size_t index_base = static_cast<std::size_t>(triangle_index) * triangle_vertex_count;
+        for (std::uint32_t index_offset = 0; index_offset < triangle_vertex_count; ++index_offset) {
+            const std::uint32_t vertex_id = (*source_triangle_indices_)[index_base + index_offset];
+            if (vertex_id >= vertex_count_) {
+                return false;
+            }
+
+            ++label_counts[vertex_id][part_label];
+        }
+    }
+
+    vertex_part_labels.assign(vertex_count_, 0u);
+    for (std::uint32_t vertex_id = 0; vertex_id < vertex_count_; ++vertex_id) {
+        std::uint32_t best_count = 0u;
+        std::uint8_t best_label = 0u;
+        for (std::uint8_t label = 0u; label < character_part_label_count; ++label) {
+            const std::uint32_t current_count = label_counts[vertex_id][label];
+            if (current_count > best_count) {
+                best_count = current_count;
+                best_label = label;
+            }
+        }
+        vertex_part_labels[vertex_id] = best_label;
     }
 
     return true;
@@ -144,6 +243,23 @@ std::uint32_t VertexBvhBuilder::build_bvh_tree(std::size_t begin,
     compute_node_bounds(begin, end, node.min_bounds, node.max_bounds);
 
     const std::size_t vertex_count = end - begin;
+    if (has_part_labels()) {
+        const std::uint32_t part_label_mask = compute_part_label_mask(begin, end);
+        if (has_multiple_bits(part_label_mask)) {
+            const std::uint32_t left_part_label_mask = find_best_part_label_split_mask(begin, end, part_label_mask);
+            if (left_part_label_mask != 0u) {
+                const std::size_t middle =
+                    partition_vertex_items_by_part_labels(begin, end, left_part_label_mask);
+
+                const std::uint32_t left_child_index = build_bvh_tree(begin, middle, vertex_ids);
+                const std::uint32_t right_child_index = build_bvh_tree(middle, end, vertex_ids);
+                build_nodes_[node_index].left_child_index = left_child_index;
+                build_nodes_[node_index].right_child_index = right_child_index;
+
+                return node_index;
+            }
+        }
+    }
     if (vertex_count <= vertex_bvh_leaf_size) {
         write_leaf_node_data(node, begin, end, vertex_ids);
         return node_index;
@@ -157,6 +273,83 @@ std::uint32_t VertexBvhBuilder::build_bvh_tree(std::size_t begin,
     build_nodes_[node_index].right_child_index = right_child_index;
 
     return node_index;
+}
+
+std::uint32_t VertexBvhBuilder::compute_part_label_mask(std::size_t begin, std::size_t end) const
+{
+    std::uint32_t part_label_mask = 0u;
+    for (std::size_t item_index = begin; item_index < end; ++item_index) {
+        part_label_mask |= 1u << vertex_items_[item_index].part_label;
+    }
+    return part_label_mask;
+}
+
+std::uint32_t VertexBvhBuilder::find_best_part_label_split_mask(std::size_t begin,
+                                                                std::size_t end,
+                                                                std::uint32_t part_label_mask) const
+{
+    std::array<PartLabelStats, character_part_label_count> stats_by_label;
+    for (std::size_t item_index = begin; item_index < end; ++item_index) {
+        const VertexBuildItem& item = vertex_items_[item_index];
+        PartLabelStats& stats = stats_by_label[item.part_label];
+        stats.min_bounds = glm::min(stats.min_bounds, item.min_bounds);
+        stats.max_bounds = glm::max(stats.max_bounds, item.max_bounds);
+        ++stats.vertex_count;
+    }
+
+    double best_cost = std::numeric_limits<double>::max();
+    std::uint32_t best_split_mask = 0u;
+    const std::uint32_t anchor_label_mask = part_label_mask & (~part_label_mask + 1u);
+
+    for (std::uint32_t split_mask = (part_label_mask - 1u) & part_label_mask;
+         split_mask != 0u;
+         split_mask = (split_mask - 1u) & part_label_mask) {
+        if ((split_mask & anchor_label_mask) == 0u) {
+            continue;
+        }
+
+        PartLabelStats left_stats;
+        PartLabelStats right_stats;
+        const std::uint32_t right_split_mask = part_label_mask ^ split_mask;
+        for (std::size_t label = 0; label < stats_by_label.size(); ++label) {
+            const std::uint32_t label_mask = 1u << label;
+            const PartLabelStats& source_stats = stats_by_label[label];
+            if (source_stats.vertex_count == 0u) {
+                continue;
+            }
+
+            PartLabelStats& target_stats = (split_mask & label_mask) != 0u ? left_stats : right_stats;
+            target_stats.min_bounds = glm::min(target_stats.min_bounds, source_stats.min_bounds);
+            target_stats.max_bounds = glm::max(target_stats.max_bounds, source_stats.max_bounds);
+            target_stats.vertex_count += source_stats.vertex_count;
+        }
+
+        if (left_stats.vertex_count == 0u || right_stats.vertex_count == 0u || right_split_mask == 0u) {
+            continue;
+        }
+
+        const double cost =
+            surface_area(left_stats.min_bounds, left_stats.max_bounds) * left_stats.vertex_count +
+            surface_area(right_stats.min_bounds, right_stats.max_bounds) * right_stats.vertex_count;
+        if (cost < best_cost) {
+            best_cost = cost;
+            best_split_mask = split_mask;
+        }
+    }
+
+    return best_split_mask;
+}
+
+std::size_t VertexBvhBuilder::partition_vertex_items_by_part_labels(std::size_t begin,
+                                                                    std::size_t end,
+                                                                    std::uint32_t left_part_label_mask)
+{
+    const auto middle = std::partition(vertex_items_.begin() + static_cast<std::ptrdiff_t>(begin),
+                                       vertex_items_.begin() + static_cast<std::ptrdiff_t>(end),
+                                       [left_part_label_mask](const VertexBuildItem& item) {
+                                           return (left_part_label_mask & (1u << item.part_label)) != 0u;
+                                       });
+    return static_cast<std::size_t>(middle - vertex_items_.begin());
 }
 
 std::size_t VertexBvhBuilder::partition_vertex_items(std::size_t begin,

@@ -34,14 +34,6 @@ inline bool is_valid_cloth_mesh_topology_resource(const ClothMeshTopologyResourc
            topology.triangle_count != 0;
 }
 
-inline bool is_valid_cloth_triangle_color_view(const ClothTriangleColorView& triangle_color_view)
-{
-    return triangle_color_view.triangle_id_buffer != 0 &&
-           triangle_color_view.triangle_count != 0 &&
-           triangle_color_view.color_ranges != nullptr &&
-           !triangle_color_view.color_ranges->empty();
-}
-
 inline bool is_valid_character_mesh_topology_resource(const CharacterMeshTopologyResources& topology)
 {
     return topology.triangle_index_buffer != 0 &&

@@ -86,6 +86,8 @@ add_executable(simulation_app
     src/utils/QtUtils.h
     src/utils/BufferUtils.h
     src/utils/FileUtils.h
+    src/utils/GpuElapsedTimer.cpp
+    src/utils/GpuElapsedTimer.h
     src/utils/NumericUtils.h
     src/utils/ShaderUtils.h
     src/ui/MainWindow.cpp
@@ -109,7 +111,9 @@ add_executable(simulation_app
     shaders/simulation/cloth_bending_constraint.comp
     shaders/simulation/cloth_attachment_constraint.comp
     shaders/simulation/collision/cloth_ground_collision.comp
-    shaders/simulation/collision/body_vertex_cloth_face_collision.comp
+    shaders/simulation/collision/body_vertex_cloth_face_pair_generate.comp
+    shaders/simulation/collision/body_vertex_cloth_face_pair_accumulate.comp
+    shaders/simulation/collision/body_vertex_cloth_face_pair_apply.comp
     shaders/simulation/collision/cloth_vertex_body_face_collision.comp
     shaders/simulation/garment_prefit.comp
     shaders/simulation/collision/cloth_collision_common.glsl

@@ -95,46 +95,6 @@ ClothBufferElementCounts make_expanded_capacity(const ClothBufferElementCounts& 
 }
 
 // state checks //
-bool has_contiguous_ranges(const std::vector<MeshElementRange>& ranges, std::size_t element_count)
-{
-    if (ranges.empty()) {
-        return false;
-    }
-
-    std::size_t expected_offset = 0;
-    for (const MeshElementRange& range : ranges) {
-        const std::size_t range_end = static_cast<std::size_t>(range.offset) + range.count;
-        if (range.count == 0u ||
-            range.offset != expected_offset ||
-            range_end > element_count) {
-            return false;
-        }
-
-        expected_offset = range_end;
-    }
-
-    return expected_offset == element_count;
-}
-
-bool has_valid_triangle_ids(const std::vector<std::uint32_t>& triangle_ids, std::uint32_t triangle_count)
-{
-    return std::all_of(triangle_ids.begin(), triangle_ids.end(),
-        [triangle_count](std::uint32_t triangle_id) {
-            return triangle_id < triangle_count;
-        }
-    );
-}
-
-bool has_uploadable_triangle_colors(const GarmentMesh& garment_mesh)
-{
-    const std::uint32_t triangle_count = static_cast<std::uint32_t>(garment_mesh.triangle_vertex_indices.size() / 3u);
-    const std::vector<std::uint32_t>& triangle_ids = garment_mesh.colorized_triangle_ids;
-
-    return triangle_ids.size() == triangle_count &&
-           has_contiguous_ranges(garment_mesh.triangle_color_ranges, triangle_ids.size()) &&
-           has_valid_triangle_ids(triangle_ids, triangle_count);
-}
-
 bool is_uploadable_mesh(const GarmentMesh& garment_mesh)
 {
     const auto vertex_count = static_cast<std::uint32_t>(garment_mesh.vertices.size() / vertex_position_components);
@@ -143,7 +103,6 @@ bool is_uploadable_mesh(const GarmentMesh& garment_mesh)
            !garment_mesh.triangle_vertex_indices.empty() &&
            garment_mesh.vertices.size() % vertex_position_components == 0u &&
            garment_mesh.triangle_vertex_indices.size() % 3u == 0u &&
-           has_uploadable_triangle_colors(garment_mesh) &&
            garment_mesh.adjacency.is_valid(vertex_count) &&
            garment_mesh.stretch_constraints.is_valid() &&
            garment_mesh.bending_constraints.is_valid();
@@ -257,14 +216,12 @@ struct TopologyUploadData final {
     std::vector<std::uint32_t> vertex_indices;
     std::vector<std::uint32_t> adjacent_triangle_offsets;
     std::vector<std::uint32_t> adjacent_triangle_indices;
-    std::vector<std::uint32_t> colorized_triangle_ids;
 };
 
 struct TopologyUploadOffsets final {
     std::uint32_t index = 0;
     std::uint32_t adjacent_triangle_offsets = 0;
     std::uint32_t adjacent_triangle_indices = 0;
-    std::uint32_t colorized_triangle_id = 0;
 };
 
 // buffer에 upload할 topology data 생성
@@ -291,10 +248,6 @@ void build_topology_upload_data(const GarmentObject& garment,
     for (std::uint32_t local_face : adjacency.face_indices) {
         data.adjacent_triangle_indices.push_back(buffer_ranges.triangle_offset + local_face);
     }
-
-    for (std::uint32_t local_triangle_id : garment.mesh.colorized_triangle_ids) {
-        data.colorized_triangle_ids.push_back(buffer_ranges.triangle_offset + local_triangle_id);
-    }
 }
 
 // topology data를 GPU buffer에 upload
@@ -315,10 +268,6 @@ void upload_topology_data(const ClothBufferSet& buffers,
                             scalar_byte_size(offsets.adjacent_triangle_indices, sizeof(std::uint32_t)),
                             scalar_byte_size(static_cast<std::uint32_t>(data.adjacent_triangle_indices.size()), sizeof(std::uint32_t)),
                             data.adjacent_triangle_indices.data());
-    gl.glNamedBufferSubData(buffers.colorized_triangle_id,
-                            scalar_byte_size(offsets.colorized_triangle_id, sizeof(std::uint32_t)),
-                            scalar_byte_size(static_cast<std::uint32_t>(data.colorized_triangle_ids.size()), sizeof(std::uint32_t)),
-                            data.colorized_triangle_ids.data());
 }
 
 // stretch constraint //
@@ -471,7 +420,6 @@ GarmentUploadData prepare_garment_upload_data(const GarmentObject& garment,
     data.topology.vertex_indices.reserve(garment.mesh.triangle_vertex_indices.size());
     data.topology.adjacent_triangle_offsets.resize(static_cast<std::size_t>(buffer_ranges.vertex_count) + 1u, 0);
     data.topology.adjacent_triangle_indices.reserve(garment.mesh.adjacency.face_indices.size());
-    data.topology.colorized_triangle_ids.reserve(buffer_ranges.triangle_count);
     data.stretch_constraints.edge_indices.reserve(buffer_ranges.stretch_constraint_count * 2u);
     data.stretch_constraints.rest_lengths.reserve(buffer_ranges.stretch_constraint_count);
     data.bending_constraints.edge_indices.reserve(buffer_ranges.bending_constraint_count * 2u);
@@ -531,7 +479,6 @@ struct BufferRebuildUploadData final {
     std::vector<ElementRange> stretch_color_ranges;
     std::vector<ElementRange> bending_color_ranges;
     std::vector<ElementRange> attachment_ranges;
-    std::vector<ElementRange> triangle_color_ranges;
 };
 
 BufferRebuildUploadData prepare_buffer_rebuild_upload_data(const ClothBufferElementCounts& element_counts, std::size_t garment_count)
@@ -540,7 +487,6 @@ BufferRebuildUploadData prepare_buffer_rebuild_upload_data(const ClothBufferElem
     data.topology.vertex_indices.reserve(element_counts.index);
     data.topology.adjacent_triangle_offsets.resize(static_cast<std::size_t>(element_counts.vertex) + 1u, 0);
     data.topology.adjacent_triangle_indices.reserve(element_counts.adjacency_entry);
-    data.topology.colorized_triangle_ids.reserve(element_counts.triangle);
     data.stretch_constraints.edge_indices.reserve(element_counts.stretch_constraint * 2u);
     data.stretch_constraints.rest_lengths.reserve(element_counts.stretch_constraint);
     data.bending_constraints.edge_indices.reserve(element_counts.bending_constraint * 2u);
@@ -548,7 +494,6 @@ BufferRebuildUploadData prepare_buffer_rebuild_upload_data(const ClothBufferElem
     data.stretch_color_ranges.reserve(garment_count * 8u);
     data.bending_color_ranges.reserve(garment_count * 8u);
     data.attachment_ranges.reserve(garment_count);
-    data.triangle_color_ranges.reserve(garment_count * 8u);
     return data;
 }
 
@@ -569,9 +514,6 @@ void build_buffer_rebuild_upload_data(const GarmentObject& garment,
     append_color_ranges(bending_constraints.color_ranges,
                         buffer_ranges.bending_constraint_offset,
                         data.bending_color_ranges);
-    append_color_ranges(garment.mesh.triangle_color_ranges,
-                        buffer_ranges.triangle_offset,
-                        data.triangle_color_ranges);
 }
 
 // buffer object //
@@ -589,7 +531,6 @@ ClothBufferSet create_buffer_set(const ClothBufferElementCounts& allocated_eleme
     gl.glCreateBuffers(1, &buffers.index);
     gl.glCreateBuffers(1, &buffers.adjacent_triangle_offsets);
     gl.glCreateBuffers(1, &buffers.adjacent_triangle_indices);
-    gl.glCreateBuffers(1, &buffers.colorized_triangle_id);
     gl.glCreateBuffers(1, &buffers.stretch_edge_index);
     gl.glCreateBuffers(1, &buffers.stretch_rest_length);
     gl.glCreateBuffers(1, &buffers.bending_edge_index);
@@ -629,10 +570,6 @@ ClothBufferSet create_buffer_set(const ClothBufferElementCounts& allocated_eleme
                          GL_STATIC_DRAW);
     gl.glNamedBufferData(buffers.adjacent_triangle_indices,
                          scalar_byte_size(allocated_elements.adjacency_entry, sizeof(std::uint32_t)),
-                         nullptr,
-                         GL_STATIC_DRAW);
-    gl.glNamedBufferData(buffers.colorized_triangle_id,
-                         scalar_byte_size(allocated_elements.triangle, sizeof(std::uint32_t)),
                          nullptr,
                          GL_STATIC_DRAW);
     gl.glNamedBufferData(buffers.stretch_edge_index,
@@ -687,7 +624,6 @@ void copy_used_buffer_data(const ClothBufferSet& old_buffers,
     const GLsizeiptr index_bytes = scalar_byte_size(used_elements.index, sizeof(std::uint32_t));
     const GLsizeiptr adjacent_triangle_offsets_bytes = scalar_byte_size(used_elements.vertex + 1u, sizeof(std::uint32_t));
     const GLsizeiptr adjacent_triangle_indices_bytes = scalar_byte_size(used_elements.adjacency_entry, sizeof(std::uint32_t));
-    const GLsizeiptr colorized_triangle_id_bytes = scalar_byte_size(used_elements.triangle, sizeof(std::uint32_t));
     const GLsizeiptr stretch_edge_index_bytes = scalar_byte_size(used_elements.stretch_constraint * 2u, sizeof(std::uint32_t));
     const GLsizeiptr stretch_rest_length_bytes = scalar_byte_size(used_elements.stretch_constraint, sizeof(float));
     const GLsizeiptr bending_edge_index_bytes = scalar_byte_size(used_elements.bending_constraint * 2u, sizeof(std::uint32_t));
@@ -730,13 +666,6 @@ void copy_used_buffer_data(const ClothBufferSet& old_buffers,
                                     0,
                                     0,
                                     adjacent_triangle_indices_bytes);
-    }
-    if (colorized_triangle_id_bytes > 0 && old_buffers.colorized_triangle_id != 0) {
-        gl.glCopyNamedBufferSubData(old_buffers.colorized_triangle_id,
-                                    next_buffers.colorized_triangle_id,
-                                    0,
-                                    0,
-                                    colorized_triangle_id_bytes);
     }
     if (stretch_edge_index_bytes > 0 && old_buffers.stretch_edge_index != 0) {
         gl.glCopyNamedBufferSubData(old_buffers.stretch_edge_index,
@@ -962,7 +891,6 @@ ClothGpuResources::ClothGpuResources(ClothGpuResources&& other) noexcept
     stretch_color_ranges_ = std::move(other.stretch_color_ranges_);
     bending_color_ranges_ = std::move(other.bending_color_ranges_);
     attachment_ranges_ = std::move(other.attachment_ranges_);
-    triangle_color_ranges_ = std::move(other.triangle_color_ranges_);
     used_elements_ = other.used_elements_;
     allocated_elements_ = other.allocated_elements_;
 
@@ -985,7 +913,6 @@ void ClothGpuResources::reset_resources() noexcept
     stretch_color_ranges_.clear();
     bending_color_ranges_.clear();
     attachment_ranges_.clear();
-    triangle_color_ranges_.clear();
     used_elements_ = {};
     allocated_elements_ = {};
 
@@ -1198,7 +1125,6 @@ void ClothGpuResources::rebuild_garment_buffers(const std::vector<GarmentObject>
                                  std::move(rebuild_upload_data.stretch_color_ranges),
                                  std::move(rebuild_upload_data.bending_color_ranges),
                                  std::move(rebuild_upload_data.attachment_ranges),
-                                 std::move(rebuild_upload_data.triangle_color_ranges),
                                  rebuild_element_counts,
                                  gl);
 }
@@ -1208,7 +1134,6 @@ void ClothGpuResources::replace_with_rebuild_buffers(ClothBufferSet rebuild_buff
                                                      std::vector<ElementRange> rebuild_stretch_color_ranges,
                                                      std::vector<ElementRange> rebuild_bending_color_ranges,
                                                      std::vector<ElementRange> rebuild_attachment_ranges,
-                                                     std::vector<ElementRange> rebuild_triangle_color_ranges,
                                                      const ClothBufferElementCounts& rebuild_element_counts,
                                                      QOpenGLFunctions_4_5_Core& gl)
 {
@@ -1218,7 +1143,6 @@ void ClothGpuResources::replace_with_rebuild_buffers(ClothBufferSet rebuild_buff
     stretch_color_ranges_ = std::move(rebuild_stretch_color_ranges);
     bending_color_ranges_ = std::move(rebuild_bending_color_ranges);
     attachment_ranges_ = std::move(rebuild_attachment_ranges);
-    triangle_color_ranges_ = std::move(rebuild_triangle_color_ranges);
     used_elements_ = rebuild_element_counts;
     allocated_elements_ = rebuild_element_counts;
 
@@ -1264,7 +1188,6 @@ bool ClothGpuResources::append_garment(const GarmentObject& garment, QOpenGLFunc
                              buffer_ranges.index_offset,
                              buffer_ranges.vertex_offset,
                              buffer_ranges.adjacency_entry_offset,
-                             buffer_ranges.triangle_offset,
                          },
                          upload_data.topology,
                          gl);
@@ -1285,7 +1208,6 @@ bool ClothGpuResources::append_garment(const GarmentObject& garment, QOpenGLFunc
     garments_.push_back(buffer_ranges);
     append_color_ranges(stretch_constraints.color_ranges, buffer_ranges.stretch_constraint_offset, stretch_color_ranges_);
     append_color_ranges(bending_constraints.color_ranges, buffer_ranges.bending_constraint_offset, bending_color_ranges_);
-    append_color_ranges(garment.mesh.triangle_color_ranges, buffer_ranges.triangle_offset, triangle_color_ranges_);
     used_elements_ = next_used_elements;
     return true;
 }
@@ -1334,9 +1256,6 @@ void ClothGpuResources::delete_buffer_set(ClothBufferSet& buffers, QOpenGLFuncti
     }
     if (buffers.adjacent_triangle_indices != 0) {
         gl.glDeleteBuffers(1, &buffers.adjacent_triangle_indices);
-    }
-    if (buffers.colorized_triangle_id != 0) {
-        gl.glDeleteBuffers(1, &buffers.colorized_triangle_id);
     }
     if (buffers.adjacent_triangle_offsets != 0) {
         gl.glDeleteBuffers(1, &buffers.adjacent_triangle_offsets);
@@ -1458,7 +1377,6 @@ bool ClothGpuResources::has_gpu_objects() const
            buffers_.index != 0 &&
            buffers_.adjacent_triangle_offsets != 0 &&
            buffers_.adjacent_triangle_indices != 0 &&
-           buffers_.colorized_triangle_id != 0 &&
            buffers_.stretch_edge_index != 0 &&
            buffers_.stretch_rest_length != 0 &&
            buffers_.bending_edge_index != 0 &&
@@ -1479,8 +1397,7 @@ bool ClothGpuResources::is_initialized() const
            used_elements_.stretch_constraint > 0 &&
            used_elements_.bending_constraint > 0 &&
            !stretch_color_ranges_.empty() &&
-           !bending_color_ranges_.empty() &&
-           !triangle_color_ranges_.empty();
+           !bending_color_ranges_.empty();
 }
 
 // getter //
@@ -1568,15 +1485,6 @@ ClothMeshTopologyResources ClothGpuResources::mesh_topology_resources() const
     topology.vertex_count = used_elements_.vertex;
     topology.triangle_count = used_elements_.triangle;
     return topology;
-}
-
-ClothTriangleColorView ClothGpuResources::triangle_color_view() const
-{
-    ClothTriangleColorView view;
-    view.triangle_id_buffer = buffers_.colorized_triangle_id;
-    view.triangle_count = used_elements_.triangle;
-    view.color_ranges = &triangle_color_ranges_;
-    return view;
 }
 
 ClothNormalResources ClothGpuResources::mesh_normal_resources() const
