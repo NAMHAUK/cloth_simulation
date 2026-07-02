@@ -18,14 +18,14 @@ bool VertexBvhBoundsUpdater::is_initialized() const
 }
 
 bool VertexBvhBoundsUpdater::can_update(const CharacterVertexBufferView& vertex_view,
-                                        const BodyVertexBvhResources& body_vertex_bvh,
+                                        const VertexBvhResources& body_vertex_bvh,
                                         const std::vector<BvhNodeRange>& node_ranges_by_level,
                                         float collision_thickness) const
 {
     return is_initialized() &&
            vertex_view.current_position_buffer != 0 &&
            vertex_view.vertex_count != 0 &&
-           is_valid_body_vertex_bvh_resource(body_vertex_bvh) &&
+           is_valid_vertex_bvh_resource(body_vertex_bvh) &&
            !node_ranges_by_level.empty() &&
            collision_thickness > 0.0f;
 }
@@ -51,7 +51,7 @@ bool VertexBvhBoundsUpdater::initialize(const std::filesystem::path& shader_path
 }
 
 void VertexBvhBoundsUpdater::update(const CharacterVertexBufferView& vertex_view,
-                                    const BodyVertexBvhResources& body_vertex_bvh,
+                                    const VertexBvhResources& body_vertex_bvh,
                                     const std::vector<BvhNodeRange>& node_ranges_by_level,
                                     float collision_thickness,
                                     QOpenGLFunctions_4_5_Core& gl) const
@@ -82,9 +82,7 @@ void VertexBvhBoundsUpdater::update(const CharacterVertexBufferView& vertex_view
 
 void VertexBvhBoundsUpdater::release(QOpenGLFunctions_4_5_Core& gl)
 {
-    if (program_ != 0) {
-        gl.glDeleteProgram(program_);
-    }
+    gl.glDeleteProgram(program_);
 
     program_ = 0;
     first_node_location_ = -1;

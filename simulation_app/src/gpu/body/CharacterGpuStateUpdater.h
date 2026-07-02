@@ -9,7 +9,7 @@
 #include <QOpenGLFunctions_4_5_Core>
 
 class CharacterGpuResources;
-class MeshBvhBoundsUpdater;
+class TriangleBvhBoundsUpdater;
 class VertexBvhBoundsUpdater;
 class NormalUpdater;
 struct CharacterFrameInterpolation;
@@ -20,7 +20,7 @@ struct TriangleGeometryResources;
 class CharacterGpuStateUpdater final {
 public:
     CharacterGpuStateUpdater(CharacterGpuResources& character_gpu_state,
-                             MeshBvhBoundsUpdater& bvh_bounds_updater,
+                             TriangleBvhBoundsUpdater& bvh_bounds_updater,
                              VertexBvhBoundsUpdater& vertex_bvh_bounds_updater,
                              NormalUpdater& normal_updater);
     CharacterGpuStateUpdater(const CharacterGpuStateUpdater&) = delete;
@@ -59,7 +59,7 @@ private:
                                    QOpenGLFunctions_4_5_Core& gl) const;
 
     CharacterGpuResources& character_gpu_state_;
-    MeshBvhBoundsUpdater& bvh_bounds_updater_;
+    TriangleBvhBoundsUpdater& bvh_bounds_updater_;
     VertexBvhBoundsUpdater& vertex_bvh_bounds_updater_;
     NormalUpdater& normal_updater_;
 

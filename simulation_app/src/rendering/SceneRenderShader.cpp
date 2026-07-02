@@ -154,9 +154,7 @@ void SceneRenderShader::set_normal_lighting_enabled(bool enabled, QOpenGLFunctio
 
 void SceneRenderShader::release(QOpenGLFunctions_4_5_Core& gl)
 {
-    if (program_ != 0) {
-        gl.glDeleteProgram(program_);
-    }
+    gl.glDeleteProgram(program_);
 
     program_ = 0;
     mvp_location_ = -1;

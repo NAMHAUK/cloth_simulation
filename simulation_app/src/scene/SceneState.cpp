@@ -16,12 +16,12 @@ void SceneState::set_character_mesh(CharacterMesh mesh)
     current_character_frame_ = 0;
 }
 
-void SceneState::set_default_character_bvh_data(MeshBvhData default_character_bvh_data)
+void SceneState::set_default_character_bvh_data(TriangleBvhData default_character_bvh_data)
 {
     default_character_bvh_data_ = std::move(default_character_bvh_data);
 }
 
-void SceneState::set_default_body_vertex_bvh_data(BodyVertexBvhData default_body_vertex_bvh_data)
+void SceneState::set_default_body_vertex_bvh_data(VertexBvhData default_body_vertex_bvh_data)
 {
     default_body_vertex_bvh_data_ = std::move(default_body_vertex_bvh_data);
 }
@@ -31,12 +31,12 @@ const CharacterMesh& SceneState::character_mesh() const
     return character_mesh_;
 }
 
-const MeshBvhData& SceneState::default_character_bvh_data() const
+const TriangleBvhData& SceneState::default_character_bvh_data() const
 {
     return default_character_bvh_data_;
 }
 
-const BodyVertexBvhData& SceneState::default_body_vertex_bvh_data() const
+const VertexBvhData& SceneState::default_body_vertex_bvh_data() const
 {
     return default_body_vertex_bvh_data_;
 }

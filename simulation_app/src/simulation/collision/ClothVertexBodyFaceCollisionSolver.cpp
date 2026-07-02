@@ -32,13 +32,11 @@ bool ClothVertexBodyFaceCollisionSolver::initialize(const std::filesystem::path&
     }
 
     cloth_vertex_count_location_ = gl.glGetUniformLocation(program_, "uClothVertexCount");
-    root_node_index_location_ = gl.glGetUniformLocation(program_, "uRootNodeIndex");
     max_contacts_per_vertex_location_ = gl.glGetUniformLocation(program_, "uMaxContactsPerVertex");
     collision_thickness_location_ = gl.glGetUniformLocation(program_, "uCollisionThickness");
     max_correction_length_location_ = gl.glGetUniformLocation(program_, "uMaxCorrectionLength");
 
     if (cloth_vertex_count_location_ < 0 ||
-        root_node_index_location_ < 0 ||
         max_contacts_per_vertex_location_ < 0 ||
         collision_thickness_location_ < 0 ||
         max_correction_length_location_ < 0) {
@@ -55,14 +53,14 @@ bool ClothVertexBodyFaceCollisionSolver::initialize(const std::filesystem::path&
 bool ClothVertexBodyFaceCollisionSolver::can_solve(const ClothMotionBufferView& motion_view,
                                                    const ClothCollisionStateBufferView& collision_view,
                                                    const TriangleGeometryResources& character_geometry,
-                                                   const MeshBvhResources& character_bvh) const
+                                                   const TriangleBvhResources& character_bvh) const
 {
     return is_initialized() &&
            is_valid_motion_view(motion_view) &&
            is_valid_collision_state_view(collision_view) &&
            motion_view.vertex_count == collision_view.vertex_count &&
            is_valid_triangle_geometry_resource(character_geometry) &&
-           is_valid_mesh_bvh_resource(character_bvh) &&
+           is_valid_triangle_bvh_resource(character_bvh) &&
            collision_thickness_ > 0.0f &&
            max_correction_length_ > 0.0f;
 }
@@ -70,7 +68,7 @@ bool ClothVertexBodyFaceCollisionSolver::can_solve(const ClothMotionBufferView& 
 void ClothVertexBodyFaceCollisionSolver::solve(const ClothMotionBufferView& motion_view,
                                                const ClothCollisionStateBufferView& collision_view,
                                                const TriangleGeometryResources& character_geometry,
-                                               const MeshBvhResources& character_bvh,
+                                               const TriangleBvhResources& character_bvh,
                                                QOpenGLFunctions_4_5_Core& gl) const
 {
     assert(can_solve(motion_view, collision_view, character_geometry, character_bvh));
@@ -84,7 +82,6 @@ void ClothVertexBodyFaceCollisionSolver::solve(const ClothMotionBufferView& moti
     gl.glBindBufferBase(GL_SHADER_STORAGE_BUFFER, contact_normals_binding, collision_view.contact_normal_buffer);
 
     gl.glProgramUniform1ui(program_, cloth_vertex_count_location_, motion_view.vertex_count);
-    gl.glProgramUniform1ui(program_, root_node_index_location_, character_bvh.root_node_index);
     gl.glProgramUniform1ui(program_, max_contacts_per_vertex_location_, collision_view.max_contacts_per_vertex);
     gl.glProgramUniform1f(program_, collision_thickness_location_, collision_thickness_);
     gl.glProgramUniform1f(program_, max_correction_length_location_, max_correction_length_);
@@ -95,13 +92,10 @@ void ClothVertexBodyFaceCollisionSolver::solve(const ClothMotionBufferView& moti
 
 void ClothVertexBodyFaceCollisionSolver::release(QOpenGLFunctions_4_5_Core& gl)
 {
-    if (program_ != 0) {
-        gl.glDeleteProgram(program_);
-    }
+    gl.glDeleteProgram(program_);
 
     program_ = 0;
     cloth_vertex_count_location_ = -1;
-    root_node_index_location_ = -1;
     max_contacts_per_vertex_location_ = -1;
     collision_thickness_location_ = -1;
     max_correction_length_location_ = -1;

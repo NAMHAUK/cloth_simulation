@@ -73,6 +73,7 @@ void SceneGpuState::update_mesh_normals(QOpenGLFunctions_4_5_Core& gl)
 
 void SceneGpuState::release(QOpenGLFunctions_4_5_Core& gl)
 {
+    collision_workspace_buffers_.release(gl);
     cloth_gpu_state_.release(gl);
     character_gpu_state_.release(gl);
     character_gpu_state_updater_.release(gl);
@@ -128,9 +129,27 @@ const ClothGpuResources& SceneGpuState::cloth_gpu_state() const
     return cloth_gpu_state_;
 }
 
+CollisionWorkspaceBufferView SceneGpuState::collision_workspace_buffer_view() const
+{
+    return collision_workspace_buffers_.view();
+}
+
 void SceneGpuState::update_garment_meshes(const SceneState& scene, QOpenGLFunctions_4_5_Core& gl)
 {
     cloth_gpu_state_.update_garment_buffers(scene.garments(), gl);
+    if (cloth_gpu_state_.is_initialized()) {
+        const ClothMotionBufferView motion_view = cloth_gpu_state_.motion_buffer_view();
+        const ClothCollisionStateBufferView collision_view = cloth_gpu_state_.collision_state_buffer_view();
+        const ClothMeshTopologyResources topology = cloth_gpu_state_.mesh_topology_resources();
+        if (!collision_workspace_buffers_.ensure_capacity(motion_view.vertex_count,
+                                                          topology.triangle_count,
+                                                          collision_view.max_contacts_per_vertex,
+                                                          gl)) {
+            std::cerr << "Failed to prepare collision workspace buffers.\n";
+        }
+    } else {
+        collision_workspace_buffers_.release(gl);
+    }
     normal_updater_.update_cloth_normals(cloth_gpu_state_.mesh_topology_resources(),
                                          cloth_gpu_state_.mesh_normal_resources(),
                                          gl);
@@ -172,7 +191,7 @@ void SceneGpuState::build_garment_attachment_targets(SceneState& scene,
     const ClothMotionBufferView motion_view = cloth_gpu_state_.motion_buffer_view();
     const AttachmentConstraintBufferView attachment_view = cloth_gpu_state_.attachment_constraint_buffer_view();
     const TriangleGeometryResources character_geometry = character_gpu_state_.character_triangle_geometry_resources();
-    const MeshBvhResources character_bvh = character_gpu_state_.character_bvh_resources();
+    const TriangleBvhResources character_bvh = character_gpu_state_.character_bvh_resources();
     
     if (!attachment_target_builder_.build(motion_view, attachment_view, target_range, character_geometry, character_bvh, gl)) {
         std::cerr << "Cannot build garment attachment targets because required GPU buffers are missing.\n";

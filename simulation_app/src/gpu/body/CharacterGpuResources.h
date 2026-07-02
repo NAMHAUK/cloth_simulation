@@ -19,8 +19,8 @@ public:
 
     // Mesh upload and playback
     void upload_mesh(const CharacterMesh& character_mesh,
-                     const MeshBvhData& default_character_bvh_data,
-                     const BodyVertexBvhData& default_body_vertex_bvh_data,
+                     const TriangleBvhData& default_character_bvh_data,
+                     const VertexBvhData& default_body_vertex_bvh_data,
                      QOpenGLFunctions_4_5_Core& gl);
     void set_current_frame(std::uint32_t frame_index);
     std::uint32_t current_frame_index() const;
@@ -38,8 +38,8 @@ public:
     CharacterVertexBufferView character_vertex_buffer_view() const;
     TriangleGeometryResources character_triangle_geometry_resources() const;
     CharacterNormalResources mesh_normal_resources() const;
-    MeshBvhResources character_bvh_resources() const;
-    BodyVertexBvhResources body_vertex_bvh_resources() const;
+    TriangleBvhResources character_bvh_resources() const;
+    VertexBvhResources body_vertex_bvh_resources() const;
 
     // GPU resource lifetime
     void release(QOpenGLFunctions_4_5_Core& gl);
@@ -66,7 +66,5 @@ private:
 
     // Character BVH data
     std::uint32_t bvh_node_count_ = 0;
-    std::uint32_t bvh_root_node_index_ = 0;
     std::uint32_t body_vertex_bvh_node_count_ = 0;
-    std::uint32_t body_vertex_bvh_root_node_index_ = 0;
 };

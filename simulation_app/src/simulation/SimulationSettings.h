@@ -25,7 +25,7 @@ inline constexpr std::uint32_t substep_count = 8;
 inline constexpr std::uint32_t solver_iteration_count = 4;
 inline constexpr std::uint32_t prefit_iteration_count = 32;
 inline constexpr float stretch_stiffness = 0.8f;
-inline constexpr float bending_stiffness = 0.25f;
+inline constexpr float bending_stiffness = 0.15f;
 inline constexpr float attachment_stiffness = 0.8f;
 
 static_assert(character_motion_fps > 0);

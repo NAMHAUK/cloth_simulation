@@ -2,7 +2,7 @@
 
 #include "gpu/body/CharacterGpuDataTypes.h"
 #include "gpu/body/CharacterGpuResources.h"
-#include "gpu/body/bvh/MeshBvhBoundsUpdater.h"
+#include "gpu/body/bvh/TriangleBvhBoundsUpdater.h"
 #include "gpu/body/bvh/VertexBvhBoundsUpdater.h"
 #include "gpu/scene/NormalUpdater.h"
 #include "scene/SceneState.h"
@@ -58,7 +58,7 @@ bool is_valid_triangle_geometry_input(const CharacterMeshTopologyResources& topo
 }
 
 CharacterGpuStateUpdater::CharacterGpuStateUpdater(CharacterGpuResources& character_gpu_state,
-                                                   MeshBvhBoundsUpdater& bvh_bounds_updater,
+                                                   TriangleBvhBoundsUpdater& bvh_bounds_updater,
                                                    VertexBvhBoundsUpdater& vertex_bvh_bounds_updater,
                                                    NormalUpdater& normal_updater)
     : character_gpu_state_(character_gpu_state),
@@ -226,12 +226,8 @@ void CharacterGpuStateUpdater::update_derived_pose_state(const std::vector<BvhNo
 
 void CharacterGpuStateUpdater::release(QOpenGLFunctions_4_5_Core& gl)
 {
-    if (triangle_geometry_program_ != 0) {
-        gl.glDeleteProgram(triangle_geometry_program_);
-    }
-    if (position_program_ != 0) {
-        gl.glDeleteProgram(position_program_);
-    }
+    gl.glDeleteProgram(triangle_geometry_program_);
+    gl.glDeleteProgram(position_program_);
 
     position_program_ = 0;
     triangle_geometry_program_ = 0;

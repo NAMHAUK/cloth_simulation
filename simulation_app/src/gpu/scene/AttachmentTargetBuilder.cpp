@@ -40,12 +40,10 @@ bool AttachmentTargetBuilder::initialize(const std::filesystem::path& shader_pat
 
     constraint_offset_location_ = gl.glGetUniformLocation(program_, "uConstraintOffset");
     constraint_count_location_ = gl.glGetUniformLocation(program_, "uConstraintCount");
-    root_node_index_location_ = gl.glGetUniformLocation(program_, "uRootNodeIndex");
     surface_offset_location_ = gl.glGetUniformLocation(program_, "uSurfaceOffset");
 
     if (constraint_offset_location_ < 0 ||
         constraint_count_location_ < 0 ||
-        root_node_index_location_ < 0 ||
         surface_offset_location_ < 0) {
         std::cerr << "Attachment target build compute shader missing required uniforms.\n";
         release(gl);
@@ -59,20 +57,20 @@ bool AttachmentTargetBuilder::can_build(const ClothMotionBufferView& motion_view
                                         const AttachmentConstraintBufferView& attachment_view,
                                         const ElementRange& target_range,
                                         const TriangleGeometryResources& character_geometry,
-                                        const MeshBvhResources& character_bvh) const
+                                        const TriangleBvhResources& character_bvh) const
 {
     return is_initialized() &&
            is_valid_motion_view(motion_view) &&
            is_valid_attachment_target_range(attachment_view, target_range) &&
            is_valid_triangle_geometry_resource(character_geometry) &&
-           is_valid_mesh_bvh_resource(character_bvh);
+           is_valid_triangle_bvh_resource(character_bvh);
 }
 
 bool AttachmentTargetBuilder::build(const ClothMotionBufferView& motion_view,
                                     const AttachmentConstraintBufferView& attachment_view,
                                     const ElementRange& target_range,
                                     const TriangleGeometryResources& character_geometry,
-                                    const MeshBvhResources& character_bvh,
+                                    const TriangleBvhResources& character_bvh,
                                     QOpenGLFunctions_4_5_Core& gl) const
 {
     if (!can_build(motion_view, attachment_view, target_range, character_geometry, character_bvh)) {
@@ -88,7 +86,6 @@ bool AttachmentTargetBuilder::build(const ClothMotionBufferView& motion_view,
 
     gl.glProgramUniform1ui(program_, constraint_offset_location_, target_range.offset);
     gl.glProgramUniform1ui(program_, constraint_count_location_, target_range.count);
-    gl.glProgramUniform1ui(program_, root_node_index_location_, character_bvh.root_node_index);
     gl.glProgramUniform1f(program_, surface_offset_location_, attachment_surface_offset);
 
     gl.glDispatchCompute(compute_group_count(target_range.count, attachment_target_local_size), 1, 1);
@@ -98,13 +95,10 @@ bool AttachmentTargetBuilder::build(const ClothMotionBufferView& motion_view,
 
 void AttachmentTargetBuilder::release(QOpenGLFunctions_4_5_Core& gl)
 {
-    if (program_ != 0) {
-        gl.glDeleteProgram(program_);
-    }
+    gl.glDeleteProgram(program_);
 
     program_ = 0;
     constraint_offset_location_ = -1;
     constraint_count_location_ = -1;
-    root_node_index_location_ = -1;
     surface_offset_location_ = -1;
 }

@@ -66,12 +66,8 @@ bool NormalUpdater::initialize(const std::filesystem::path& triangle_normal_shad
 
 void NormalUpdater::release(QOpenGLFunctions_4_5_Core& gl)
 {
-    if (vertex_program_ != 0) {
-        gl.glDeleteProgram(vertex_program_);
-    }
-    if (triangle_program_ != 0) {
-        gl.glDeleteProgram(triangle_program_);
-    }
+    gl.glDeleteProgram(vertex_program_);
+    gl.glDeleteProgram(triangle_program_);
 
     triangle_program_ = 0;
     vertex_program_ = 0;

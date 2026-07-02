@@ -2,18 +2,18 @@
 
 layout(local_size_x = 128) in;
 
-struct BodyVertexBvhNode {
+struct BvhNode {
     vec4 min_bounds;
     vec4 max_bounds;
     uint left_child_index;
     uint right_child_index;
-    uint first_vertex_index;
-    uint vertex_count;
+    uint first_element_index;
+    uint element_count;
 };
 
-bool is_leaf_node(BodyVertexBvhNode node)
+bool is_leaf_node(BvhNode node)
 {
-    return node.vertex_count > 0u;
+    return node.element_count > 0u;
 }
 
 layout(std430, binding = 0) readonly buffer BodyCurrentPositions {
@@ -24,8 +24,8 @@ layout(std430, binding = 1) readonly buffer BodyVertexIds {
     uint body_vertex_ids[];
 };
 
-layout(std430, binding = 2) buffer BodyVertexBvhNodes {
-    BodyVertexBvhNode body_vertex_bvh_nodes[];
+layout(std430, binding = 2) buffer BvhNodes {
+    BvhNode body_vertex_bvh_nodes[];
 };
 
 uniform uint uFirstNode;
@@ -40,12 +40,12 @@ vec3 load_body_current_position(uint vertex_index)
                 body_current_positions[base_index + 2u]);
 }
 
-void update_leaf_bounds(uint node_index, BodyVertexBvhNode node)
+void update_leaf_bounds(uint node_index, BvhNode node)
 {
     vec3 min_bounds = vec3(3.402823e+38);
     vec3 max_bounds = vec3(-3.402823e+38);
-    for (uint vertex_offset = 0u; vertex_offset < node.vertex_count; ++vertex_offset) {
-        uint vertex_id = body_vertex_ids[node.first_vertex_index + vertex_offset];
+    for (uint vertex_offset = 0u; vertex_offset < node.element_count; ++vertex_offset) {
+        uint vertex_id = body_vertex_ids[node.first_element_index + vertex_offset];
         vec3 position = load_body_current_position(vertex_id);
         min_bounds = min(min_bounds, position);
         max_bounds = max(max_bounds, position);
@@ -56,7 +56,7 @@ void update_leaf_bounds(uint node_index, BodyVertexBvhNode node)
     body_vertex_bvh_nodes[node_index].max_bounds = vec4(max_bounds + thickness, 0.0);
 }
 
-void update_internal_bounds(uint node_index, BodyVertexBvhNode node)
+void update_internal_bounds(uint node_index, BvhNode node)
 {
     vec3 min_bounds = min(body_vertex_bvh_nodes[node.left_child_index].min_bounds.xyz,
                           body_vertex_bvh_nodes[node.right_child_index].min_bounds.xyz);
@@ -75,7 +75,7 @@ void main()
     }
 
     uint node_index = uFirstNode + local_node_index;
-    BodyVertexBvhNode node = body_vertex_bvh_nodes[node_index];
+    BvhNode node = body_vertex_bvh_nodes[node_index];
     if (is_leaf_node(node)) {
         update_leaf_bounds(node_index, node);
     } else {

@@ -18,15 +18,11 @@ layout(std430, binding = 3) readonly buffer CorrectionSums {
     ivec4 correction_sums[];
 };
 
-layout(std430, binding = 4) readonly buffer CorrectionCounts {
-    uint correction_counts[];
-};
-
-layout(std430, binding = 5) readonly buffer ContactCandidateCounts {
+layout(std430, binding = 4) readonly buffer ContactCandidateCounts {
     uint contact_candidate_counts[];
 };
 
-layout(std430, binding = 6) readonly buffer ContactCandidates {
+layout(std430, binding = 5) readonly buffer ContactCandidates {
     vec4 contact_candidates[];
 };
 
@@ -97,12 +93,16 @@ void merge_contact_candidates(uint vertex_index, float clamp_scale)
 void main()
 {
     uint vertex_index = gl_GlobalInvocationID.x;
-    if (vertex_index >= uVertexCount || correction_counts[vertex_index] == 0u) {
+    if (vertex_index >= uVertexCount) {
         return;
     }
 
-    vec3 accumulated_correction =
-        vec3(correction_sums[vertex_index].xyz) / correction_fixed_point_scale;
+    ivec3 accumulated_correction_sum = correction_sums[vertex_index].xyz;
+    if (accumulated_correction_sum == ivec3(0)) {
+        return;
+    }
+
+    vec3 accumulated_correction = vec3(accumulated_correction_sum) / correction_fixed_point_scale;
     vec3 final_correction = clamp_correction(accumulated_correction);
     float accumulated_length_sq = dot(accumulated_correction, accumulated_correction);
     float clamp_scale = accumulated_length_sq > 0.0 ?

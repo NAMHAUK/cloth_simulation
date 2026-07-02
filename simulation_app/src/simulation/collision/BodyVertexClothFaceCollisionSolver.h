@@ -2,9 +2,9 @@
 
 #include "gpu/body/CharacterGpuDataTypes.h"
 #include "gpu/cloth/ClothGpuDataTypes.h"
+#include "gpu/scene/CollisionWorkspaceBuffers.h"
 #include "utils/GpuElapsedTimer.h"
 
-#include <cstdint>
 #include <filesystem>
 
 #include <QOpenGLFunctions_4_5_Core>
@@ -31,60 +31,52 @@ public:
                    const ClothCollisionStateBufferView& collision_view,
                    const ClothMeshTopologyResources& cloth_topology,
                    const CharacterVertexBufferView& character_vertex_view,
-                   const BodyVertexBvhResources& body_vertex_bvh) const;
+                   const VertexBvhResources& body_vertex_bvh,
+                   const CollisionWorkspaceBufferView& collision_workspace_view) const;
     void solve(const ClothMotionBufferView& motion_view,
                const ClothCollisionStateBufferView& collision_view,
                const ClothMeshTopologyResources& cloth_topology,
                const CharacterVertexBufferView& character_vertex_view,
-               const BodyVertexBvhResources& body_vertex_bvh,
+               const VertexBvhResources& body_vertex_bvh,
+               const CollisionWorkspaceBufferView& collision_workspace_view,
                QOpenGLFunctions_4_5_Core& gl) const;
     void release(QOpenGLFunctions_4_5_Core& gl);
 
 private:
-    struct PairScratchBuffers final {
-        GLuint pair_record = 0;
-        GLuint pair_count = 0;
-        GLuint correction_sum = 0;
-        GLuint correction_count = 0;
-        GLuint contact_candidate_count = 0;
-        GLuint contact_candidate = 0;
-        std::uint32_t vertex_capacity = 0;
-        std::uint32_t pair_capacity = 0;
-        std::uint32_t contact_candidate_capacity_per_vertex = 0;
+    struct GenerateStage final {
+        GLuint program = 0;
+        GLint triangle_count = -1;
+        GLint max_pairs = -1;
+        GLint thickness = -1;
+    };
+
+    struct AccumulateStage final {
+        GLuint program = 0;
+        GLint max_pairs = -1;
+        GLint thickness = -1;
+        GLint contact_capacity = -1;
+    };
+
+    struct ApplyStage final {
+        GLuint program = 0;
+        GLint vertex_count = -1;
+        GLint max_contacts = -1;
+        GLint contact_capacity = -1;
+        GLint max_correction = -1;
     };
 
 #if CLOTH_SIM_BODY_VERTEX_CLOTH_FACE_GPU_TIMING
     mutable GpuElapsedTimer gpu_timer_;
 #endif
 
-    bool solve_pair_path(const ClothMotionBufferView& motion_view,
-                         const ClothCollisionStateBufferView& collision_view,
-                         const ClothMeshTopologyResources& cloth_topology,
-                         const CharacterVertexBufferView& character_vertex_view,
-                         const BodyVertexBvhResources& body_vertex_bvh,
-                         QOpenGLFunctions_4_5_Core& gl) const;
-    bool ensure_pair_scratch_buffers(std::uint32_t vertex_count,
-                                     std::uint32_t triangle_count,
-                                     std::uint32_t max_contacts_per_vertex,
-                                     QOpenGLFunctions_4_5_Core& gl) const;
-    void clear_pair_scratch_buffers(QOpenGLFunctions_4_5_Core& gl) const;
-    void release_pair_scratch_buffers(QOpenGLFunctions_4_5_Core& gl) const;
+    void run_pair_generation_stage(const ClothMotionBufferView& motion_view, const ClothMeshTopologyResources& cloth_topology, const CharacterVertexBufferView& character_vertex_view, const VertexBvhResources& body_vertex_bvh, const CollisionWorkspaceBufferView& collision_workspace_view, QOpenGLFunctions_4_5_Core& gl) const;
+    void run_pair_accumulation_stage(const ClothMotionBufferView& motion_view, const ClothMeshTopologyResources& cloth_topology, const CharacterVertexBufferView& character_vertex_view, const CollisionWorkspaceBufferView& collision_workspace_view, QOpenGLFunctions_4_5_Core& gl) const;
+    void run_pair_apply_stage(const ClothMotionBufferView& motion_view, const ClothCollisionStateBufferView& collision_view, const CollisionWorkspaceBufferView& collision_workspace_view, QOpenGLFunctions_4_5_Core& gl) const;
     bool has_pair_programs() const;
 
-    GLuint pair_generate_program_ = 0;
-    GLuint pair_accumulate_program_ = 0;
-    GLuint pair_apply_program_ = 0;
-    GLint pair_generate_triangle_count_location_ = -1;
-    GLint pair_generate_root_node_index_location_ = -1;
-    GLint pair_generate_max_pair_count_location_ = -1;
-    GLint pair_accumulate_max_pair_count_location_ = -1;
-    GLint pair_accumulate_collision_thickness_location_ = -1;
-    GLint pair_accumulate_contact_candidate_capacity_location_ = -1;
-    GLint pair_apply_vertex_count_location_ = -1;
-    GLint pair_apply_max_contacts_per_vertex_location_ = -1;
-    GLint pair_apply_contact_candidate_capacity_location_ = -1;
-    GLint pair_apply_max_correction_length_location_ = -1;
-    mutable PairScratchBuffers pair_scratch_buffers_;
+    GenerateStage generate_;
+    AccumulateStage accumulate_;
+    ApplyStage apply_;
     float collision_thickness_ = 0.0f;
     float max_correction_length_ = 0.0f;
 };

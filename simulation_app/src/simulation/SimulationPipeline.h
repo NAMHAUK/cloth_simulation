@@ -2,6 +2,7 @@
 
 #include "gpu/body/CharacterGpuDataTypes.h"
 #include "gpu/cloth/ClothGpuDataTypes.h"
+#include "gpu/scene/CollisionWorkspaceBuffers.h"
 #include "simulation/forces/SimulationForceField.h"
 #include "simulation/forces/ExternalForceSolver.h"
 #include "simulation/constraints/StretchConstraintSolver.h"
@@ -39,8 +40,9 @@ private:
         ClothMeshTopologyResources cloth_topology;
         CharacterVertexBufferView character_vertices;
         TriangleGeometryResources character_geometry;
-        MeshBvhResources character_bvh;
-        BodyVertexBvhResources body_vertex_bvh;
+        TriangleBvhResources character_bvh;
+        VertexBvhResources body_vertex_bvh;
+        CollisionWorkspaceBufferView collision_workspace;
         DistanceConstraintBufferView stretch_constraints;
         DistanceConstraintBufferView bending_constraints;
         AttachmentConstraintBufferView attachment_constraints;

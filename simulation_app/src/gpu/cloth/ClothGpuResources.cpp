@@ -1077,9 +1077,7 @@ bool ClothGpuResources::restore_base_positions(QOpenGLFunctions_4_5_Core& gl) co
 
 void ClothGpuResources::clear_base_positions(QOpenGLFunctions_4_5_Core& gl)
 {
-    if (base_positions_ != 0) {
-        gl.glDeleteBuffers(1, &base_positions_);
-    }
+    gl.glDeleteBuffers(1, &base_positions_);
 
     base_positions_ = 0;
     base_position_vertex_count_ = 0;
@@ -1248,57 +1246,23 @@ void ClothGpuResources::create_buffers(const ClothBufferElementCounts& allocated
 
 void ClothGpuResources::delete_buffer_set(ClothBufferSet& buffers, QOpenGLFunctions_4_5_Core& gl)
 {
-    if (buffers.vertex_normal != 0) {
-        gl.glDeleteBuffers(1, &buffers.vertex_normal);
-    }
-    if (buffers.triangle_normal != 0) {
-        gl.glDeleteBuffers(1, &buffers.triangle_normal);
-    }
-    if (buffers.adjacent_triangle_indices != 0) {
-        gl.glDeleteBuffers(1, &buffers.adjacent_triangle_indices);
-    }
-    if (buffers.adjacent_triangle_offsets != 0) {
-        gl.glDeleteBuffers(1, &buffers.adjacent_triangle_offsets);
-    }
-    if (buffers.stretch_rest_length != 0) {
-        gl.glDeleteBuffers(1, &buffers.stretch_rest_length);
-    }
-    if (buffers.stretch_edge_index != 0) {
-        gl.glDeleteBuffers(1, &buffers.stretch_edge_index);
-    }
-    if (buffers.bending_rest_length != 0) {
-        gl.glDeleteBuffers(1, &buffers.bending_rest_length);
-    }
-    if (buffers.bending_edge_index != 0) {
-        gl.glDeleteBuffers(1, &buffers.bending_edge_index);
-    }
-    if (buffers.attachment_barycentric_offset != 0) {
-        gl.glDeleteBuffers(1, &buffers.attachment_barycentric_offset);
-    }
-    if (buffers.attachment_indices != 0) {
-        gl.glDeleteBuffers(1, &buffers.attachment_indices);
-    }
-    if (buffers.index != 0) {
-        gl.glDeleteBuffers(1, &buffers.index);
-    }
-    if (buffers.previous_position != 0) {
-        gl.glDeleteBuffers(1, &buffers.previous_position);
-    }
-    if (buffers.velocity != 0) {
-        gl.glDeleteBuffers(1, &buffers.velocity);
-    }
-    if (buffers.collision_state != 0) {
-        gl.glDeleteBuffers(1, &buffers.collision_state);
-    }
-    if (buffers.contact_normal != 0) {
-        gl.glDeleteBuffers(1, &buffers.contact_normal);
-    }
-    if (buffers.current_position != 0) {
-        gl.glDeleteBuffers(1, &buffers.current_position);
-    }
-    if (buffers.vao != 0) {
-        gl.glDeleteVertexArrays(1, &buffers.vao);
-    }
+    gl.glDeleteBuffers(1, &buffers.vertex_normal);
+    gl.glDeleteBuffers(1, &buffers.triangle_normal);
+    gl.glDeleteBuffers(1, &buffers.adjacent_triangle_indices);
+    gl.glDeleteBuffers(1, &buffers.adjacent_triangle_offsets);
+    gl.glDeleteBuffers(1, &buffers.stretch_rest_length);
+    gl.glDeleteBuffers(1, &buffers.stretch_edge_index);
+    gl.glDeleteBuffers(1, &buffers.bending_rest_length);
+    gl.glDeleteBuffers(1, &buffers.bending_edge_index);
+    gl.glDeleteBuffers(1, &buffers.attachment_barycentric_offset);
+    gl.glDeleteBuffers(1, &buffers.attachment_indices);
+    gl.glDeleteBuffers(1, &buffers.index);
+    gl.glDeleteBuffers(1, &buffers.previous_position);
+    gl.glDeleteBuffers(1, &buffers.velocity);
+    gl.glDeleteBuffers(1, &buffers.collision_state);
+    gl.glDeleteBuffers(1, &buffers.contact_normal);
+    gl.glDeleteBuffers(1, &buffers.current_position);
+    gl.glDeleteVertexArrays(1, &buffers.vao);
 
     buffers = {};
 }

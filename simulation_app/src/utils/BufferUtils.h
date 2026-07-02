@@ -2,6 +2,7 @@
 
 #include "gpu/body/CharacterGpuDataTypes.h"
 #include "gpu/cloth/ClothGpuResources.h"
+#include "gpu/scene/CollisionWorkspaceBuffers.h"
 
 inline bool is_valid_motion_view(const ClothMotionBufferView& motion_view)
 {
@@ -56,17 +57,27 @@ inline bool is_valid_triangle_geometry_resource(const TriangleGeometryResources&
            triangle_geometry.triangle_count != 0;
 }
 
-inline bool is_valid_mesh_bvh_resource(const MeshBvhResources& mesh_bvh)
+inline bool is_valid_triangle_bvh_resource(const TriangleBvhResources& triangle_bvh)
 {
-    return mesh_bvh.node_buffer != 0 &&
-           mesh_bvh.node_count != 0 &&
-           mesh_bvh.root_node_index < mesh_bvh.node_count;
+    return triangle_bvh.node_buffer != 0 &&
+           triangle_bvh.node_count != 0;
 }
 
-inline bool is_valid_body_vertex_bvh_resource(const BodyVertexBvhResources& body_vertex_bvh)
+inline bool is_valid_vertex_bvh_resource(const VertexBvhResources& vertex_bvh)
 {
-    return body_vertex_bvh.node_buffer != 0 &&
-           body_vertex_bvh.vertex_id_buffer != 0 &&
-           body_vertex_bvh.node_count != 0 &&
-           body_vertex_bvh.root_node_index < body_vertex_bvh.node_count;
+    return vertex_bvh.node_buffer != 0 &&
+           vertex_bvh.vertex_id_buffer != 0 &&
+           vertex_bvh.node_count != 0;
+}
+
+inline bool is_valid_collision_workspace_buffer_view(const CollisionWorkspaceBufferView& collision_workspace_view)
+{
+    return collision_workspace_view.pair_record_buffer != 0 &&
+           collision_workspace_view.pair_count_buffer != 0 &&
+           collision_workspace_view.correction_sum_buffer != 0 &&
+           collision_workspace_view.contact_candidate_count_buffer != 0 &&
+           collision_workspace_view.contact_candidate_buffer != 0 &&
+           collision_workspace_view.vertex_capacity != 0 &&
+           collision_workspace_view.pair_capacity != 0 &&
+           collision_workspace_view.contact_candidate_capacity_per_vertex != 0;
 }

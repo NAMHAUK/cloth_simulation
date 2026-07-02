@@ -49,13 +49,15 @@ add_executable(simulation_app
     src/gpu/body/CharacterGpuResources.cpp
     src/gpu/body/CharacterGpuDataTypes.h
     src/gpu/body/CharacterGpuResources.h
-    src/gpu/body/bvh/MeshBvhBuilder.cpp
+    src/gpu/body/bvh/TriangleBvhBuilder.cpp
     src/gpu/body/bvh/BvhDataTypes.h
-    src/gpu/body/bvh/MeshBvhBuilder.h
+    src/gpu/body/bvh/BvhBuildUtils.cpp
+    src/gpu/body/bvh/BvhBuildUtils.h
+    src/gpu/body/bvh/TriangleBvhBuilder.h
     src/gpu/body/bvh/VertexBvhBuilder.cpp
     src/gpu/body/bvh/VertexBvhBuilder.h
-    src/gpu/body/bvh/MeshBvhBoundsUpdater.cpp
-    src/gpu/body/bvh/MeshBvhBoundsUpdater.h
+    src/gpu/body/bvh/TriangleBvhBoundsUpdater.cpp
+    src/gpu/body/bvh/TriangleBvhBoundsUpdater.h
     src/gpu/body/bvh/VertexBvhBoundsUpdater.cpp
     src/gpu/body/bvh/VertexBvhBoundsUpdater.h
     src/gpu/body/CharacterGpuStateUpdater.cpp
@@ -69,6 +71,8 @@ add_executable(simulation_app
     src/rendering/GroundGridMesh.h
     src/gpu/scene/SceneGpuState.cpp
     src/gpu/scene/SceneGpuState.h
+    src/gpu/scene/CollisionWorkspaceBuffers.cpp
+    src/gpu/scene/CollisionWorkspaceBuffers.h
     src/gpu/scene/AttachmentTargetBuilder.cpp
     src/gpu/scene/AttachmentTargetBuilder.h
     src/gpu/scene/NormalUpdater.cpp

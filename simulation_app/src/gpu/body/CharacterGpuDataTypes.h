@@ -51,15 +51,13 @@ struct CharacterNormalResources final {
     std::uint32_t triangle_count = 0;
 };
 
-struct MeshBvhResources final {
+struct TriangleBvhResources final {
     GLuint node_buffer = 0;
     std::uint32_t node_count = 0;
-    std::uint32_t root_node_index = 0;
 };
 
-struct BodyVertexBvhResources final {
+struct VertexBvhResources final {
     GLuint node_buffer = 0;
     GLuint vertex_id_buffer = 0;
     std::uint32_t node_count = 0;
-    std::uint32_t root_node_index = 0;
 };

@@ -77,9 +77,7 @@ void BendingConstraintSolver::solve(const ClothMotionBufferView& motion_view,
 
 void BendingConstraintSolver::release(QOpenGLFunctions_4_5_Core& gl)
 {
-    if (program_ != 0) {
-        gl.glDeleteProgram(program_);
-    }
+    gl.glDeleteProgram(program_);
 
     program_ = 0;
     constraint_offset_location_ = -1;

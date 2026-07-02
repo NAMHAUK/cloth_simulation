@@ -1,7 +1,7 @@
 #include "simulation/SimulationController.h"
 
 #include "app/ProjectPaths.h"
-#include "gpu/body/bvh/MeshBvhBuilder.h"
+#include "gpu/body/bvh/TriangleBvhBuilder.h"
 #include "gpu/body/bvh/VertexBvhBuilder.h"
 #include "simulation/SimulationSettings.h"
 
@@ -84,13 +84,13 @@ void SimulationController::load_default_character_mesh(CharacterMesh mesh,
                                                        const std::vector<std::uint8_t>& triangle_part_labels,
                                                        QOpenGLFunctions_4_5_Core& gl)
 {
-    MeshBvhBuilder bvh_builder(
+    TriangleBvhBuilder bvh_builder(
         mesh.vertex_count,
         mesh.triangle_vertex_indices,
         mesh.vertices,
         triangle_part_labels
     );
-    MeshBvhData default_character_bvh_data = bvh_builder.build_mesh_bvh();
+    TriangleBvhData default_character_bvh_data = bvh_builder.build_triangle_bvh();
     if (!default_character_bvh_data.is_valid(mesh.triangle_count)) {
         std::cerr << "Failed to build default character BVH.\n";
         return;
@@ -102,7 +102,7 @@ void SimulationController::load_default_character_mesh(CharacterMesh mesh,
         mesh.vertices,
         triangle_part_labels
     );
-    BodyVertexBvhData default_body_vertex_bvh_data = vertex_bvh_builder.build_body_vertex_bvh();
+    VertexBvhData default_body_vertex_bvh_data = vertex_bvh_builder.build_vertex_bvh();
     if (!default_body_vertex_bvh_data.is_valid(mesh.vertex_count)) {
         std::cerr << "Failed to build default body vertex BVH.\n";
         return;

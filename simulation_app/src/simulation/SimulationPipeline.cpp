@@ -133,6 +133,7 @@ bool SimulationPipeline::step(SceneState& scene, SceneGpuState& gpu_state, std::
                                                            views.cloth_topology,
                                                            views.character_vertices,
                                                            views.body_vertex_bvh,
+                                                           views.collision_workspace,
                                                            gl);
             cloth_vertex_body_face_collision_solver_.solve(views.cloth_motion,
                                                            views.cloth_collision,
@@ -171,6 +172,7 @@ SimulationPipeline::SimulationGpuViews SimulationPipeline::collect_gpu_views(con
     views.character_geometry = gpu_state.character_gpu_state().character_triangle_geometry_resources();
     views.character_bvh = gpu_state.character_gpu_state().character_bvh_resources();
     views.body_vertex_bvh = gpu_state.character_gpu_state().body_vertex_bvh_resources();
+    views.collision_workspace = gpu_state.collision_workspace_buffer_view();
     views.stretch_constraints = gpu_state.cloth_gpu_state().stretch_constraint_buffer_view();
     views.bending_constraints = gpu_state.cloth_gpu_state().bending_constraint_buffer_view();
     views.attachment_constraints = gpu_state.cloth_gpu_state().attachment_constraint_buffer_view();
@@ -181,11 +183,14 @@ bool SimulationPipeline::can_solve_constraint_iteration(const SimulationGpuViews
 {
     return stretch_constraint_solver_.can_solve(views.cloth_motion, views.stretch_constraints) &&
            bending_constraint_solver_.can_solve(views.cloth_motion, views.bending_constraints) &&
+           (views.attachment_constraints.constraint_count == 0 ||
+            attachment_constraint_solver_.can_solve(views.cloth_motion, views.attachment_constraints, views.character_geometry)) &&
            body_vertex_cloth_face_collision_solver_.can_solve(views.cloth_motion,
                                                               views.cloth_collision,
                                                               views.cloth_topology,
                                                               views.character_vertices,
-                                                              views.body_vertex_bvh) &&
+                                                              views.body_vertex_bvh,
+                                                              views.collision_workspace) &&
            cloth_vertex_body_face_collision_solver_.can_solve(views.cloth_motion,
                                                               views.cloth_collision,
                                                               views.character_geometry,

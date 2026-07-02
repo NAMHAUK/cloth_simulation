@@ -67,12 +67,8 @@ void GroundGridMesh::draw(QOpenGLFunctions_4_5_Core& gl) const
 
 void GroundGridMesh::release(QOpenGLFunctions_4_5_Core& gl)
 {
-    if (vertex_buffer_ != 0) {
-        gl.glDeleteBuffers(1, &vertex_buffer_);
-    }
-    if (vao_ != 0) {
-        gl.glDeleteVertexArrays(1, &vao_);
-    }
+    gl.glDeleteBuffers(1, &vertex_buffer_);
+    gl.glDeleteVertexArrays(1, &vao_);
 
     vao_ = 0;
     vertex_buffer_ = 0;
