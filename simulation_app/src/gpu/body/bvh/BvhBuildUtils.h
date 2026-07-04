@@ -10,7 +10,7 @@
 
 namespace bvh_build {
 inline constexpr std::size_t shader_max_bvh_stack_depth = 32u;
-inline constexpr std::size_t character_part_label_count = 6u;
+inline constexpr std::size_t character_part_label_count = 8u;
 inline constexpr std::uint32_t uploaded_bvh_root_node = 0u;
 
 struct DefaultBodyElement final {
@@ -28,6 +28,7 @@ struct BvhBuildNode final {
     std::uint32_t right_child_index = invalid_bvh_node;
     std::uint32_t first_element_index = 0;
     std::uint32_t element_count = 0;
+    std::uint32_t part_label_mask = 0;
 };
 
 struct BvhBuildContext final {

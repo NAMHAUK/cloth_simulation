@@ -50,7 +50,7 @@ void update_leaf_bounds(uint node_index, BvhNode node)
 
     vec3 thickness = vec3(uCollisionThickness);
     bvh_nodes[node_index].min_bounds = vec4(min_bounds - thickness, 0.0);
-    bvh_nodes[node_index].max_bounds = vec4(max_bounds + thickness, 0.0);
+    bvh_nodes[node_index].max_bounds = vec4(max_bounds + thickness, node.max_bounds.w);
 }
 
 void update_internal_bounds(uint node_index, BvhNode node)
@@ -59,7 +59,7 @@ void update_internal_bounds(uint node_index, BvhNode node)
     vec3 max_bounds = max(bvh_nodes[node.left_child_index].max_bounds.xyz, bvh_nodes[node.right_child_index].max_bounds.xyz);
 
     bvh_nodes[node_index].min_bounds = vec4(min_bounds, 0.0);
-    bvh_nodes[node_index].max_bounds = vec4(max_bounds, 0.0);
+    bvh_nodes[node_index].max_bounds = vec4(max_bounds, node.max_bounds.w);
 }
 
 void main()

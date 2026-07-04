@@ -46,6 +46,7 @@ uniform uint uClothVertexCount;
 uniform uint uMaxContactsPerVertex;
 uniform float uCollisionThickness;
 uniform float uMaxCorrectionLength;
+uniform uint uIgnoredBodyPartMask;
 
 const uint max_bvh_stack_depth = 32u;
 const uint bvh_root_node = 0u;
@@ -56,6 +57,12 @@ const uint local_contact_capacity = 4u;
 bool is_leaf_node(BvhNode node)
 {
     return node.element_count > 0u;
+}
+
+bool is_ignored_body_part_node(BvhNode node)
+{
+    uint part_label_mask = uint(node.max_bounds.w + 0.5);
+    return part_label_mask != 0u && (part_label_mask & ~uIgnoredBodyPartMask) == 0u;
 }
 
 #include "cloth_collision_common.glsl"
@@ -172,6 +179,10 @@ void main()
         --stack_count;
         uint current_node_index = node_index_stack[stack_count];
         BvhNode current_node = bvh_nodes[current_node_index];
+        if (is_ignored_body_part_node(current_node)) {
+            continue;
+        }
+
         if (!overlaps_bounds(query_bounds, current_node.min_bounds, current_node.max_bounds)) {
             continue;
         }

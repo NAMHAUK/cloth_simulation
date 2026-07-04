@@ -16,6 +16,7 @@ inline constexpr float ground_y = 0.0f;
 inline constexpr float ground_collision_offset = 0.001f;
 inline constexpr float character_collision_thickness = 0.004f;
 inline constexpr float character_collision_max_correction_length = 0.01f;
+inline constexpr std::uint32_t ignored_body_part_mask = (1u << 6u) | (1u << 7u);
 inline constexpr std::uint32_t max_contacts_per_vertex = 4;
 
 inline constexpr float prefit_pushout_margin = 0.01f;

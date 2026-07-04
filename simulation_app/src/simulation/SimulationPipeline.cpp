@@ -61,10 +61,12 @@ bool SimulationPipeline::initialize(const ShaderPaths& shader_paths, QOpenGLFunc
                                                             shader_paths.body_vertex_cloth_face_pair_apply_compute,
                                                             simulation_settings::character_collision_thickness,
                                                             simulation_settings::character_collision_max_correction_length,
+                                                            simulation_settings::ignored_body_part_mask,
                                                             gl) &&
         cloth_vertex_body_face_collision_solver_.initialize(shader_paths.cloth_vertex_body_face_collision_compute,
                                                             simulation_settings::character_collision_thickness,
                                                             simulation_settings::character_collision_max_correction_length,
+                                                            simulation_settings::ignored_body_part_mask,
                                                             gl) &&
         garment_prefit_solver_.initialize(shader_paths.garment_prefit_compute,
                                           simulation_settings::prefit_search_radius,

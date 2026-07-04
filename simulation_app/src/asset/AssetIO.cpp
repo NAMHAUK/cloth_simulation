@@ -17,7 +17,7 @@
 namespace {
 constexpr std::array<char, 7> garment_asset_signature = {'N', 'A', 'M', 'H', 'A', 'U', 'K'};
 constexpr std::array<char, 8> motion_asset_signature = {'S', 'M', 'P', 'L', 'M', 'O', 'T', 'N'};
-constexpr std::uint8_t max_character_part_label = 5u;
+constexpr std::uint8_t max_character_part_label = 7u;
 
 struct GarmentAssetCounts final {
     std::uint32_t vertex_count = 0;

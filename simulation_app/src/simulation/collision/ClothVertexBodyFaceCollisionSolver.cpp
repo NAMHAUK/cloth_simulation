@@ -24,6 +24,7 @@ bool ClothVertexBodyFaceCollisionSolver::is_initialized() const
 bool ClothVertexBodyFaceCollisionSolver::initialize(const std::filesystem::path& shader_path,
                                                     float collision_thickness,
                                                     float max_correction_length,
+                                                    std::uint32_t ignored_body_part_mask,
                                                     QOpenGLFunctions_4_5_Core& gl)
 {
     program_ = load_compute_program(shader_path, "Cloth vertex/body face collision", gl);
@@ -35,11 +36,13 @@ bool ClothVertexBodyFaceCollisionSolver::initialize(const std::filesystem::path&
     max_contacts_per_vertex_location_ = gl.glGetUniformLocation(program_, "uMaxContactsPerVertex");
     collision_thickness_location_ = gl.glGetUniformLocation(program_, "uCollisionThickness");
     max_correction_length_location_ = gl.glGetUniformLocation(program_, "uMaxCorrectionLength");
+    ignored_body_part_mask_location_ = gl.glGetUniformLocation(program_, "uIgnoredBodyPartMask");
 
     if (cloth_vertex_count_location_ < 0 ||
         max_contacts_per_vertex_location_ < 0 ||
         collision_thickness_location_ < 0 ||
-        max_correction_length_location_ < 0) {
+        max_correction_length_location_ < 0 ||
+        ignored_body_part_mask_location_ < 0) {
         std::cerr << "Cloth vertex/body face collision compute shader missing required uniforms.\n";
         release(gl);
         return false;
@@ -47,6 +50,7 @@ bool ClothVertexBodyFaceCollisionSolver::initialize(const std::filesystem::path&
 
     collision_thickness_ = collision_thickness;
     max_correction_length_ = max_correction_length;
+    ignored_body_part_mask_ = ignored_body_part_mask;
     return true;
 }
 
@@ -85,6 +89,7 @@ void ClothVertexBodyFaceCollisionSolver::solve(const ClothMotionBufferView& moti
     gl.glProgramUniform1ui(program_, max_contacts_per_vertex_location_, collision_view.max_contacts_per_vertex);
     gl.glProgramUniform1f(program_, collision_thickness_location_, collision_thickness_);
     gl.glProgramUniform1f(program_, max_correction_length_location_, max_correction_length_);
+    gl.glProgramUniform1ui(program_, ignored_body_part_mask_location_, ignored_body_part_mask_);
 
     gl.glDispatchCompute(compute_group_count(motion_view.vertex_count, cloth_vertex_body_face_collision_local_size), 1, 1);
     gl.glMemoryBarrier(GL_SHADER_STORAGE_BARRIER_BIT | GL_VERTEX_ATTRIB_ARRAY_BARRIER_BIT);
@@ -99,6 +104,8 @@ void ClothVertexBodyFaceCollisionSolver::release(QOpenGLFunctions_4_5_Core& gl)
     max_contacts_per_vertex_location_ = -1;
     collision_thickness_location_ = -1;
     max_correction_length_location_ = -1;
+    ignored_body_part_mask_location_ = -1;
     collision_thickness_ = 0.0f;
     max_correction_length_ = 0.0f;
+    ignored_body_part_mask_ = 0;
 }

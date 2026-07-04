@@ -26,6 +26,7 @@ public:
                     const std::filesystem::path& pair_apply_shader_path,
                     float collision_thickness,
                     float max_correction_length,
+                    std::uint32_t ignored_body_part_mask,
                     QOpenGLFunctions_4_5_Core& gl);
     bool can_solve(const ClothMotionBufferView& motion_view,
                    const ClothCollisionStateBufferView& collision_view,
@@ -48,6 +49,7 @@ private:
         GLint triangle_count = -1;
         GLint max_pairs = -1;
         GLint thickness = -1;
+        GLint ignored_body_part_mask = -1;
     };
 
     struct AccumulateStage final {
@@ -79,4 +81,5 @@ private:
     ApplyStage apply_;
     float collision_thickness_ = 0.0f;
     float max_correction_length_ = 0.0f;
+    std::uint32_t ignored_body_part_mask_ = 0;
 };

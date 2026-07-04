@@ -283,6 +283,7 @@ std::uint32_t build_bvh_tree(BvhBuildContext& context, std::size_t begin, std::s
 
     BvhBuildNode& node = context.nodes.back();
     compute_node_bounds(context.elements, begin, end, node.min_bounds, node.max_bounds);
+    node.part_label_mask = compute_part_label_mask(context.elements, begin, end);
 
     const std::size_t element_count = end - begin;
     if (const auto middle = split_mixed_part_labels(context.elements, begin, end, context.split_by_part_labels)) {
@@ -332,7 +333,7 @@ void write_level_ordered_bvh_data(std::uint32_t source_root_node,
             const auto& build_node = build_nodes[build_node_index];
             BvhNode& node = result_nodes.emplace_back();
             node.min_bounds = glm::vec4(build_node.min_bounds, 0.0f);
-            node.max_bounds = glm::vec4(build_node.max_bounds, 0.0f);
+            node.max_bounds = glm::vec4(build_node.max_bounds, static_cast<float>(build_node.part_label_mask));
 
             if (build_node.element_count > 0u) {
                 node.first_element_index = build_node.first_element_index;
