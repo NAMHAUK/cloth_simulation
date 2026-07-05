@@ -15,7 +15,7 @@ public:
 
     bool is_initialized() const;
     bool initialize(const std::filesystem::path& shader_path, QOpenGLFunctions_4_5_Core& gl);
-    bool build(const ClothPositionBufferView& position_view,
+    bool build(const ClothMotionBufferView& motion_view,
                const AttachmentConstraintBufferView& attachment_view,
                const ConstraintRange& target_range,
                const TriangleGeometryResources& character_geometry,
@@ -24,7 +24,7 @@ public:
     void release(QOpenGLFunctions_4_5_Core& gl);
 
 private:
-    bool can_build(const ClothPositionBufferView& position_view,
+    bool can_build(const ClothMotionBufferView& motion_view,
                    const AttachmentConstraintBufferView& attachment_view,
                    const ConstraintRange& target_range,
                    const TriangleGeometryResources& character_geometry,

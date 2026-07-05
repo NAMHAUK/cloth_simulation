@@ -31,7 +31,8 @@ public:
     bool save_base_positions(QOpenGLFunctions_4_5_Core& gl);
     bool restore_base_positions(QOpenGLFunctions_4_5_Core& gl) const;
     void clear_base_positions(QOpenGLFunctions_4_5_Core& gl);
-    ClothPositionBufferView position_buffer_view() const;
+    ClothMotionBufferView motion_buffer_view() const;
+    ClothCollisionStateBufferView collision_state_buffer_view() const;
     void copy_current_positions_to_previous(QOpenGLFunctions_4_5_Core& gl) const;
     DistanceConstraintBufferView stretch_constraint_buffer_view() const;
     DistanceConstraintBufferView bending_constraint_buffer_view() const;

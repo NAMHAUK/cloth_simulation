@@ -22,6 +22,10 @@ envs/
 data/
 image/
 
+# Python cache
+__pycache__/
+*.py[cod]
+
 # Generated binaries and debug files
 *.exe
 *.dll

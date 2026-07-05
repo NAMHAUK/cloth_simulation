@@ -55,32 +55,32 @@ bool AttachmentTargetBuilder::initialize(const std::filesystem::path& shader_pat
     return true;
 }
 
-bool AttachmentTargetBuilder::can_build(const ClothPositionBufferView& position_view,
+bool AttachmentTargetBuilder::can_build(const ClothMotionBufferView& motion_view,
                                         const AttachmentConstraintBufferView& attachment_view,
                                         const ConstraintRange& target_range,
                                         const TriangleGeometryResources& character_geometry,
                                         const MeshBvhResources& character_bvh) const
 {
     return is_initialized() &&
-           is_valid_position_view(position_view) &&
+           is_valid_motion_view(motion_view) &&
            is_valid_attachment_target_range(attachment_view, target_range) &&
            is_valid_triangle_geometry_resource(character_geometry) &&
            is_valid_mesh_bvh_resource(character_bvh);
 }
 
-bool AttachmentTargetBuilder::build(const ClothPositionBufferView& position_view,
+bool AttachmentTargetBuilder::build(const ClothMotionBufferView& motion_view,
                                     const AttachmentConstraintBufferView& attachment_view,
                                     const ConstraintRange& target_range,
                                     const TriangleGeometryResources& character_geometry,
                                     const MeshBvhResources& character_bvh,
                                     QOpenGLFunctions_4_5_Core& gl) const
 {
-    if (!can_build(position_view, attachment_view, target_range, character_geometry, character_bvh)) {
+    if (!can_build(motion_view, attachment_view, target_range, character_geometry, character_bvh)) {
         return false;
     }
 
     gl.glUseProgram(program_);
-    gl.glBindBufferBase(GL_SHADER_STORAGE_BUFFER, current_positions_binding, position_view.current_position_buffer);
+    gl.glBindBufferBase(GL_SHADER_STORAGE_BUFFER, current_positions_binding, motion_view.current_position_buffer);
     gl.glBindBufferBase(GL_SHADER_STORAGE_BUFFER, attachment_indices_binding, attachment_view.attachment_index_buffer);
     gl.glBindBufferBase(GL_SHADER_STORAGE_BUFFER, attachment_barycentric_offsets_binding, attachment_view.barycentric_offset_buffer);
     gl.glBindBufferBase(GL_SHADER_STORAGE_BUFFER, character_triangle_geometry_binding, character_geometry.triangle_geometry_buffer);

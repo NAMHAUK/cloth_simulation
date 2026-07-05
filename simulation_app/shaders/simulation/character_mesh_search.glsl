@@ -1,15 +1,3 @@
-bool is_leaf_node(MeshBvhNode node)
-{
-    return node.triangle_count > 0u;
-}
-
-const uint max_bvh_stack_depth = 32u;
-
-float length_squared(vec3 value)
-{
-    return dot(value, value);
-}
-
 float squared_distance_to_bounds(vec3 point, in MeshBvhNode node)
 {
     vec3 clamped_point = clamp(point, node.min_bounds.xyz, node.max_bounds.xyz);

@@ -33,7 +33,8 @@ public:
 
 private:
     struct SimulationGpuViews final {
-        ClothPositionBufferView cloth_position;
+        ClothMotionBufferView cloth_motion;
+        ClothCollisionStateBufferView cloth_collision;
         TriangleGeometryResources character_geometry;
         MeshBvhResources character_bvh;
         DistanceConstraintBufferView stretch_constraints;

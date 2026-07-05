@@ -1,0 +1,222 @@
+#version 430 core
+
+layout(local_size_x = 128) in;
+
+layout(std430, binding = 0) buffer CurrentPositions {
+    float current_positions[];
+};
+
+layout(std430, binding = 1) buffer PreviousPositions {
+    float previous_positions[];
+};
+
+struct CharacterTriangleGeometry {
+    vec4 a;
+    vec4 b;
+    vec4 c;
+    vec4 normal;
+};
+
+struct MeshBvhNode {
+    vec4 min_bounds;
+    vec4 max_bounds;
+    uint left_child_index;
+    uint right_child_index;
+    uint first_triangle_index;
+    uint triangle_count;
+};
+
+layout(std430, binding = 2) readonly buffer CharacterTriangleGeometryBuffer {
+    CharacterTriangleGeometry triangle_geometry[];
+};
+
+layout(std430, binding = 3) readonly buffer MeshBvhNodeBuffer {
+    MeshBvhNode bvh_nodes[];
+};
+
+layout(std430, binding = 4) buffer CollisionStates {
+    vec4 collision_states[];
+};
+
+layout(std430, binding = 5) buffer ContactNormals {
+    vec4 contact_normals[];
+};
+
+uniform uint uRootNodeIndex;
+uniform uint uClothVertexCount;
+uniform uint uMaxContactsPerVertex;
+uniform float uCollisionThickness;
+uniform float uMaxCorrectionLength;
+
+const uint max_bvh_stack_depth = 32u;
+const float triangle_edge_tolerance = -1.0e-6;
+const float penetration_tolerance = 0.0005;
+const uint local_contact_capacity = 4u;
+
+bool is_leaf_node(MeshBvhNode node)
+{
+    return node.triangle_count > 0u;
+}
+
+#include "cloth_collision_common.glsl"
+
+bool point_inside_triangle(vec3 point, vec3 a, vec3 b, vec3 c, vec3 normal)
+{
+    vec3 ab = b - a;
+    vec3 bc = c - b;
+    vec3 ca = a - c;
+    return dot(cross(ab, point - a), normal) >= triangle_edge_tolerance &&
+           dot(cross(bc, point - b), normal) >= triangle_edge_tolerance &&
+           dot(cross(ca, point - c), normal) >= triangle_edge_tolerance;
+}
+
+bool compute_vertex_triangle_contact(vec3 previous_position,
+                                     vec3 current_position,
+                                     uint triangle_index,
+                                     out vec3 correction_normal,
+                                     out float penetration_depth)
+{
+    correction_normal = vec3(0.0, 1.0, 0.0);
+    penetration_depth = 0.0;
+
+    vec4 stored_normal = triangle_geometry[triangle_index].normal;
+    if (stored_normal.w == 0.0) {
+        return false;
+    }
+
+    vec3 a = triangle_geometry[triangle_index].a.xyz;
+    vec3 b = triangle_geometry[triangle_index].b.xyz;
+    vec3 c = triangle_geometry[triangle_index].c.xyz;
+    vec3 normal = stored_normal.xyz;
+
+    float previous_signed_distance = dot(previous_position - a, normal);
+    float current_signed_distance = dot(current_position - a, normal);
+
+    penetration_depth = uCollisionThickness - current_signed_distance - penetration_tolerance;
+    if (penetration_depth <= 0.0) {
+        return false;
+    }
+
+    bool swept_contact = false;
+    if (previous_signed_distance > uCollisionThickness) {
+        float denominator = current_signed_distance - previous_signed_distance;
+        float t = (uCollisionThickness - previous_signed_distance) / denominator;
+        vec3 hit_position = mix(previous_position, current_position, t);
+        vec3 surface_position = hit_position - normal * uCollisionThickness;
+        swept_contact = point_inside_triangle(surface_position, a, b, c, normal);
+    }
+
+    if (!swept_contact) {
+        vec3 surface_position = current_position - normal * current_signed_distance;
+        if (!point_inside_triangle(surface_position, a, b, c, normal)) {
+            return false;
+        }
+    }
+
+    correction_normal = normal;
+    return true;
+}
+
+void retain_contact(inout vec4 contacts[local_contact_capacity],
+                    inout uint retained_count,
+                    vec3 correction_normal,
+                    float weight)
+{
+    if (retained_count < local_contact_capacity) {
+        contacts[retained_count] = vec4(correction_normal, weight);
+        ++retained_count;
+        return;
+    }
+
+    uint weakest_index = 0u;
+    float weakest_weight = contacts[0].w;
+    for (uint contact_index = 1u; contact_index < local_contact_capacity; ++contact_index) {
+        if (contacts[contact_index].w < weakest_weight) {
+            weakest_index = contact_index;
+            weakest_weight = contacts[contact_index].w;
+        }
+    }
+
+    if (weight > weakest_weight) {
+        contacts[weakest_index] = vec4(correction_normal, weight);
+    }
+}
+
+void main()
+{
+    uint cloth_vertex_index = gl_GlobalInvocationID.x;
+    if (cloth_vertex_index >= uClothVertexCount) {
+        return;
+    }
+
+    uint cloth_vertex_base_index = cloth_vertex_index * 3u;
+    vec3 previous_position = vec3(previous_positions[cloth_vertex_base_index],
+                                  previous_positions[cloth_vertex_base_index + 1u],
+                                  previous_positions[cloth_vertex_base_index + 2u]);
+    vec3 current_position = vec3(current_positions[cloth_vertex_base_index],
+                                 current_positions[cloth_vertex_base_index + 1u],
+                                 current_positions[cloth_vertex_base_index + 2u]);
+    Aabb query_bounds = build_swept_aabb(previous_position, current_position);
+
+    vec3 accumulated_correction = vec3(0.0);
+    uint contact_count = 0u;
+    vec4 retained_contacts[local_contact_capacity];
+    uint retained_contact_count = 0u;
+
+    uint node_index_stack[max_bvh_stack_depth];
+    uint stack_count = 0u;
+
+    node_index_stack[stack_count++] = uRootNodeIndex;
+
+    while (stack_count > 0u) {
+        --stack_count;
+        uint current_node_index = node_index_stack[stack_count];
+        MeshBvhNode current_node = bvh_nodes[current_node_index];
+        if (!overlaps_bounds(query_bounds, current_node.min_bounds, current_node.max_bounds)) {
+            continue;
+        }
+
+        if (is_leaf_node(current_node)) {
+            for (uint triangle_offset = 0u; triangle_offset < current_node.triangle_count; ++triangle_offset) {
+                vec3 correction_normal;
+                float penetration_depth;
+                uint triangle_index = current_node.first_triangle_index + triangle_offset;
+                if (compute_vertex_triangle_contact(previous_position,
+                                                    current_position,
+                                                    triangle_index,
+                                                    correction_normal,
+                                                    penetration_depth)) {
+                    accumulated_correction += correction_normal * penetration_depth;
+                    ++contact_count;
+                    retain_contact(retained_contacts, retained_contact_count, correction_normal, penetration_depth);
+                }
+            }
+        } else {
+            node_index_stack[stack_count++] = current_node.left_child_index;
+            node_index_stack[stack_count++] = current_node.right_child_index;
+        }
+    }
+
+    if (contact_count == 0u) {
+        return;
+    }
+
+    vec3 final_correction = accumulated_correction / float(contact_count);
+    float correction_length_sq = dot(final_correction, final_correction);
+    float max_correction_length_sq = uMaxCorrectionLength * uMaxCorrectionLength;
+    if (correction_length_sq > max_correction_length_sq) {
+        final_correction *= uMaxCorrectionLength * inversesqrt(correction_length_sq);
+    }
+
+    vec3 corrected_position = current_position + final_correction;
+    current_positions[cloth_vertex_base_index] = corrected_position.x;
+    current_positions[cloth_vertex_base_index + 1u] = corrected_position.y;
+    current_positions[cloth_vertex_base_index + 2u] = corrected_position.z;
+
+    vec4 collision_state = collision_states[cloth_vertex_index];
+    collision_state.xyz += final_correction;
+    collision_states[cloth_vertex_index] = collision_state;
+    for (uint contact_index = 0u; contact_index < retained_contact_count; ++contact_index) {
+        store_contact(cloth_vertex_index, retained_contacts[contact_index].xyz, retained_contacts[contact_index].w);
+    }
+}

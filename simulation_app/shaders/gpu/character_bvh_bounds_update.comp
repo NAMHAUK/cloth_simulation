@@ -33,6 +33,7 @@ layout(std430, binding = 1) buffer MeshBvhNodeBuffer {
 
 uniform uint uFirstNode;
 uniform uint uNodeCount;
+uniform float uCollisionThickness;
 
 void update_leaf_bounds(uint node_index, MeshBvhNode node)
 {
@@ -47,8 +48,9 @@ void update_leaf_bounds(uint node_index, MeshBvhNode node)
         max_bounds = max(max_bounds, max(a, max(b, c)));
     }
 
-    bvh_nodes[node_index].min_bounds = vec4(min_bounds, 0.0);
-    bvh_nodes[node_index].max_bounds = vec4(max_bounds, 0.0);
+    vec3 thickness = vec3(uCollisionThickness);
+    bvh_nodes[node_index].min_bounds = vec4(min_bounds - thickness, 0.0);
+    bvh_nodes[node_index].max_bounds = vec4(max_bounds + thickness, 0.0);
 }
 
 void update_internal_bounds(uint node_index, MeshBvhNode node)
