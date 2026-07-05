@@ -27,7 +27,15 @@ layout(std430, binding = 0) readonly buffer CharacterTriangleGeometryBuffer {
     CharacterTriangleGeometry triangle_geometry[];
 };
 
-layout(std430, binding = 1) buffer BvhNodeBuffer {
+layout(std430, binding = 1) readonly buffer CharacterTriangleIndices {
+    uint triangle_indices[];
+};
+
+layout(std430, binding = 2) readonly buffer CharacterPreviousPositions {
+    float previous_positions[];
+};
+
+layout(std430, binding = 3) buffer BvhNodeBuffer {
     BvhNode bvh_nodes[];
 };
 
@@ -35,17 +43,31 @@ uniform uint uFirstNode;
 uniform uint uNodeCount;
 uniform float uCollisionThickness;
 
+vec3 load_previous_position(uint vertex_index)
+{
+    uint base_index = vertex_index * 3u;
+    return vec3(previous_positions[base_index],
+                previous_positions[base_index + 1u],
+                previous_positions[base_index + 2u]);
+}
+
 void update_leaf_bounds(uint node_index, BvhNode node)
 {
     vec3 min_bounds = vec3(3.402823e+38);
     vec3 max_bounds = vec3(-3.402823e+38);
     for (uint triangle_offset = 0u; triangle_offset < node.element_count; ++triangle_offset) {
         uint triangle_index = node.first_element_index + triangle_offset;
-        vec3 a = triangle_geometry[triangle_index].a.xyz;
-        vec3 b = triangle_geometry[triangle_index].b.xyz;
-        vec3 c = triangle_geometry[triangle_index].c.xyz;
-        min_bounds = min(min_bounds, min(a, min(b, c)));
-        max_bounds = max(max_bounds, max(a, max(b, c)));
+        uint index_base = triangle_index * 3u;
+        vec3 previous_a = load_previous_position(triangle_indices[index_base]);
+        vec3 previous_b = load_previous_position(triangle_indices[index_base + 1u]);
+        vec3 previous_c = load_previous_position(triangle_indices[index_base + 2u]);
+        vec3 current_a = triangle_geometry[triangle_index].a.xyz;
+        vec3 current_b = triangle_geometry[triangle_index].b.xyz;
+        vec3 current_c = triangle_geometry[triangle_index].c.xyz;
+        min_bounds = min(min_bounds, min(min(previous_a, min(previous_b, previous_c)),
+                                         min(current_a, min(current_b, current_c))));
+        max_bounds = max(max_bounds, max(max(previous_a, max(previous_b, previous_c)),
+                                         max(current_a, max(current_b, current_c))));
     }
 
     vec3 thickness = vec3(uCollisionThickness);

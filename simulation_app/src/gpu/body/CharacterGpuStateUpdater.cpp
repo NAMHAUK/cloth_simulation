@@ -217,7 +217,9 @@ void CharacterGpuStateUpdater::update_derived_pose_state(const std::vector<BvhNo
     const TriangleGeometryResources triangle_geometry = character_gpu_state_.character_triangle_geometry_resources();
 
     update_triangle_geometry(topology, vertex_view, triangle_geometry, gl);
-    bvh_bounds_updater_.update(triangle_geometry,
+    bvh_bounds_updater_.update(topology,
+                               vertex_view,
+                               triangle_geometry,
                                character_gpu_state_.character_bvh_resources(),
                                node_ranges_by_level,
                                collision_thickness,

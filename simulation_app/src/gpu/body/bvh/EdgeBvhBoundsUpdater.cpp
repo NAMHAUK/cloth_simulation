@@ -8,8 +8,9 @@
 
 namespace {
 constexpr GLuint body_current_positions_binding = 0;
-constexpr GLuint body_edge_indices_binding = 1;
-constexpr GLuint body_edge_bvh_nodes_binding = 2;
+constexpr GLuint body_previous_positions_binding = 1;
+constexpr GLuint body_edge_indices_binding = 2;
+constexpr GLuint body_edge_bvh_nodes_binding = 3;
 constexpr std::uint32_t edge_bvh_bounds_update_local_size = 128;
 }
 
@@ -24,6 +25,7 @@ bool EdgeBvhBoundsUpdater::can_update(const CharacterVertexBufferView& vertex_vi
                                       float collision_thickness) const
 {
     return is_initialized() &&
+           vertex_view.previous_position_buffer != 0 &&
            vertex_view.current_position_buffer != 0 &&
            vertex_view.vertex_count != 0 &&
            is_valid_edge_bvh_resource(body_edge_bvh) &&
@@ -63,6 +65,7 @@ void EdgeBvhBoundsUpdater::update(const CharacterVertexBufferView& vertex_view,
 
     gl.glUseProgram(program_);
     gl.glBindBufferBase(GL_SHADER_STORAGE_BUFFER, body_current_positions_binding, vertex_view.current_position_buffer);
+    gl.glBindBufferBase(GL_SHADER_STORAGE_BUFFER, body_previous_positions_binding, vertex_view.previous_position_buffer);
     gl.glBindBufferBase(GL_SHADER_STORAGE_BUFFER, body_edge_indices_binding, body_edge_bvh.edge_index_buffer);
     gl.glBindBufferBase(GL_SHADER_STORAGE_BUFFER, body_edge_bvh_nodes_binding, body_edge_bvh.node_buffer);
     gl.glProgramUniform1f(program_, collision_thickness_location_, collision_thickness);

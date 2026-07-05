@@ -7,7 +7,9 @@
 
 namespace {
 constexpr GLuint character_triangle_geometry_binding = 0;
-constexpr GLuint character_bvh_node_binding = 1;
+constexpr GLuint character_triangle_indices_binding = 1;
+constexpr GLuint character_previous_positions_binding = 2;
+constexpr GLuint character_bvh_node_binding = 3;
 constexpr std::uint32_t bvh_bounds_update_local_size = 128;
 }
 
@@ -16,13 +18,21 @@ bool TriangleBvhBoundsUpdater::is_initialized() const
     return program_ != 0;
 }
 
-bool TriangleBvhBoundsUpdater::can_update(const TriangleGeometryResources& character_geometry,
-                                      const TriangleBvhResources& character_bvh,
-                                      const std::vector<BvhNodeRange>& node_ranges_by_level,
-                                      float collision_thickness) const
+bool TriangleBvhBoundsUpdater::can_update(const CharacterMeshTopologyResources& topology,
+                                          const CharacterVertexBufferView& vertex_view,
+                                          const TriangleGeometryResources& character_geometry,
+                                          const TriangleBvhResources& character_bvh,
+                                          const std::vector<BvhNodeRange>& node_ranges_by_level,
+                                          float collision_thickness) const
 {
     return is_initialized() &&
+           is_valid_character_mesh_topology_resource(topology) &&
+           vertex_view.previous_position_buffer != 0 &&
+           vertex_view.current_position_buffer != 0 &&
+           vertex_view.vertex_count != 0 &&
            is_valid_triangle_geometry_resource(character_geometry) &&
+           topology.triangle_count == character_geometry.triangle_count &&
+           topology.vertex_count == vertex_view.vertex_count &&
            is_valid_triangle_bvh_resource(character_bvh) &&
            !node_ranges_by_level.empty() &&
            collision_thickness > 0.0f;
@@ -48,18 +58,22 @@ bool TriangleBvhBoundsUpdater::initialize(const std::filesystem::path& shader_pa
     return true;
 }
 
-void TriangleBvhBoundsUpdater::update(const TriangleGeometryResources& character_geometry,
-                                  const TriangleBvhResources& character_bvh,
-                                  const std::vector<BvhNodeRange>& node_ranges_by_level,
-                                  float collision_thickness,
-                                  QOpenGLFunctions_4_5_Core& gl) const
+void TriangleBvhBoundsUpdater::update(const CharacterMeshTopologyResources& topology,
+                                      const CharacterVertexBufferView& vertex_view,
+                                      const TriangleGeometryResources& character_geometry,
+                                      const TriangleBvhResources& character_bvh,
+                                      const std::vector<BvhNodeRange>& node_ranges_by_level,
+                                      float collision_thickness,
+                                      QOpenGLFunctions_4_5_Core& gl) const
 {
-    if (!can_update(character_geometry, character_bvh, node_ranges_by_level, collision_thickness)) {
+    if (!can_update(topology, vertex_view, character_geometry, character_bvh, node_ranges_by_level, collision_thickness)) {
         return;
     }
 
     gl.glUseProgram(program_);
     gl.glBindBufferBase(GL_SHADER_STORAGE_BUFFER, character_triangle_geometry_binding, character_geometry.triangle_geometry_buffer);
+    gl.glBindBufferBase(GL_SHADER_STORAGE_BUFFER, character_triangle_indices_binding, topology.triangle_index_buffer);
+    gl.glBindBufferBase(GL_SHADER_STORAGE_BUFFER, character_previous_positions_binding, vertex_view.previous_position_buffer);
     gl.glBindBufferBase(GL_SHADER_STORAGE_BUFFER, character_bvh_node_binding, character_bvh.node_buffer);
     gl.glProgramUniform1f(program_, collision_thickness_location_, collision_thickness);
 
