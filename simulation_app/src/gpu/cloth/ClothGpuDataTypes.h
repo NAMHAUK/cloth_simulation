@@ -11,7 +11,6 @@ struct ClothBufferSet final {
     GLuint previous_position = 0;
     GLuint velocity = 0;
     GLuint collision_state = 0;
-    GLuint contact_normal = 0;
     GLuint index = 0;
     GLuint adjacent_triangle_offsets = 0;
     GLuint adjacent_triangle_indices = 0;
@@ -49,9 +48,7 @@ struct ClothMotionBufferView final {
 
 struct ClothCollisionStateBufferView final {
     GLuint collision_state_buffer = 0;
-    GLuint contact_normal_buffer = 0;
     std::uint32_t vertex_count = 0;
-    std::uint32_t max_contacts_per_vertex = 0;
 };
 
 struct ClothMeshTopologyResources final {

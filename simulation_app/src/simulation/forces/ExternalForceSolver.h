@@ -28,7 +28,6 @@ public:
 private:
     GLuint program_ = 0;
     GLint vertex_count_location_ = -1;
-    GLint max_contacts_per_vertex_location_ = -1;
     GLint delta_time_location_ = -1;
     GLint external_acceleration_location_ = -1;
     GLint velocity_damping_location_ = -1;

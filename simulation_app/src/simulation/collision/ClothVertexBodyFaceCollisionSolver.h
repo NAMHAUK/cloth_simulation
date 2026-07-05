@@ -34,7 +34,6 @@ public:
 private:
     GLuint program_ = 0;
     GLint cloth_vertex_count_location_ = -1;
-    GLint max_contacts_per_vertex_location_ = -1;
     GLint collision_thickness_location_ = -1;
     GLint max_correction_length_location_ = -1;
     GLint ignored_body_part_mask_location_ = -1;

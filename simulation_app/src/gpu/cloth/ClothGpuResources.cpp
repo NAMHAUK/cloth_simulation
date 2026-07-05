@@ -1,8 +1,6 @@
 #include "gpu/cloth/ClothGpuResources.h"
 
 #include "scene/SceneState.h"
-#include "simulation/SimulationSettings.h"
-
 #include <algorithm>
 #include <cstddef>
 #include <cstdint>
@@ -27,16 +25,6 @@ GLsizeiptr scalar_byte_size(std::uint32_t count, std::size_t component_size)
     return static_cast<GLsizeiptr>(std::size_t{count} * component_size);
 }
 
-std::uint32_t contact_normal_offset(std::uint32_t vertex_offset)
-{
-    return vertex_offset * simulation_settings::max_contacts_per_vertex;
-}
-
-std::uint32_t contact_normal_capacity(std::uint32_t vertex_count)
-{
-    return vertex_count * simulation_settings::max_contacts_per_vertex;
-}
-
 void clear_dynamic_state_range(const ClothBufferSet& buffers,
                                std::uint32_t vertex_offset,
                                std::uint32_t vertex_count,
@@ -57,16 +45,9 @@ void clear_dynamic_state_range(const ClothBufferSet& buffers,
                                  GL_RGBA32F,
                                  scalar_byte_size(vertex_offset, sizeof(glm::vec4)),
                                  scalar_byte_size(vertex_count, sizeof(glm::vec4)),
-                                 GL_RGBA,
-                                 GL_FLOAT,
-                                 nullptr);
-    gl.glClearNamedBufferSubData(buffers.contact_normal,
-                                 GL_RGBA32F,
-                                 scalar_byte_size(contact_normal_offset(vertex_offset), sizeof(glm::vec4)),
-                                 scalar_byte_size(contact_normal_capacity(vertex_count), sizeof(glm::vec4)),
-                                 GL_RGBA,
-                                 GL_FLOAT,
-                                 nullptr);
+                                  GL_RGBA,
+                                  GL_FLOAT,
+                                  nullptr);
 }
 
 ClothBufferElementCounts make_expanded_capacity(const ClothBufferElementCounts& allocated_elements,
@@ -527,7 +508,6 @@ ClothBufferSet create_buffer_set(const ClothBufferElementCounts& allocated_eleme
     gl.glCreateBuffers(1, &buffers.previous_position);
     gl.glCreateBuffers(1, &buffers.velocity);
     gl.glCreateBuffers(1, &buffers.collision_state);
-    gl.glCreateBuffers(1, &buffers.contact_normal);
     gl.glCreateBuffers(1, &buffers.index);
     gl.glCreateBuffers(1, &buffers.adjacent_triangle_offsets);
     gl.glCreateBuffers(1, &buffers.adjacent_triangle_indices);
@@ -554,10 +534,6 @@ ClothBufferSet create_buffer_set(const ClothBufferElementCounts& allocated_eleme
                          GL_DYNAMIC_DRAW);
     gl.glNamedBufferData(buffers.collision_state,
                          scalar_byte_size(allocated_elements.vertex, sizeof(glm::vec4)),
-                         nullptr,
-                         GL_DYNAMIC_DRAW);
-    gl.glNamedBufferData(buffers.contact_normal,
-                         scalar_byte_size(contact_normal_capacity(allocated_elements.vertex), sizeof(glm::vec4)),
                          nullptr,
                          GL_DYNAMIC_DRAW);
     gl.glNamedBufferData(buffers.index,
@@ -619,8 +595,6 @@ void copy_used_buffer_data(const ClothBufferSet& old_buffers,
 
     const GLsizeiptr position_bytes = float_byte_size(used_elements.vertex, vertex_position_components);
     const GLsizeiptr collision_state_bytes = scalar_byte_size(used_elements.vertex, sizeof(glm::vec4));
-    const GLsizeiptr contact_normal_bytes = scalar_byte_size(contact_normal_capacity(used_elements.vertex),
-                                                             sizeof(glm::vec4));
     const GLsizeiptr index_bytes = scalar_byte_size(used_elements.index, sizeof(std::uint32_t));
     const GLsizeiptr adjacent_triangle_offsets_bytes = scalar_byte_size(used_elements.vertex + 1u, sizeof(std::uint32_t));
     const GLsizeiptr adjacent_triangle_indices_bytes = scalar_byte_size(used_elements.adjacency_entry, sizeof(std::uint32_t));
@@ -642,13 +616,6 @@ void copy_used_buffer_data(const ClothBufferSet& old_buffers,
                                     0,
                                     0,
                                     collision_state_bytes);
-    }
-    if (contact_normal_bytes > 0) {
-        gl.glCopyNamedBufferSubData(old_buffers.contact_normal,
-                                    next_buffers.contact_normal,
-                                    0,
-                                    0,
-                                    contact_normal_bytes);
     }
     if (index_bytes > 0) {
         gl.glCopyNamedBufferSubData(old_buffers.index, next_buffers.index, 0, 0, index_bytes);
@@ -722,12 +689,10 @@ bool copy_dynamic_state_buffers(const GarmentBufferRanges& old_data,
         old_buffers.previous_position == 0 ||
         old_buffers.velocity == 0 ||
         old_buffers.collision_state == 0 ||
-        old_buffers.contact_normal == 0 ||
         next_buffers.current_position == 0 ||
         next_buffers.previous_position == 0 ||
         next_buffers.velocity == 0 ||
-        next_buffers.collision_state == 0 ||
-        next_buffers.contact_normal == 0) {
+        next_buffers.collision_state == 0) {
         return false;
     }
 
@@ -737,12 +702,6 @@ bool copy_dynamic_state_buffers(const GarmentBufferRanges& old_data,
     const GLsizeiptr old_vec4_offset_bytes = scalar_byte_size(old_data.vertex_offset, sizeof(glm::vec4));
     const GLsizeiptr next_vec4_offset_bytes = scalar_byte_size(next_data.vertex_offset, sizeof(glm::vec4));
     const GLsizeiptr vec4_size_bytes = scalar_byte_size(next_data.vertex_count, sizeof(glm::vec4));
-    const GLsizeiptr old_contact_normal_offset_bytes = scalar_byte_size(contact_normal_offset(old_data.vertex_offset),
-                                                                        sizeof(glm::vec4));
-    const GLsizeiptr next_contact_normal_offset_bytes = scalar_byte_size(contact_normal_offset(next_data.vertex_offset),
-                                                                         sizeof(glm::vec4));
-    const GLsizeiptr contact_normal_size_bytes = scalar_byte_size(contact_normal_capacity(next_data.vertex_count),
-                                                                  sizeof(glm::vec4));
 
     gl.glCopyNamedBufferSubData(old_buffers.current_position,
                                 next_buffers.current_position,
@@ -764,11 +723,6 @@ bool copy_dynamic_state_buffers(const GarmentBufferRanges& old_data,
                                 old_vec4_offset_bytes,
                                 next_vec4_offset_bytes,
                                 vec4_size_bytes);
-    gl.glCopyNamedBufferSubData(old_buffers.contact_normal,
-                                next_buffers.contact_normal,
-                                old_contact_normal_offset_bytes,
-                                next_contact_normal_offset_bytes,
-                                contact_normal_size_bytes);
     return true;
 }
 
@@ -1050,7 +1004,6 @@ bool ClothGpuResources::restore_base_positions(QOpenGLFunctions_4_5_Core& gl) co
         buffers_.previous_position == 0 ||
         buffers_.velocity == 0 ||
         buffers_.collision_state == 0 ||
-        buffers_.contact_normal == 0 ||
         used_elements_.vertex == 0 ||
         base_position_vertex_count_ != used_elements_.vertex) {
         return false;
@@ -1260,7 +1213,6 @@ void ClothGpuResources::delete_buffer_set(ClothBufferSet& buffers, QOpenGLFuncti
     gl.glDeleteBuffers(1, &buffers.previous_position);
     gl.glDeleteBuffers(1, &buffers.velocity);
     gl.glDeleteBuffers(1, &buffers.collision_state);
-    gl.glDeleteBuffers(1, &buffers.contact_normal);
     gl.glDeleteBuffers(1, &buffers.current_position);
     gl.glDeleteVertexArrays(1, &buffers.vao);
 
@@ -1337,7 +1289,6 @@ bool ClothGpuResources::has_gpu_objects() const
            buffers_.previous_position != 0 &&
            buffers_.velocity != 0 &&
            buffers_.collision_state != 0 &&
-           buffers_.contact_normal != 0 &&
            buffers_.index != 0 &&
            buffers_.adjacent_triangle_offsets != 0 &&
            buffers_.adjacent_triangle_indices != 0 &&
@@ -1380,9 +1331,7 @@ ClothCollisionStateBufferView ClothGpuResources::collision_state_buffer_view() c
 {
     ClothCollisionStateBufferView view;
     view.collision_state_buffer = buffers_.collision_state;
-    view.contact_normal_buffer = buffers_.contact_normal;
     view.vertex_count = used_elements_.vertex;
-    view.max_contacts_per_vertex = simulation_settings::max_contacts_per_vertex;
     return view;
 }
 
@@ -1392,7 +1341,6 @@ void ClothGpuResources::copy_current_positions_to_previous(QOpenGLFunctions_4_5_
         buffers_.previous_position == 0 ||
         buffers_.velocity == 0 ||
         buffers_.collision_state == 0 ||
-        buffers_.contact_normal == 0 ||
         used_elements_.vertex == 0) {
         return;
     }

@@ -24,7 +24,6 @@ public:
 private:
     GLuint program_ = 0;
     GLint vertex_count_location_ = -1;
-    GLint max_contacts_per_vertex_location_ = -1;
     GLint floor_height_location_ = -1;
     float floor_height_ = 0.0f;
 };

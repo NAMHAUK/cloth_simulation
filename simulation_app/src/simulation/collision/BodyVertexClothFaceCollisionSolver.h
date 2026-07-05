@@ -50,14 +50,11 @@ private:
         GLuint program = 0;
         GLint max_pairs = -1;
         GLint thickness = -1;
-        GLint contact_candidate_capacity = -1;
     };
 
     struct ApplyStage final {
         GLuint program = 0;
         GLint vertex_count = -1;
-        GLint max_contacts = -1;
-        GLint contact_candidate_capacity = -1;
         GLint max_correction = -1;
     };
 

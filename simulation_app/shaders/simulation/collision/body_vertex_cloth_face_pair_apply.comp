@@ -10,37 +10,14 @@ layout(std430, binding = 1) buffer CollisionStates {
     vec4 collision_states[];
 };
 
-layout(std430, binding = 2) buffer ContactNormals {
-    vec4 contact_normals[];
-};
-
-layout(std430, binding = 3) readonly buffer CorrectionSums {
+layout(std430, binding = 2) readonly buffer CorrectionSums {
     ivec4 correction_sums[];
 };
 
-layout(std430, binding = 4) readonly buffer ContactCandidateHeads {
-    uint contact_candidate_heads[];
-};
-
-layout(std430, binding = 5) readonly buffer ContactCandidates {
-    vec4 contact_candidates[];
-};
-
-layout(std430, binding = 6) readonly buffer ContactCandidateNext {
-    uint contact_candidate_next[];
-};
-
 uniform uint uVertexCount;
-uniform uint uMaxContactsPerVertex;
-uniform uint uMaxContactCandidateCount;
 uniform float uMaxCorrectionLength;
 
-const uint invalid_contact_candidate = 0xffffffffu;
-const uint local_contact_capacity = 4u;
 const float correction_fixed_point_scale = 1000000.0;
-const float contact_normal_store_epsilon = 1.0e-8;
-
-#include "cloth_collision_common.glsl"
 
 vec3 read_cloth_current_position(uint vertex_index)
 {
@@ -79,59 +56,6 @@ void apply_position_correction(uint vertex_index, vec3 correction)
     collision_states[vertex_index] = collision_state;
 }
 
-void retain_contact(inout vec4 contacts[local_contact_capacity],
-                    inout uint retained_count,
-                    vec3 normal,
-                    float weight)
-{
-    if (retained_count < local_contact_capacity) {
-        contacts[retained_count] = vec4(normal, weight);
-        ++retained_count;
-        return;
-    }
-
-    uint weakest_index = 0u;
-    float weakest_weight = contacts[0].w;
-    for (uint contact_index = 1u; contact_index < local_contact_capacity; ++contact_index) {
-        if (contacts[contact_index].w < weakest_weight) {
-            weakest_index = contact_index;
-            weakest_weight = contacts[contact_index].w;
-        }
-    }
-
-    if (weight > weakest_weight) {
-        contacts[weakest_index] = vec4(normal, weight);
-    }
-}
-
-void merge_contact_candidates(uint vertex_index, float clamp_scale)
-{
-    if (clamp_scale <= 0.0) {
-        return;
-    }
-
-    vec4 retained_contacts[local_contact_capacity];
-    uint retained_contact_count = 0u;
-    uint candidate_index = contact_candidate_heads[vertex_index];
-    uint visited_count = 0u;
-    while (candidate_index != invalid_contact_candidate &&
-           candidate_index < uMaxContactCandidateCount &&
-           visited_count < uMaxContactCandidateCount) {
-        vec4 candidate = contact_candidates[candidate_index];
-        float applied_weight = candidate.w * clamp_scale;
-        if (applied_weight > contact_normal_store_epsilon) {
-            retain_contact(retained_contacts, retained_contact_count, candidate.xyz, applied_weight);
-        }
-
-        candidate_index = contact_candidate_next[candidate_index];
-        ++visited_count;
-    }
-
-    for (uint contact_index = 0u; contact_index < retained_contact_count; ++contact_index) {
-        store_contact(vertex_index, retained_contacts[contact_index].xyz, retained_contacts[contact_index].w);
-    }
-}
-
 void main()
 {
     uint vertex_index = gl_GlobalInvocationID.x;
@@ -146,10 +70,6 @@ void main()
 
     vec3 accumulated_correction = vec3(accumulated_correction_sum) / correction_fixed_point_scale;
     vec3 final_correction = clamp_correction(accumulated_correction);
-    float accumulated_length_sq = dot(accumulated_correction, accumulated_correction);
-    float clamp_scale = accumulated_length_sq > 0.0 ?
-        length(final_correction) * inversesqrt(accumulated_length_sq) : 0.0;
 
     apply_position_correction(vertex_index, final_correction);
-    merge_contact_candidates(vertex_index, clamp_scale);
 }

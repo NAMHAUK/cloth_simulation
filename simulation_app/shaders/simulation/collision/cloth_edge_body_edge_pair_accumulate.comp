@@ -38,31 +38,13 @@ layout(std430, binding = 8) buffer CorrectionSums {
     ivec4 correction_sums[];
 };
 
-layout(std430, binding = 9) buffer ContactCandidateHeads {
-    uint contact_candidate_heads[];
-};
-
-layout(std430, binding = 10) buffer ContactCandidateCount {
-    uint contact_candidate_count;
-};
-
-layout(std430, binding = 11) buffer ContactCandidates {
-    vec4 contact_candidates[];
-};
-
-layout(std430, binding = 12) buffer ContactCandidateNext {
-    uint contact_candidate_next[];
-};
-
 uniform uint uMaxPairCount;
 uniform float uCollisionThickness;
-uniform uint uMaxContactCandidateCount;
 
 const float edge_endpoint_tolerance = 1.0e-4;
 const float penetration_tolerance = 0.0005;
 const float ccd_parallel_epsilon = 1.0e-8;
 const float pbd_denominator_epsilon = 1.0e-8;
-const float contact_normal_store_epsilon = 1.0e-8;
 const float correction_fixed_point_scale = 1000000.0;
 const float correction_component_limit = 1073741823.0;
 
@@ -307,22 +289,6 @@ void accumulate_vertex_correction(uint vertex_index, vec3 correction)
     atomicAdd(correction_sums[vertex_index].z, encoded_correction.z);
 }
 
-void store_contact_candidate(uint vertex_index, vec3 normal, float weight)
-{
-    if (weight <= contact_normal_store_epsilon) {
-        return;
-    }
-
-    uint candidate_index = atomicAdd(contact_candidate_count, 1u);
-    if (candidate_index >= uMaxContactCandidateCount) {
-        return;
-    }
-
-    contact_candidates[candidate_index] = vec4(normal, weight);
-    uint previous_head = atomicExchange(contact_candidate_heads[vertex_index], candidate_index);
-    contact_candidate_next[candidate_index] = previous_head;
-}
-
 void accumulate_contact_for_vertex(uint vertex_index,
                                    EdgeContact contact,
                                    float vertex_weight,
@@ -334,7 +300,6 @@ void accumulate_contact_for_vertex(uint vertex_index,
 
     vec3 correction = contact.normal * contact.depth * vertex_weight * inverse_denominator;
     accumulate_vertex_correction(vertex_index, correction);
-    store_contact_candidate(vertex_index, contact.normal, length(correction));
 }
 
 void main()

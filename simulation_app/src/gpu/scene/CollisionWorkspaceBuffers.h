@@ -10,14 +10,9 @@ struct CollisionWorkspaceBufferView final {
     GLuint edge_pair_record_buffer = 0;
     GLuint edge_pair_count_buffer = 0;
     GLuint correction_sum_buffer = 0;
-    GLuint contact_candidate_head_buffer = 0;
-    GLuint contact_candidate_count_buffer = 0;
-    GLuint contact_candidate_buffer = 0;
-    GLuint contact_candidate_next_buffer = 0;
     std::uint32_t vertex_capacity = 0;
     std::uint32_t pair_capacity = 0;
     std::uint32_t edge_pair_capacity = 0;
-    std::uint32_t contact_candidate_capacity = 0;
 
     void clear(QOpenGLFunctions_4_5_Core& gl) const;
 };
@@ -33,7 +28,6 @@ public:
     bool ensure_capacity(std::uint32_t vertex_count,
                           std::uint32_t triangle_count,
                           std::uint32_t edge_count,
-                          std::uint32_t max_contacts_per_vertex,
                           QOpenGLFunctions_4_5_Core& gl);
     CollisionWorkspaceBufferView view() const;
     void release(QOpenGLFunctions_4_5_Core& gl);

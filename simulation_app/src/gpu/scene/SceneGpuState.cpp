@@ -151,13 +151,11 @@ void SceneGpuState::update_garment_meshes(const SceneState& scene, QOpenGLFuncti
     cloth_gpu_state_.update_garment_buffers(scene.garments(), gl);
     if (cloth_gpu_state_.is_initialized()) {
         const ClothMotionBufferView motion_view = cloth_gpu_state_.motion_buffer_view();
-        const ClothCollisionStateBufferView collision_view = cloth_gpu_state_.collision_state_buffer_view();
         const ClothMeshTopologyResources topology = cloth_gpu_state_.mesh_topology_resources();
         const DistanceConstraintBufferView stretch_constraints = cloth_gpu_state_.stretch_constraint_buffer_view();
         if (!collision_workspace_buffers_.ensure_capacity(motion_view.vertex_count,
                                                           topology.triangle_count,
                                                           stretch_constraints.constraint_count,
-                                                          collision_view.max_contacts_per_vertex,
                                                           gl)) {
             std::cerr << "Failed to prepare collision workspace buffers.\n";
         }

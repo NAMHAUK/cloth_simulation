@@ -18,12 +18,7 @@ layout(std430, binding = 3) buffer CollisionStates {
     vec4 collision_states[];
 };
 
-layout(std430, binding = 4) buffer ContactNormals {
-    vec4 contact_normals[];
-};
-
 uniform uint uVertexCount;
-uniform uint uMaxContactsPerVertex;
 uniform float uDeltaTime;
 uniform vec3 uExternalAcceleration;
 uniform float uVelocityDamping;
@@ -58,19 +53,10 @@ void main()
     vec3 solved_velocity = (current - previous - collision_state.xyz) / uDeltaTime;
 
     
-    // contact normal 안쪽 방향 속도 제거
+    // remove inward velocity along the pushout direction
     float pushout_length_sq = dot(collision_state.xyz, collision_state.xyz);
     if (pushout_length_sq > pushout_normal_epsilon) {
         remove_inward_contact_velocity(solved_velocity, collision_state.xyz * inversesqrt(pushout_length_sq));
-    }
-
-    uint stored_contact_count = min(uint(collision_state.w + 0.5), uMaxContactsPerVertex);
-    uint contact_base = vertex_index * uMaxContactsPerVertex;
-    //if (uMaxContactsPerVertex == 0xffffffffu) {
-    //    remove_inward_contact_velocity(solved_velocity, contact_normals[contact_base].xyz);
-    //}   
-    for (uint contact_index = 0u; contact_index < stored_contact_count; ++contact_index) {
-        remove_inward_contact_velocity(solved_velocity, contact_normals[contact_base + contact_index].xyz);
     }
 
     collision_states[vertex_index] = vec4(0.0);
