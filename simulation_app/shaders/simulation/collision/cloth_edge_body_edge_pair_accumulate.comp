@@ -72,6 +72,18 @@ struct EdgeContact {
     float depth;
 };
 
+struct SegmentCandidateState {
+    vec3 p0;
+    vec3 d1;
+    vec3 q0;
+    vec3 d2;
+    float best_distance_sq;
+    float s;
+    float t;
+    vec3 p;
+    vec3 q;
+};
+
 vec3 read_cloth_current_position(uint vertex_index)
 {
     uint base_index = vertex_index * 3u;
@@ -104,6 +116,22 @@ vec3 read_body_previous_position(uint vertex_index)
                 body_previous_positions[base_index + 2u]);
 }
 
+void retain_closest_segment_candidate(float candidate_s, float candidate_t, inout SegmentCandidateState state)
+{
+    vec3 candidate_p = state.p0 + state.d1 * candidate_s;
+    vec3 candidate_q = state.q0 + state.d2 * candidate_t;
+    vec3 candidate_delta = candidate_p - candidate_q;
+    float candidate_distance_sq = dot(candidate_delta, candidate_delta);
+
+    if (candidate_distance_sq < state.best_distance_sq) {
+        state.best_distance_sq = candidate_distance_sq;
+        state.s = candidate_s;
+        state.t = candidate_t;
+        state.p = candidate_p;
+        state.q = candidate_q;
+    }
+}
+
 bool closest_segment_points(vec3 p0, vec3 p1, vec3 q0, vec3 q1, out float s, out float t, out vec3 p, out vec3 q)
 {
     vec3 d1 = p1 - p0;
@@ -120,7 +148,19 @@ bool closest_segment_points(vec3 p0, vec3 p1, vec3 q0, vec3 q1, out float s, out
     float f = dot(d2, r);
     float denominator = a * e - b * b;
     if (abs(denominator) <= pbd_denominator_epsilon) {
-        return false;
+        SegmentCandidateState state = SegmentCandidateState(p0, d1, q0, d2, 3.402823e+38, 0.0, 0.0, p0, q0);
+
+        retain_closest_segment_candidate(0.0, clamp(f / e, 0.0, 1.0), state);
+        retain_closest_segment_candidate(1.0, clamp(dot(d2, p1 - q0) / e, 0.0, 1.0), state);
+        retain_closest_segment_candidate(clamp(-c / a, 0.0, 1.0), 0.0, state);
+        retain_closest_segment_candidate(clamp((b - c) / a, 0.0, 1.0), 1.0, state);
+
+        s = state.s;
+        t = state.t;
+        p = state.p;
+        q = state.q;
+
+        return true;
     }
 
     s = clamp((b * f - c * e) / denominator, 0.0, 1.0);
@@ -198,15 +238,33 @@ bool compute_pair_contact(uint pair_index, out uvec2 cloth_vertices, out EdgeCon
         return false;
     }
 
-    if (!is_finite_edge_contact(current_cloth_t, current_body_t)) {
-        return false;
-    }
-
     vec3 previous_delta = previous_cloth_point - previous_body_point;
     vec3 current_delta = current_cloth_point - current_body_point;
     float previous_distance = length(previous_delta);
     float current_distance = length(current_delta);
-    if (previous_distance <= uCollisionThickness || current_distance >= uCollisionThickness - penetration_tolerance) {
+    if (previous_distance <= uCollisionThickness) {
+        if (current_distance < uCollisionThickness - penetration_tolerance) {
+            vec3 normal = current_delta;
+            float normal_length_sq = dot(normal, normal);
+            if (normal_length_sq <= ccd_parallel_epsilon) {
+                vec3 previous_normal = previous_delta;
+                float previous_normal_length_sq = dot(previous_normal, previous_normal);
+                if (previous_normal_length_sq <= ccd_parallel_epsilon) {
+                    return false;
+                }
+                normal = previous_normal * inversesqrt(previous_normal_length_sq);
+            } else {
+                normal *= inversesqrt(normal_length_sq);
+            }
+
+            contact.normal = normal;
+            contact.cloth_t = current_cloth_t;
+            contact.depth = uCollisionThickness - dot(current_delta, normal) - penetration_tolerance;
+            return contact.depth > 0.0;
+        }
+        return false;
+    }
+    if (current_distance >= uCollisionThickness - penetration_tolerance) {
         return false;
     }
 

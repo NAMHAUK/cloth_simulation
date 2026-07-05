@@ -12,7 +12,7 @@
 
 namespace {
 
-constexpr std::uint32_t gpu_timing_log_interval = 512u;
+constexpr std::uint32_t gpu_timing_log_interval = 200u;
 
 float character_frame_time(std::uint64_t motion_step_index, std::uint32_t substep)
 {

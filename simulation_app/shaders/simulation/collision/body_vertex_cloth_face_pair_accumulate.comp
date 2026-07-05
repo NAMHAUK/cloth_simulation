@@ -163,11 +163,29 @@ bool compute_pair_contact(uint pair_index, out uvec3 cloth_vertices, out Accepte
     vec3 previous_body_contact = read_body_previous_position(body_vertex_id) + contact.normal * uCollisionThickness;
     vec3 current_body_contact = read_body_current_position(body_vertex_id) + contact.normal * uCollisionThickness;
 
-    // Reject pairs without front-to-back crossing
+    // Reject pairs without front-to-back crossing unless the vertex is already penetrating now.
     float previous_signed_distance = dot(previous_body_contact - previous_a, cloth_normal);
     float current_signed_distance = dot(current_body_contact - current_a, cloth_normal);
-    if (previous_signed_distance <= 0.0 || current_signed_distance > 0.0) {
+
+    if (current_signed_distance > 0.0) {
         return false;
+    }
+
+    if (previous_signed_distance <= 0.0) {
+        if (!compute_barycentric(current_body_contact, current_a, current_b, current_c, contact.barycentric)) {
+            return false;
+        }
+
+        vec3 current_cloth_contact = current_a * contact.barycentric.x
+                                   + current_b * contact.barycentric.y
+                                   + current_c * contact.barycentric.z;
+        float current_depth = dot(current_body_contact - current_cloth_contact, contact.normal) - penetration_tolerance;
+        if (current_depth <= 0.0) {
+            return false;
+        }
+
+        contact.depth = current_depth;
+        return true;
     }
 
     float distance_delta = current_signed_distance - previous_signed_distance;

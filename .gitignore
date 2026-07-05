@@ -13,6 +13,7 @@ out/
 AGENTS.md
 PLAN.md
 HISTORY.md
+PERFORMANCE_LOG.md
 
 # Local dependencies/environments
 vcpkg/
