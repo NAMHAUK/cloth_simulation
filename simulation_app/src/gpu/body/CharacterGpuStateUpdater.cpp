@@ -2,6 +2,7 @@
 
 #include "gpu/body/CharacterGpuDataTypes.h"
 #include "gpu/body/CharacterGpuResources.h"
+#include "gpu/body/bvh/EdgeBvhBoundsUpdater.h"
 #include "gpu/body/bvh/TriangleBvhBoundsUpdater.h"
 #include "gpu/body/bvh/VertexBvhBoundsUpdater.h"
 #include "gpu/scene/NormalUpdater.h"
@@ -60,10 +61,12 @@ bool is_valid_triangle_geometry_input(const CharacterMeshTopologyResources& topo
 CharacterGpuStateUpdater::CharacterGpuStateUpdater(CharacterGpuResources& character_gpu_state,
                                                    TriangleBvhBoundsUpdater& bvh_bounds_updater,
                                                    VertexBvhBoundsUpdater& vertex_bvh_bounds_updater,
+                                                   EdgeBvhBoundsUpdater& edge_bvh_bounds_updater,
                                                    NormalUpdater& normal_updater)
     : character_gpu_state_(character_gpu_state),
       bvh_bounds_updater_(bvh_bounds_updater),
       vertex_bvh_bounds_updater_(vertex_bvh_bounds_updater),
+      edge_bvh_bounds_updater_(edge_bvh_bounds_updater),
       normal_updater_(normal_updater)
 {
 }
@@ -110,6 +113,7 @@ bool CharacterGpuStateUpdater::initialize(const std::filesystem::path& position_
 void CharacterGpuStateUpdater::initialize_character_pose_state(const CharacterFrameInterpolation& interpolation,
                                                               const std::vector<BvhNodeRange>& node_ranges_by_level,
                                                               const std::vector<BvhNodeRange>& body_vertex_node_ranges_by_level,
+                                                              const std::vector<BvhNodeRange>& body_edge_node_ranges_by_level,
                                                               float collision_thickness,
                                                               QOpenGLFunctions_4_5_Core& gl) const
 {
@@ -121,12 +125,13 @@ void CharacterGpuStateUpdater::initialize_character_pose_state(const CharacterFr
     const CharacterVertexBufferView vertex_view = character_gpu_state_.character_vertex_buffer_view();
     write_current_position_buffer(interpolation, vertex_view, gl);
     copy_current_position_to_previous(vertex_view, gl);
-    update_derived_pose_state(node_ranges_by_level, body_vertex_node_ranges_by_level, collision_thickness, gl);
+    update_derived_pose_state(node_ranges_by_level, body_vertex_node_ranges_by_level, body_edge_node_ranges_by_level, collision_thickness, gl);
 }
 
 void CharacterGpuStateUpdater::update_character_pose_state(const CharacterFrameInterpolation& interpolation,
                                                           const std::vector<BvhNodeRange>& node_ranges_by_level,
                                                           const std::vector<BvhNodeRange>& body_vertex_node_ranges_by_level,
+                                                          const std::vector<BvhNodeRange>& body_edge_node_ranges_by_level,
                                                           float collision_thickness,
                                                           QOpenGLFunctions_4_5_Core& gl) const
 {
@@ -138,7 +143,7 @@ void CharacterGpuStateUpdater::update_character_pose_state(const CharacterFrameI
     const CharacterVertexBufferView vertex_view = character_gpu_state_.character_vertex_buffer_view();
     copy_current_position_to_previous(vertex_view, gl);
     write_current_position_buffer(interpolation, vertex_view, gl);
-    update_derived_pose_state(node_ranges_by_level, body_vertex_node_ranges_by_level, collision_thickness, gl);
+    update_derived_pose_state(node_ranges_by_level, body_vertex_node_ranges_by_level, body_edge_node_ranges_by_level, collision_thickness, gl);
 }
 
 void CharacterGpuStateUpdater::write_current_position_buffer(const CharacterFrameInterpolation& interpolation,
@@ -203,6 +208,7 @@ void CharacterGpuStateUpdater::update_triangle_geometry(const CharacterMeshTopol
 
 void CharacterGpuStateUpdater::update_derived_pose_state(const std::vector<BvhNodeRange>& node_ranges_by_level,
                                                          const std::vector<BvhNodeRange>& body_vertex_node_ranges_by_level,
+                                                         const std::vector<BvhNodeRange>& body_edge_node_ranges_by_level,
                                                          float collision_thickness,
                                                          QOpenGLFunctions_4_5_Core& gl) const
 {
@@ -221,6 +227,11 @@ void CharacterGpuStateUpdater::update_derived_pose_state(const std::vector<BvhNo
                                       body_vertex_node_ranges_by_level,
                                       collision_thickness,
                                       gl);
+    edge_bvh_bounds_updater_.update(vertex_view,
+                                    character_gpu_state_.body_edge_bvh_resources(),
+                                    body_edge_node_ranges_by_level,
+                                    collision_thickness,
+                                    gl);
     normal_updater_.update_character_normals(topology, character_gpu_state_.mesh_normal_resources(), gl);
 }
 

@@ -38,3 +38,12 @@ struct VertexBvhData final {
 
     bool is_valid(std::uint32_t vertex_count) const;
 };
+
+struct EdgeBvhData final {
+    std::vector<std::uint32_t> edge_vertex_indices;
+    std::vector<BvhNode> nodes;
+    std::vector<BvhNodeRange> node_ranges_by_level;
+
+    std::uint32_t edge_count() const;
+    bool is_valid() const;
+};

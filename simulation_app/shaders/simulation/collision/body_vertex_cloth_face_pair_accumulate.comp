@@ -38,17 +38,25 @@ layout(std430, binding = 8) buffer CorrectionSums {
     ivec4 correction_sums[];
 };
 
-layout(std430, binding = 9) buffer ContactCandidateCounts {
-    uint contact_candidate_counts[];
+layout(std430, binding = 9) buffer ContactCandidateHeads {
+    uint contact_candidate_heads[];
 };
 
-layout(std430, binding = 10) buffer ContactCandidates {
+layout(std430, binding = 10) buffer ContactCandidateCount {
+    uint contact_candidate_count;
+};
+
+layout(std430, binding = 11) buffer ContactCandidates {
     vec4 contact_candidates[];
+};
+
+layout(std430, binding = 12) buffer ContactCandidateNext {
+    uint contact_candidate_next[];
 };
 
 uniform uint uMaxPairCount;
 uniform float uCollisionThickness;
-uniform uint uContactCandidateCapacityPerVertex;
+uniform uint uMaxContactCandidateCount;
 
 const float triangle_edge_tolerance = -1.0e-6;
 const float penetration_tolerance = 0.0005;
@@ -208,13 +216,14 @@ void store_contact_candidate(uint vertex_index, vec3 normal, float weight)
         return;
     }
 
-    uint candidate_index = atomicAdd(contact_candidate_counts[vertex_index], 1u);
-    if (candidate_index >= uContactCandidateCapacityPerVertex) {
+    uint candidate_index = atomicAdd(contact_candidate_count, 1u);
+    if (candidate_index >= uMaxContactCandidateCount) {
         return;
     }
 
-    uint contact_base = vertex_index * uContactCandidateCapacityPerVertex;
-    contact_candidates[contact_base + candidate_index] = vec4(normal, weight);
+    contact_candidates[candidate_index] = vec4(normal, weight);
+    uint previous_head = atomicExchange(contact_candidate_heads[vertex_index], candidate_index);
+    contact_candidate_next[candidate_index] = previous_head;
 }
 
 void accumulate_contact_for_vertex(uint vertex_index,

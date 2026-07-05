@@ -28,6 +28,8 @@ uniform float uDeltaTime;
 uniform vec3 uExternalAcceleration;
 uniform float uVelocityDamping;
 
+const float pushout_normal_epsilon = 1.0e-20;
+
 void remove_inward_contact_velocity(inout vec3 velocity, vec3 unit_normal)
 {
     float normal_velocity = dot(velocity, unit_normal);
@@ -55,9 +57,18 @@ void main()
     vec4 collision_state = collision_states[vertex_index];
     vec3 solved_velocity = (current - previous - collision_state.xyz) / uDeltaTime;
 
+    
     // contact normal 안쪽 방향 속도 제거
+    float pushout_length_sq = dot(collision_state.xyz, collision_state.xyz);
+    if (pushout_length_sq > pushout_normal_epsilon) {
+        remove_inward_contact_velocity(solved_velocity, collision_state.xyz * inversesqrt(pushout_length_sq));
+    }
+
     uint stored_contact_count = min(uint(collision_state.w + 0.5), uMaxContactsPerVertex);
     uint contact_base = vertex_index * uMaxContactsPerVertex;
+    //if (uMaxContactsPerVertex == 0xffffffffu) {
+    //    remove_inward_contact_velocity(solved_velocity, contact_normals[contact_base].xyz);
+    //}   
     for (uint contact_index = 0u; contact_index < stored_contact_count; ++contact_index) {
         remove_inward_contact_velocity(solved_velocity, contact_normals[contact_base + contact_index].xyz);
     }

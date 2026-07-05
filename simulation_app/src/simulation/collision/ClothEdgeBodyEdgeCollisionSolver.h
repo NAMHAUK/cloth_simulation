@@ -8,11 +8,11 @@
 
 #include <QOpenGLFunctions_4_5_Core>
 
-class BodyVertexClothFaceCollisionSolver final {
+class ClothEdgeBodyEdgeCollisionSolver final {
 public:
-    BodyVertexClothFaceCollisionSolver() = default;
-    BodyVertexClothFaceCollisionSolver(const BodyVertexClothFaceCollisionSolver&) = delete;
-    BodyVertexClothFaceCollisionSolver& operator=(const BodyVertexClothFaceCollisionSolver&) = delete;
+    ClothEdgeBodyEdgeCollisionSolver() = default;
+    ClothEdgeBodyEdgeCollisionSolver(const ClothEdgeBodyEdgeCollisionSolver&) = delete;
+    ClothEdgeBodyEdgeCollisionSolver& operator=(const ClothEdgeBodyEdgeCollisionSolver&) = delete;
 
     bool is_initialized() const;
     bool initialize(const std::filesystem::path& pair_generate_shader_path,
@@ -24,15 +24,15 @@ public:
                     QOpenGLFunctions_4_5_Core& gl);
     bool can_solve(const ClothMotionBufferView& motion_view,
                    const ClothCollisionStateBufferView& collision_view,
-                   const ClothMeshTopologyResources& cloth_topology,
+                   const DistanceConstraintBufferView& cloth_edges,
                    const CharacterVertexBufferView& character_vertex_view,
-                   const VertexBvhResources& body_vertex_bvh,
+                   const EdgeBvhResources& body_edge_bvh,
                    const CollisionWorkspaceBufferView& collision_workspace_view) const;
     void solve(const ClothMotionBufferView& motion_view,
                const ClothCollisionStateBufferView& collision_view,
-               const ClothMeshTopologyResources& cloth_topology,
+               const DistanceConstraintBufferView& cloth_edges,
                const CharacterVertexBufferView& character_vertex_view,
-               const VertexBvhResources& body_vertex_bvh,
+               const EdgeBvhResources& body_edge_bvh,
                const CollisionWorkspaceBufferView& collision_workspace_view,
                QOpenGLFunctions_4_5_Core& gl) const;
     void release(QOpenGLFunctions_4_5_Core& gl);
@@ -40,7 +40,7 @@ public:
 private:
     struct GenerateStage final {
         GLuint program = 0;
-        GLint triangle_count = -1;
+        GLint edge_count = -1;
         GLint max_pairs = -1;
         GLint thickness = -1;
         GLint ignored_body_part_mask = -1;
@@ -61,8 +61,8 @@ private:
         GLint max_correction = -1;
     };
 
-    void run_pair_generation_stage(const ClothMotionBufferView& motion_view, const ClothMeshTopologyResources& cloth_topology, const CharacterVertexBufferView& character_vertex_view, const VertexBvhResources& body_vertex_bvh, const CollisionWorkspaceBufferView& collision_workspace_view, QOpenGLFunctions_4_5_Core& gl) const;
-    void run_pair_accumulation_stage(const ClothMotionBufferView& motion_view, const ClothMeshTopologyResources& cloth_topology, const CharacterVertexBufferView& character_vertex_view, const CollisionWorkspaceBufferView& collision_workspace_view, QOpenGLFunctions_4_5_Core& gl) const;
+    void run_pair_generation_stage(const ClothMotionBufferView& motion_view, const DistanceConstraintBufferView& cloth_edges, const CharacterVertexBufferView& character_vertex_view, const EdgeBvhResources& body_edge_bvh, const CollisionWorkspaceBufferView& collision_workspace_view, QOpenGLFunctions_4_5_Core& gl) const;
+    void run_pair_accumulation_stage(const ClothMotionBufferView& motion_view, const DistanceConstraintBufferView& cloth_edges, const CharacterVertexBufferView& character_vertex_view, const EdgeBvhResources& body_edge_bvh, const CollisionWorkspaceBufferView& collision_workspace_view, QOpenGLFunctions_4_5_Core& gl) const;
     void run_pair_apply_stage(const ClothMotionBufferView& motion_view, const ClothCollisionStateBufferView& collision_view, const CollisionWorkspaceBufferView& collision_workspace_view, QOpenGLFunctions_4_5_Core& gl) const;
     bool has_pair_programs() const;
 

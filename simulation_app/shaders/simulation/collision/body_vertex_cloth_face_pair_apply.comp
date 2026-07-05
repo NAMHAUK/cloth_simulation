@@ -18,19 +18,25 @@ layout(std430, binding = 3) readonly buffer CorrectionSums {
     ivec4 correction_sums[];
 };
 
-layout(std430, binding = 4) readonly buffer ContactCandidateCounts {
-    uint contact_candidate_counts[];
+layout(std430, binding = 4) readonly buffer ContactCandidateHeads {
+    uint contact_candidate_heads[];
 };
 
 layout(std430, binding = 5) readonly buffer ContactCandidates {
     vec4 contact_candidates[];
 };
 
+layout(std430, binding = 6) readonly buffer ContactCandidateNext {
+    uint contact_candidate_next[];
+};
+
 uniform uint uVertexCount;
 uniform uint uMaxContactsPerVertex;
-uniform uint uContactCandidateCapacityPerVertex;
+uniform uint uMaxContactCandidateCount;
 uniform float uMaxCorrectionLength;
 
+const uint invalid_contact_candidate = 0xffffffffu;
+const uint local_contact_capacity = 4u;
 const float correction_fixed_point_scale = 1000000.0;
 const float contact_normal_store_epsilon = 1.0e-8;
 
@@ -73,20 +79,56 @@ void apply_position_correction(uint vertex_index, vec3 correction)
     collision_states[vertex_index] = collision_state;
 }
 
+void retain_contact(inout vec4 contacts[local_contact_capacity],
+                    inout uint retained_count,
+                    vec3 normal,
+                    float weight)
+{
+    if (retained_count < local_contact_capacity) {
+        contacts[retained_count] = vec4(normal, weight);
+        ++retained_count;
+        return;
+    }
+
+    uint weakest_index = 0u;
+    float weakest_weight = contacts[0].w;
+    for (uint contact_index = 1u; contact_index < local_contact_capacity; ++contact_index) {
+        if (contacts[contact_index].w < weakest_weight) {
+            weakest_index = contact_index;
+            weakest_weight = contacts[contact_index].w;
+        }
+    }
+
+    if (weight > weakest_weight) {
+        contacts[weakest_index] = vec4(normal, weight);
+    }
+}
+
 void merge_contact_candidates(uint vertex_index, float clamp_scale)
 {
     if (clamp_scale <= 0.0) {
         return;
     }
 
-    uint candidate_count = min(contact_candidate_counts[vertex_index], uContactCandidateCapacityPerVertex);
-    uint contact_base = vertex_index * uContactCandidateCapacityPerVertex;
-    for (uint candidate_index = 0u; candidate_index < candidate_count; ++candidate_index) {
-        vec4 candidate = contact_candidates[contact_base + candidate_index];
+    vec4 retained_contacts[local_contact_capacity];
+    uint retained_contact_count = 0u;
+    uint candidate_index = contact_candidate_heads[vertex_index];
+    uint visited_count = 0u;
+    while (candidate_index != invalid_contact_candidate &&
+           candidate_index < uMaxContactCandidateCount &&
+           visited_count < uMaxContactCandidateCount) {
+        vec4 candidate = contact_candidates[candidate_index];
         float applied_weight = candidate.w * clamp_scale;
         if (applied_weight > contact_normal_store_epsilon) {
-            store_contact(vertex_index, candidate.xyz, applied_weight);
+            retain_contact(retained_contacts, retained_contact_count, candidate.xyz, applied_weight);
         }
+
+        candidate_index = contact_candidate_next[candidate_index];
+        ++visited_count;
+    }
+
+    for (uint contact_index = 0u; contact_index < retained_contact_count; ++contact_index) {
+        store_contact(vertex_index, retained_contacts[contact_index].xyz, retained_contacts[contact_index].w);
     }
 }
 

@@ -70,14 +70,27 @@ inline bool is_valid_vertex_bvh_resource(const VertexBvhResources& vertex_bvh)
            vertex_bvh.node_count != 0;
 }
 
+inline bool is_valid_edge_bvh_resource(const EdgeBvhResources& edge_bvh)
+{
+    return edge_bvh.node_buffer != 0 &&
+           edge_bvh.edge_index_buffer != 0 &&
+           edge_bvh.node_count != 0 &&
+           edge_bvh.edge_count != 0;
+}
+
 inline bool is_valid_collision_workspace_buffer_view(const CollisionWorkspaceBufferView& collision_workspace_view)
 {
     return collision_workspace_view.pair_record_buffer != 0 &&
            collision_workspace_view.pair_count_buffer != 0 &&
+           collision_workspace_view.edge_pair_record_buffer != 0 &&
+           collision_workspace_view.edge_pair_count_buffer != 0 &&
            collision_workspace_view.correction_sum_buffer != 0 &&
+           collision_workspace_view.contact_candidate_head_buffer != 0 &&
            collision_workspace_view.contact_candidate_count_buffer != 0 &&
            collision_workspace_view.contact_candidate_buffer != 0 &&
+           collision_workspace_view.contact_candidate_next_buffer != 0 &&
            collision_workspace_view.vertex_capacity != 0 &&
            collision_workspace_view.pair_capacity != 0 &&
-           collision_workspace_view.contact_candidate_capacity_per_vertex != 0;
+           collision_workspace_view.edge_pair_capacity != 0 &&
+           collision_workspace_view.contact_candidate_capacity != 0;
 }

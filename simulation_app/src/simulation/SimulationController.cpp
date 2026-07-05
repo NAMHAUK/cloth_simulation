@@ -1,6 +1,7 @@
 #include "simulation/SimulationController.h"
 
 #include "app/ProjectPaths.h"
+#include "gpu/body/bvh/EdgeBvhBuilder.h"
 #include "gpu/body/bvh/TriangleBvhBuilder.h"
 #include "gpu/body/bvh/VertexBvhBuilder.h"
 #include "simulation/SimulationSettings.h"
@@ -108,8 +109,21 @@ void SimulationController::load_default_character_mesh(CharacterMesh mesh,
         return;
     }
 
+    EdgeBvhBuilder edge_bvh_builder(
+        mesh.vertex_count,
+        mesh.triangle_vertex_indices,
+        mesh.vertices,
+        triangle_part_labels
+    );
+    EdgeBvhData default_body_edge_bvh_data = edge_bvh_builder.build_edge_bvh();
+    if (!default_body_edge_bvh_data.is_valid()) {
+        std::cerr << "Failed to build default body edge BVH.\n";
+        return;
+    }
+
     scene_.set_default_character_bvh_data(std::move(default_character_bvh_data));
     scene_.set_default_body_vertex_bvh_data(std::move(default_body_vertex_bvh_data));
+    scene_.set_default_body_edge_bvh_data(std::move(default_body_edge_bvh_data));
     default_character_mesh_ = std::move(mesh);
     set_character_mesh_state(default_character_mesh_, gl);
     is_default_pose_ = true;
