@@ -1,11 +1,11 @@
-float squared_distance_to_bounds(vec3 point, in MeshBvhNode node)
+float squared_distance_to_bounds(vec3 point, in BvhNode node)
 {
     vec3 clamped_point = clamp(point, node.min_bounds.xyz, node.max_bounds.xyz);
     return length_squared(point - clamped_point);
 }
 
 void push_child_nodes(vec3 cloth_position,
-                      MeshBvhNode current_node,
+                      BvhNode current_node,
                       float best_distance_sq,
                       inout uint node_index_stack[max_bvh_stack_depth],
                       inout float node_distance_stack[max_bvh_stack_depth],

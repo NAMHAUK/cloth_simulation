@@ -56,10 +56,18 @@ bool SimulationPipeline::initialize(const ShaderPaths& shader_paths, QOpenGLFunc
         bending_constraint_solver_.initialize(shader_paths.cloth_bending_constraint_compute, simulation_settings::bending_stiffness, gl) &&
         attachment_constraint_solver_.initialize(shader_paths.cloth_attachment_constraint_compute, simulation_settings::attachment_stiffness, gl) &&
         ground_collision_solver_.initialize(shader_paths.cloth_ground_collision_compute, floor_height, gl) &&
-        character_collision_solver_.initialize(shader_paths.cloth_character_collision_compute,
-                                                simulation_settings::character_collision_thickness,
-                                                simulation_settings::character_collision_max_correction_length,
-                                                gl) &&
+        body_vertex_cloth_face_collision_solver_.initialize(shader_paths.body_vertex_cloth_face_pair_generate_compute,
+                                                            shader_paths.body_vertex_cloth_face_pair_accumulate_compute,
+                                                            shader_paths.body_vertex_cloth_face_pair_apply_compute,
+                                                            simulation_settings::character_collision_thickness,
+                                                            simulation_settings::character_collision_max_correction_length,
+                                                            simulation_settings::ignored_body_part_mask,
+                                                            gl) &&
+        cloth_vertex_body_face_collision_solver_.initialize(shader_paths.cloth_vertex_body_face_collision_compute,
+                                                            simulation_settings::character_collision_thickness,
+                                                            simulation_settings::character_collision_max_correction_length,
+                                                            simulation_settings::ignored_body_part_mask,
+                                                            gl) &&
         garment_prefit_solver_.initialize(shader_paths.garment_prefit_compute,
                                           simulation_settings::prefit_search_radius,
                                           simulation_settings::prefit_pushout_margin,
@@ -80,9 +88,6 @@ bool SimulationPipeline::prefit_garments(SceneState& scene, SceneGpuState& gpu_s
         std::cerr << "Cannot pre-fit garments before simulation pipeline initialization.\n";
         return false;
     }
-
-    scene.update_character_frame(0, simulation_settings::character_frame_stride);
-    gpu_state.update_character_frame(scene, gl);
 
     const auto views = collect_gpu_views(gpu_state);
     if (!garment_prefit_solver_.can_solve(views.cloth_motion, views.character_geometry, views.character_bvh)) {
@@ -125,7 +130,18 @@ bool SimulationPipeline::step(SceneState& scene, SceneGpuState& gpu_state, std::
             stretch_constraint_solver_.solve(views.cloth_motion, views.stretch_constraints, gl);
             bending_constraint_solver_.solve(views.cloth_motion, views.bending_constraints, gl);
             attachment_constraint_solver_.solve(views.cloth_motion, views.attachment_constraints, views.character_geometry, gl);
-            character_collision_solver_.solve(views.cloth_motion, views.cloth_collision, views.character_geometry, views.character_bvh, gl);
+            body_vertex_cloth_face_collision_solver_.solve(views.cloth_motion,
+                                                           views.cloth_collision,
+                                                           views.cloth_topology,
+                                                           views.character_vertices,
+                                                           views.body_vertex_bvh,
+                                                           views.collision_workspace,
+                                                           gl);
+            cloth_vertex_body_face_collision_solver_.solve(views.cloth_motion,
+                                                           views.cloth_collision,
+                                                           views.character_geometry,
+                                                           views.character_bvh,
+                                                           gl);
             ground_collision_solver_.solve(views.cloth_motion, views.cloth_collision, gl);
         }
     }
@@ -137,7 +153,8 @@ bool SimulationPipeline::step(SceneState& scene, SceneGpuState& gpu_state, std::
 void SimulationPipeline::release(QOpenGLFunctions_4_5_Core& gl)
 {
     garment_prefit_solver_.release(gl);
-    character_collision_solver_.release(gl);
+    cloth_vertex_body_face_collision_solver_.release(gl);
+    body_vertex_cloth_face_collision_solver_.release(gl);
     ground_collision_solver_.release(gl);
     attachment_constraint_solver_.release(gl);
     bending_constraint_solver_.release(gl);
@@ -152,8 +169,12 @@ SimulationPipeline::SimulationGpuViews SimulationPipeline::collect_gpu_views(con
     SimulationGpuViews views;
     views.cloth_motion = gpu_state.cloth_gpu_state().motion_buffer_view();
     views.cloth_collision = gpu_state.cloth_gpu_state().collision_state_buffer_view();
+    views.cloth_topology = gpu_state.cloth_gpu_state().mesh_topology_resources();
+    views.character_vertices = gpu_state.character_gpu_state().character_vertex_buffer_view();
     views.character_geometry = gpu_state.character_gpu_state().character_triangle_geometry_resources();
     views.character_bvh = gpu_state.character_gpu_state().character_bvh_resources();
+    views.body_vertex_bvh = gpu_state.character_gpu_state().body_vertex_bvh_resources();
+    views.collision_workspace = gpu_state.collision_workspace_buffer_view();
     views.stretch_constraints = gpu_state.cloth_gpu_state().stretch_constraint_buffer_view();
     views.bending_constraints = gpu_state.cloth_gpu_state().bending_constraint_buffer_view();
     views.attachment_constraints = gpu_state.cloth_gpu_state().attachment_constraint_buffer_view();
@@ -164,9 +185,17 @@ bool SimulationPipeline::can_solve_constraint_iteration(const SimulationGpuViews
 {
     return stretch_constraint_solver_.can_solve(views.cloth_motion, views.stretch_constraints) &&
            bending_constraint_solver_.can_solve(views.cloth_motion, views.bending_constraints) &&
-           character_collision_solver_.can_solve(views.cloth_motion,
-                                                 views.cloth_collision,
-                                                 views.character_geometry,
-                                                 views.character_bvh) &&
+           (views.attachment_constraints.constraint_count == 0 ||
+            attachment_constraint_solver_.can_solve(views.cloth_motion, views.attachment_constraints, views.character_geometry)) &&
+           body_vertex_cloth_face_collision_solver_.can_solve(views.cloth_motion,
+                                                              views.cloth_collision,
+                                                              views.cloth_topology,
+                                                              views.character_vertices,
+                                                              views.body_vertex_bvh,
+                                                              views.collision_workspace) &&
+           cloth_vertex_body_face_collision_solver_.can_solve(views.cloth_motion,
+                                                              views.cloth_collision,
+                                                              views.character_geometry,
+                                                              views.character_bvh) &&
            ground_collision_solver_.can_solve(views.cloth_motion, views.cloth_collision);
 }

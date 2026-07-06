@@ -2,7 +2,7 @@
 
 #include "asset/AssetDataTypes.h"
 #include "gpu/body/CharacterGpuDataTypes.h"
-#include "gpu/collision/BvhDataTypes.h"
+#include "gpu/body/bvh/BvhDataTypes.h"
 
 #include <cstdint>
 
@@ -19,7 +19,8 @@ public:
 
     // Mesh upload and playback
     void upload_mesh(const CharacterMesh& character_mesh,
-                     const MeshBvhData& default_character_bvh_data,
+                     const TriangleBvhData& default_character_bvh_data,
+                     const VertexBvhData& default_body_vertex_bvh_data,
                      QOpenGLFunctions_4_5_Core& gl);
     void set_current_frame(std::uint32_t frame_index);
     std::uint32_t current_frame_index() const;
@@ -27,15 +28,18 @@ public:
     std::uint32_t vertex_count() const;
 
     // Rendering
-    void bind_animation_positions(GLuint binding_index, QOpenGLFunctions_4_5_Core& gl) const;
+    void bind_current_positions(GLuint binding_index, QOpenGLFunctions_4_5_Core& gl) const;
     void bind_vertex_normals(GLuint binding_index, QOpenGLFunctions_4_5_Core& gl) const;
     void draw(QOpenGLFunctions_4_5_Core& gl) const;
 
     // Mesh buffer resources
     CharacterMeshTopologyResources mesh_topology_resources() const;
+    CharacterAnimationBufferView animation_buffer_view() const;
+    CharacterVertexBufferView character_vertex_buffer_view() const;
     TriangleGeometryResources character_triangle_geometry_resources() const;
     CharacterNormalResources mesh_normal_resources() const;
-    MeshBvhResources character_bvh_resources() const;
+    TriangleBvhResources character_bvh_resources() const;
+    VertexBvhResources body_vertex_bvh_resources() const;
 
     // GPU resource lifetime
     void release(QOpenGLFunctions_4_5_Core& gl);
@@ -49,24 +53,18 @@ private:
     GLuint vao_ = 0;
     GLsizei index_count_ = 0;
 
+    // GPU buffers
+    CharacterBufferSet buffers_;
+
     // Animated position data
-    GLuint all_frame_vertex_buffer_ = 0;
     std::uint32_t frame_count_ = 0;
     std::uint32_t vertex_count_ = 0;
     std::uint32_t current_frame_index_ = 0;
 
-    // Mesh adjacent triangle data
-    GLuint index_buffer_ = 0;
+    // Mesh triangle and adjacent triangle data
     std::uint32_t triangle_count_ = 0;
 
     // Character BVH data
-    GLuint character_bvh_node_buffer_ = 0;
     std::uint32_t bvh_node_count_ = 0;
-    std::uint32_t bvh_root_node_index_ = 0;
-
-    // Normal update buffers
-    GLuint adjacent_triangle_offsets_ = 0;
-    GLuint adjacent_triangle_indices_ = 0;
-    GLuint character_triangle_geometry_buffer_ = 0;
-    GLuint vertex_normal_buffer_ = 0;
+    std::uint32_t body_vertex_bvh_node_count_ = 0;
 };

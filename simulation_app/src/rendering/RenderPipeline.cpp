@@ -9,7 +9,7 @@
 #include <glm/geometric.hpp>
 
 namespace {
-constexpr GLuint character_animation_position_binding = 0;
+constexpr GLuint character_position_binding = 0;
 constexpr GLuint vertex_normal_binding = 1;
 
 const glm::vec3 light_direction_world = glm::normalize(glm::vec3{-0.4f, 0.8f, 0.3f});
@@ -73,13 +73,9 @@ void RenderPipeline::draw(const SceneState& scene,
     // character
     const CharacterGpuResources& character_gpu_state = gpu_state.character_gpu_state();
     if (character_gpu_state.is_initialized()) {
-        character_gpu_state.bind_animation_positions(character_animation_position_binding, gl);
+        character_gpu_state.bind_current_positions(character_position_binding, gl);
         character_gpu_state.bind_vertex_normals(vertex_normal_binding, gl);
-        viewer_shader_.set_character_animation_mode(
-            character_gpu_state.current_frame_index(),
-            character_gpu_state.vertex_count(),
-            gl
-        );
+        viewer_shader_.set_character_position_buffer_mode(gl);
         viewer_shader_.set_vertex_color_mode(gl);
         viewer_shader_.set_normal_lighting_enabled(true, gl);
         character_gpu_state.draw(gl);

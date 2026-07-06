@@ -13,34 +13,34 @@ struct CharacterTriangleGeometry {
     vec4 normal;
 };
 
-struct MeshBvhNode {
+struct BvhNode {
     vec4 min_bounds;
     vec4 max_bounds;
     uint left_child_index;
     uint right_child_index;
-    uint first_triangle_index;
-    uint triangle_count;
+    uint first_element_index;
+    uint element_count;
 };
 
 layout(std430, binding = 2) readonly buffer CharacterTriangleGeometryBuffer {
     CharacterTriangleGeometry triangle_geometry[];
 };
 
-layout(std430, binding = 3) readonly buffer MeshBvhNodeBuffer {
-    MeshBvhNode bvh_nodes[];
+layout(std430, binding = 3) readonly buffer BvhNodeBuffer {
+    BvhNode bvh_nodes[];
 };
 
-uniform uint uRootNodeIndex;
 uniform float uSearchRadius;
 
 uniform uint uClothVertexCount;
 uniform float uPushoutMargin;
 
 const uint max_bvh_stack_depth = 32u;
+const uint bvh_root_node = 0u;
 
-bool is_leaf_node(MeshBvhNode node)
+bool is_leaf_node(BvhNode node)
 {
-    return node.triangle_count > 0u;
+    return node.element_count > 0u;
 }
 
 float length_squared(vec3 value)
@@ -83,8 +83,8 @@ void main()
     float node_distance_stack[max_bvh_stack_depth];
     uint stack_count = 0u;
 
-    MeshBvhNode root_node = bvh_nodes[uRootNodeIndex];
-    node_index_stack[stack_count] = uRootNodeIndex;
+    BvhNode root_node = bvh_nodes[bvh_root_node];
+    node_index_stack[stack_count] = bvh_root_node;
     node_distance_stack[stack_count] = squared_distance_to_bounds(cloth_position, root_node);
     ++stack_count;
 
@@ -94,10 +94,10 @@ void main()
         float distance_to_node_sq = node_distance_stack[stack_count];
 
         if (distance_to_node_sq <= best_distance_sq) {
-            MeshBvhNode current_node = bvh_nodes[current_node_index];
+            BvhNode current_node = bvh_nodes[current_node_index];
             if (is_leaf_node(current_node)) {
-                for (uint triangle_offset = 0u; triangle_offset < current_node.triangle_count; ++triangle_offset) {
-                    update_nearest_contact(current_node.first_triangle_index + triangle_offset,
+                for (uint triangle_offset = 0u; triangle_offset < current_node.element_count; ++triangle_offset) {
+                    update_nearest_contact(current_node.first_element_index + triangle_offset,
                                            cloth_position,
                                            best_closest_point,
                                            best_normal,

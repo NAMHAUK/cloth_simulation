@@ -1,0 +1,39 @@
+#version 430 core
+
+layout(local_size_x = 128) in;
+
+layout(std430, binding = 0) readonly buffer CharacterAnimationPositions {
+    float animation_positions[];
+};
+
+layout(std430, binding = 1) writeonly buffer CharacterCurrentPositions {
+    float current_positions[];
+};
+
+uniform uint uCurrentFrameBase;
+uniform uint uNextFrameBase;
+uniform float uFrameAlpha;
+uniform uint uVertexCount;
+
+vec3 load_animation_position(uint frame_base, uint vertex_index)
+{
+    uint base = frame_base + vertex_index * 3u;
+    return vec3(animation_positions[base], animation_positions[base + 1u], animation_positions[base + 2u]);
+}
+
+void main()
+{
+    uint vertex_index = gl_GlobalInvocationID.x;
+    if (vertex_index >= uVertexCount) {
+        return;
+    }
+
+    vec3 current_position = load_animation_position(uCurrentFrameBase, vertex_index);
+    vec3 next_position = load_animation_position(uNextFrameBase, vertex_index);
+    vec3 interpolated_position = mix(current_position, next_position, uFrameAlpha);
+
+    uint output_base = vertex_index * 3u;
+    current_positions[output_base] = interpolated_position.x;
+    current_positions[output_base + 1u] = interpolated_position.y;
+    current_positions[output_base + 2u] = interpolated_position.z;
+}

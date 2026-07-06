@@ -1,23 +1,23 @@
 #pragma once
 
 #include "gpu/body/CharacterGpuDataTypes.h"
-#include "gpu/collision/BvhDataTypes.h"
+#include "gpu/body/bvh/BvhDataTypes.h"
 
 #include <filesystem>
 #include <vector>
 
 #include <QOpenGLFunctions_4_5_Core>
 
-class MeshBvhBoundsUpdater final {
+class TriangleBvhBoundsUpdater final {
 public:
-    MeshBvhBoundsUpdater() = default;
-    MeshBvhBoundsUpdater(const MeshBvhBoundsUpdater&) = delete;
-    MeshBvhBoundsUpdater& operator=(const MeshBvhBoundsUpdater&) = delete;
+    TriangleBvhBoundsUpdater() = default;
+    TriangleBvhBoundsUpdater(const TriangleBvhBoundsUpdater&) = delete;
+    TriangleBvhBoundsUpdater& operator=(const TriangleBvhBoundsUpdater&) = delete;
 
     bool is_initialized() const;
     bool initialize(const std::filesystem::path& shader_path, QOpenGLFunctions_4_5_Core& gl);
     void update(const TriangleGeometryResources& character_geometry,
-                const MeshBvhResources& character_bvh,
+                const TriangleBvhResources& character_bvh,
                 const std::vector<BvhNodeRange>& node_ranges_by_level,
                 float collision_thickness,
                 QOpenGLFunctions_4_5_Core& gl) const;
@@ -25,7 +25,7 @@ public:
 
 private:
     bool can_update(const TriangleGeometryResources& character_geometry,
-                    const MeshBvhResources& character_bvh,
+                    const TriangleBvhResources& character_bvh,
                     const std::vector<BvhNodeRange>& node_ranges_by_level,
                     float collision_thickness) const;
 

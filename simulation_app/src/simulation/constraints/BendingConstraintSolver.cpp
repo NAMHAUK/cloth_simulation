@@ -63,7 +63,7 @@ void BendingConstraintSolver::solve(const ClothMotionBufferView& motion_view,
     gl.glBindBufferBase(GL_SHADER_STORAGE_BUFFER, rest_lengths_binding, constraint_view.rest_length_buffer);
     gl.glProgramUniform1f(program_, stiffness_location_, std::clamp(stiffness_, 0.0f, 1.0f));
 
-    for (const ConstraintRange& range : *constraint_view.color_ranges) {
+    for (const ElementRange& range : *constraint_view.color_ranges) {
         if (range.count == 0) {
             continue;
         }
@@ -77,9 +77,7 @@ void BendingConstraintSolver::solve(const ClothMotionBufferView& motion_view,
 
 void BendingConstraintSolver::release(QOpenGLFunctions_4_5_Core& gl)
 {
-    if (program_ != 0) {
-        gl.glDeleteProgram(program_);
-    }
+    gl.glDeleteProgram(program_);
 
     program_ = 0;
     constraint_offset_location_ = -1;

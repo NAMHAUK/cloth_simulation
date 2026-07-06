@@ -21,10 +21,12 @@ LOW_CONFIDENCE_THRESHOLD = 0.60
 PART_GROUPS = (
     ("torso", (0, 3, 6, 9, 12, 13, 14)),
     ("head", (15,)),
-    ("left_arm", (16, 18, 20, 22)),
-    ("right_arm", (17, 19, 21, 23)),
+    ("left_arm", (16, 18)),
+    ("right_arm", (17, 19)),
     ("left_leg", (1, 4, 7, 10)),
     ("right_leg", (2, 5, 8, 11)),
+    ("left_hand", (20, 22)),
+    ("right_hand", (21, 23)),
 )
 
 def align_pose_to_ground(vertices, root_position, ground_clearance):

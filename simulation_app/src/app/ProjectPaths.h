@@ -10,14 +10,19 @@ struct ShaderPaths {
     std::filesystem::path background_fragment;
     std::filesystem::path triangle_normal_compute;
     std::filesystem::path vertex_normal_compute;
+    std::filesystem::path character_vertex_position_update_compute;
     std::filesystem::path character_triangle_geometry_update_compute;
     std::filesystem::path character_bvh_bounds_update_compute;
+    std::filesystem::path character_vertex_bvh_bounds_update_compute;
     std::filesystem::path cloth_external_force_compute;
     std::filesystem::path cloth_stretch_constraint_compute;
     std::filesystem::path cloth_bending_constraint_compute;
     std::filesystem::path cloth_attachment_constraint_compute;
     std::filesystem::path cloth_ground_collision_compute;
-    std::filesystem::path cloth_character_collision_compute;
+    std::filesystem::path body_vertex_cloth_face_pair_generate_compute;
+    std::filesystem::path body_vertex_cloth_face_pair_accumulate_compute;
+    std::filesystem::path body_vertex_cloth_face_pair_apply_compute;
+    std::filesystem::path cloth_vertex_body_face_collision_compute;
     std::filesystem::path garment_prefit_compute;
     std::filesystem::path garment_attachment_target_build_compute;
 };
@@ -46,14 +51,19 @@ inline ShaderPaths make_shader_paths(const std::filesystem::path& project_root)
         shader_dir / "rendering" / "background.frag",
         shader_dir / "gpu" / "triangle_normal.comp",
         shader_dir / "gpu" / "vertex_normal.comp",
+        shader_dir / "gpu" / "character_vertex_position_update.comp",
         shader_dir / "gpu" / "character_triangle_geometry_update.comp",
         shader_dir / "gpu" / "character_bvh_bounds_update.comp",
+        shader_dir / "gpu" / "character_vertex_bvh_bounds_update.comp",
         shader_dir / "simulation" / "cloth_external_force.comp",
         shader_dir / "simulation" / "cloth_stretch_constraint.comp",
         shader_dir / "simulation" / "cloth_bending_constraint.comp",
         shader_dir / "simulation" / "cloth_attachment_constraint.comp",
         shader_dir / "simulation" / "collision" / "cloth_ground_collision.comp",
-        shader_dir / "simulation" / "collision" / "cloth_character_collision.comp",
+        shader_dir / "simulation" / "collision" / "body_vertex_cloth_face_pair_generate.comp",
+        shader_dir / "simulation" / "collision" / "body_vertex_cloth_face_pair_accumulate.comp",
+        shader_dir / "simulation" / "collision" / "body_vertex_cloth_face_pair_apply.comp",
+        shader_dir / "simulation" / "collision" / "cloth_vertex_body_face_collision.comp",
         shader_dir / "simulation" / "garment_prefit.comp",
         shader_dir / "simulation" / "garment_attachment_target_build.comp",
     };

@@ -266,7 +266,7 @@ ColorizedMeshEdges colorize_mesh_edges(std::uint32_t vertex_count,
             continue;
         }
 
-        MeshEdgeRange range;
+        MeshElementRange range;
         range.offset = static_cast<std::uint32_t>(colorized_edges.edges.size());
         range.count = static_cast<std::uint32_t>(edge_group.edges.size());
         colorized_edges.ranges.push_back(range);

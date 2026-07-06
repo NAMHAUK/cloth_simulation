@@ -17,21 +17,21 @@ struct CharacterTriangleGeometry {
     vec4 normal;
 };
 
-struct MeshBvhNode {
+struct BvhNode {
     vec4 min_bounds;
     vec4 max_bounds;
     uint left_child_index;
     uint right_child_index;
-    uint first_triangle_index;
-    uint triangle_count;
+    uint first_element_index;
+    uint element_count;
 };
 
 layout(std430, binding = 2) readonly buffer CharacterTriangleGeometryBuffer {
     CharacterTriangleGeometry triangle_geometry[];
 };
 
-layout(std430, binding = 3) readonly buffer MeshBvhNodeBuffer {
-    MeshBvhNode bvh_nodes[];
+layout(std430, binding = 3) readonly buffer BvhNodeBuffer {
+    BvhNode bvh_nodes[];
 };
 
 layout(std430, binding = 4) buffer CollisionStates {
@@ -42,20 +42,27 @@ layout(std430, binding = 5) buffer ContactNormals {
     vec4 contact_normals[];
 };
 
-uniform uint uRootNodeIndex;
 uniform uint uClothVertexCount;
 uniform uint uMaxContactsPerVertex;
 uniform float uCollisionThickness;
 uniform float uMaxCorrectionLength;
+uniform uint uIgnoredBodyPartMask;
 
 const uint max_bvh_stack_depth = 32u;
+const uint bvh_root_node = 0u;
 const float triangle_edge_tolerance = -1.0e-6;
 const float penetration_tolerance = 0.0005;
 const uint local_contact_capacity = 4u;
 
-bool is_leaf_node(MeshBvhNode node)
+bool is_leaf_node(BvhNode node)
 {
-    return node.triangle_count > 0u;
+    return node.element_count > 0u;
+}
+
+bool is_ignored_body_part_node(BvhNode node)
+{
+    uint part_label_mask = uint(node.max_bounds.w + 0.5);
+    return part_label_mask != 0u && (part_label_mask & ~uIgnoredBodyPartMask) == 0u;
 }
 
 #include "cloth_collision_common.glsl"
@@ -166,21 +173,25 @@ void main()
     uint node_index_stack[max_bvh_stack_depth];
     uint stack_count = 0u;
 
-    node_index_stack[stack_count++] = uRootNodeIndex;
+    node_index_stack[stack_count++] = bvh_root_node;
 
     while (stack_count > 0u) {
         --stack_count;
         uint current_node_index = node_index_stack[stack_count];
-        MeshBvhNode current_node = bvh_nodes[current_node_index];
+        BvhNode current_node = bvh_nodes[current_node_index];
+        if (is_ignored_body_part_node(current_node)) {
+            continue;
+        }
+
         if (!overlaps_bounds(query_bounds, current_node.min_bounds, current_node.max_bounds)) {
             continue;
         }
 
         if (is_leaf_node(current_node)) {
-            for (uint triangle_offset = 0u; triangle_offset < current_node.triangle_count; ++triangle_offset) {
+            for (uint triangle_offset = 0u; triangle_offset < current_node.element_count; ++triangle_offset) {
                 vec3 correction_normal;
                 float penetration_depth;
-                uint triangle_index = current_node.first_triangle_index + triangle_offset;
+                uint triangle_index = current_node.first_element_index + triangle_offset;
                 if (compute_vertex_triangle_contact(previous_position,
                                                     current_position,
                                                     triangle_index,

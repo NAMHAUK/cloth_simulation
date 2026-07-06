@@ -29,12 +29,10 @@ bool GarmentPrefitSolver::initialize(const std::filesystem::path& shader_path,
     }
 
     cloth_vertex_count_location_ = gl.glGetUniformLocation(program_, "uClothVertexCount");
-    root_node_index_location_ = gl.glGetUniformLocation(program_, "uRootNodeIndex");
     search_radius_location_ = gl.glGetUniformLocation(program_, "uSearchRadius");
     pushout_margin_location_ = gl.glGetUniformLocation(program_, "uPushoutMargin");
 
     if (cloth_vertex_count_location_ < 0 ||
-        root_node_index_location_ < 0 ||
         search_radius_location_ < 0 ||
         pushout_margin_location_ < 0) {
         std::cerr << "Garment pre-fit compute shader missing required uniforms.\n";
@@ -49,19 +47,19 @@ bool GarmentPrefitSolver::initialize(const std::filesystem::path& shader_path,
 
 bool GarmentPrefitSolver::can_solve(const ClothMotionBufferView& motion_view,
                                     const TriangleGeometryResources& character_geometry,
-                                    const MeshBvhResources& character_bvh) const
+                                    const TriangleBvhResources& character_bvh) const
 {
     return is_initialized() &&
            is_valid_motion_view(motion_view) &&
            is_valid_triangle_geometry_resource(character_geometry) &&
-           is_valid_mesh_bvh_resource(character_bvh) &&
+           is_valid_triangle_bvh_resource(character_bvh) &&
            search_radius_ > 0.0f &&
            pushout_margin_ > 0.0f;
 }
 
 void GarmentPrefitSolver::solve(const ClothMotionBufferView& motion_view,
                                 const TriangleGeometryResources& character_geometry,
-                                const MeshBvhResources& character_bvh,
+                                const TriangleBvhResources& character_bvh,
                                 QOpenGLFunctions_4_5_Core& gl) const
 {
     assert(can_solve(motion_view, character_geometry, character_bvh));
@@ -72,7 +70,6 @@ void GarmentPrefitSolver::solve(const ClothMotionBufferView& motion_view,
     gl.glBindBufferBase(GL_SHADER_STORAGE_BUFFER, character_bvh_node_binding, character_bvh.node_buffer);
 
     gl.glProgramUniform1ui(program_, cloth_vertex_count_location_, motion_view.vertex_count);
-    gl.glProgramUniform1ui(program_, root_node_index_location_, character_bvh.root_node_index);
     gl.glProgramUniform1f(program_, search_radius_location_, search_radius_);
     gl.glProgramUniform1f(program_, pushout_margin_location_, pushout_margin_);
 
@@ -82,13 +79,10 @@ void GarmentPrefitSolver::solve(const ClothMotionBufferView& motion_view,
 
 void GarmentPrefitSolver::release(QOpenGLFunctions_4_5_Core& gl)
 {
-    if (program_ != 0) {
-        gl.glDeleteProgram(program_);
-    }
+    gl.glDeleteProgram(program_);
 
     program_ = 0;
     cloth_vertex_count_location_ = -1;
-    root_node_index_location_ = -1;
     search_radius_location_ = -1;
     pushout_margin_location_ = -1;
     search_radius_ = 0.0f;

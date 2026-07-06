@@ -22,22 +22,22 @@ struct MeshEdge final {
     std::uint32_t vertex_b = 0;
 };
 
-struct MeshEdgeRange final {
+struct MeshElementRange final {
     std::uint32_t offset = 0;
     std::uint32_t count = 0;
 };
 
 struct ColorizedMeshEdges final {
     std::vector<MeshEdge> edges;
-    std::vector<MeshEdgeRange> ranges;
+    std::vector<MeshElementRange> ranges;
 };
 
 struct CharacterMesh {
     float fps = 0.0f;
     std::uint32_t frame_count = 0;
     std::uint32_t vertex_count = 0;
-    std::uint32_t index_count = 0;
-    std::vector<std::uint32_t> indices;
+    std::uint32_t triangle_count = 0;
+    std::vector<std::uint32_t> triangle_vertex_indices;
     std::vector<float> root_positions;
     std::vector<float> vertices;
 };
@@ -49,7 +49,7 @@ struct MotionAsset {
 
 struct GarmentDistanceConstraints final {
     std::vector<MeshEdge> colorized_edges;
-    std::vector<MeshEdgeRange> color_ranges;
+    std::vector<MeshElementRange> color_ranges;
     std::vector<float> rest_lengths;
 
     bool is_valid() const
@@ -62,7 +62,7 @@ struct GarmentDistanceConstraints final {
 
 struct GarmentMesh {
     std::vector<float> vertices;
-    std::vector<std::uint32_t> indices;
+    std::vector<std::uint32_t> triangle_vertex_indices;
     VertexFaceAdjacency adjacency;
     GarmentDistanceConstraints stretch_constraints;
     GarmentDistanceConstraints bending_constraints;

@@ -25,9 +25,9 @@ public:
                                   bool update_rest_lengths,
                                   QOpenGLFunctions_4_5_Core& gl);
     bool upload_garment_attachment_vertices(const GarmentObject& garment,
-                                            ConstraintRange& target_range,
+                                            ElementRange& target_range,
                                             QOpenGLFunctions_4_5_Core& gl);
-    bool activate_attachment_targets(const ConstraintRange& target_range);
+    bool activate_attachment_targets(const ElementRange& target_range);
     bool save_base_positions(QOpenGLFunctions_4_5_Core& gl);
     bool restore_base_positions(QOpenGLFunctions_4_5_Core& gl) const;
     void clear_base_positions(QOpenGLFunctions_4_5_Core& gl);
@@ -47,9 +47,9 @@ private:
     void rebuild_garment_buffers(const std::vector<GarmentObject>& garments, QOpenGLFunctions_4_5_Core& gl);
     void replace_with_rebuild_buffers(ClothBufferSet rebuild_buffer_set,
                                       std::vector<GarmentBufferRanges> rebuild_ranges,
-                                      std::vector<ConstraintRange> rebuild_stretch_color_ranges,
-                                      std::vector<ConstraintRange> rebuild_bending_color_ranges,
-                                      std::vector<ConstraintRange> rebuild_attachment_ranges,
+                                      std::vector<ElementRange> rebuild_stretch_color_ranges,
+                                      std::vector<ElementRange> rebuild_bending_color_ranges,
+                                      std::vector<ElementRange> rebuild_attachment_ranges,
                                       const ClothBufferElementCounts& rebuild_element_counts,
                                       QOpenGLFunctions_4_5_Core& gl);
     bool append_garment(const GarmentObject& garment, QOpenGLFunctions_4_5_Core& gl);
@@ -66,9 +66,9 @@ private:
     ClothBufferSet buffers_;
     GLuint base_positions_ = 0;
     std::vector<GarmentBufferRanges> garments_;
-    std::vector<ConstraintRange> stretch_color_ranges_;
-    std::vector<ConstraintRange> bending_color_ranges_;
-    std::vector<ConstraintRange> attachment_ranges_;
+    std::vector<ElementRange> stretch_color_ranges_;
+    std::vector<ElementRange> bending_color_ranges_;
+    std::vector<ElementRange> attachment_ranges_;
     ClothBufferElementCounts used_elements_;
     ClothBufferElementCounts allocated_elements_;
     std::uint32_t base_position_vertex_count_ = 0;

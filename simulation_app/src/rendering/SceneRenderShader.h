@@ -22,9 +22,7 @@ public:
     void bind(QOpenGLFunctions_4_5_Core& gl) const;
     void set_mvp(const glm::mat4& mvp, QOpenGLFunctions_4_5_Core& gl) const;
     void set_attribute_position_mode(QOpenGLFunctions_4_5_Core& gl) const;
-    void set_character_animation_mode(std::uint32_t frame_index,
-                                      std::uint32_t vertex_count,
-                                      QOpenGLFunctions_4_5_Core& gl) const;
+    void set_character_position_buffer_mode(QOpenGLFunctions_4_5_Core& gl) const;
     void set_solid_color(const glm::vec3& color, QOpenGLFunctions_4_5_Core& gl) const;
     void set_vertex_color_mode(QOpenGLFunctions_4_5_Core& gl) const;
     void set_lighting(const glm::vec3& light_direction_world,
@@ -41,9 +39,7 @@ private:
     GLint mvp_location_ = -1;
     GLint solid_mode_location_ = -1;
     GLint solid_color_location_ = -1;
-    GLint animation_mode_location_ = -1;
-    GLint animation_frame_index_location_ = -1;
-    GLint animation_vertex_count_location_ = -1;
+    GLint position_buffer_mode_location_ = -1;
     GLint normal_lighting_mode_location_ = -1;
     GLint light_direction_location_ = -1;
     GLint ambient_strength_location_ = -1;

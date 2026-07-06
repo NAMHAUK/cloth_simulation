@@ -76,9 +76,7 @@ void GroundCollisionSolver::solve(const ClothMotionBufferView& motion_view,
 
 void GroundCollisionSolver::release(QOpenGLFunctions_4_5_Core& gl)
 {
-    if (program_ != 0) {
-        gl.glDeleteProgram(program_);
-    }
+    gl.glDeleteProgram(program_);
 
     program_ = 0;
     vertex_count_location_ = -1;

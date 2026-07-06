@@ -88,15 +88,9 @@ void BackgroundGradient::draw(QOpenGLFunctions_4_5_Core& gl) const
 
 void BackgroundGradient::release(QOpenGLFunctions_4_5_Core& gl)
 {
-    if (vertex_buffer_ != 0) {
-        gl.glDeleteBuffers(1, &vertex_buffer_);
-    }
-    if (vao_ != 0) {
-        gl.glDeleteVertexArrays(1, &vao_);
-    }
-    if (program_ != 0) {
-        gl.glDeleteProgram(program_);
-    }
+    gl.glDeleteBuffers(1, &vertex_buffer_);
+    gl.glDeleteVertexArrays(1, &vao_);
+    gl.glDeleteProgram(program_);
 
     program_ = 0;
     vao_ = 0;

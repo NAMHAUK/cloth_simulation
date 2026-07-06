@@ -1,0 +1,252 @@
+#version 430 core
+
+layout(local_size_x = 128) in;
+
+layout(std430, binding = 0) readonly buffer ClothCurrentPositions {
+    float cloth_current_positions[];
+};
+
+layout(std430, binding = 1) readonly buffer ClothPreviousPositions {
+    float cloth_previous_positions[];
+};
+
+layout(std430, binding = 2) readonly buffer ClothTriangleIndices {
+    uint cloth_triangle_indices[];
+};
+
+layout(std430, binding = 3) readonly buffer BodyPreviousPositions {
+    float body_previous_positions[];
+};
+
+layout(std430, binding = 4) readonly buffer BodyCurrentPositions {
+    float body_current_positions[];
+};
+
+layout(std430, binding = 5) readonly buffer BodyVertexNormals {
+    vec4 body_vertex_normals[];
+};
+
+layout(std430, binding = 6) readonly buffer PairRecords {
+    uvec2 pair_records[];
+};
+
+layout(std430, binding = 7) buffer PairCount {
+    uint pair_count;
+};
+
+layout(std430, binding = 8) buffer CorrectionSums {
+    ivec4 correction_sums[];
+};
+
+layout(std430, binding = 9) buffer ContactCandidateCounts {
+    uint contact_candidate_counts[];
+};
+
+layout(std430, binding = 10) buffer ContactCandidates {
+    vec4 contact_candidates[];
+};
+
+uniform uint uMaxPairCount;
+uniform float uCollisionThickness;
+uniform uint uContactCandidateCapacityPerVertex;
+
+const float triangle_edge_tolerance = -1.0e-6;
+const float penetration_tolerance = 0.0005;
+const float ccd_parallel_epsilon = 1.0e-8;
+const float pbd_denominator_epsilon = 1.0e-8;
+const float contact_normal_store_epsilon = 1.0e-8;
+const float correction_fixed_point_scale = 1000000.0;
+const float correction_component_limit = 1073741823.0;
+
+struct AcceptedContact {
+    vec3 normal;
+    vec3 barycentric;
+    float depth;
+};
+
+vec3 read_cloth_current_position(uint vertex_index)
+{
+    uint base_index = vertex_index * 3u;
+    return vec3(cloth_current_positions[base_index],
+                cloth_current_positions[base_index + 1u],
+                cloth_current_positions[base_index + 2u]);
+}
+
+vec3 read_cloth_previous_position(uint vertex_index)
+{
+    uint base_index = vertex_index * 3u;
+    return vec3(cloth_previous_positions[base_index],
+                cloth_previous_positions[base_index + 1u],
+                cloth_previous_positions[base_index + 2u]);
+}
+
+vec3 read_body_current_position(uint vertex_index)
+{
+    uint base_index = vertex_index * 3u;
+    return vec3(body_current_positions[base_index],
+                body_current_positions[base_index + 1u],
+                body_current_positions[base_index + 2u]);
+}
+
+vec3 read_body_previous_position(uint vertex_index)
+{
+    uint base_index = vertex_index * 3u;
+    return vec3(body_previous_positions[base_index],
+                body_previous_positions[base_index + 1u],
+                body_previous_positions[base_index + 2u]);
+}
+
+bool compute_barycentric(vec3 point, vec3 a, vec3 b, vec3 c, out vec3 barycentric)
+{
+    vec3 ab = b - a;
+    vec3 ac = c - a;
+    vec3 ap = point - a;
+
+    float d00 = dot(ab, ab);
+    float d01 = dot(ab, ac);
+    float d11 = dot(ac, ac);
+    float d20 = dot(ap, ab);
+    float d21 = dot(ap, ac);
+    float denominator = d00 * d11 - d01 * d01;
+    if (abs(denominator) <= pbd_denominator_epsilon) {
+        barycentric = vec3(0.0);
+        return false;
+    }
+
+    barycentric.z = (d00 * d21 - d01 * d20) / denominator;
+    barycentric.y = (d11 * d20 - d01 * d21) / denominator;
+    barycentric.x = 1.0 - barycentric.y - barycentric.z;
+    return barycentric.x >= triangle_edge_tolerance &&
+           barycentric.y >= triangle_edge_tolerance &&
+           barycentric.z >= triangle_edge_tolerance;
+}
+
+bool compute_pair_contact(uint pair_index, out uvec3 cloth_vertices, out AcceptedContact contact)
+{
+    uvec2 pair_record = pair_records[pair_index];
+    uint cloth_triangle_id = pair_record.x;
+    uint body_vertex_id = pair_record.y;
+
+    uint cloth_triangle_base = cloth_triangle_id * 3u;
+    cloth_vertices = uvec3(cloth_triangle_indices[cloth_triangle_base],
+                           cloth_triangle_indices[cloth_triangle_base + 1u],
+                           cloth_triangle_indices[cloth_triangle_base + 2u]);
+
+    vec3 previous_a = read_cloth_previous_position(cloth_vertices.x);
+    vec3 previous_b = read_cloth_previous_position(cloth_vertices.y);
+    vec3 previous_c = read_cloth_previous_position(cloth_vertices.z);
+    vec3 current_a = read_cloth_current_position(cloth_vertices.x);
+    vec3 current_b = read_cloth_current_position(cloth_vertices.y);
+    vec3 current_c = read_cloth_current_position(cloth_vertices.z);
+
+    // Build current cloth face plane
+    vec3 cloth_normal = cross(current_b - current_a, current_c - current_a);
+    float normal_length_sq = dot(cloth_normal, cloth_normal);
+    if (normal_length_sq <= pbd_denominator_epsilon) {
+        return false;
+    }
+    cloth_normal *= inversesqrt(normal_length_sq);
+
+    // Build swept body contact point
+    contact.normal = body_vertex_normals[body_vertex_id].xyz;
+    contact.barycentric = vec3(0.0);
+    contact.depth = 0.0;
+
+    vec3 previous_body_contact = read_body_previous_position(body_vertex_id) + contact.normal * uCollisionThickness;
+    vec3 current_body_contact = read_body_current_position(body_vertex_id) + contact.normal * uCollisionThickness;
+
+    // Reject pairs without front-to-back crossing
+    float previous_signed_distance = dot(previous_body_contact - previous_a, cloth_normal);
+    float current_signed_distance = dot(current_body_contact - current_a, cloth_normal);
+    if (previous_signed_distance <= 0.0 || current_signed_distance > 0.0) {
+        return false;
+    }
+
+    float distance_delta = current_signed_distance - previous_signed_distance;
+    if (abs(distance_delta) <= ccd_parallel_epsilon) {
+        return false;
+    }
+
+    // Compute current-pose pushout depth
+    float hit_time = -previous_signed_distance / distance_delta;
+
+    vec3 hit_body_contact = mix(previous_body_contact, current_body_contact, hit_time);
+    vec3 hit_a = mix(previous_a, current_a, hit_time);
+    vec3 hit_b = mix(previous_b, current_b, hit_time);
+    vec3 hit_c = mix(previous_c, current_c, hit_time);
+    if (!compute_barycentric(hit_body_contact, hit_a, hit_b, hit_c, contact.barycentric)) {
+        return false;
+    }
+
+    vec3 current_cloth_contact = current_a * contact.barycentric.x
+                               + current_b * contact.barycentric.y
+                               + current_c * contact.barycentric.z;
+    float depth = dot(current_body_contact - current_cloth_contact, contact.normal) - penetration_tolerance;
+    if (depth <= 0.0) {
+        return false;
+    }
+    contact.depth = depth;
+
+    return true;
+}
+
+void accumulate_vertex_correction(uint vertex_index, vec3 correction)
+{
+    vec3 scaled_correction = round(correction * correction_fixed_point_scale);
+    ivec3 encoded_correction = ivec3(clamp(scaled_correction,
+                                           vec3(-correction_component_limit),
+                                           vec3(correction_component_limit)));
+
+    atomicAdd(correction_sums[vertex_index].x, encoded_correction.x);
+    atomicAdd(correction_sums[vertex_index].y, encoded_correction.y);
+    atomicAdd(correction_sums[vertex_index].z, encoded_correction.z);
+}
+
+void store_contact_candidate(uint vertex_index, vec3 normal, float weight)
+{
+    if (weight <= contact_normal_store_epsilon) {
+        return;
+    }
+
+    uint candidate_index = atomicAdd(contact_candidate_counts[vertex_index], 1u);
+    if (candidate_index >= uContactCandidateCapacityPerVertex) {
+        return;
+    }
+
+    uint contact_base = vertex_index * uContactCandidateCapacityPerVertex;
+    contact_candidates[contact_base + candidate_index] = vec4(normal, weight);
+}
+
+void accumulate_contact_for_vertex(uint vertex_index,
+                                   AcceptedContact contact,
+                                   float vertex_weight,
+                                   float inverse_denominator)
+{
+    if (vertex_weight <= 0.0) {
+        return;
+    }
+
+    vec3 correction = contact.normal * contact.depth * vertex_weight * inverse_denominator;
+    accumulate_vertex_correction(vertex_index, correction);
+    store_contact_candidate(vertex_index, contact.normal, length(correction));
+}
+
+void main()
+{
+    uint pair_index = gl_GlobalInvocationID.x;
+    uint active_pair_count = min(pair_count, uMaxPairCount);
+    if (pair_index >= active_pair_count) {
+        return;
+    }
+
+    uvec3 cloth_vertices;
+    AcceptedContact contact;
+    if (!compute_pair_contact(pair_index, cloth_vertices, contact)) {
+        return;
+    }
+
+    float inverse_denominator = 1.0 / dot(contact.barycentric, contact.barycentric);
+    accumulate_contact_for_vertex(cloth_vertices.x, contact, contact.barycentric.x, inverse_denominator);
+    accumulate_contact_for_vertex(cloth_vertices.y, contact, contact.barycentric.y, inverse_denominator);
+    accumulate_contact_for_vertex(cloth_vertices.z, contact, contact.barycentric.z, inverse_denominator);
+}

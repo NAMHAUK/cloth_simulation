@@ -2,13 +2,15 @@
 
 #include "gpu/body/CharacterGpuDataTypes.h"
 #include "gpu/cloth/ClothGpuDataTypes.h"
+#include "gpu/scene/CollisionWorkspaceBuffers.h"
 #include "simulation/forces/SimulationForceField.h"
 #include "simulation/forces/ExternalForceSolver.h"
 #include "simulation/constraints/StretchConstraintSolver.h"
 #include "simulation/constraints/BendingConstraintSolver.h"
 #include "simulation/constraints/AttachmentConstraintSolver.h"
 #include "simulation/collision/GroundCollisionSolver.h"
-#include "simulation/collision/CharacterCollisionSolver.h"
+#include "simulation/collision/BodyVertexClothFaceCollisionSolver.h"
+#include "simulation/collision/ClothVertexBodyFaceCollisionSolver.h"
 #include "simulation/collision/GarmentPrefitSolver.h"
 
 #include <cstdint>
@@ -35,8 +37,12 @@ private:
     struct SimulationGpuViews final {
         ClothMotionBufferView cloth_motion;
         ClothCollisionStateBufferView cloth_collision;
+        ClothMeshTopologyResources cloth_topology;
+        CharacterVertexBufferView character_vertices;
         TriangleGeometryResources character_geometry;
-        MeshBvhResources character_bvh;
+        TriangleBvhResources character_bvh;
+        VertexBvhResources body_vertex_bvh;
+        CollisionWorkspaceBufferView collision_workspace;
         DistanceConstraintBufferView stretch_constraints;
         DistanceConstraintBufferView bending_constraints;
         AttachmentConstraintBufferView attachment_constraints;
@@ -51,7 +57,8 @@ private:
     BendingConstraintSolver bending_constraint_solver_;
     AttachmentConstraintSolver attachment_constraint_solver_;
     GroundCollisionSolver ground_collision_solver_;
-    CharacterCollisionSolver character_collision_solver_;
+    BodyVertexClothFaceCollisionSolver body_vertex_cloth_face_collision_solver_;
+    ClothVertexBodyFaceCollisionSolver cloth_vertex_body_face_collision_solver_;
     GarmentPrefitSolver garment_prefit_solver_;
     float substep_dt_ = 0.0f;
     bool initialized_ = false;

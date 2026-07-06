@@ -1,7 +1,8 @@
 #include "simulation/SimulationController.h"
 
 #include "app/ProjectPaths.h"
-#include "gpu/collision/MeshBvhBuilder.h"
+#include "gpu/body/bvh/TriangleBvhBuilder.h"
+#include "gpu/body/bvh/VertexBvhBuilder.h"
 #include "simulation/SimulationSettings.h"
 
 #include <cassert>
@@ -65,7 +66,6 @@ void SimulationController::tick_frame()
                 if (simulation_step_finished) {
                     ++motion_step_index_;
                     scene_.update_character_frame(motion_step_index_, simulation_settings::character_frame_stride);
-                    gpu_state_.update_character_frame(scene_, gl);
                 }
             }
         });
@@ -84,20 +84,32 @@ void SimulationController::load_default_character_mesh(CharacterMesh mesh,
                                                        const std::vector<std::uint8_t>& triangle_part_labels,
                                                        QOpenGLFunctions_4_5_Core& gl)
 {
-    const std::uint32_t source_triangle_count = static_cast<std::uint32_t>(mesh.indices.size() / 3u);
-    MeshBvhBuilder bvh_builder(
+    TriangleBvhBuilder bvh_builder(
         mesh.vertex_count,
-        mesh.indices,
+        mesh.triangle_vertex_indices,
         mesh.vertices,
         triangle_part_labels
     );
-    MeshBvhData default_character_bvh_data = bvh_builder.build_mesh_bvh();
-    if (!default_character_bvh_data.is_valid(source_triangle_count)) {
+    TriangleBvhData default_character_bvh_data = bvh_builder.build_triangle_bvh();
+    if (!default_character_bvh_data.is_valid(mesh.triangle_count)) {
         std::cerr << "Failed to build default character BVH.\n";
         return;
     }
 
+    VertexBvhBuilder vertex_bvh_builder(
+        mesh.vertex_count,
+        mesh.triangle_vertex_indices,
+        mesh.vertices,
+        triangle_part_labels
+    );
+    VertexBvhData default_body_vertex_bvh_data = vertex_bvh_builder.build_vertex_bvh();
+    if (!default_body_vertex_bvh_data.is_valid(mesh.vertex_count)) {
+        std::cerr << "Failed to build default body vertex BVH.\n";
+        return;
+    }
+
     scene_.set_default_character_bvh_data(std::move(default_character_bvh_data));
+    scene_.set_default_body_vertex_bvh_data(std::move(default_body_vertex_bvh_data));
     default_character_mesh_ = std::move(mesh);
     set_character_mesh_state(default_character_mesh_, gl);
     is_default_pose_ = true;

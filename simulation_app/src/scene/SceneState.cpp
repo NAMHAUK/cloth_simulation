@@ -16,9 +16,14 @@ void SceneState::set_character_mesh(CharacterMesh mesh)
     current_character_frame_ = 0;
 }
 
-void SceneState::set_default_character_bvh_data(MeshBvhData default_character_bvh_data)
+void SceneState::set_default_character_bvh_data(TriangleBvhData default_character_bvh_data)
 {
     default_character_bvh_data_ = std::move(default_character_bvh_data);
+}
+
+void SceneState::set_default_body_vertex_bvh_data(VertexBvhData default_body_vertex_bvh_data)
+{
+    default_body_vertex_bvh_data_ = std::move(default_body_vertex_bvh_data);
 }
 
 const CharacterMesh& SceneState::character_mesh() const
@@ -26,9 +31,14 @@ const CharacterMesh& SceneState::character_mesh() const
     return character_mesh_;
 }
 
-const MeshBvhData& SceneState::default_character_bvh_data() const
+const TriangleBvhData& SceneState::default_character_bvh_data() const
 {
     return default_character_bvh_data_;
+}
+
+const VertexBvhData& SceneState::default_body_vertex_bvh_data() const
+{
+    return default_body_vertex_bvh_data_;
 }
 
 // Garments //
@@ -37,7 +47,7 @@ std::uint32_t SceneState::add_garment_mesh(GarmentMesh mesh)
 {
     const std::uint32_t vertex_count = static_cast<std::uint32_t>(mesh.vertices.size() / 3u);
     if (!mesh.adjacency.is_valid(vertex_count) &&
-        !build_vertex_face_adjacency(vertex_count, mesh.indices, mesh.adjacency)) {
+        !build_vertex_face_adjacency(vertex_count, mesh.triangle_vertex_indices, mesh.adjacency)) {
         std::cerr << "Cannot add garment mesh with invalid topology.\n";
     }
 
