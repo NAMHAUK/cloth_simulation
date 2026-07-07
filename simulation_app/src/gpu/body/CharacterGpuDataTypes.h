@@ -12,6 +12,8 @@ struct CharacterBufferSet final {
     GLuint character_bvh_node = 0;
     GLuint body_vertex_bvh_node = 0;
     GLuint body_vertex_bvh_vertex_id = 0;
+    GLuint body_edge_bvh_node = 0;
+    GLuint body_edge_index = 0;
     GLuint adjacent_triangle_offsets = 0;
     GLuint adjacent_triangle_indices = 0;
     GLuint triangle_geometry = 0;
@@ -60,4 +62,11 @@ struct VertexBvhResources final {
     GLuint node_buffer = 0;
     GLuint vertex_id_buffer = 0;
     std::uint32_t node_count = 0;
+};
+
+struct EdgeBvhResources final {
+    GLuint node_buffer = 0;
+    GLuint edge_index_buffer = 0;
+    std::uint32_t node_count = 0;
+    std::uint32_t edge_count = 0;
 };

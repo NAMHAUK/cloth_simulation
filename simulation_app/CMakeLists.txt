@@ -40,6 +40,8 @@ add_executable(simulation_app
     src/simulation/collision/GroundCollisionSolver.h
     src/simulation/collision/BodyVertexClothFaceCollisionSolver.cpp
     src/simulation/collision/BodyVertexClothFaceCollisionSolver.h
+    src/simulation/collision/ClothEdgeBodyEdgeCollisionSolver.cpp
+    src/simulation/collision/ClothEdgeBodyEdgeCollisionSolver.h
     src/simulation/collision/ClothVertexBodyFaceCollisionSolver.cpp
     src/simulation/collision/ClothVertexBodyFaceCollisionSolver.h
     src/simulation/collision/GarmentPrefitSolver.cpp
@@ -56,10 +58,14 @@ add_executable(simulation_app
     src/gpu/body/bvh/TriangleBvhBuilder.h
     src/gpu/body/bvh/VertexBvhBuilder.cpp
     src/gpu/body/bvh/VertexBvhBuilder.h
+    src/gpu/body/bvh/EdgeBvhBuilder.cpp
+    src/gpu/body/bvh/EdgeBvhBuilder.h
     src/gpu/body/bvh/TriangleBvhBoundsUpdater.cpp
     src/gpu/body/bvh/TriangleBvhBoundsUpdater.h
     src/gpu/body/bvh/VertexBvhBoundsUpdater.cpp
     src/gpu/body/bvh/VertexBvhBoundsUpdater.h
+    src/gpu/body/bvh/EdgeBvhBoundsUpdater.cpp
+    src/gpu/body/bvh/EdgeBvhBoundsUpdater.h
     src/gpu/body/CharacterGpuStateUpdater.cpp
     src/gpu/body/CharacterGpuStateUpdater.h
     src/gpu/cloth/ClothGpuResources.cpp
@@ -110,6 +116,7 @@ add_executable(simulation_app
     shaders/gpu/character_triangle_geometry_update.comp
     shaders/gpu/character_bvh_bounds_update.comp
     shaders/gpu/character_vertex_bvh_bounds_update.comp
+    shaders/gpu/character_edge_bvh_bounds_update.comp
     shaders/simulation/cloth_external_force.comp
     shaders/simulation/cloth_stretch_constraint.comp
     shaders/simulation/cloth_bending_constraint.comp
@@ -118,6 +125,8 @@ add_executable(simulation_app
     shaders/simulation/collision/body_vertex_cloth_face_pair_generate.comp
     shaders/simulation/collision/body_vertex_cloth_face_pair_accumulate.comp
     shaders/simulation/collision/body_vertex_cloth_face_pair_apply.comp
+    shaders/simulation/collision/cloth_edge_body_edge_pair_generate.comp
+    shaders/simulation/collision/cloth_edge_body_edge_pair_accumulate.comp
     shaders/simulation/collision/cloth_vertex_body_face_collision.comp
     shaders/simulation/garment_prefit.comp
     shaders/simulation/collision/cloth_collision_common.glsl

@@ -14,10 +14,9 @@ inline constexpr float velocity_damping = 0.998f;
 
 inline constexpr float ground_y = 0.0f;
 inline constexpr float ground_collision_offset = 0.001f;
-inline constexpr float character_collision_thickness = 0.004f;
-inline constexpr float character_collision_max_correction_length = 0.01f;
+inline constexpr float character_collision_thickness = 0.005f;
+inline constexpr float character_collision_max_correction_length = 0.005f;
 inline constexpr std::uint32_t ignored_body_part_mask = (1u << 6u) | (1u << 7u);
-inline constexpr std::uint32_t max_contacts_per_vertex = 4;
 
 inline constexpr float prefit_pushout_margin = 0.01f;
 inline constexpr float prefit_search_radius = 0.15f;
@@ -35,7 +34,6 @@ static_assert(cloth_simulation_fps % character_motion_fps == 0);
 static_assert(velocity_damping >= 0.0f && velocity_damping <= 1.0f);
 static_assert(character_collision_thickness > 0.0f);
 static_assert(character_collision_max_correction_length > 0.0f);
-static_assert(max_contacts_per_vertex > 0);
 static_assert(prefit_pushout_margin > 0.0f);
 static_assert(prefit_search_radius >= prefit_pushout_margin);
 static_assert(solver_iteration_count > 0);

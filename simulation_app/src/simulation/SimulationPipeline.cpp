@@ -12,6 +12,8 @@
 
 namespace {
 
+constexpr std::uint32_t gpu_timing_log_interval = 100u;
+
 float character_frame_time(std::uint64_t motion_step_index, std::uint32_t substep)
 {
     if (simulation_settings::character_frame_stride == 0 || simulation_settings::substep_count == 0) {
@@ -63,6 +65,13 @@ bool SimulationPipeline::initialize(const ShaderPaths& shader_paths, QOpenGLFunc
                                                             simulation_settings::character_collision_max_correction_length,
                                                             simulation_settings::ignored_body_part_mask,
                                                             gl) &&
+        cloth_edge_body_edge_collision_solver_.initialize(shader_paths.cloth_edge_body_edge_pair_generate_compute,
+                                                          shader_paths.cloth_edge_body_edge_pair_accumulate_compute,
+                                                          shader_paths.body_vertex_cloth_face_pair_apply_compute,
+                                                          simulation_settings::character_collision_thickness,
+                                                          simulation_settings::character_collision_max_correction_length,
+                                                          simulation_settings::ignored_body_part_mask,
+                                                          gl) &&
         cloth_vertex_body_face_collision_solver_.initialize(shader_paths.cloth_vertex_body_face_collision_compute,
                                                             simulation_settings::character_collision_thickness,
                                                             simulation_settings::character_collision_max_correction_length,
@@ -79,6 +88,9 @@ bool SimulationPipeline::initialize(const ShaderPaths& shader_paths, QOpenGLFunc
     }
 
     initialized_ = true;
+#if CLOTH_SIM_SUBSTEP_GPU_TIMING
+    substep_gpu_timer_.initialize("SimulationPipeline::substep", gpu_timing_log_interval, gl);
+#endif
     return true;
 }
 
@@ -117,6 +129,10 @@ bool SimulationPipeline::step(SceneState& scene, SceneGpuState& gpu_state, std::
 
     const glm::vec3 external_acceleration = force_field_.external_acceleration();
     for (std::uint32_t substep = 0; substep < simulation_settings::substep_count; ++substep) {
+#if CLOTH_SIM_SUBSTEP_GPU_TIMING
+        const bool gpu_timing_started = substep_gpu_timer_.begin(gl);
+#endif
+
         update_character_substep_frame(scene, gpu_state, motion_step_index, substep, gl);
 
         external_force_solver_.solve(views.cloth_motion,
@@ -137,6 +153,13 @@ bool SimulationPipeline::step(SceneState& scene, SceneGpuState& gpu_state, std::
                                                            views.body_vertex_bvh,
                                                            views.collision_workspace,
                                                            gl);
+            cloth_edge_body_edge_collision_solver_.solve(views.cloth_motion,
+                                                         views.cloth_collision,
+                                                         views.stretch_constraints,
+                                                         views.character_vertices,
+                                                         views.body_edge_bvh,
+                                                         views.collision_workspace,
+                                                         gl);
             cloth_vertex_body_face_collision_solver_.solve(views.cloth_motion,
                                                            views.cloth_collision,
                                                            views.character_geometry,
@@ -144,6 +167,12 @@ bool SimulationPipeline::step(SceneState& scene, SceneGpuState& gpu_state, std::
                                                            gl);
             ground_collision_solver_.solve(views.cloth_motion, views.cloth_collision, gl);
         }
+
+#if CLOTH_SIM_SUBSTEP_GPU_TIMING
+        if (gpu_timing_started) {
+            substep_gpu_timer_.end(gl);
+        }
+#endif
     }
 
     gpu_state.update_mesh_normals(gl);
@@ -152,8 +181,12 @@ bool SimulationPipeline::step(SceneState& scene, SceneGpuState& gpu_state, std::
 
 void SimulationPipeline::release(QOpenGLFunctions_4_5_Core& gl)
 {
+#if CLOTH_SIM_SUBSTEP_GPU_TIMING
+    substep_gpu_timer_.release(gl);
+#endif
     garment_prefit_solver_.release(gl);
     cloth_vertex_body_face_collision_solver_.release(gl);
+    cloth_edge_body_edge_collision_solver_.release(gl);
     body_vertex_cloth_face_collision_solver_.release(gl);
     ground_collision_solver_.release(gl);
     attachment_constraint_solver_.release(gl);
@@ -174,6 +207,7 @@ SimulationPipeline::SimulationGpuViews SimulationPipeline::collect_gpu_views(con
     views.character_geometry = gpu_state.character_gpu_state().character_triangle_geometry_resources();
     views.character_bvh = gpu_state.character_gpu_state().character_bvh_resources();
     views.body_vertex_bvh = gpu_state.character_gpu_state().body_vertex_bvh_resources();
+    views.body_edge_bvh = gpu_state.character_gpu_state().body_edge_bvh_resources();
     views.collision_workspace = gpu_state.collision_workspace_buffer_view();
     views.stretch_constraints = gpu_state.cloth_gpu_state().stretch_constraint_buffer_view();
     views.bending_constraints = gpu_state.cloth_gpu_state().bending_constraint_buffer_view();
@@ -193,6 +227,12 @@ bool SimulationPipeline::can_solve_constraint_iteration(const SimulationGpuViews
                                                               views.character_vertices,
                                                               views.body_vertex_bvh,
                                                               views.collision_workspace) &&
+           cloth_edge_body_edge_collision_solver_.can_solve(views.cloth_motion,
+                                                            views.cloth_collision,
+                                                            views.stretch_constraints,
+                                                            views.character_vertices,
+                                                            views.body_edge_bvh,
+                                                            views.collision_workspace) &&
            cloth_vertex_body_face_collision_solver_.can_solve(views.cloth_motion,
                                                               views.cloth_collision,
                                                               views.character_geometry,

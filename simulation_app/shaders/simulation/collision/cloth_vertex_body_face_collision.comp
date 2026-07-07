@@ -38,12 +38,7 @@ layout(std430, binding = 4) buffer CollisionStates {
     vec4 collision_states[];
 };
 
-layout(std430, binding = 5) buffer ContactNormals {
-    vec4 contact_normals[];
-};
-
 uniform uint uClothVertexCount;
-uniform uint uMaxContactsPerVertex;
 uniform float uCollisionThickness;
 uniform float uMaxCorrectionLength;
 uniform uint uIgnoredBodyPartMask;
@@ -52,7 +47,6 @@ const uint max_bvh_stack_depth = 32u;
 const uint bvh_root_node = 0u;
 const float triangle_edge_tolerance = -1.0e-6;
 const float penetration_tolerance = 0.0005;
-const uint local_contact_capacity = 4u;
 
 bool is_leaf_node(BvhNode node)
 {
@@ -124,31 +118,6 @@ bool compute_vertex_triangle_contact(vec3 previous_position,
     return true;
 }
 
-void retain_contact(inout vec4 contacts[local_contact_capacity],
-                    inout uint retained_count,
-                    vec3 correction_normal,
-                    float weight)
-{
-    if (retained_count < local_contact_capacity) {
-        contacts[retained_count] = vec4(correction_normal, weight);
-        ++retained_count;
-        return;
-    }
-
-    uint weakest_index = 0u;
-    float weakest_weight = contacts[0].w;
-    for (uint contact_index = 1u; contact_index < local_contact_capacity; ++contact_index) {
-        if (contacts[contact_index].w < weakest_weight) {
-            weakest_index = contact_index;
-            weakest_weight = contacts[contact_index].w;
-        }
-    }
-
-    if (weight > weakest_weight) {
-        contacts[weakest_index] = vec4(correction_normal, weight);
-    }
-}
-
 void main()
 {
     uint cloth_vertex_index = gl_GlobalInvocationID.x;
@@ -167,8 +136,6 @@ void main()
 
     vec3 accumulated_correction = vec3(0.0);
     uint contact_count = 0u;
-    vec4 retained_contacts[local_contact_capacity];
-    uint retained_contact_count = 0u;
 
     uint node_index_stack[max_bvh_stack_depth];
     uint stack_count = 0u;
@@ -199,7 +166,6 @@ void main()
                                                     penetration_depth)) {
                     accumulated_correction += correction_normal * penetration_depth;
                     ++contact_count;
-                    retain_contact(retained_contacts, retained_contact_count, correction_normal, penetration_depth);
                 }
             }
         } else {
@@ -227,7 +193,4 @@ void main()
     vec4 collision_state = collision_states[cloth_vertex_index];
     collision_state.xyz += final_correction;
     collision_states[cloth_vertex_index] = collision_state;
-    for (uint contact_index = 0u; contact_index < retained_contact_count; ++contact_index) {
-        store_contact(cloth_vertex_index, retained_contacts[contact_index].xyz, retained_contacts[contact_index].w);
-    }
 }

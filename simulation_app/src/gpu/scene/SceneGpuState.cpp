@@ -14,7 +14,7 @@ CharacterFrameInterpolation make_single_frame_interpolation(std::uint32_t frame_
 }
 
 SceneGpuState::SceneGpuState()
-    : character_gpu_state_updater_(character_gpu_state_, bvh_bounds_updater_, vertex_bvh_bounds_updater_, normal_updater_)
+    : character_gpu_state_updater_(character_gpu_state_, bvh_bounds_updater_, vertex_bvh_bounds_updater_, edge_bvh_bounds_updater_, normal_updater_)
 {
 }
 
@@ -37,9 +37,16 @@ bool SceneGpuState::initialize(const ShaderPaths& shader_paths, QOpenGLFunctions
         normal_updater_.release(gl);
         return false;
     }
+    if (!edge_bvh_bounds_updater_.initialize(shader_paths.character_edge_bvh_bounds_update_compute, gl)) {
+        vertex_bvh_bounds_updater_.release(gl);
+        bvh_bounds_updater_.release(gl);
+        normal_updater_.release(gl);
+        return false;
+    }
     if (!character_gpu_state_updater_.initialize(shader_paths.character_vertex_position_update_compute,
                                                  shader_paths.character_triangle_geometry_update_compute,
                                                  gl)) {
+        edge_bvh_bounds_updater_.release(gl);
         vertex_bvh_bounds_updater_.release(gl);
         bvh_bounds_updater_.release(gl);
         normal_updater_.release(gl);
@@ -47,6 +54,7 @@ bool SceneGpuState::initialize(const ShaderPaths& shader_paths, QOpenGLFunctions
     }
     if (!attachment_target_builder_.initialize(shader_paths.garment_attachment_target_build_compute, gl)) {
         character_gpu_state_updater_.release(gl);
+        edge_bvh_bounds_updater_.release(gl);
         vertex_bvh_bounds_updater_.release(gl);
         bvh_bounds_updater_.release(gl);
         normal_updater_.release(gl);
@@ -78,6 +86,7 @@ void SceneGpuState::release(QOpenGLFunctions_4_5_Core& gl)
     character_gpu_state_.release(gl);
     character_gpu_state_updater_.release(gl);
     normal_updater_.release(gl);
+    edge_bvh_bounds_updater_.release(gl);
     vertex_bvh_bounds_updater_.release(gl);
     bvh_bounds_updater_.release(gl);
     attachment_target_builder_.release(gl);
@@ -98,11 +107,13 @@ void SceneGpuState::set_character_mesh(const SceneState& scene, QOpenGLFunctions
     character_gpu_state_.upload_mesh(character_mesh,
                                      scene.default_character_bvh_data(),
                                      scene.default_body_vertex_bvh_data(),
+                                     scene.default_body_edge_bvh_data(),
                                      gl);
     character_gpu_state_.set_current_frame(0);
     character_gpu_state_updater_.initialize_character_pose_state(make_single_frame_interpolation(0),
                                                                  scene.default_character_bvh_data().node_ranges_by_level,
                                                                  scene.default_body_vertex_bvh_data().node_ranges_by_level,
+                                                                 scene.default_body_edge_bvh_data().node_ranges_by_level,
                                                                  simulation_settings::character_collision_thickness,
                                                                  gl);
 }
@@ -118,6 +129,7 @@ void SceneGpuState::update_character_frame_interpolation(const SceneState& scene
     character_gpu_state_updater_.update_character_pose_state(interpolation,
                                                              scene.default_character_bvh_data().node_ranges_by_level,
                                                              scene.default_body_vertex_bvh_data().node_ranges_by_level,
+                                                             scene.default_body_edge_bvh_data().node_ranges_by_level,
                                                              simulation_settings::character_collision_thickness,
                                                              gl);
 }
@@ -139,11 +151,11 @@ void SceneGpuState::update_garment_meshes(const SceneState& scene, QOpenGLFuncti
     cloth_gpu_state_.update_garment_buffers(scene.garments(), gl);
     if (cloth_gpu_state_.is_initialized()) {
         const ClothMotionBufferView motion_view = cloth_gpu_state_.motion_buffer_view();
-        const ClothCollisionStateBufferView collision_view = cloth_gpu_state_.collision_state_buffer_view();
         const ClothMeshTopologyResources topology = cloth_gpu_state_.mesh_topology_resources();
+        const DistanceConstraintBufferView stretch_constraints = cloth_gpu_state_.stretch_constraint_buffer_view();
         if (!collision_workspace_buffers_.ensure_capacity(motion_view.vertex_count,
                                                           topology.triangle_count,
-                                                          collision_view.max_contacts_per_vertex,
+                                                          stretch_constraints.constraint_count,
                                                           gl)) {
             std::cerr << "Failed to prepare collision workspace buffers.\n";
         }

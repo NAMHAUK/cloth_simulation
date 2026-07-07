@@ -16,7 +16,9 @@ public:
 
     bool is_initialized() const;
     bool initialize(const std::filesystem::path& shader_path, QOpenGLFunctions_4_5_Core& gl);
-    void update(const TriangleGeometryResources& character_geometry,
+    void update(const CharacterMeshTopologyResources& topology,
+                const CharacterVertexBufferView& vertex_view,
+                const TriangleGeometryResources& character_geometry,
                 const TriangleBvhResources& character_bvh,
                 const std::vector<BvhNodeRange>& node_ranges_by_level,
                 float collision_thickness,
@@ -24,7 +26,9 @@ public:
     void release(QOpenGLFunctions_4_5_Core& gl);
 
 private:
-    bool can_update(const TriangleGeometryResources& character_geometry,
+    bool can_update(const CharacterMeshTopologyResources& topology,
+                    const CharacterVertexBufferView& vertex_view,
+                    const TriangleGeometryResources& character_geometry,
                     const TriangleBvhResources& character_bvh,
                     const std::vector<BvhNodeRange>& node_ranges_by_level,
                     float collision_thickness) const;

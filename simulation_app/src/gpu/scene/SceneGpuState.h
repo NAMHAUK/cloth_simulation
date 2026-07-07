@@ -2,6 +2,7 @@
 
 #include "gpu/body/CharacterGpuStateUpdater.h"
 #include "gpu/body/CharacterGpuResources.h"
+#include "gpu/body/bvh/EdgeBvhBoundsUpdater.h"
 #include "gpu/body/bvh/TriangleBvhBoundsUpdater.h"
 #include "gpu/body/bvh/VertexBvhBoundsUpdater.h"
 #include "gpu/cloth/ClothGpuResources.h"
@@ -50,6 +51,7 @@ private:
     CharacterGpuResources character_gpu_state_;
     TriangleBvhBoundsUpdater bvh_bounds_updater_;
     VertexBvhBoundsUpdater vertex_bvh_bounds_updater_;
+    EdgeBvhBoundsUpdater edge_bvh_bounds_updater_;
     NormalUpdater normal_updater_;
     CharacterGpuStateUpdater character_gpu_state_updater_;
     ClothGpuResources cloth_gpu_state_;

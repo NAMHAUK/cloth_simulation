@@ -11,7 +11,6 @@ constexpr GLuint current_positions_binding = 0;
 constexpr GLuint previous_positions_binding = 1;
 constexpr GLuint velocities_binding = 2;
 constexpr GLuint collision_states_binding = 3;
-constexpr GLuint contact_normals_binding = 4;
 constexpr std::uint32_t external_force_local_size = 128;
 }
 
@@ -29,13 +28,11 @@ bool ExternalForceSolver::initialize(const std::filesystem::path& shader_path, Q
 
     // shader program 안의 uniform 변수들 위치 저장
     vertex_count_location_ = gl.glGetUniformLocation(program_, "uVertexCount");
-    max_contacts_per_vertex_location_ = gl.glGetUniformLocation(program_, "uMaxContactsPerVertex");
     delta_time_location_ = gl.glGetUniformLocation(program_, "uDeltaTime");
     external_acceleration_location_ = gl.glGetUniformLocation(program_, "uExternalAcceleration");
     velocity_damping_location_ = gl.glGetUniformLocation(program_, "uVelocityDamping");
 
     if (vertex_count_location_ < 0 ||
-        max_contacts_per_vertex_location_ < 0 ||
         delta_time_location_ < 0 ||
         external_acceleration_location_ < 0 ||
         velocity_damping_location_ < 0) {
@@ -69,11 +66,9 @@ void ExternalForceSolver::solve(const ClothMotionBufferView& motion_view,
     gl.glBindBufferBase(GL_SHADER_STORAGE_BUFFER, previous_positions_binding, motion_view.previous_position_buffer);
     gl.glBindBufferBase(GL_SHADER_STORAGE_BUFFER, velocities_binding, motion_view.velocity_buffer);
     gl.glBindBufferBase(GL_SHADER_STORAGE_BUFFER, collision_states_binding, collision_view.collision_state_buffer);
-    gl.glBindBufferBase(GL_SHADER_STORAGE_BUFFER, contact_normals_binding, collision_view.contact_normal_buffer);
 
     // shader에 값 전달
     gl.glProgramUniform1ui(program_, vertex_count_location_, motion_view.vertex_count);
-    gl.glProgramUniform1ui(program_, max_contacts_per_vertex_location_, collision_view.max_contacts_per_vertex);
     gl.glProgramUniform1f(program_, delta_time_location_, dt);
     gl.glProgramUniform3f(program_,
                           external_acceleration_location_,
@@ -93,7 +88,6 @@ void ExternalForceSolver::release(QOpenGLFunctions_4_5_Core& gl)
 
     program_ = 0;
     vertex_count_location_ = -1;
-    max_contacts_per_vertex_location_ = -1;
     delta_time_location_ = -1;
     external_acceleration_location_ = -1;
     velocity_damping_location_ = -1;

@@ -10,12 +10,19 @@
 #include "simulation/constraints/AttachmentConstraintSolver.h"
 #include "simulation/collision/GroundCollisionSolver.h"
 #include "simulation/collision/BodyVertexClothFaceCollisionSolver.h"
+#include "simulation/collision/ClothEdgeBodyEdgeCollisionSolver.h"
 #include "simulation/collision/ClothVertexBodyFaceCollisionSolver.h"
 #include "simulation/collision/GarmentPrefitSolver.h"
+#include "utils/GpuElapsedTimer.h"
 
 #include <cstdint>
 
 #include <QOpenGLFunctions_4_5_Core>
+
+// GPU timing stays opt-in at compile time because GL_TIME_ELAPSED has runtime cost.
+#ifndef CLOTH_SIM_SUBSTEP_GPU_TIMING
+#define CLOTH_SIM_SUBSTEP_GPU_TIMING 1
+#endif
 
 class SceneGpuState;
 class SceneState;
@@ -42,6 +49,7 @@ private:
         TriangleGeometryResources character_geometry;
         TriangleBvhResources character_bvh;
         VertexBvhResources body_vertex_bvh;
+        EdgeBvhResources body_edge_bvh;
         CollisionWorkspaceBufferView collision_workspace;
         DistanceConstraintBufferView stretch_constraints;
         DistanceConstraintBufferView bending_constraints;
@@ -58,8 +66,12 @@ private:
     AttachmentConstraintSolver attachment_constraint_solver_;
     GroundCollisionSolver ground_collision_solver_;
     BodyVertexClothFaceCollisionSolver body_vertex_cloth_face_collision_solver_;
+    ClothEdgeBodyEdgeCollisionSolver cloth_edge_body_edge_collision_solver_;
     ClothVertexBodyFaceCollisionSolver cloth_vertex_body_face_collision_solver_;
     GarmentPrefitSolver garment_prefit_solver_;
+#if CLOTH_SIM_SUBSTEP_GPU_TIMING
+    mutable GpuElapsedTimer substep_gpu_timer_;
+#endif
     float substep_dt_ = 0.0f;
     bool initialized_ = false;
 };
