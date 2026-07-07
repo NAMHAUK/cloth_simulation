@@ -38,30 +38,18 @@ uniform float uCollisionThickness;
 
 const float triangle_edge_tolerance = -1.0e-6;
 const float penetration_tolerance = 0.0005;
-const float correction_fixed_point_scale = 1000000.0;
-const float correction_component_limit = 1073741823.0;
+
+#define COLLISION_POSITION_IO_CLOTH_SWEEP
+#include "common/collision_position_io.glsl"
+
+#define COLLISION_CORRECTION_ACCUMULATE
+#include "common/collision_correction_common.glsl"
 
 struct VertexFaceContact {
     uint cloth_vertex_id;
     vec3 normal;
     float depth;
 };
-
-vec3 read_cloth_current_position(uint vertex_index)
-{
-    uint base_index = vertex_index * 3u;
-    return vec3(cloth_current_positions[base_index],
-                cloth_current_positions[base_index + 1u],
-                cloth_current_positions[base_index + 2u]);
-}
-
-vec3 read_cloth_previous_position(uint vertex_index)
-{
-    uint base_index = vertex_index * 3u;
-    return vec3(cloth_previous_positions[base_index],
-                cloth_previous_positions[base_index + 1u],
-                cloth_previous_positions[base_index + 2u]);
-}
 
 bool point_inside_triangle(vec3 point, vec3 a, vec3 b, vec3 c, vec3 normal)
 {
@@ -123,14 +111,7 @@ bool compute_vertex_triangle_contact(uint cloth_vertex_id, uint triangle_index, 
 void accumulate_contact(VertexFaceContact contact)
 {
     vec3 correction = contact.normal * contact.depth;
-    vec3 scaled_correction = round(correction * correction_fixed_point_scale);
-    ivec3 encoded_correction = ivec3(clamp(scaled_correction,
-                                           vec3(-correction_component_limit),
-                                           vec3(correction_component_limit)));
-
-    atomicAdd(correction_sums[contact.cloth_vertex_id].x, encoded_correction.x);
-    atomicAdd(correction_sums[contact.cloth_vertex_id].y, encoded_correction.y);
-    atomicAdd(correction_sums[contact.cloth_vertex_id].z, encoded_correction.z);
+    accumulate_vertex_correction(contact.cloth_vertex_id, correction);
     atomicAdd(correction_sums[contact.cloth_vertex_id].w, 1);
 }
 

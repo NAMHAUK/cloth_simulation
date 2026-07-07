@@ -136,8 +136,11 @@ add_executable(simulation_app
     shaders/simulation/collision/body_vertex_cloth_face_pair_apply.comp
     shaders/simulation/collision/cloth_edge_body_edge_pair_generate.comp
     shaders/simulation/collision/cloth_edge_body_edge_pair_accumulate.comp
+    shaders/simulation/collision/common/collision_common.glsl
+    shaders/simulation/collision/common/collision_position_io.glsl
+    shaders/simulation/collision/common/collision_correction_common.glsl
+    shaders/simulation/collision/common/contact_pair_output.glsl
     shaders/simulation/garment_prefit.comp
-    shaders/simulation/collision/cloth_collision_common.glsl
     shaders/simulation/garment_attachment_target_build.comp
 )
 
