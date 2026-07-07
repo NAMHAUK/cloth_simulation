@@ -2,7 +2,7 @@
 
 #include "gpu/body/CharacterGpuDataTypes.h"
 #include "gpu/cloth/ClothGpuDataTypes.h"
-#include "gpu/scene/CollisionWorkspaceBuffers.h"
+#include "gpu/scene/CollisionContactBuffers.h"
 #include "simulation/forces/SimulationForceField.h"
 #include "simulation/forces/ExternalForceSolver.h"
 #include "simulation/constraints/StretchConstraintSolver.h"
@@ -12,6 +12,7 @@
 #include "simulation/collision/BodyVertexClothFaceCollisionSolver.h"
 #include "simulation/collision/ClothEdgeBodyEdgeCollisionSolver.h"
 #include "simulation/collision/ClothVertexBodyFaceCollisionSolver.h"
+#include "simulation/collision/ClothBodyContactGenerator.h"
 #include "simulation/collision/GarmentPrefitSolver.h"
 #include "utils/GpuElapsedTimer.h"
 
@@ -50,7 +51,7 @@ private:
         TriangleBvhResources character_bvh;
         VertexBvhResources body_vertex_bvh;
         EdgeBvhResources body_edge_bvh;
-        CollisionWorkspaceBufferView collision_workspace;
+        CollisionContactBufferView collision_contacts;
         DistanceConstraintBufferView stretch_constraints;
         DistanceConstraintBufferView bending_constraints;
         AttachmentConstraintBufferView attachment_constraints;
@@ -65,6 +66,7 @@ private:
     BendingConstraintSolver bending_constraint_solver_;
     AttachmentConstraintSolver attachment_constraint_solver_;
     GroundCollisionSolver ground_collision_solver_;
+    ClothBodyContactGenerator cloth_body_contact_generator_;
     BodyVertexClothFaceCollisionSolver body_vertex_cloth_face_collision_solver_;
     ClothEdgeBodyEdgeCollisionSolver cloth_edge_body_edge_collision_solver_;
     ClothVertexBodyFaceCollisionSolver cloth_vertex_body_face_collision_solver_;

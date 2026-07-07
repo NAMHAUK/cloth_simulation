@@ -2,7 +2,7 @@
 
 #include "gpu/body/CharacterGpuDataTypes.h"
 #include "gpu/cloth/ClothGpuResources.h"
-#include "gpu/scene/CollisionWorkspaceBuffers.h"
+#include "gpu/scene/CollisionContactBuffers.h"
 
 inline bool is_valid_motion_view(const ClothMotionBufferView& motion_view)
 {
@@ -76,14 +76,20 @@ inline bool is_valid_edge_bvh_resource(const EdgeBvhResources& edge_bvh)
            edge_bvh.edge_count != 0;
 }
 
-inline bool is_valid_collision_workspace_buffer_view(const CollisionWorkspaceBufferView& collision_workspace_view)
+inline bool is_valid_contact_pair_buffers(const ContactPairBuffers& contact_pair_buffers)
 {
-    return collision_workspace_view.pair_record_buffer != 0 &&
-           collision_workspace_view.pair_count_buffer != 0 &&
-           collision_workspace_view.edge_pair_record_buffer != 0 &&
-           collision_workspace_view.edge_pair_count_buffer != 0 &&
-           collision_workspace_view.correction_sum_buffer != 0 &&
-           collision_workspace_view.vertex_capacity != 0 &&
-           collision_workspace_view.pair_capacity != 0 &&
-           collision_workspace_view.edge_pair_capacity != 0;
+    return contact_pair_buffers.pairs != 0 &&
+           contact_pair_buffers.count != 0 &&
+           contact_pair_buffers.dispatch_command != 0 &&
+           contact_pair_buffers.overflow_count != 0 &&
+           contact_pair_buffers.capacity != 0;
+}
+
+inline bool is_valid_collision_contact_buffer_view(const CollisionContactBufferView& collision_contact_view)
+{
+    return is_valid_contact_pair_buffers(collision_contact_view.cloth_vertex_body_face) &&
+           is_valid_contact_pair_buffers(collision_contact_view.cloth_edge_body_edge) &&
+           is_valid_contact_pair_buffers(collision_contact_view.cloth_face_body_vertex) &&
+           collision_contact_view.correction_sum_buffer != 0 &&
+           collision_contact_view.vertex_capacity != 0;
 }

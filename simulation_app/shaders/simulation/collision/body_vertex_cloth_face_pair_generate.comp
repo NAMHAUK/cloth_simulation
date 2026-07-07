@@ -47,6 +47,10 @@ layout(std430, binding = 8) buffer PairCount {
     uint pair_count;
 };
 
+layout(std430, binding = 9) buffer OverflowCount {
+    uint overflow_count;
+};
+
 uniform uint uTriangleCount;
 uniform uint uMaxPairCount;
 uniform float uCollisionThickness;
@@ -145,6 +149,7 @@ void append_pair(uint cloth_triangle_id, uint body_vertex_id)
 {
     uint pair_index = atomicAdd(pair_count, 1u);
     if (pair_index >= uMaxPairCount) {
+        atomicAdd(overflow_count, 1u);
         return;
     }
 

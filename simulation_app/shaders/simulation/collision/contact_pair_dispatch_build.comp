@@ -1,0 +1,24 @@
+#version 430 core
+
+layout(local_size_x = 1) in;
+
+layout(std430, binding = 0) readonly buffer PairCount {
+    uint pair_count;
+};
+
+layout(std430, binding = 1) buffer DispatchCommand {
+    uint num_groups_x;
+    uint num_groups_y;
+    uint num_groups_z;
+};
+
+uniform uint uMaxPairCount;
+uniform uint uLocalSize;
+
+void main()
+{
+    uint active_pair_count = min(pair_count, uMaxPairCount);
+    num_groups_x = (active_pair_count + uLocalSize - 1u) / uLocalSize;
+    num_groups_y = 1u;
+    num_groups_z = 1u;
+}
