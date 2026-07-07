@@ -27,6 +27,7 @@ add_executable(simulation_app
     src/simulation/SimulationController.h
     src/simulation/forces/SimulationForceField.cpp
     src/simulation/forces/SimulationForceField.h
+    src/simulation/SimulationGpuViews.h
     src/simulation/SimulationSettings.h
     src/simulation/forces/ExternalForceSolver.cpp
     src/simulation/forces/ExternalForceSolver.h
@@ -44,8 +45,10 @@ add_executable(simulation_app
     src/simulation/collision/ClothEdgeBodyEdgeCollisionSolver.h
     src/simulation/collision/ClothVertexBodyFaceCollisionSolver.cpp
     src/simulation/collision/ClothVertexBodyFaceCollisionSolver.h
-    src/simulation/collision/ClothBodyContactGenerator.cpp
-    src/simulation/collision/ClothBodyContactGenerator.h
+    src/simulation/collision/ClothBodyCollisionDetector.cpp
+    src/simulation/collision/ClothBodyCollisionDetector.h
+    src/simulation/collision/ClothBodyCollisionSolver.cpp
+    src/simulation/collision/ClothBodyCollisionSolver.h
     src/simulation/collision/GarmentPrefitSolver.cpp
     src/simulation/collision/GarmentPrefitSolver.h
     src/asset/MeshGeometryUtils.cpp
@@ -124,7 +127,7 @@ add_executable(simulation_app
     shaders/simulation/cloth_bending_constraint.comp
     shaders/simulation/cloth_attachment_constraint.comp
     shaders/simulation/collision/cloth_ground_collision.comp
-    shaders/simulation/collision/contact_pair_dispatch_build.comp
+    shaders/simulation/collision/contact_pair_dispatch_size.comp
     shaders/simulation/collision/cloth_vertex_body_face_pair_generate.comp
     shaders/simulation/collision/cloth_vertex_body_face_pair_accumulate.comp
     shaders/simulation/collision/cloth_vertex_body_face_pair_apply.comp

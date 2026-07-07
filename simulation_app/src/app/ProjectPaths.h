@@ -20,7 +20,7 @@ struct ShaderPaths {
     std::filesystem::path cloth_bending_constraint_compute;
     std::filesystem::path cloth_attachment_constraint_compute;
     std::filesystem::path cloth_ground_collision_compute;
-    std::filesystem::path contact_pair_dispatch_build_compute;
+    std::filesystem::path contact_pair_dispatch_size_compute;
     std::filesystem::path cloth_vertex_body_face_pair_generate_compute;
     std::filesystem::path cloth_vertex_body_face_pair_accumulate_compute;
     std::filesystem::path cloth_vertex_body_face_pair_apply_compute;
@@ -67,7 +67,7 @@ inline ShaderPaths make_shader_paths(const std::filesystem::path& project_root)
         shader_dir / "simulation" / "cloth_bending_constraint.comp",
         shader_dir / "simulation" / "cloth_attachment_constraint.comp",
         shader_dir / "simulation" / "collision" / "cloth_ground_collision.comp",
-        shader_dir / "simulation" / "collision" / "contact_pair_dispatch_build.comp",
+        shader_dir / "simulation" / "collision" / "contact_pair_dispatch_size.comp",
         shader_dir / "simulation" / "collision" / "cloth_vertex_body_face_pair_generate.comp",
         shader_dir / "simulation" / "collision" / "cloth_vertex_body_face_pair_accumulate.comp",
         shader_dir / "simulation" / "collision" / "cloth_vertex_body_face_pair_apply.comp",

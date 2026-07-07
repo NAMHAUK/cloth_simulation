@@ -2,65 +2,52 @@
 
 namespace {
 
-constexpr std::uint32_t dispatch_indirect_component_count = 3;
+constexpr std::uint32_t dispatch_component_count = 3;
 
 bool has_contact_pair_buffers(const ContactPairBuffers& buffers)
 {
     return buffers.pairs != 0 &&
-           buffers.count != 0 &&
-           buffers.dispatch_command != 0 &&
+           buffers.pair_count != 0 &&
+           buffers.dispatch_size != 0 &&
            buffers.overflow_count != 0 &&
            buffers.capacity != 0;
 }
 
-void create_contact_pair_buffers(ContactPairBuffers& buffers,
-                                 std::uint32_t capacity,
-                                 QOpenGLFunctions_4_5_Core& gl)
+void create_buffer(GLuint& buffer, GLsizeiptr size, QOpenGLFunctions_4_5_Core& gl)
+{
+    gl.glCreateBuffers(1, &buffer);
+    gl.glNamedBufferData(buffer, size, nullptr, GL_DYNAMIC_DRAW);
+}
+
+void create_contact_pair_buffers(ContactPairBuffers& buffers, std::uint32_t capacity, QOpenGLFunctions_4_5_Core& gl)
 {
     buffers.capacity = capacity;
-    gl.glCreateBuffers(1, &buffers.pairs);
-    gl.glCreateBuffers(1, &buffers.count);
-    gl.glCreateBuffers(1, &buffers.dispatch_command);
-    gl.glCreateBuffers(1, &buffers.overflow_count);
-
-    gl.glNamedBufferData(buffers.pairs,
-                         static_cast<GLsizeiptr>(capacity * sizeof(std::uint32_t) * 2u),
-                         nullptr,
-                         GL_DYNAMIC_DRAW);
-    gl.glNamedBufferData(buffers.count,
-                         static_cast<GLsizeiptr>(sizeof(std::uint32_t)),
-                         nullptr,
-                         GL_DYNAMIC_DRAW);
-    gl.glNamedBufferData(buffers.dispatch_command,
-                         static_cast<GLsizeiptr>(dispatch_indirect_component_count * sizeof(std::uint32_t)),
-                         nullptr,
-                         GL_DYNAMIC_DRAW);
-    gl.glNamedBufferData(buffers.overflow_count,
-                         static_cast<GLsizeiptr>(sizeof(std::uint32_t)),
-                         nullptr,
-                         GL_DYNAMIC_DRAW);
+    create_buffer(buffers.pairs, static_cast<GLsizeiptr>(capacity * sizeof(std::uint32_t) * 2u), gl);
+    create_buffer(buffers.pair_count, static_cast<GLsizeiptr>(sizeof(std::uint32_t)), gl);
+    create_buffer(buffers.dispatch_size, static_cast<GLsizeiptr>(dispatch_component_count * sizeof(std::uint32_t)), gl);
+    create_buffer(buffers.overflow_count, static_cast<GLsizeiptr>(sizeof(std::uint32_t)), gl);
 }
 
 void clear_contact_pair_counts(const ContactPairBuffers& buffers, QOpenGLFunctions_4_5_Core& gl)
 {
-    const std::uint32_t zero_uint[4] = {};
-    gl.glClearNamedBufferData(buffers.count,
+    const std::uint32_t zero_uint = 0;
+    gl.glClearNamedBufferData(buffers.pair_count,
                               GL_R32UI,
                               GL_RED_INTEGER,
                               GL_UNSIGNED_INT,
-                              zero_uint);
+                              &zero_uint);
     gl.glClearNamedBufferData(buffers.overflow_count,
                               GL_R32UI,
                               GL_RED_INTEGER,
                               GL_UNSIGNED_INT,
-                              zero_uint);
+                              &zero_uint);
 }
 
 void delete_contact_pair_buffers(ContactPairBuffers& buffers, QOpenGLFunctions_4_5_Core& gl)
 {
     gl.glDeleteBuffers(1, &buffers.pairs);
-    gl.glDeleteBuffers(1, &buffers.count);
-    gl.glDeleteBuffers(1, &buffers.dispatch_command);
+    gl.glDeleteBuffers(1, &buffers.pair_count);
+    gl.glDeleteBuffers(1, &buffers.dispatch_size);
     gl.glDeleteBuffers(1, &buffers.overflow_count);
     buffers = {};
 }
@@ -93,11 +80,7 @@ bool CollisionContactBuffers::ensure_capacity(std::uint32_t vertex_count,
     create_contact_pair_buffers(buffers_.cloth_vertex_body_face, cloth_vertex_body_face_capacity, gl);
     create_contact_pair_buffers(buffers_.cloth_edge_body_edge, cloth_edge_body_edge_capacity, gl);
     create_contact_pair_buffers(buffers_.cloth_face_body_vertex, cloth_face_body_vertex_capacity, gl);
-    gl.glCreateBuffers(1, &buffers_.correction_sum_buffer);
-    gl.glNamedBufferData(buffers_.correction_sum_buffer,
-                         static_cast<GLsizeiptr>(vertex_count * sizeof(std::int32_t) * 4u),
-                         nullptr,
-                         GL_DYNAMIC_DRAW);
+    create_buffer(buffers_.correction_sum_buffer, static_cast<GLsizeiptr>(vertex_count * sizeof(std::int32_t) * 4u), gl);
 
     return has_contact_pair_buffers(buffers_.cloth_vertex_body_face) &&
            has_contact_pair_buffers(buffers_.cloth_edge_body_edge) &&

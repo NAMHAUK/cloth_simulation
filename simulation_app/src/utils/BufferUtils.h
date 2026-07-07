@@ -79,8 +79,8 @@ inline bool is_valid_edge_bvh_resource(const EdgeBvhResources& edge_bvh)
 inline bool is_valid_contact_pair_buffers(const ContactPairBuffers& contact_pair_buffers)
 {
     return contact_pair_buffers.pairs != 0 &&
-           contact_pair_buffers.count != 0 &&
-           contact_pair_buffers.dispatch_command != 0 &&
+           contact_pair_buffers.pair_count != 0 &&
+           contact_pair_buffers.dispatch_size != 0 &&
            contact_pair_buffers.overflow_count != 0 &&
            contact_pair_buffers.capacity != 0;
 }

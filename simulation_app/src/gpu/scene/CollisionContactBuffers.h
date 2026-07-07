@@ -6,8 +6,8 @@
 
 struct ContactPairBuffers final {
     GLuint pairs = 0;
-    GLuint count = 0;
-    GLuint dispatch_command = 0;
+    GLuint pair_count = 0;
+    GLuint dispatch_size = 0;
     GLuint overflow_count = 0;
     std::uint32_t capacity = 0;
 };
