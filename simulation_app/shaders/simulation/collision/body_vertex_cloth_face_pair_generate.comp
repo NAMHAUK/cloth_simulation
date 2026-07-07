@@ -58,6 +58,11 @@ uniform uint uIgnoredBodyPartMask;
 
 const uint max_bvh_stack_depth = 32u;
 const uint bvh_root_node = 0u;
+const uint group_pair_capacity = 512u;
+
+shared uvec2 group_pairs[group_pair_capacity];
+shared uint group_pair_count;
+shared uint group_base_index;
 
 struct Aabb {
     vec3 min_bounds;
@@ -145,7 +150,7 @@ bool overlaps_aabb(Aabb left_bounds, vec3 right_min_bounds, vec3 right_max_bound
            all(greaterThanEqual(left_bounds.max_bounds, right_min_bounds));
 }
 
-void append_pair(uint cloth_triangle_id, uint body_vertex_id)
+void append_pair_direct(uvec2 pair_record)
 {
     uint pair_index = atomicAdd(pair_count, 1u);
     if (pair_index >= uMaxPairCount) {
@@ -153,47 +158,97 @@ void append_pair(uint cloth_triangle_id, uint body_vertex_id)
         return;
     }
 
-    pair_records[pair_index] = uvec2(cloth_triangle_id, body_vertex_id);
+    pair_records[pair_index] = pair_record;
+}
+
+void append_pair(uint cloth_triangle_id, uint body_vertex_id)
+{
+    uvec2 pair_record = uvec2(cloth_triangle_id, body_vertex_id);
+    uint group_pair_index = atomicAdd(group_pair_count, 1u);
+    if (group_pair_index < group_pair_capacity) {
+        group_pairs[group_pair_index] = pair_record;
+        return;
+    }
+
+    append_pair_direct(pair_record);
+}
+
+void flush_group_pairs()
+{
+    barrier();
+
+    uint stored_pair_count = min(group_pair_count, group_pair_capacity);
+    if (gl_LocalInvocationIndex == 0u) {
+        if (stored_pair_count == 0u) {
+            group_base_index = 0u;
+        } else {
+            group_base_index = atomicAdd(pair_count, stored_pair_count);
+            if (group_base_index >= uMaxPairCount) {
+                atomicAdd(overflow_count, stored_pair_count);
+            } else {
+                uint available_pair_count = uMaxPairCount - group_base_index;
+                if (stored_pair_count > available_pair_count) {
+                    atomicAdd(overflow_count, stored_pair_count - available_pair_count);
+                }
+            }
+        }
+    }
+
+    barrier();
+
+    for (uint group_pair_index = gl_LocalInvocationIndex;
+         group_pair_index < stored_pair_count;
+         group_pair_index += gl_WorkGroupSize.x) {
+        uint pair_index = group_base_index + group_pair_index;
+        if (pair_index < uMaxPairCount) {
+            pair_records[pair_index] = group_pairs[group_pair_index];
+        }
+    }
 }
 
 void main()
 {
+    if (gl_LocalInvocationIndex == 0u) {
+        group_pair_count = 0u;
+    }
+    barrier();
+
     uint cloth_triangle_id = gl_GlobalInvocationID.x;
-    if (cloth_triangle_id >= uTriangleCount) {
-        return;
-    }
+    if (cloth_triangle_id < uTriangleCount) {
+        Aabb cloth_swept_bounds = build_cloth_triangle_swept_aabb(cloth_triangle_id);
 
-    Aabb cloth_swept_bounds = build_cloth_triangle_swept_aabb(cloth_triangle_id);
+        uint node_index_stack[max_bvh_stack_depth];
+        uint stack_count = 0u;
+        node_index_stack[stack_count++] = bvh_root_node;
 
-    uint node_index_stack[max_bvh_stack_depth];
-    uint stack_count = 0u;
-    node_index_stack[stack_count++] = bvh_root_node;
-
-    while (stack_count > 0u) {
-        --stack_count;
-        uint current_node_index = node_index_stack[stack_count];
-        BvhNode current_node = body_vertex_bvh_nodes[current_node_index];
-        if (is_ignored_body_part_node(current_node)) {
-            continue;
-        }
-
-        if (!overlaps_aabb(cloth_swept_bounds, current_node.min_bounds.xyz, current_node.max_bounds.xyz)) {
-            continue;
-        }
-
-        if (is_leaf_node(current_node)) {
-            for (uint vertex_offset = 0u; vertex_offset < current_node.element_count; ++vertex_offset) {
-                uint body_vertex_id = body_vertex_ids[current_node.first_element_index + vertex_offset];
-                Aabb body_bounds = build_body_vertex_swept_aabb(body_vertex_id);
-                if (!overlaps_aabb(cloth_swept_bounds, body_bounds.min_bounds, body_bounds.max_bounds)) {
-                    continue;
-                }
-
-                append_pair(cloth_triangle_id, body_vertex_id);
+        while (stack_count > 0u) {
+            --stack_count;
+            uint current_node_index = node_index_stack[stack_count];
+            BvhNode current_node = body_vertex_bvh_nodes[current_node_index];
+            if (is_ignored_body_part_node(current_node)) {
+                continue;
             }
-        } else {
-            node_index_stack[stack_count++] = current_node.left_child_index;
-            node_index_stack[stack_count++] = current_node.right_child_index;
+
+            if (!overlaps_aabb(cloth_swept_bounds, current_node.min_bounds.xyz, current_node.max_bounds.xyz)) {
+                continue;
+            }
+
+            if (is_leaf_node(current_node)) {
+                for (uint vertex_offset = 0u; vertex_offset < current_node.element_count; ++vertex_offset) {
+                    uint body_vertex_id = body_vertex_ids[current_node.first_element_index + vertex_offset];
+                    Aabb body_bounds = build_body_vertex_swept_aabb(body_vertex_id);
+                    if (!overlaps_aabb(cloth_swept_bounds, body_bounds.min_bounds, body_bounds.max_bounds)) {
+                        continue;
+                    }
+
+                    append_pair(cloth_triangle_id, body_vertex_id);
+                }
+            } else {
+                node_index_stack[stack_count++] = current_node.left_child_index;
+                node_index_stack[stack_count++] = current_node.right_child_index;
+            }
         }
     }
+
+    flush_group_pairs();
 }
