@@ -13,6 +13,7 @@ constexpr GLuint character_triangle_geometry_binding = 2;
 constexpr GLuint character_bvh_node_binding = 3;
 constexpr GLuint collision_states_binding = 4;
 constexpr std::uint32_t cloth_vertex_body_face_collision_local_size = 128;
+constexpr std::uint32_t gpu_timing_log_interval = 100u;
 }
 
 bool ClothVertexBodyFaceCollisionSolver::is_initialized() const
@@ -48,6 +49,9 @@ bool ClothVertexBodyFaceCollisionSolver::initialize(const std::filesystem::path&
     collision_thickness_ = collision_thickness;
     max_correction_length_ = max_correction_length;
     ignored_body_part_mask_ = ignored_body_part_mask;
+#if CLOTH_SIM_COLLISION_GPU_TIMING
+    solve_timer_.initialize("cloth vertex - body face", gpu_timing_log_interval, gl);
+#endif
     return true;
 }
 
@@ -74,6 +78,9 @@ void ClothVertexBodyFaceCollisionSolver::solve(const ClothMotionBufferView& moti
 {
     assert(can_solve(motion_view, collision_view, character_geometry, character_bvh));
 
+#if CLOTH_SIM_COLLISION_GPU_TIMING
+    const bool gpu_timing_started = solve_timer_.begin(gl);
+#endif
     gl.glUseProgram(program_);
     gl.glBindBufferBase(GL_SHADER_STORAGE_BUFFER, current_positions_binding, motion_view.current_position_buffer);
     gl.glBindBufferBase(GL_SHADER_STORAGE_BUFFER, previous_positions_binding, motion_view.previous_position_buffer);
@@ -88,11 +95,19 @@ void ClothVertexBodyFaceCollisionSolver::solve(const ClothMotionBufferView& moti
 
     gl.glDispatchCompute(compute_group_count(motion_view.vertex_count, cloth_vertex_body_face_collision_local_size), 1, 1);
     gl.glMemoryBarrier(GL_SHADER_STORAGE_BARRIER_BIT | GL_VERTEX_ATTRIB_ARRAY_BARRIER_BIT);
+#if CLOTH_SIM_COLLISION_GPU_TIMING
+    if (gpu_timing_started) {
+        solve_timer_.end(gl);
+    }
+#endif
 }
 
 void ClothVertexBodyFaceCollisionSolver::release(QOpenGLFunctions_4_5_Core& gl)
 {
     gl.glDeleteProgram(program_);
+#if CLOTH_SIM_COLLISION_GPU_TIMING
+    solve_timer_.release(gl);
+#endif
 
     program_ = 0;
     cloth_vertex_count_location_ = -1;

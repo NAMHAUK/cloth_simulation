@@ -11,6 +11,7 @@ namespace {
 constexpr std::uint32_t pair_generate_local_size = 128;
 constexpr std::uint32_t pair_accumulate_local_size = 128;
 constexpr std::uint32_t pair_apply_local_size = 128;
+constexpr std::uint32_t gpu_timing_log_interval = 100u;
 
 namespace generate_binding {
 constexpr GLuint cloth_current = 0;
@@ -89,6 +90,11 @@ bool ClothEdgeBodyEdgeCollisionSolver::initialize(const std::filesystem::path& p
     collision_thickness_ = collision_thickness;
     max_correction_length_ = max_correction_length;
     ignored_body_part_mask_ = ignored_body_part_mask;
+#if CLOTH_SIM_COLLISION_GPU_TIMING
+    generate_timer_.initialize("cloth edge - body edge pair generation", gpu_timing_log_interval, gl);
+    accumulate_timer_.initialize("cloth edge - body edge pair accumulation", gpu_timing_log_interval, gl);
+    apply_timer_.initialize("cloth edge - body edge pair apply", gpu_timing_log_interval, gl);
+#endif
     return true;
 }
 
@@ -135,6 +141,11 @@ void ClothEdgeBodyEdgeCollisionSolver::release(QOpenGLFunctions_4_5_Core& gl)
     gl.glDeleteProgram(generate_.program);
     gl.glDeleteProgram(accumulate_.program);
     gl.glDeleteProgram(apply_.program);
+#if CLOTH_SIM_COLLISION_GPU_TIMING
+    generate_timer_.release(gl);
+    accumulate_timer_.release(gl);
+    apply_timer_.release(gl);
+#endif
 
     generate_ = {};
     accumulate_ = {};
@@ -151,6 +162,9 @@ void ClothEdgeBodyEdgeCollisionSolver::run_pair_generation_stage(const ClothMoti
                                                                  const CollisionWorkspaceBufferView& collision_workspace_view,
                                                                  QOpenGLFunctions_4_5_Core& gl) const
 {
+#if CLOTH_SIM_COLLISION_GPU_TIMING
+    const bool gpu_timing_started = generate_timer_.begin(gl);
+#endif
     gl.glUseProgram(generate_.program);
     gl.glBindBufferBase(GL_SHADER_STORAGE_BUFFER, generate_binding::cloth_current, motion_view.current_position_buffer);
     gl.glBindBufferBase(GL_SHADER_STORAGE_BUFFER, generate_binding::cloth_previous, motion_view.previous_position_buffer);
@@ -167,6 +181,11 @@ void ClothEdgeBodyEdgeCollisionSolver::run_pair_generation_stage(const ClothMoti
     gl.glProgramUniform1ui(generate_.program, generate_.ignored_body_part_mask, ignored_body_part_mask_);
     gl.glDispatchCompute(compute_group_count(cloth_edges.constraint_count, pair_generate_local_size), 1, 1);
     gl.glMemoryBarrier(GL_SHADER_STORAGE_BARRIER_BIT);
+#if CLOTH_SIM_COLLISION_GPU_TIMING
+    if (gpu_timing_started) {
+        generate_timer_.end(gl);
+    }
+#endif
 }
 
 void ClothEdgeBodyEdgeCollisionSolver::run_pair_accumulation_stage(const ClothMotionBufferView& motion_view,
@@ -176,6 +195,9 @@ void ClothEdgeBodyEdgeCollisionSolver::run_pair_accumulation_stage(const ClothMo
                                                                    const CollisionWorkspaceBufferView& collision_workspace_view,
                                                                    QOpenGLFunctions_4_5_Core& gl) const
 {
+#if CLOTH_SIM_COLLISION_GPU_TIMING
+    const bool gpu_timing_started = accumulate_timer_.begin(gl);
+#endif
     gl.glUseProgram(accumulate_.program);
     gl.glBindBufferBase(GL_SHADER_STORAGE_BUFFER, accumulate_binding::cloth_current, motion_view.current_position_buffer);
     gl.glBindBufferBase(GL_SHADER_STORAGE_BUFFER, accumulate_binding::cloth_previous, motion_view.previous_position_buffer);
@@ -190,6 +212,11 @@ void ClothEdgeBodyEdgeCollisionSolver::run_pair_accumulation_stage(const ClothMo
     gl.glProgramUniform1f(accumulate_.program, accumulate_.thickness, collision_thickness_);
     gl.glDispatchCompute(compute_group_count(collision_workspace_view.edge_pair_capacity, pair_accumulate_local_size), 1, 1);
     gl.glMemoryBarrier(GL_SHADER_STORAGE_BARRIER_BIT);
+#if CLOTH_SIM_COLLISION_GPU_TIMING
+    if (gpu_timing_started) {
+        accumulate_timer_.end(gl);
+    }
+#endif
 }
 
 void ClothEdgeBodyEdgeCollisionSolver::run_pair_apply_stage(const ClothMotionBufferView& motion_view,
@@ -197,6 +224,9 @@ void ClothEdgeBodyEdgeCollisionSolver::run_pair_apply_stage(const ClothMotionBuf
                                                             const CollisionWorkspaceBufferView& collision_workspace_view,
                                                             QOpenGLFunctions_4_5_Core& gl) const
 {
+#if CLOTH_SIM_COLLISION_GPU_TIMING
+    const bool gpu_timing_started = apply_timer_.begin(gl);
+#endif
     gl.glUseProgram(apply_.program);
     gl.glBindBufferBase(GL_SHADER_STORAGE_BUFFER, apply_binding::cloth_current, motion_view.current_position_buffer);
     gl.glBindBufferBase(GL_SHADER_STORAGE_BUFFER, apply_binding::collision_states, collision_view.collision_state_buffer);
@@ -205,6 +235,11 @@ void ClothEdgeBodyEdgeCollisionSolver::run_pair_apply_stage(const ClothMotionBuf
     gl.glProgramUniform1f(apply_.program, apply_.max_correction, max_correction_length_);
     gl.glDispatchCompute(compute_group_count(motion_view.vertex_count, pair_apply_local_size), 1, 1);
     gl.glMemoryBarrier(GL_SHADER_STORAGE_BARRIER_BIT | GL_VERTEX_ATTRIB_ARRAY_BARRIER_BIT);
+#if CLOTH_SIM_COLLISION_GPU_TIMING
+    if (gpu_timing_started) {
+        apply_timer_.end(gl);
+    }
+#endif
 }
 
 bool ClothEdgeBodyEdgeCollisionSolver::has_pair_programs() const

@@ -3,10 +3,15 @@
 #include "gpu/body/CharacterGpuDataTypes.h"
 #include "gpu/cloth/ClothGpuDataTypes.h"
 #include "gpu/scene/CollisionWorkspaceBuffers.h"
+#include "utils/GpuElapsedTimer.h"
 
 #include <filesystem>
 
 #include <QOpenGLFunctions_4_5_Core>
+
+#ifndef CLOTH_SIM_COLLISION_GPU_TIMING
+#define CLOTH_SIM_COLLISION_GPU_TIMING 1
+#endif
 
 class BodyVertexClothFaceCollisionSolver final {
 public:
@@ -66,6 +71,11 @@ private:
     GenerateStage generate_;
     AccumulateStage accumulate_;
     ApplyStage apply_;
+#if CLOTH_SIM_COLLISION_GPU_TIMING
+    mutable GpuElapsedTimer generate_timer_;
+    mutable GpuElapsedTimer accumulate_timer_;
+    mutable GpuElapsedTimer apply_timer_;
+#endif
     float collision_thickness_ = 0.0f;
     float max_correction_length_ = 0.0f;
     std::uint32_t ignored_body_part_mask_ = 0;

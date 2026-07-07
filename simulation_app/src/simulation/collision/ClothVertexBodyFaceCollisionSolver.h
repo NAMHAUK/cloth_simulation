@@ -2,11 +2,16 @@
 
 #include "gpu/body/CharacterGpuDataTypes.h"
 #include "gpu/cloth/ClothGpuDataTypes.h"
+#include "utils/GpuElapsedTimer.h"
 
 #include <cstdint>
 #include <filesystem>
 
 #include <QOpenGLFunctions_4_5_Core>
+
+#ifndef CLOTH_SIM_COLLISION_GPU_TIMING
+#define CLOTH_SIM_COLLISION_GPU_TIMING 1
+#endif
 
 class ClothVertexBodyFaceCollisionSolver final {
 public:
@@ -37,6 +42,9 @@ private:
     GLint collision_thickness_location_ = -1;
     GLint max_correction_length_location_ = -1;
     GLint ignored_body_part_mask_location_ = -1;
+#if CLOTH_SIM_COLLISION_GPU_TIMING
+    mutable GpuElapsedTimer solve_timer_;
+#endif
     float collision_thickness_ = 0.0f;
     float max_correction_length_ = 0.0f;
     std::uint32_t ignored_body_part_mask_ = 0;
