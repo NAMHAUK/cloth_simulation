@@ -12,6 +12,7 @@ constexpr GLuint character_previous_positions_binding = 2;
 constexpr GLuint character_bvh_node_binding = 3;
 constexpr GLuint body_triangle_bounds_binding = 4;
 constexpr std::uint32_t bvh_bounds_update_local_size = 128;
+constexpr std::uint32_t gpu_timing_log_interval = 100u;
 }
 
 bool TriangleBvhBoundsUpdater::is_initialized() const
@@ -56,6 +57,7 @@ bool TriangleBvhBoundsUpdater::initialize(const std::filesystem::path& shader_pa
         return false;
     }
 
+    update_timer_.initialize("character triangle BVH bounds update", gpu_timing_log_interval, gl);
     return true;
 }
 
@@ -70,6 +72,8 @@ void TriangleBvhBoundsUpdater::update(const CharacterMeshTopologyResources& topo
     if (!can_update(topology, vertex_view, character_geometry, character_bvh, node_ranges_by_level, collision_thickness)) {
         return;
     }
+
+    const bool gpu_timing_started = update_timer_.begin(gl);
 
     gl.glUseProgram(program_);
     gl.glBindBufferBase(GL_SHADER_STORAGE_BUFFER, character_triangle_geometry_binding, character_geometry.triangle_geometry_buffer);
@@ -91,10 +95,15 @@ void TriangleBvhBoundsUpdater::update(const CharacterMeshTopologyResources& topo
         gl.glDispatchCompute(compute_group_count(range.node_count, bvh_bounds_update_local_size), 1, 1);
         gl.glMemoryBarrier(GL_SHADER_STORAGE_BARRIER_BIT);
     }
+
+    if (gpu_timing_started) {
+        update_timer_.end(gl);
+    }
 }
 
 void TriangleBvhBoundsUpdater::release(QOpenGLFunctions_4_5_Core& gl)
 {
+    update_timer_.release(gl);
     gl.glDeleteProgram(program_);
 
     program_ = 0;

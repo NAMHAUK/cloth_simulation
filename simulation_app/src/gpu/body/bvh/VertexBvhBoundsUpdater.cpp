@@ -12,6 +12,7 @@ constexpr GLuint body_vertex_ids_binding = 2;
 constexpr GLuint body_vertex_bvh_nodes_binding = 3;
 constexpr GLuint body_vertex_bounds_binding = 4;
 constexpr std::uint32_t vertex_bvh_bounds_update_local_size = 128;
+constexpr std::uint32_t gpu_timing_log_interval = 100u;
 }
 
 bool VertexBvhBoundsUpdater::is_initialized() const
@@ -50,6 +51,7 @@ bool VertexBvhBoundsUpdater::initialize(const std::filesystem::path& shader_path
         return false;
     }
 
+    update_timer_.initialize("character vertex BVH bounds update", gpu_timing_log_interval, gl);
     return true;
 }
 
@@ -62,6 +64,8 @@ void VertexBvhBoundsUpdater::update(const CharacterVertexBufferView& vertex_view
     if (!can_update(vertex_view, body_vertex_bvh, node_ranges_by_level, collision_thickness)) {
         return;
     }
+
+    const bool gpu_timing_started = update_timer_.begin(gl);
 
     gl.glUseProgram(program_);
     gl.glBindBufferBase(GL_SHADER_STORAGE_BUFFER, body_current_positions_binding, vertex_view.current_position_buffer);
@@ -83,10 +87,15 @@ void VertexBvhBoundsUpdater::update(const CharacterVertexBufferView& vertex_view
         gl.glDispatchCompute(compute_group_count(range.node_count, vertex_bvh_bounds_update_local_size), 1, 1);
         gl.glMemoryBarrier(GL_SHADER_STORAGE_BARRIER_BIT);
     }
+
+    if (gpu_timing_started) {
+        update_timer_.end(gl);
+    }
 }
 
 void VertexBvhBoundsUpdater::release(QOpenGLFunctions_4_5_Core& gl)
 {
+    update_timer_.release(gl);
     gl.glDeleteProgram(program_);
 
     program_ = 0;

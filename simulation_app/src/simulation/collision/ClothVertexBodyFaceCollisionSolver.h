@@ -10,7 +10,7 @@
 #include <QOpenGLFunctions_4_5_Core>
 
 #ifndef CLOTH_SIM_COLLISION_GPU_TIMING
-#define CLOTH_SIM_COLLISION_GPU_TIMING 1
+#define CLOTH_SIM_COLLISION_GPU_TIMING 0
 #endif
 
 class ClothVertexBodyFaceCollisionSolver final {
