@@ -38,6 +38,7 @@ __pycache__/
 *.exp
 
 # Temp/log files
+log/
 *.log
 *.tmp
 .DS_Store
