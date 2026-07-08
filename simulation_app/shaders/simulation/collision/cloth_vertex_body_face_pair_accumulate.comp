@@ -1,0 +1,131 @@
+#version 430 core
+
+layout(local_size_x = 128) in;
+
+layout(std430, binding = 0) readonly buffer ClothCurrentPositions {
+    float cloth_current_positions[];
+};
+
+layout(std430, binding = 1) readonly buffer ClothPreviousPositions {
+    float cloth_previous_positions[];
+};
+
+struct CharacterTriangleGeometry {
+    vec4 a;
+    vec4 b;
+    vec4 c;
+    vec4 normal;
+};
+
+layout(std430, binding = 2) readonly buffer CharacterTriangleGeometryBuffer {
+    CharacterTriangleGeometry triangle_geometry[];
+};
+
+layout(std430, binding = 3) readonly buffer PairRecords {
+    uvec2 pair_records[];
+};
+
+layout(std430, binding = 4) readonly buffer PairCount {
+    uint pair_count;
+};
+
+layout(std430, binding = 5) buffer CorrectionSums {
+    ivec4 correction_sums[];
+};
+
+uniform uint uMaxPairCount;
+uniform float uCollisionThickness;
+
+const float triangle_edge_tolerance = -1.0e-6;
+const float penetration_tolerance = 0.0005;
+
+#define COLLISION_POSITION_IO_CLOTH_SWEEP
+#include "common/collision_position_io.glsl"
+
+#define COLLISION_CORRECTION_ACCUMULATE
+#include "common/collision_correction_common.glsl"
+
+struct VertexFaceContact {
+    uint cloth_vertex_id;
+    vec3 normal;
+    float depth;
+};
+
+bool point_inside_triangle(vec3 point, vec3 a, vec3 b, vec3 c, vec3 normal)
+{
+    vec3 ab = b - a;
+    vec3 bc = c - b;
+    vec3 ca = a - c;
+    return dot(cross(ab, point - a), normal) >= triangle_edge_tolerance &&
+           dot(cross(bc, point - b), normal) >= triangle_edge_tolerance &&
+           dot(cross(ca, point - c), normal) >= triangle_edge_tolerance;
+}
+
+bool compute_vertex_triangle_contact(uint cloth_vertex_id, uint triangle_index, out VertexFaceContact contact)
+{
+    contact.cloth_vertex_id = cloth_vertex_id;
+    contact.normal = vec3(0.0, 1.0, 0.0);
+    contact.depth = 0.0;
+
+    vec4 stored_normal = triangle_geometry[triangle_index].normal;
+    if (stored_normal.w == 0.0) {
+        return false;
+    }
+
+    vec3 previous_position = read_cloth_previous_position(cloth_vertex_id);
+    vec3 current_position = read_cloth_current_position(cloth_vertex_id);
+    vec3 a = triangle_geometry[triangle_index].a.xyz;
+    vec3 b = triangle_geometry[triangle_index].b.xyz;
+    vec3 c = triangle_geometry[triangle_index].c.xyz;
+    vec3 normal = stored_normal.xyz;
+
+    float previous_signed_distance = dot(previous_position - a, normal);
+    float current_signed_distance = dot(current_position - a, normal);
+    float penetration_depth = uCollisionThickness - current_signed_distance - penetration_tolerance;
+    if (penetration_depth <= 0.0) {
+        return false;
+    }
+
+    bool swept_contact = false;
+    if (previous_signed_distance > uCollisionThickness) {
+        float denominator = current_signed_distance - previous_signed_distance;
+        vec3 hit_position = mix(previous_position,
+                                current_position,
+                                (uCollisionThickness - previous_signed_distance) / denominator);
+        vec3 surface_position = hit_position - normal * uCollisionThickness;
+        swept_contact = point_inside_triangle(surface_position, a, b, c, normal);
+    }
+
+    if (!swept_contact) {
+        vec3 surface_position = current_position - normal * current_signed_distance;
+        if (!point_inside_triangle(surface_position, a, b, c, normal)) {
+            return false;
+        }
+    }
+
+    contact.normal = normal;
+    contact.depth = penetration_depth;
+    return true;
+}
+
+void accumulate_contact(VertexFaceContact contact)
+{
+    vec3 correction = contact.normal * contact.depth;
+    accumulate_vertex_correction(contact.cloth_vertex_id, correction);
+    atomicAdd(correction_sums[contact.cloth_vertex_id].w, 1);
+}
+
+void main()
+{
+    uint pair_index = gl_GlobalInvocationID.x;
+    uint active_pair_count = min(pair_count, uMaxPairCount);
+    if (pair_index >= active_pair_count) {
+        return;
+    }
+
+    uvec2 pair_record = pair_records[pair_index];
+    VertexFaceContact contact;
+    if (compute_vertex_triangle_contact(pair_record.x, pair_record.y, contact)) {
+        accumulate_contact(contact);
+    }
+}

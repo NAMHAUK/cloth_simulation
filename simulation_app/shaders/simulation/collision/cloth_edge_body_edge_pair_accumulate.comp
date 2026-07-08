@@ -45,8 +45,12 @@ const float edge_endpoint_tolerance = 1.0e-4;
 const float penetration_tolerance = 0.0005;
 const float ccd_parallel_epsilon = 1.0e-8;
 const float pbd_denominator_epsilon = 1.0e-8;
-const float correction_fixed_point_scale = 1000000.0;
-const float correction_component_limit = 1073741823.0;
+
+#define COLLISION_POSITION_IO_CLOTH_BODY_SWEEP
+#include "common/collision_position_io.glsl"
+
+#define COLLISION_CORRECTION_ACCUMULATE
+#include "common/collision_correction_common.glsl"
 
 struct EdgeContact {
     vec3 normal;
@@ -65,38 +69,6 @@ struct SegmentCandidateState {
     vec3 p;
     vec3 q;
 };
-
-vec3 read_cloth_current_position(uint vertex_index)
-{
-    uint base_index = vertex_index * 3u;
-    return vec3(cloth_current_positions[base_index],
-                cloth_current_positions[base_index + 1u],
-                cloth_current_positions[base_index + 2u]);
-}
-
-vec3 read_cloth_previous_position(uint vertex_index)
-{
-    uint base_index = vertex_index * 3u;
-    return vec3(cloth_previous_positions[base_index],
-                cloth_previous_positions[base_index + 1u],
-                cloth_previous_positions[base_index + 2u]);
-}
-
-vec3 read_body_current_position(uint vertex_index)
-{
-    uint base_index = vertex_index * 3u;
-    return vec3(body_current_positions[base_index],
-                body_current_positions[base_index + 1u],
-                body_current_positions[base_index + 2u]);
-}
-
-vec3 read_body_previous_position(uint vertex_index)
-{
-    uint base_index = vertex_index * 3u;
-    return vec3(body_previous_positions[base_index],
-                body_previous_positions[base_index + 1u],
-                body_previous_positions[base_index + 2u]);
-}
 
 void retain_closest_segment_candidate(float candidate_s, float candidate_t, inout SegmentCandidateState state)
 {
@@ -275,18 +247,6 @@ bool compute_pair_contact(uint pair_index, out uvec2 cloth_vertices, out EdgeCon
     contact.cloth_t = current_cloth_t;
     contact.depth = uCollisionThickness - current_signed_distance - penetration_tolerance;
     return contact.depth > 0.0;
-}
-
-void accumulate_vertex_correction(uint vertex_index, vec3 correction)
-{
-    vec3 scaled_correction = round(correction * correction_fixed_point_scale);
-    ivec3 encoded_correction = ivec3(clamp(scaled_correction,
-                                           vec3(-correction_component_limit),
-                                           vec3(correction_component_limit)));
-
-    atomicAdd(correction_sums[vertex_index].x, encoded_correction.x);
-    atomicAdd(correction_sums[vertex_index].y, encoded_correction.y);
-    atomicAdd(correction_sums[vertex_index].z, encoded_correction.z);
 }
 
 void accumulate_contact_for_vertex(uint vertex_index,

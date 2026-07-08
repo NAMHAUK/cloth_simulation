@@ -1,13 +1,6 @@
 #version 430 core
 
-struct BvhNode {
-    vec4 min_bounds;
-    vec4 max_bounds;
-    uint left_child_index;
-    uint right_child_index;
-    uint first_element_index;
-    uint element_count;
-};
+#include "common/collision_common.glsl"
 
 layout(local_size_x = 128) in;
 
@@ -31,12 +24,13 @@ layout(std430, binding = 4) readonly buffer BvhNodes {
     BvhNode body_vertex_bvh_nodes[];
 };
 
-layout(std430, binding = 5) readonly buffer BodyCurrentPositions {
-    float body_current_positions[];
+struct BodyElementAabb {
+    vec4 min_bounds;
+    vec4 max_bounds;
 };
 
-layout(std430, binding = 6) readonly buffer BodyPreviousPositions {
-    float body_previous_positions[];
+layout(std430, binding = 5) readonly buffer BodyVertexBounds {
+    BodyElementAabb body_vertex_bounds[];
 };
 
 layout(std430, binding = 7) buffer PairRecords {
@@ -47,61 +41,21 @@ layout(std430, binding = 8) buffer PairCount {
     uint pair_count;
 };
 
+layout(std430, binding = 9) buffer OverflowCount {
+    uint overflow_count;
+};
+
 uniform uint uTriangleCount;
 uniform uint uMaxPairCount;
-uniform float uCollisionThickness;
 uniform uint uIgnoredBodyPartMask;
 
 const uint max_bvh_stack_depth = 32u;
 const uint bvh_root_node = 0u;
+const uint group_pair_capacity = 512u;
 
-struct Aabb {
-    vec3 min_bounds;
-    vec3 max_bounds;
-};
-
-bool is_leaf_node(BvhNode node)
-{
-    return node.element_count > 0u;
-}
-
-bool is_ignored_body_part_node(BvhNode node)
-{
-    uint part_label_mask = uint(node.max_bounds.w + 0.5);
-    return part_label_mask != 0u && (part_label_mask & ~uIgnoredBodyPartMask) == 0u;
-}
-
-vec3 read_cloth_current_position(uint vertex_index)
-{
-    uint base_index = vertex_index * 3u;
-    return vec3(cloth_current_positions[base_index],
-                cloth_current_positions[base_index + 1u],
-                cloth_current_positions[base_index + 2u]);
-}
-
-vec3 read_cloth_previous_position(uint vertex_index)
-{
-    uint base_index = vertex_index * 3u;
-    return vec3(cloth_previous_positions[base_index],
-                cloth_previous_positions[base_index + 1u],
-                cloth_previous_positions[base_index + 2u]);
-}
-
-vec3 read_body_current_position(uint vertex_index)
-{
-    uint base_index = vertex_index * 3u;
-    return vec3(body_current_positions[base_index],
-                body_current_positions[base_index + 1u],
-                body_current_positions[base_index + 2u]);
-}
-
-vec3 read_body_previous_position(uint vertex_index)
-{
-    uint base_index = vertex_index * 3u;
-    return vec3(body_previous_positions[base_index],
-                body_previous_positions[base_index + 1u],
-                body_previous_positions[base_index + 2u]);
-}
+#define COLLISION_POSITION_IO_CLOTH_SWEEP
+#include "common/collision_position_io.glsl"
+#include "common/contact_pair_output.glsl"
 
 Aabb build_cloth_triangle_swept_aabb(uint cloth_triangle_id)
 {
@@ -126,69 +80,53 @@ Aabb build_cloth_triangle_swept_aabb(uint cloth_triangle_id)
 
 Aabb build_body_vertex_swept_aabb(uint body_vertex_id)
 {
-    vec3 previous_position = read_body_previous_position(body_vertex_id);
-    vec3 current_position = read_body_current_position(body_vertex_id);
-    vec3 expansion = vec3(uCollisionThickness);
-
-    vec3 min_bounds = min(previous_position, current_position) - expansion;
-    vec3 max_bounds = max(previous_position, current_position) + expansion;
-    return Aabb(min_bounds, max_bounds);
-}
-
-bool overlaps_aabb(Aabb left_bounds, vec3 right_min_bounds, vec3 right_max_bounds)
-{
-    return all(lessThanEqual(left_bounds.min_bounds, right_max_bounds)) &&
-           all(greaterThanEqual(left_bounds.max_bounds, right_min_bounds));
-}
-
-void append_pair(uint cloth_triangle_id, uint body_vertex_id)
-{
-    uint pair_index = atomicAdd(pair_count, 1u);
-    if (pair_index >= uMaxPairCount) {
-        return;
-    }
-
-    pair_records[pair_index] = uvec2(cloth_triangle_id, body_vertex_id);
+    BodyElementAabb bounds = body_vertex_bounds[body_vertex_id];
+    return Aabb(bounds.min_bounds.xyz, bounds.max_bounds.xyz);
 }
 
 void main()
 {
+    if (gl_LocalInvocationIndex == 0u) {
+        group_pair_count = 0u;
+    }
+    barrier();
+
     uint cloth_triangle_id = gl_GlobalInvocationID.x;
-    if (cloth_triangle_id >= uTriangleCount) {
-        return;
-    }
+    if (cloth_triangle_id < uTriangleCount) {
+        Aabb cloth_swept_bounds = build_cloth_triangle_swept_aabb(cloth_triangle_id);
 
-    Aabb cloth_swept_bounds = build_cloth_triangle_swept_aabb(cloth_triangle_id);
+        uint node_index_stack[max_bvh_stack_depth];
+        uint stack_count = 0u;
+        node_index_stack[stack_count++] = bvh_root_node;
 
-    uint node_index_stack[max_bvh_stack_depth];
-    uint stack_count = 0u;
-    node_index_stack[stack_count++] = bvh_root_node;
-
-    while (stack_count > 0u) {
-        --stack_count;
-        uint current_node_index = node_index_stack[stack_count];
-        BvhNode current_node = body_vertex_bvh_nodes[current_node_index];
-        if (is_ignored_body_part_node(current_node)) {
-            continue;
-        }
-
-        if (!overlaps_aabb(cloth_swept_bounds, current_node.min_bounds.xyz, current_node.max_bounds.xyz)) {
-            continue;
-        }
-
-        if (is_leaf_node(current_node)) {
-            for (uint vertex_offset = 0u; vertex_offset < current_node.element_count; ++vertex_offset) {
-                uint body_vertex_id = body_vertex_ids[current_node.first_element_index + vertex_offset];
-                Aabb body_bounds = build_body_vertex_swept_aabb(body_vertex_id);
-                if (!overlaps_aabb(cloth_swept_bounds, body_bounds.min_bounds, body_bounds.max_bounds)) {
-                    continue;
-                }
-
-                append_pair(cloth_triangle_id, body_vertex_id);
+        while (stack_count > 0u) {
+            --stack_count;
+            uint current_node_index = node_index_stack[stack_count];
+            BvhNode current_node = body_vertex_bvh_nodes[current_node_index];
+            if (is_ignored_body_part_node(current_node, uIgnoredBodyPartMask)) {
+                continue;
             }
-        } else {
-            node_index_stack[stack_count++] = current_node.left_child_index;
-            node_index_stack[stack_count++] = current_node.right_child_index;
+
+            if (!overlaps_aabb(cloth_swept_bounds, current_node.min_bounds.xyz, current_node.max_bounds.xyz)) {
+                continue;
+            }
+
+            if (is_leaf_node(current_node)) {
+                for (uint vertex_offset = 0u; vertex_offset < current_node.element_count; ++vertex_offset) {
+                    uint body_vertex_id = body_vertex_ids[current_node.first_element_index + vertex_offset];
+                    Aabb body_bounds = build_body_vertex_swept_aabb(body_vertex_id);
+                    if (!overlaps_aabb(cloth_swept_bounds, body_bounds.min_bounds, body_bounds.max_bounds)) {
+                        continue;
+                    }
+
+                    append_pair(uvec2(cloth_triangle_id, body_vertex_id));
+                }
+            } else {
+                node_index_stack[stack_count++] = current_node.left_child_index;
+                node_index_stack[stack_count++] = current_node.right_child_index;
+            }
         }
     }
+
+    flush_group_pairs();
 }

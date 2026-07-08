@@ -11,6 +11,11 @@ struct BvhNode {
     uint element_count;
 };
 
+struct EdgeBounds {
+    vec4 min_bounds;
+    vec4 max_bounds;
+};
+
 bool is_leaf_node(BvhNode node)
 {
     return node.element_count > 0u;
@@ -30,6 +35,10 @@ layout(std430, binding = 2) readonly buffer BodyEdgeIndices {
 
 layout(std430, binding = 3) buffer BvhNodes {
     BvhNode body_edge_bvh_nodes[];
+};
+
+layout(std430, binding = 4) buffer BodyEdgeBounds {
+    EdgeBounds body_edge_bounds[];
 };
 
 uniform uint uFirstNode;
@@ -54,6 +63,7 @@ vec3 load_body_previous_position(uint vertex_index)
 
 void update_leaf_bounds(uint node_index, BvhNode node)
 {
+    vec3 thickness = vec3(uCollisionThickness);
     vec3 min_bounds = vec3(3.402823e+38);
     vec3 max_bounds = vec3(-3.402823e+38);
     for (uint edge_offset = 0u; edge_offset < node.element_count; ++edge_offset) {
@@ -65,11 +75,14 @@ void update_leaf_bounds(uint node_index, BvhNode node)
         vec3 previous_b = load_body_previous_position(vertex_b);
         vec3 current_a = load_body_current_position(vertex_a);
         vec3 current_b = load_body_current_position(vertex_b);
-        min_bounds = min(min_bounds, min(min(previous_a, previous_b), min(current_a, current_b)));
-        max_bounds = max(max_bounds, max(max(previous_a, previous_b), max(current_a, current_b)));
+        vec3 edge_min_bounds = min(min(previous_a, previous_b), min(current_a, current_b));
+        vec3 edge_max_bounds = max(max(previous_a, previous_b), max(current_a, current_b));
+        body_edge_bounds[edge_index].min_bounds = vec4(edge_min_bounds - thickness, 0.0);
+        body_edge_bounds[edge_index].max_bounds = vec4(edge_max_bounds + thickness, 0.0);
+        min_bounds = min(min_bounds, edge_min_bounds);
+        max_bounds = max(max_bounds, edge_max_bounds);
     }
 
-    vec3 thickness = vec3(uCollisionThickness);
     body_edge_bvh_nodes[node_index].min_bounds = vec4(min_bounds - thickness, 0.0);
     body_edge_bvh_nodes[node_index].max_bounds = vec4(max_bounds + thickness, node.max_bounds.w);
 }

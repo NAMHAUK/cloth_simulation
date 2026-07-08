@@ -7,6 +7,8 @@
 namespace {
 constexpr std::size_t vertex_position_components = 3;
 constexpr std::size_t character_triangle_geometry_components = 16;
+constexpr std::size_t primitive_bounds_components = 8;
+constexpr std::size_t body_edge_bounds_components = 8;
 
 std::size_t frame_position_component_count(const CharacterMesh& character_mesh)
 {
@@ -58,10 +60,13 @@ void CharacterGpuResources::initialize_gpu_resources(QOpenGLFunctions_4_5_Core& 
     gl.glCreateBuffers(1, &buffers_.current_position);
     gl.glCreateBuffers(1, &buffers_.triangle_index);
     gl.glCreateBuffers(1, &buffers_.character_bvh_node);
+    gl.glCreateBuffers(1, &buffers_.body_triangle_bounds);
     gl.glCreateBuffers(1, &buffers_.body_vertex_bvh_node);
     gl.glCreateBuffers(1, &buffers_.body_vertex_bvh_vertex_id);
+    gl.glCreateBuffers(1, &buffers_.body_vertex_bounds);
     gl.glCreateBuffers(1, &buffers_.body_edge_bvh_node);
     gl.glCreateBuffers(1, &buffers_.body_edge_index);
+    gl.glCreateBuffers(1, &buffers_.body_edge_bounds);
     gl.glCreateBuffers(1, &buffers_.adjacent_triangle_offsets);
     gl.glCreateBuffers(1, &buffers_.adjacent_triangle_indices);
     gl.glCreateBuffers(1, &buffers_.triangle_geometry);
@@ -111,10 +116,13 @@ void CharacterGpuResources::upload_mesh(const CharacterMesh& character_mesh,
     const GLsizeiptr endpoint_position_bytes = static_cast<GLsizeiptr>(vertex_position_component_count(character_mesh.vertex_count) * sizeof(float));
     const GLsizeiptr triangle_index_bytes = static_cast<GLsizeiptr>(default_character_bvh_data.triangle_indices.size() * sizeof(std::uint32_t));
     const GLsizeiptr bvh_node_bytes = static_cast<GLsizeiptr>(default_character_bvh_data.nodes.size() * sizeof(BvhNode));
+    const GLsizeiptr body_triangle_bounds_bytes = static_cast<GLsizeiptr>(static_cast<std::size_t>(character_mesh.triangle_count) * primitive_bounds_components * sizeof(float));
     const GLsizeiptr body_vertex_bvh_node_bytes = static_cast<GLsizeiptr>(default_body_vertex_bvh_data.nodes.size() * sizeof(BvhNode));
     const GLsizeiptr body_vertex_bvh_vertex_id_bytes = static_cast<GLsizeiptr>(default_body_vertex_bvh_data.vertex_ids.size() * sizeof(std::uint32_t));
+    const GLsizeiptr body_vertex_bounds_bytes = static_cast<GLsizeiptr>(static_cast<std::size_t>(character_mesh.vertex_count) * primitive_bounds_components * sizeof(float));
     const GLsizeiptr body_edge_bvh_node_bytes = static_cast<GLsizeiptr>(default_body_edge_bvh_data.nodes.size() * sizeof(BvhNode));
     const GLsizeiptr body_edge_index_bytes = static_cast<GLsizeiptr>(default_body_edge_bvh_data.edge_vertex_indices.size() * sizeof(std::uint32_t));
+    const GLsizeiptr body_edge_bounds_bytes = static_cast<GLsizeiptr>(static_cast<std::size_t>(default_body_edge_bvh_data.edge_count()) * body_edge_bounds_components * sizeof(float));
     const GLsizeiptr adjacent_triangle_offsets_bytes = static_cast<GLsizeiptr>(adjacency.offsets.size() * sizeof(std::uint32_t));
     const GLsizeiptr adjacent_triangle_indices_bytes = static_cast<GLsizeiptr>(adjacency.face_indices.size() * sizeof(std::uint32_t));
     const GLsizeiptr triangle_geometry_bytes = static_cast<GLsizeiptr>(static_cast<std::size_t>(adjacency.face_count) * character_triangle_geometry_components * sizeof(float));
@@ -125,10 +133,13 @@ void CharacterGpuResources::upload_mesh(const CharacterMesh& character_mesh,
     gl.glNamedBufferData(buffers_.current_position, endpoint_position_bytes, nullptr, GL_DYNAMIC_DRAW);
     gl.glNamedBufferData(buffers_.triangle_index, triangle_index_bytes, default_character_bvh_data.triangle_indices.data(), GL_STATIC_DRAW);
     gl.glNamedBufferData(buffers_.character_bvh_node, bvh_node_bytes, default_character_bvh_data.nodes.data(), GL_DYNAMIC_DRAW);
+    gl.glNamedBufferData(buffers_.body_triangle_bounds, body_triangle_bounds_bytes, nullptr, GL_DYNAMIC_DRAW);
     gl.glNamedBufferData(buffers_.body_vertex_bvh_node, body_vertex_bvh_node_bytes, default_body_vertex_bvh_data.nodes.data(), GL_DYNAMIC_DRAW);
     gl.glNamedBufferData(buffers_.body_vertex_bvh_vertex_id, body_vertex_bvh_vertex_id_bytes, default_body_vertex_bvh_data.vertex_ids.data(), GL_STATIC_DRAW);
+    gl.glNamedBufferData(buffers_.body_vertex_bounds, body_vertex_bounds_bytes, nullptr, GL_DYNAMIC_DRAW);
     gl.glNamedBufferData(buffers_.body_edge_bvh_node, body_edge_bvh_node_bytes, default_body_edge_bvh_data.nodes.data(), GL_DYNAMIC_DRAW);
     gl.glNamedBufferData(buffers_.body_edge_index, body_edge_index_bytes, default_body_edge_bvh_data.edge_vertex_indices.data(), GL_STATIC_DRAW);
+    gl.glNamedBufferData(buffers_.body_edge_bounds, body_edge_bounds_bytes, nullptr, GL_DYNAMIC_DRAW);
     gl.glNamedBufferData(buffers_.adjacent_triangle_offsets, adjacent_triangle_offsets_bytes, adjacency.offsets.data(), GL_STATIC_DRAW);
     gl.glNamedBufferData(buffers_.adjacent_triangle_indices, adjacent_triangle_indices_bytes, adjacency.face_indices.data(), GL_STATIC_DRAW);
     gl.glNamedBufferData(buffers_.triangle_geometry, triangle_geometry_bytes, nullptr, GL_DYNAMIC_DRAW);
@@ -253,6 +264,7 @@ TriangleBvhResources CharacterGpuResources::character_bvh_resources() const
 {
     TriangleBvhResources resources;
     resources.node_buffer = buffers_.character_bvh_node;
+    resources.triangle_bounds_buffer = buffers_.body_triangle_bounds;
     resources.node_count = bvh_node_count_;
     return resources;
 }
@@ -262,6 +274,7 @@ VertexBvhResources CharacterGpuResources::body_vertex_bvh_resources() const
     VertexBvhResources resources;
     resources.node_buffer = buffers_.body_vertex_bvh_node;
     resources.vertex_id_buffer = buffers_.body_vertex_bvh_vertex_id;
+    resources.vertex_bounds_buffer = buffers_.body_vertex_bounds;
     resources.node_count = body_vertex_bvh_node_count_;
     return resources;
 }
@@ -271,6 +284,7 @@ EdgeBvhResources CharacterGpuResources::body_edge_bvh_resources() const
     EdgeBvhResources resources;
     resources.node_buffer = buffers_.body_edge_bvh_node;
     resources.edge_index_buffer = buffers_.body_edge_index;
+    resources.edge_bounds_buffer = buffers_.body_edge_bounds;
     resources.node_count = body_edge_bvh_node_count_;
     resources.edge_count = body_edge_count_;
     return resources;
@@ -284,10 +298,13 @@ void CharacterGpuResources::release(QOpenGLFunctions_4_5_Core& gl)
     gl.glDeleteBuffers(1, &buffers_.adjacent_triangle_offsets);
     gl.glDeleteBuffers(1, &buffers_.triangle_index);
     gl.glDeleteBuffers(1, &buffers_.character_bvh_node);
+    gl.glDeleteBuffers(1, &buffers_.body_edge_bounds);
     gl.glDeleteBuffers(1, &buffers_.body_edge_index);
     gl.glDeleteBuffers(1, &buffers_.body_edge_bvh_node);
+    gl.glDeleteBuffers(1, &buffers_.body_vertex_bounds);
     gl.glDeleteBuffers(1, &buffers_.body_vertex_bvh_vertex_id);
     gl.glDeleteBuffers(1, &buffers_.body_vertex_bvh_node);
+    gl.glDeleteBuffers(1, &buffers_.body_triangle_bounds);
     gl.glDeleteBuffers(1, &buffers_.current_position);
     gl.glDeleteBuffers(1, &buffers_.previous_position);
     gl.glDeleteBuffers(1, &buffers_.all_frame_position);
@@ -319,10 +336,13 @@ bool CharacterGpuResources::has_gpu_objects() const
            buffers_.current_position != 0 &&
            buffers_.triangle_index != 0 &&
            buffers_.character_bvh_node != 0 &&
+           buffers_.body_triangle_bounds != 0 &&
            buffers_.body_vertex_bvh_node != 0 &&
            buffers_.body_vertex_bvh_vertex_id != 0 &&
+           buffers_.body_vertex_bounds != 0 &&
            buffers_.body_edge_bvh_node != 0 &&
            buffers_.body_edge_index != 0 &&
+           buffers_.body_edge_bounds != 0 &&
            buffers_.adjacent_triangle_offsets != 0 &&
            buffers_.adjacent_triangle_indices != 0 &&
            buffers_.triangle_geometry != 0 &&

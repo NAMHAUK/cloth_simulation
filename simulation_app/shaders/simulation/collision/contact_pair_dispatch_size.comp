@@ -1,0 +1,26 @@
+#version 430 core
+
+// Builds pair accumulation group counts for glDispatchComputeIndirect from the generated pair count.
+
+layout(local_size_x = 1) in;
+
+layout(std430, binding = 0) readonly buffer PairCount {
+    uint pair_count;
+};
+
+layout(std430, binding = 1) buffer DispatchSize {
+    uint dispatch_size_x;
+    uint dispatch_size_y;
+    uint dispatch_size_z;
+};
+
+uniform uint uMaxPairCount;
+uniform uint uLocalSize;
+
+void main()
+{
+    uint active_pair_count = min(pair_count, uMaxPairCount);
+    dispatch_size_x = (active_pair_count + uLocalSize - 1u) / uLocalSize;
+    dispatch_size_y = 1u;
+    dispatch_size_z = 1u;
+}

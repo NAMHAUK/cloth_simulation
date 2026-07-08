@@ -24,9 +24,11 @@ private:
 
     std::string label_;
     std::uint32_t log_interval_ = 1u;
-    mutable std::array<GLuint, query_count> queries_{};
+    mutable std::array<GLuint, query_count> start_queries_{};
+    mutable std::array<GLuint, query_count> end_queries_{};
     mutable std::array<bool, query_count> query_pending_{};
     mutable std::size_t next_query_ = 0u;
+    mutable std::size_t active_query_ = 0u;
     mutable bool active_ = false;
     mutable std::uint64_t sample_count_ = 0u;
     mutable std::uint32_t window_sample_count_ = 0u;

@@ -12,34 +12,37 @@ void GpuElapsedTimer::initialize(std::string label,
 
     label_ = std::move(label);
     log_interval_ = std::max(log_interval, 1u);
-    gl.glGenQueries(static_cast<GLsizei>(queries_.size()), queries_.data());
+    gl.glGenQueries(static_cast<GLsizei>(start_queries_.size()), start_queries_.data());
+    gl.glGenQueries(static_cast<GLsizei>(end_queries_.size()), end_queries_.data());
     query_pending_.fill(false);
     next_query_ = 0u;
+    active_query_ = 0u;
     active_ = false;
     sample_count_ = 0u;
     window_sample_count_ = 0u;
     window_total_ms_ = 0.0;
 
     if (is_initialized()) {
-        std::cerr << "[GPU TIMING] " << label_ << " GL_TIME_ELAPSED enabled.\n";
+        std::cerr << "[GPU TIMING] " << label_ << " timestamp timing enabled.\n";
     }
 }
 
 void GpuElapsedTimer::release(QOpenGLFunctions_4_5_Core& gl)
 {
-    if (active_) {
-        gl.glEndQuery(GL_TIME_ELAPSED);
-        active_ = false;
+    if (start_queries_[0] != 0u) {
+        gl.glDeleteQueries(static_cast<GLsizei>(start_queries_.size()), start_queries_.data());
     }
-
-    if (queries_[0] != 0u) {
-        gl.glDeleteQueries(static_cast<GLsizei>(queries_.size()), queries_.data());
+    if (end_queries_[0] != 0u) {
+        gl.glDeleteQueries(static_cast<GLsizei>(end_queries_.size()), end_queries_.data());
     }
 
     label_.clear();
-    queries_.fill(0u);
+    start_queries_.fill(0u);
+    end_queries_.fill(0u);
     query_pending_.fill(false);
     next_query_ = 0u;
+    active_query_ = 0u;
+    active_ = false;
     sample_count_ = 0u;
     window_sample_count_ = 0u;
     window_total_ms_ = 0.0;
@@ -58,10 +61,11 @@ bool GpuElapsedTimer::begin(QOpenGLFunctions_4_5_Core& gl) const
         return false;
     }
 
-    gl.glBeginQuery(GL_TIME_ELAPSED, queries_[query_index]);
+    gl.glQueryCounter(start_queries_[query_index], GL_TIMESTAMP);
     query_pending_[query_index] = true;
+    active_query_ = query_index;
     active_ = true;
-    next_query_ = (next_query_ + 1u) % queries_.size();
+    next_query_ = (next_query_ + 1u) % start_queries_.size();
     return true;
 }
 
@@ -71,7 +75,7 @@ void GpuElapsedTimer::end(QOpenGLFunctions_4_5_Core& gl) const
         return;
     }
 
-    gl.glEndQuery(GL_TIME_ELAPSED);
+    gl.glQueryCounter(end_queries_[active_query_], GL_TIMESTAMP);
     active_ = false;
 }
 
@@ -81,21 +85,25 @@ void GpuElapsedTimer::collect(QOpenGLFunctions_4_5_Core& gl) const
         return;
     }
 
-    for (std::size_t query_index = 0u; query_index < queries_.size(); ++query_index) {
+    for (std::size_t query_index = 0u; query_index < end_queries_.size(); ++query_index) {
         if (!query_pending_[query_index]) {
             continue;
         }
 
         GLuint is_available = GL_FALSE;
-        gl.glGetQueryObjectuiv(queries_[query_index], GL_QUERY_RESULT_AVAILABLE, &is_available);
+        gl.glGetQueryObjectuiv(end_queries_[query_index], GL_QUERY_RESULT_AVAILABLE, &is_available);
         if (is_available == GL_FALSE) {
             continue;
         }
 
-        GLuint64 elapsed_nanoseconds = 0u;
-        gl.glGetQueryObjectui64v(queries_[query_index], GL_QUERY_RESULT, &elapsed_nanoseconds);
+        GLuint64 start_nanoseconds = 0u;
+        GLuint64 end_nanoseconds = 0u;
+        gl.glGetQueryObjectui64v(start_queries_[query_index], GL_QUERY_RESULT, &start_nanoseconds);
+        gl.glGetQueryObjectui64v(end_queries_[query_index], GL_QUERY_RESULT, &end_nanoseconds);
         query_pending_[query_index] = false;
 
+        const GLuint64 elapsed_nanoseconds =
+            end_nanoseconds > start_nanoseconds ? end_nanoseconds - start_nanoseconds : 0u;
         const double elapsed_ms =
             static_cast<double>(elapsed_nanoseconds) * nanoseconds_to_milliseconds;
         ++sample_count_;
@@ -115,5 +123,5 @@ void GpuElapsedTimer::collect(QOpenGLFunctions_4_5_Core& gl) const
 
 bool GpuElapsedTimer::is_initialized() const
 {
-    return queries_[0] != 0u;
+    return start_queries_[0] != 0u && end_queries_[0] != 0u;
 }

@@ -27,6 +27,7 @@ add_executable(simulation_app
     src/simulation/SimulationController.h
     src/simulation/forces/SimulationForceField.cpp
     src/simulation/forces/SimulationForceField.h
+    src/simulation/SimulationGpuViews.h
     src/simulation/SimulationSettings.h
     src/simulation/forces/ExternalForceSolver.cpp
     src/simulation/forces/ExternalForceSolver.h
@@ -44,6 +45,10 @@ add_executable(simulation_app
     src/simulation/collision/ClothEdgeBodyEdgeCollisionSolver.h
     src/simulation/collision/ClothVertexBodyFaceCollisionSolver.cpp
     src/simulation/collision/ClothVertexBodyFaceCollisionSolver.h
+    src/simulation/collision/ClothBodyCollisionDetector.cpp
+    src/simulation/collision/ClothBodyCollisionDetector.h
+    src/simulation/collision/ClothBodyCollisionSolver.cpp
+    src/simulation/collision/ClothBodyCollisionSolver.h
     src/simulation/collision/GarmentPrefitSolver.cpp
     src/simulation/collision/GarmentPrefitSolver.h
     src/asset/MeshGeometryUtils.cpp
@@ -77,8 +82,8 @@ add_executable(simulation_app
     src/rendering/GroundGridMesh.h
     src/gpu/scene/SceneGpuState.cpp
     src/gpu/scene/SceneGpuState.h
-    src/gpu/scene/CollisionWorkspaceBuffers.cpp
-    src/gpu/scene/CollisionWorkspaceBuffers.h
+    src/gpu/scene/CollisionContactBuffers.cpp
+    src/gpu/scene/CollisionContactBuffers.h
     src/gpu/scene/AttachmentTargetBuilder.cpp
     src/gpu/scene/AttachmentTargetBuilder.h
     src/gpu/scene/NormalUpdater.cpp
@@ -122,14 +127,20 @@ add_executable(simulation_app
     shaders/simulation/cloth_bending_constraint.comp
     shaders/simulation/cloth_attachment_constraint.comp
     shaders/simulation/collision/cloth_ground_collision.comp
+    shaders/simulation/collision/contact_pair_dispatch_size.comp
+    shaders/simulation/collision/cloth_vertex_body_face_pair_generate.comp
+    shaders/simulation/collision/cloth_vertex_body_face_pair_accumulate.comp
+    shaders/simulation/collision/cloth_vertex_body_face_pair_apply.comp
     shaders/simulation/collision/body_vertex_cloth_face_pair_generate.comp
     shaders/simulation/collision/body_vertex_cloth_face_pair_accumulate.comp
     shaders/simulation/collision/body_vertex_cloth_face_pair_apply.comp
     shaders/simulation/collision/cloth_edge_body_edge_pair_generate.comp
     shaders/simulation/collision/cloth_edge_body_edge_pair_accumulate.comp
-    shaders/simulation/collision/cloth_vertex_body_face_collision.comp
+    shaders/simulation/collision/common/collision_common.glsl
+    shaders/simulation/collision/common/collision_position_io.glsl
+    shaders/simulation/collision/common/collision_correction_common.glsl
+    shaders/simulation/collision/common/contact_pair_output.glsl
     shaders/simulation/garment_prefit.comp
-    shaders/simulation/collision/cloth_collision_common.glsl
     shaders/simulation/garment_attachment_target_build.comp
 )
 
