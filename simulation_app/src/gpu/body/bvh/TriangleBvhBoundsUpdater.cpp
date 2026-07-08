@@ -10,6 +10,7 @@ constexpr GLuint character_triangle_geometry_binding = 0;
 constexpr GLuint character_triangle_indices_binding = 1;
 constexpr GLuint character_previous_positions_binding = 2;
 constexpr GLuint character_bvh_node_binding = 3;
+constexpr GLuint body_triangle_bounds_binding = 4;
 constexpr std::uint32_t bvh_bounds_update_local_size = 128;
 }
 
@@ -75,6 +76,7 @@ void TriangleBvhBoundsUpdater::update(const CharacterMeshTopologyResources& topo
     gl.glBindBufferBase(GL_SHADER_STORAGE_BUFFER, character_triangle_indices_binding, topology.triangle_index_buffer);
     gl.glBindBufferBase(GL_SHADER_STORAGE_BUFFER, character_previous_positions_binding, vertex_view.previous_position_buffer);
     gl.glBindBufferBase(GL_SHADER_STORAGE_BUFFER, character_bvh_node_binding, character_bvh.node_buffer);
+    gl.glBindBufferBase(GL_SHADER_STORAGE_BUFFER, body_triangle_bounds_binding, character_bvh.triangle_bounds_buffer);
     gl.glProgramUniform1f(program_, collision_thickness_location_, collision_thickness);
 
     for (const BvhNodeRange& range : node_ranges_by_level) {

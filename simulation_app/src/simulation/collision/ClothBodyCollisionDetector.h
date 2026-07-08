@@ -36,7 +36,6 @@ private:
         GLuint program = 0;
         GLint item_count = -1;
         GLint max_pairs = -1;
-        GLint thickness = -1;
         GLint ignored_body_part_mask = -1;
     };
 
@@ -47,19 +46,16 @@ private:
     };
 
     void detect_cloth_vertex_body_face_contacts(const ClothMotionBufferView& motion_view,
-                                                const TriangleGeometryResources& character_geometry,
                                                 const TriangleBvhResources& character_bvh,
                                                 const ContactPairBuffers& contact_pairs,
                                                 QOpenGLFunctions_4_5_Core& gl) const;
     void detect_cloth_edge_body_edge_contacts(const ClothMotionBufferView& motion_view,
                                               const DistanceConstraintBufferView& cloth_edges,
-                                              const CharacterVertexBufferView& character_vertex_view,
                                               const EdgeBvhResources& body_edge_bvh,
                                               const ContactPairBuffers& contact_pairs,
                                               QOpenGLFunctions_4_5_Core& gl) const;
     void detect_cloth_face_body_vertex_contacts(const ClothMotionBufferView& motion_view,
                                                 const ClothMeshTopologyResources& cloth_topology,
-                                                const CharacterVertexBufferView& character_vertex_view,
                                                 const VertexBvhResources& body_vertex_bvh,
                                                 const ContactPairBuffers& contact_pairs,
                                                 QOpenGLFunctions_4_5_Core& gl) const;

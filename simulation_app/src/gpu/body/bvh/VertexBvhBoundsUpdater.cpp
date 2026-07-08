@@ -10,6 +10,7 @@ constexpr GLuint body_current_positions_binding = 0;
 constexpr GLuint body_previous_positions_binding = 1;
 constexpr GLuint body_vertex_ids_binding = 2;
 constexpr GLuint body_vertex_bvh_nodes_binding = 3;
+constexpr GLuint body_vertex_bounds_binding = 4;
 constexpr std::uint32_t vertex_bvh_bounds_update_local_size = 128;
 }
 
@@ -67,6 +68,7 @@ void VertexBvhBoundsUpdater::update(const CharacterVertexBufferView& vertex_view
     gl.glBindBufferBase(GL_SHADER_STORAGE_BUFFER, body_previous_positions_binding, vertex_view.previous_position_buffer);
     gl.glBindBufferBase(GL_SHADER_STORAGE_BUFFER, body_vertex_ids_binding, body_vertex_bvh.vertex_id_buffer);
     gl.glBindBufferBase(GL_SHADER_STORAGE_BUFFER, body_vertex_bvh_nodes_binding, body_vertex_bvh.node_buffer);
+    gl.glBindBufferBase(GL_SHADER_STORAGE_BUFFER, body_vertex_bounds_binding, body_vertex_bvh.vertex_bounds_buffer);
     gl.glProgramUniform1f(program_, collision_thickness_location_, collision_thickness);
 
     for (const BvhNodeRange& range : node_ranges_by_level) {

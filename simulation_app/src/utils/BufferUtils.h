@@ -58,6 +58,7 @@ inline bool is_valid_triangle_geometry_resource(const TriangleGeometryResources&
 inline bool is_valid_triangle_bvh_resource(const TriangleBvhResources& triangle_bvh)
 {
     return triangle_bvh.node_buffer != 0 &&
+           triangle_bvh.triangle_bounds_buffer != 0 &&
            triangle_bvh.node_count != 0;
 }
 
@@ -65,6 +66,7 @@ inline bool is_valid_vertex_bvh_resource(const VertexBvhResources& vertex_bvh)
 {
     return vertex_bvh.node_buffer != 0 &&
            vertex_bvh.vertex_id_buffer != 0 &&
+           vertex_bvh.vertex_bounds_buffer != 0 &&
            vertex_bvh.node_count != 0;
 }
 
@@ -72,6 +74,7 @@ inline bool is_valid_edge_bvh_resource(const EdgeBvhResources& edge_bvh)
 {
     return edge_bvh.node_buffer != 0 &&
            edge_bvh.edge_index_buffer != 0 &&
+           edge_bvh.edge_bounds_buffer != 0 &&
            edge_bvh.node_count != 0 &&
            edge_bvh.edge_count != 0;
 }

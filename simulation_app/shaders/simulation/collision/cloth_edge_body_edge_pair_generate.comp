@@ -16,20 +16,17 @@ layout(std430, binding = 2) readonly buffer ClothEdgeIndices {
     uint cloth_edge_indices[];
 };
 
-layout(std430, binding = 3) readonly buffer BodyEdgeIndices {
-    uint body_edge_indices[];
+struct EdgeBounds {
+    vec4 min_bounds;
+    vec4 max_bounds;
+};
+
+layout(std430, binding = 3) readonly buffer BodyEdgeBounds {
+    EdgeBounds body_edge_bounds[];
 };
 
 layout(std430, binding = 4) readonly buffer BvhNodes {
     BvhNode body_edge_bvh_nodes[];
-};
-
-layout(std430, binding = 5) readonly buffer BodyCurrentPositions {
-    float body_current_positions[];
-};
-
-layout(std430, binding = 6) readonly buffer BodyPreviousPositions {
-    float body_previous_positions[];
 };
 
 layout(std430, binding = 7) buffer PairRecords {
@@ -46,14 +43,13 @@ layout(std430, binding = 9) buffer OverflowCount {
 
 uniform uint uEdgeCount;
 uniform uint uMaxPairCount;
-uniform float uCollisionThickness;
 uniform uint uIgnoredBodyPartMask;
 
 const uint max_bvh_stack_depth = 32u;
 const uint bvh_root_node = 0u;
 const uint group_pair_capacity = 512u;
 
-#define COLLISION_POSITION_IO_CLOTH_BODY_SWEEP
+#define COLLISION_POSITION_IO_CLOTH_SWEEP
 #include "common/collision_position_io.glsl"
 #include "common/contact_pair_output.glsl"
 
@@ -75,17 +71,8 @@ Aabb build_cloth_edge_swept_aabb(uint cloth_edge_id)
 
 Aabb build_body_edge_swept_aabb(uint body_edge_id)
 {
-    uint edge_base = body_edge_id * 2u;
-    uint vertex_a = body_edge_indices[edge_base];
-    uint vertex_b = body_edge_indices[edge_base + 1u];
-
-    vec3 previous_a = read_body_previous_position(vertex_a);
-    vec3 previous_b = read_body_previous_position(vertex_b);
-    vec3 current_a = read_body_current_position(vertex_a);
-    vec3 current_b = read_body_current_position(vertex_b);
-    vec3 min_bounds = min(min(previous_a, previous_b), min(current_a, current_b));
-    vec3 max_bounds = max(max(previous_a, previous_b), max(current_a, current_b));
-    return expand_aabb(Aabb(min_bounds, max_bounds), vec3(uCollisionThickness));
+    EdgeBounds bounds = body_edge_bounds[body_edge_id];
+    return Aabb(bounds.min_bounds.xyz, bounds.max_bounds.xyz);
 }
 
 void main()
