@@ -65,12 +65,8 @@ add_executable(simulation_app
     src/gpu/body/bvh/VertexBvhBuilder.h
     src/gpu/body/bvh/EdgeBvhBuilder.cpp
     src/gpu/body/bvh/EdgeBvhBuilder.h
-    src/gpu/body/bvh/TriangleBvhBoundsUpdater.cpp
-    src/gpu/body/bvh/TriangleBvhBoundsUpdater.h
-    src/gpu/body/bvh/VertexBvhBoundsUpdater.cpp
-    src/gpu/body/bvh/VertexBvhBoundsUpdater.h
-    src/gpu/body/bvh/EdgeBvhBoundsUpdater.cpp
-    src/gpu/body/bvh/EdgeBvhBoundsUpdater.h
+    src/gpu/body/bvh/CharacterBvhBoundsUpdater.cpp
+    src/gpu/body/bvh/CharacterBvhBoundsUpdater.h
     src/gpu/body/CharacterGpuStateUpdater.cpp
     src/gpu/body/CharacterGpuStateUpdater.h
     src/gpu/cloth/ClothGpuResources.cpp
@@ -120,8 +116,6 @@ add_executable(simulation_app
     shaders/character/character_vertex_position_update.comp
     shaders/character/character_triangle_geometry_update.comp
     shaders/character/character_bvh_bounds_update.comp
-    shaders/character/character_vertex_bvh_bounds_update.comp
-    shaders/character/character_edge_bvh_bounds_update.comp
     shaders/cloth/cloth_external_force.comp
     shaders/cloth/constraints/cloth_stretch_constraint.comp
     shaders/cloth/constraints/cloth_bending_constraint.comp

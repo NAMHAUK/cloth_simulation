@@ -2,6 +2,8 @@
 
 layout(local_size_x = 128) in;
 
+const float max_float = 3.402823e+38;
+
 struct CharacterTriangleGeometry {
     vec4 a;
     vec4 b;
@@ -36,40 +38,80 @@ layout(std430, binding = 1) readonly buffer CharacterTriangleIndices {
     uint triangle_indices[];
 };
 
-layout(std430, binding = 2) readonly buffer CharacterPreviousPositions {
-    float previous_positions[];
+layout(std430, binding = 2) readonly buffer BodyCurrentPositions {
+    float body_current_positions[];
 };
 
-layout(std430, binding = 3) buffer BvhNodeBuffer {
-    BvhNode bvh_nodes[];
+layout(std430, binding = 3) readonly buffer BodyPreviousPositions {
+    float body_previous_positions[];
 };
 
-layout(std430, binding = 4) buffer BodyTriangleBounds {
+layout(std430, binding = 4) buffer CharacterBvhNodes {
+    BvhNode body_triangle_bvh_nodes[];
+};
+
+layout(std430, binding = 5) buffer BodyTriangleBounds {
     BodyElementAabb body_triangle_bounds[];
 };
 
-uniform uint uFirstNode;
-uniform uint uNodeCount;
+layout(std430, binding = 6) readonly buffer BodyVertexIds {
+    uint body_vertex_ids[];
+};
+
+layout(std430, binding = 7) buffer BodyVertexBvhNodes {
+    BvhNode body_vertex_bvh_nodes[];
+};
+
+layout(std430, binding = 8) buffer BodyVertexBounds {
+    BodyElementAabb body_vertex_bounds[];
+};
+
+layout(std430, binding = 9) readonly buffer BodyEdgeIndices {
+    uint body_edge_indices[];
+};
+
+layout(std430, binding = 10) buffer BodyEdgeBvhNodes {
+    BvhNode body_edge_bvh_nodes[];
+};
+
+layout(std430, binding = 11) buffer BodyEdgeBounds {
+    BodyElementAabb body_edge_bounds[];
+};
+
+uniform uint uTriangleFirstNode;
+uniform uint uTriangleNodeCount;
+uniform uint uVertexFirstNode;
+uniform uint uVertexNodeCount;
+uniform uint uEdgeFirstNode;
+uniform uint uEdgeNodeCount;
 uniform float uCollisionThickness;
 
-vec3 load_previous_position(uint vertex_index)
+vec3 load_body_current_position(uint vertex_index)
 {
     uint base_index = vertex_index * 3u;
-    return vec3(previous_positions[base_index],
-                previous_positions[base_index + 1u],
-                previous_positions[base_index + 2u]);
+    return vec3(body_current_positions[base_index],
+                body_current_positions[base_index + 1u],
+                body_current_positions[base_index + 2u]);
 }
 
-void update_leaf_bounds(uint node_index, BvhNode node)
+vec3 load_body_previous_position(uint vertex_index)
 {
-    vec3 min_bounds = vec3(3.402823e+38);
-    vec3 max_bounds = vec3(-3.402823e+38);
+    uint base_index = vertex_index * 3u;
+    return vec3(body_previous_positions[base_index],
+                body_previous_positions[base_index + 1u],
+                body_previous_positions[base_index + 2u]);
+}
+
+void update_triangle_leaf_bounds(uint node_index, BvhNode node)
+{
+    vec3 min_bounds = vec3(max_float);
+    vec3 max_bounds = vec3(-max_float);
     for (uint triangle_offset = 0u; triangle_offset < node.element_count; ++triangle_offset) {
         uint triangle_index = node.first_element_index + triangle_offset;
         uint index_base = triangle_index * 3u;
-        vec3 previous_a = load_previous_position(triangle_indices[index_base]);
-        vec3 previous_b = load_previous_position(triangle_indices[index_base + 1u]);
-        vec3 previous_c = load_previous_position(triangle_indices[index_base + 2u]);
+        vec3 previous_a = load_body_previous_position(triangle_indices[index_base]);
+        vec3 previous_b = load_body_previous_position(triangle_indices[index_base + 1u]);
+        vec3 previous_c = load_body_previous_position(triangle_indices[index_base + 2u]);
 
         CharacterTriangleGeometry triangle = triangle_geometry[triangle_index];
         vec3 current_a = triangle.a.xyz;
@@ -78,37 +120,137 @@ void update_leaf_bounds(uint node_index, BvhNode node)
 
         vec3 current_min_bounds = min(current_a, min(current_b, current_c));
         vec3 current_max_bounds = max(current_a, max(current_b, current_c));
-        body_triangle_bounds[triangle_index].min_bounds = vec4(current_min_bounds - vec3(uCollisionThickness), 0.0);
-        body_triangle_bounds[triangle_index].max_bounds = vec4(current_max_bounds + vec3(uCollisionThickness), triangle.normal.w);
+        body_triangle_bounds[triangle_index].min_bounds = vec4(current_min_bounds - uCollisionThickness, 0.0);
+        body_triangle_bounds[triangle_index].max_bounds = vec4(current_max_bounds + uCollisionThickness, triangle.normal.w);
         min_bounds = min(min_bounds, min(min(previous_a, min(previous_b, previous_c)), current_min_bounds));
         max_bounds = max(max_bounds, max(max(previous_a, max(previous_b, previous_c)), current_max_bounds));
     }
 
-    bvh_nodes[node_index].min_bounds = vec4(min_bounds - vec3(uCollisionThickness), 0.0);
-    bvh_nodes[node_index].max_bounds = vec4(max_bounds + vec3(uCollisionThickness), node.max_bounds.w);
+    body_triangle_bvh_nodes[node_index].min_bounds = vec4(min_bounds - uCollisionThickness, 0.0);
+    body_triangle_bvh_nodes[node_index].max_bounds = vec4(max_bounds + uCollisionThickness, node.max_bounds.w);
 }
 
-void update_internal_bounds(uint node_index, BvhNode node)
+void update_triangle_internal_bounds(uint node_index, BvhNode node)
 {
-    vec3 min_bounds = min(bvh_nodes[node.left_child_index].min_bounds.xyz, bvh_nodes[node.right_child_index].min_bounds.xyz);
-    vec3 max_bounds = max(bvh_nodes[node.left_child_index].max_bounds.xyz, bvh_nodes[node.right_child_index].max_bounds.xyz);
+    vec3 min_bounds = min(body_triangle_bvh_nodes[node.left_child_index].min_bounds.xyz,
+                          body_triangle_bvh_nodes[node.right_child_index].min_bounds.xyz);
+    vec3 max_bounds = max(body_triangle_bvh_nodes[node.left_child_index].max_bounds.xyz,
+                          body_triangle_bvh_nodes[node.right_child_index].max_bounds.xyz);
 
-    bvh_nodes[node_index].min_bounds = vec4(min_bounds, 0.0);
-    bvh_nodes[node_index].max_bounds = vec4(max_bounds, node.max_bounds.w);
+    body_triangle_bvh_nodes[node_index].min_bounds = vec4(min_bounds, 0.0);
+    body_triangle_bvh_nodes[node_index].max_bounds = vec4(max_bounds, node.max_bounds.w);
+}
+
+void update_vertex_leaf_bounds(uint node_index, BvhNode node)
+{
+    vec3 min_bounds = vec3(max_float);
+    vec3 max_bounds = vec3(-max_float);
+    for (uint vertex_offset = 0u; vertex_offset < node.element_count; ++vertex_offset) {
+        uint vertex_id = body_vertex_ids[node.first_element_index + vertex_offset];
+        vec3 previous_position = load_body_previous_position(vertex_id);
+        vec3 current_position = load_body_current_position(vertex_id);
+        vec3 vertex_min_bounds = min(previous_position, current_position);
+        vec3 vertex_max_bounds = max(previous_position, current_position);
+        body_vertex_bounds[vertex_id].min_bounds = vec4(vertex_min_bounds - uCollisionThickness, 0.0);
+        body_vertex_bounds[vertex_id].max_bounds = vec4(vertex_max_bounds + uCollisionThickness, 0.0);
+        min_bounds = min(min_bounds, vertex_min_bounds);
+        max_bounds = max(max_bounds, vertex_max_bounds);
+    }
+
+    body_vertex_bvh_nodes[node_index].min_bounds = vec4(min_bounds - uCollisionThickness, 0.0);
+    body_vertex_bvh_nodes[node_index].max_bounds = vec4(max_bounds + uCollisionThickness, node.max_bounds.w);
+}
+
+void update_vertex_internal_bounds(uint node_index, BvhNode node)
+{
+    vec3 min_bounds = min(body_vertex_bvh_nodes[node.left_child_index].min_bounds.xyz,
+                          body_vertex_bvh_nodes[node.right_child_index].min_bounds.xyz);
+    vec3 max_bounds = max(body_vertex_bvh_nodes[node.left_child_index].max_bounds.xyz,
+                          body_vertex_bvh_nodes[node.right_child_index].max_bounds.xyz);
+
+    body_vertex_bvh_nodes[node_index].min_bounds = vec4(min_bounds, 0.0);
+    body_vertex_bvh_nodes[node_index].max_bounds = vec4(max_bounds, node.max_bounds.w);
+}
+
+void update_edge_leaf_bounds(uint node_index, BvhNode node)
+{
+    vec3 min_bounds = vec3(max_float);
+    vec3 max_bounds = vec3(-max_float);
+    for (uint edge_offset = 0u; edge_offset < node.element_count; ++edge_offset) {
+        uint edge_index = node.first_element_index + edge_offset;
+        uint edge_base = edge_index * 2u;
+        uint vertex_a = body_edge_indices[edge_base];
+        uint vertex_b = body_edge_indices[edge_base + 1u];
+        vec3 previous_a = load_body_previous_position(vertex_a);
+        vec3 previous_b = load_body_previous_position(vertex_b);
+        vec3 current_a = load_body_current_position(vertex_a);
+        vec3 current_b = load_body_current_position(vertex_b);
+        vec3 edge_min_bounds = min(min(previous_a, previous_b), min(current_a, current_b));
+        vec3 edge_max_bounds = max(max(previous_a, previous_b), max(current_a, current_b));
+        body_edge_bounds[edge_index].min_bounds = vec4(edge_min_bounds - uCollisionThickness, 0.0);
+        body_edge_bounds[edge_index].max_bounds = vec4(edge_max_bounds + uCollisionThickness, 0.0);
+        min_bounds = min(min_bounds, edge_min_bounds);
+        max_bounds = max(max_bounds, edge_max_bounds);
+    }
+
+    body_edge_bvh_nodes[node_index].min_bounds = vec4(min_bounds - uCollisionThickness, 0.0);
+    body_edge_bvh_nodes[node_index].max_bounds = vec4(max_bounds + uCollisionThickness, node.max_bounds.w);
+}
+
+void update_edge_internal_bounds(uint node_index, BvhNode node)
+{
+    vec3 min_bounds = min(body_edge_bvh_nodes[node.left_child_index].min_bounds.xyz,
+                          body_edge_bvh_nodes[node.right_child_index].min_bounds.xyz);
+    vec3 max_bounds = max(body_edge_bvh_nodes[node.left_child_index].max_bounds.xyz,
+                          body_edge_bvh_nodes[node.right_child_index].max_bounds.xyz);
+
+    body_edge_bvh_nodes[node_index].min_bounds = vec4(min_bounds, 0.0);
+    body_edge_bvh_nodes[node_index].max_bounds = vec4(max_bounds, node.max_bounds.w);
+}
+
+void update_triangle_bounds(uint local_node_index)
+{
+    uint node_index = uTriangleFirstNode + local_node_index;
+    BvhNode node = body_triangle_bvh_nodes[node_index];
+    if (is_leaf_node(node)) {
+        update_triangle_leaf_bounds(node_index, node);
+    } else {
+        update_triangle_internal_bounds(node_index, node);
+    }
+}
+
+void update_vertex_bounds(uint local_node_index)
+{
+    uint node_index = uVertexFirstNode + local_node_index;
+    BvhNode node = body_vertex_bvh_nodes[node_index];
+    if (is_leaf_node(node)) {
+        update_vertex_leaf_bounds(node_index, node);
+    } else {
+        update_vertex_internal_bounds(node_index, node);
+    }
+}
+
+void update_edge_bounds(uint local_node_index)
+{
+    uint node_index = uEdgeFirstNode + local_node_index;
+    BvhNode node = body_edge_bvh_nodes[node_index];
+    if (is_leaf_node(node)) {
+        update_edge_leaf_bounds(node_index, node);
+    } else {
+        update_edge_internal_bounds(node_index, node);
+    }
 }
 
 void main()
 {
     uint local_node_index = gl_GlobalInvocationID.x;
-    if (local_node_index >= uNodeCount) {
-        return;
+    if (local_node_index < uTriangleNodeCount) {
+        update_triangle_bounds(local_node_index);
     }
-
-    uint node_index = uFirstNode + local_node_index;
-    BvhNode node = bvh_nodes[node_index];
-    if (is_leaf_node(node)) {
-        update_leaf_bounds(node_index, node);
-    } else {
-        update_internal_bounds(node_index, node);
+    if (local_node_index < uVertexNodeCount) {
+        update_vertex_bounds(local_node_index);
+    }
+    if (local_node_index < uEdgeNodeCount) {
+        update_edge_bounds(local_node_index);
     }
 }

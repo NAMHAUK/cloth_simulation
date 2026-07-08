@@ -14,7 +14,7 @@ CharacterFrameInterpolation make_single_frame_interpolation(std::uint32_t frame_
 }
 
 SceneGpuState::SceneGpuState()
-    : character_gpu_state_updater_(character_gpu_state_, bvh_bounds_updater_, vertex_bvh_bounds_updater_, edge_bvh_bounds_updater_, normal_updater_)
+    : character_gpu_state_updater_(character_gpu_state_, bvh_bounds_updater_, normal_updater_)
 {
 }
 
@@ -32,30 +32,15 @@ bool SceneGpuState::initialize(const ShaderPaths& shader_paths, QOpenGLFunctions
         normal_updater_.release(gl);
         return false;
     }
-    if (!vertex_bvh_bounds_updater_.initialize(shader_paths.character_vertex_bvh_bounds_update_compute, gl)) {
-        bvh_bounds_updater_.release(gl);
-        normal_updater_.release(gl);
-        return false;
-    }
-    if (!edge_bvh_bounds_updater_.initialize(shader_paths.character_edge_bvh_bounds_update_compute, gl)) {
-        vertex_bvh_bounds_updater_.release(gl);
-        bvh_bounds_updater_.release(gl);
-        normal_updater_.release(gl);
-        return false;
-    }
     if (!character_gpu_state_updater_.initialize(shader_paths.character_vertex_position_update_compute,
                                                  shader_paths.character_triangle_geometry_update_compute,
                                                  gl)) {
-        edge_bvh_bounds_updater_.release(gl);
-        vertex_bvh_bounds_updater_.release(gl);
         bvh_bounds_updater_.release(gl);
         normal_updater_.release(gl);
         return false;
     }
     if (!attachment_target_builder_.initialize(shader_paths.garment_attachment_target_build_compute, gl)) {
         character_gpu_state_updater_.release(gl);
-        edge_bvh_bounds_updater_.release(gl);
-        vertex_bvh_bounds_updater_.release(gl);
         bvh_bounds_updater_.release(gl);
         normal_updater_.release(gl);
         return false;
@@ -86,8 +71,6 @@ void SceneGpuState::release(QOpenGLFunctions_4_5_Core& gl)
     character_gpu_state_.release(gl);
     character_gpu_state_updater_.release(gl);
     normal_updater_.release(gl);
-    edge_bvh_bounds_updater_.release(gl);
-    vertex_bvh_bounds_updater_.release(gl);
     bvh_bounds_updater_.release(gl);
     attachment_target_builder_.release(gl);
 

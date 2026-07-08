@@ -2,9 +2,7 @@
 
 #include "gpu/body/CharacterGpuDataTypes.h"
 #include "gpu/body/CharacterGpuResources.h"
-#include "gpu/body/bvh/EdgeBvhBoundsUpdater.h"
-#include "gpu/body/bvh/TriangleBvhBoundsUpdater.h"
-#include "gpu/body/bvh/VertexBvhBoundsUpdater.h"
+#include "gpu/body/bvh/CharacterBvhBoundsUpdater.h"
 #include "gpu/scene/NormalUpdater.h"
 #include "scene/SceneState.h"
 #include "utils/BufferUtils.h"
@@ -59,14 +57,10 @@ bool is_valid_triangle_geometry_input(const CharacterMeshTopologyResources& topo
 }
 
 CharacterGpuStateUpdater::CharacterGpuStateUpdater(CharacterGpuResources& character_gpu_state,
-                                                   TriangleBvhBoundsUpdater& bvh_bounds_updater,
-                                                   VertexBvhBoundsUpdater& vertex_bvh_bounds_updater,
-                                                   EdgeBvhBoundsUpdater& edge_bvh_bounds_updater,
+                                                   CharacterBvhBoundsUpdater& bvh_bounds_updater,
                                                    NormalUpdater& normal_updater)
     : character_gpu_state_(character_gpu_state),
       bvh_bounds_updater_(bvh_bounds_updater),
-      vertex_bvh_bounds_updater_(vertex_bvh_bounds_updater),
-      edge_bvh_bounds_updater_(edge_bvh_bounds_updater),
       normal_updater_(normal_updater)
 {
 }
@@ -221,19 +215,13 @@ void CharacterGpuStateUpdater::update_derived_pose_state(const std::vector<BvhNo
                                vertex_view,
                                triangle_geometry,
                                character_gpu_state_.character_bvh_resources(),
+                               character_gpu_state_.body_vertex_bvh_resources(),
+                               character_gpu_state_.body_edge_bvh_resources(),
                                node_ranges_by_level,
+                               body_vertex_node_ranges_by_level,
+                               body_edge_node_ranges_by_level,
                                collision_thickness,
                                gl);
-    vertex_bvh_bounds_updater_.update(vertex_view,
-                                      character_gpu_state_.body_vertex_bvh_resources(),
-                                      body_vertex_node_ranges_by_level,
-                                      collision_thickness,
-                                      gl);
-    edge_bvh_bounds_updater_.update(vertex_view,
-                                    character_gpu_state_.body_edge_bvh_resources(),
-                                    body_edge_node_ranges_by_level,
-                                    collision_thickness,
-                                    gl);
     normal_updater_.update_character_normals(topology, character_gpu_state_.mesh_normal_resources(), gl);
 }
 
