@@ -14,7 +14,7 @@ CharacterFrameInterpolation make_single_frame_interpolation(std::uint32_t frame_
 }
 
 SceneGpuState::SceneGpuState()
-    : character_gpu_state_updater_(character_gpu_state_, bvh_bounds_updater_, vertex_bvh_bounds_updater_, edge_bvh_bounds_updater_, normal_updater_)
+    : character_gpu_state_updater_(character_gpu_state_, bvh_bounds_updater_, normal_updater_)
 {
 }
 
@@ -32,30 +32,15 @@ bool SceneGpuState::initialize(const ShaderPaths& shader_paths, QOpenGLFunctions
         normal_updater_.release(gl);
         return false;
     }
-    if (!vertex_bvh_bounds_updater_.initialize(shader_paths.character_vertex_bvh_bounds_update_compute, gl)) {
-        bvh_bounds_updater_.release(gl);
-        normal_updater_.release(gl);
-        return false;
-    }
-    if (!edge_bvh_bounds_updater_.initialize(shader_paths.character_edge_bvh_bounds_update_compute, gl)) {
-        vertex_bvh_bounds_updater_.release(gl);
-        bvh_bounds_updater_.release(gl);
-        normal_updater_.release(gl);
-        return false;
-    }
     if (!character_gpu_state_updater_.initialize(shader_paths.character_vertex_position_update_compute,
                                                  shader_paths.character_triangle_geometry_update_compute,
                                                  gl)) {
-        edge_bvh_bounds_updater_.release(gl);
-        vertex_bvh_bounds_updater_.release(gl);
         bvh_bounds_updater_.release(gl);
         normal_updater_.release(gl);
         return false;
     }
     if (!attachment_target_builder_.initialize(shader_paths.garment_attachment_target_build_compute, gl)) {
         character_gpu_state_updater_.release(gl);
-        edge_bvh_bounds_updater_.release(gl);
-        vertex_bvh_bounds_updater_.release(gl);
         bvh_bounds_updater_.release(gl);
         normal_updater_.release(gl);
         return false;
@@ -81,13 +66,11 @@ void SceneGpuState::update_mesh_normals(QOpenGLFunctions_4_5_Core& gl)
 
 void SceneGpuState::release(QOpenGLFunctions_4_5_Core& gl)
 {
-    collision_contact_buffers_.release(gl);
+    collision_pair_buffers_.release(gl);
     cloth_gpu_state_.release(gl);
     character_gpu_state_.release(gl);
     character_gpu_state_updater_.release(gl);
     normal_updater_.release(gl);
-    edge_bvh_bounds_updater_.release(gl);
-    vertex_bvh_bounds_updater_.release(gl);
     bvh_bounds_updater_.release(gl);
     attachment_target_builder_.release(gl);
 
@@ -141,9 +124,9 @@ const ClothGpuResources& SceneGpuState::cloth_gpu_state() const
     return cloth_gpu_state_;
 }
 
-CollisionContactBufferView SceneGpuState::collision_contact_buffer_view() const
+CollisionPairBufferView SceneGpuState::collision_pair_buffer_view() const
 {
-    return collision_contact_buffers_.view();
+    return collision_pair_buffers_.view();
 }
 
 void SceneGpuState::update_garment_meshes(const SceneState& scene, QOpenGLFunctions_4_5_Core& gl)
@@ -153,14 +136,14 @@ void SceneGpuState::update_garment_meshes(const SceneState& scene, QOpenGLFuncti
         const ClothMotionBufferView motion_view = cloth_gpu_state_.motion_buffer_view();
         const ClothMeshTopologyResources topology = cloth_gpu_state_.mesh_topology_resources();
         const DistanceConstraintBufferView stretch_constraints = cloth_gpu_state_.stretch_constraint_buffer_view();
-        if (!collision_contact_buffers_.ensure_capacity(motion_view.vertex_count,
+        if (!collision_pair_buffers_.ensure_capacity(motion_view.vertex_count,
                                                         topology.triangle_count,
                                                         stretch_constraints.constraint_count,
                                                         gl)) {
-            std::cerr << "Failed to prepare collision contact buffers.\n";
+            std::cerr << "Failed to prepare collision pair buffers.\n";
         }
     } else {
-        collision_contact_buffers_.release(gl);
+        collision_pair_buffers_.release(gl);
     }
     normal_updater_.update_cloth_normals(cloth_gpu_state_.mesh_topology_resources(),
                                          cloth_gpu_state_.mesh_normal_resources(),

@@ -65,12 +65,8 @@ add_executable(simulation_app
     src/gpu/body/bvh/VertexBvhBuilder.h
     src/gpu/body/bvh/EdgeBvhBuilder.cpp
     src/gpu/body/bvh/EdgeBvhBuilder.h
-    src/gpu/body/bvh/TriangleBvhBoundsUpdater.cpp
-    src/gpu/body/bvh/TriangleBvhBoundsUpdater.h
-    src/gpu/body/bvh/VertexBvhBoundsUpdater.cpp
-    src/gpu/body/bvh/VertexBvhBoundsUpdater.h
-    src/gpu/body/bvh/EdgeBvhBoundsUpdater.cpp
-    src/gpu/body/bvh/EdgeBvhBoundsUpdater.h
+    src/gpu/body/bvh/CharacterBvhBoundsUpdater.cpp
+    src/gpu/body/bvh/CharacterBvhBoundsUpdater.h
     src/gpu/body/CharacterGpuStateUpdater.cpp
     src/gpu/body/CharacterGpuStateUpdater.h
     src/gpu/cloth/ClothGpuResources.cpp
@@ -82,8 +78,8 @@ add_executable(simulation_app
     src/rendering/GroundGridMesh.h
     src/gpu/scene/SceneGpuState.cpp
     src/gpu/scene/SceneGpuState.h
-    src/gpu/scene/CollisionContactBuffers.cpp
-    src/gpu/scene/CollisionContactBuffers.h
+    src/gpu/scene/CollisionPairBuffers.cpp
+    src/gpu/scene/CollisionPairBuffers.h
     src/gpu/scene/AttachmentTargetBuilder.cpp
     src/gpu/scene/AttachmentTargetBuilder.h
     src/gpu/scene/NormalUpdater.cpp
@@ -115,33 +111,32 @@ add_executable(simulation_app
     shaders/rendering/viewer.frag
     shaders/rendering/background.vert
     shaders/rendering/background.frag
-    shaders/gpu/triangle_normal.comp
-    shaders/gpu/vertex_normal.comp
-    shaders/gpu/character_vertex_position_update.comp
-    shaders/gpu/character_triangle_geometry_update.comp
-    shaders/gpu/character_bvh_bounds_update.comp
-    shaders/gpu/character_vertex_bvh_bounds_update.comp
-    shaders/gpu/character_edge_bvh_bounds_update.comp
-    shaders/simulation/cloth_external_force.comp
-    shaders/simulation/cloth_stretch_constraint.comp
-    shaders/simulation/cloth_bending_constraint.comp
-    shaders/simulation/cloth_attachment_constraint.comp
-    shaders/simulation/collision/cloth_ground_collision.comp
-    shaders/simulation/collision/contact_pair_dispatch_size.comp
-    shaders/simulation/collision/cloth_vertex_body_face_pair_generate.comp
-    shaders/simulation/collision/cloth_vertex_body_face_pair_accumulate.comp
-    shaders/simulation/collision/cloth_vertex_body_face_pair_apply.comp
-    shaders/simulation/collision/body_vertex_cloth_face_pair_generate.comp
-    shaders/simulation/collision/body_vertex_cloth_face_pair_accumulate.comp
-    shaders/simulation/collision/body_vertex_cloth_face_pair_apply.comp
-    shaders/simulation/collision/cloth_edge_body_edge_pair_generate.comp
-    shaders/simulation/collision/cloth_edge_body_edge_pair_accumulate.comp
-    shaders/simulation/collision/common/collision_common.glsl
-    shaders/simulation/collision/common/collision_position_io.glsl
-    shaders/simulation/collision/common/collision_correction_common.glsl
-    shaders/simulation/collision/common/contact_pair_output.glsl
-    shaders/simulation/garment_prefit.comp
-    shaders/simulation/garment_attachment_target_build.comp
+    shaders/mesh/triangle_normal.comp
+    shaders/mesh/vertex_normal.comp
+    shaders/character/character_vertex_position_update.comp
+    shaders/character/character_triangle_geometry_update.comp
+    shaders/character/character_bvh_bounds_update.comp
+    shaders/cloth/cloth_external_force.comp
+    shaders/cloth/constraints/cloth_stretch_constraint.comp
+    shaders/cloth/constraints/cloth_bending_constraint.comp
+    shaders/cloth/constraints/cloth_attachment_constraint.comp
+    shaders/collision/cloth_ground_collision.comp
+    shaders/collision/collision_pair_dispatch_size.comp
+    shaders/collision/cloth_vertex_body_face_pair_detect.comp
+    shaders/collision/cloth_vertex_body_face_pair_accumulate.comp
+    shaders/collision/cloth_vertex_body_face_pair_apply.comp
+    shaders/collision/body_vertex_cloth_face_pair_detect.comp
+    shaders/collision/body_vertex_cloth_face_pair_accumulate.comp
+    shaders/collision/body_vertex_cloth_face_pair_apply.comp
+    shaders/collision/cloth_edge_body_edge_pair_detect.comp
+    shaders/collision/cloth_edge_body_edge_pair_accumulate.comp
+    shaders/character/body_bvh_common.glsl
+    shaders/collision/common/collision_position_io.glsl
+    shaders/collision/common/collision_correction_common.glsl
+    shaders/collision/common/collision_pair_output.glsl
+    shaders/cloth/setup/garment_prefit.comp
+    shaders/cloth/setup/garment_attachment_target_build.comp
+    shaders/cloth/setup/character_mesh_search.glsl
 )
 
 add_executable(garment_converter

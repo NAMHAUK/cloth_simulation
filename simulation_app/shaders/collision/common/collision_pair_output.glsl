@@ -1,5 +1,5 @@
-#ifndef CONTACT_PAIR_OUTPUT_GLSL
-#define CONTACT_PAIR_OUTPUT_GLSL
+#ifndef COLLISION_PAIR_OUTPUT_GLSL
+#define COLLISION_PAIR_OUTPUT_GLSL
 
 shared uvec2 group_pairs[group_pair_capacity];
 shared uint group_pair_count;

@@ -2,7 +2,7 @@
 
 #include "gpu/body/CharacterGpuDataTypes.h"
 #include "gpu/cloth/ClothGpuDataTypes.h"
-#include "gpu/scene/CollisionContactBuffers.h"
+#include "gpu/scene/CollisionPairBuffers.h"
 
 struct SimulationGpuViews final {
     ClothMotionBufferView cloth_motion;
@@ -13,7 +13,7 @@ struct SimulationGpuViews final {
     TriangleBvhResources character_bvh;
     VertexBvhResources body_vertex_bvh;
     EdgeBvhResources body_edge_bvh;
-    CollisionContactBufferView collision_contacts;
+    CollisionPairBufferView collision_pairs;
     DistanceConstraintBufferView stretch_constraints;
     DistanceConstraintBufferView bending_constraints;
     AttachmentConstraintBufferView attachment_constraints;

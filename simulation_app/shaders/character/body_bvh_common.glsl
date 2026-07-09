@@ -1,5 +1,5 @@
-#ifndef COLLISION_COMMON_GLSL
-#define COLLISION_COMMON_GLSL
+#ifndef BODY_BVH_COMMON_GLSL
+#define BODY_BVH_COMMON_GLSL
 
 struct BvhNode {
     vec4 min_bounds;
