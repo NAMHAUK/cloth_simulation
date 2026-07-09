@@ -1,6 +1,6 @@
 #version 430 core
 
-// Builds pair accumulation group counts for glDispatchComputeIndirect from the generated pair count.
+// Builds pair accumulation group counts for glDispatchComputeIndirect from the detected pair count.
 
 layout(local_size_x = 1) in;
 

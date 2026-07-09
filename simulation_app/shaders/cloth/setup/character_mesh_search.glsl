@@ -90,12 +90,12 @@ vec3 closest_point_on_triangle(vec3 point, vec3 a, vec3 b, vec3 c)
     return a + ab * v + ac * w;
 }
 
-bool update_nearest_contact(uint triangle_index,
-                            vec3 cloth_position,
-                            inout vec3 best_closest_point,
-                            inout vec3 best_normal,
-                            inout float best_distance_sq,
-                            inout bool has_candidate)
+bool update_nearest_character_surface_point(uint triangle_index,
+                                            vec3 cloth_position,
+                                            inout vec3 best_closest_point,
+                                            inout vec3 best_normal,
+                                            inout float best_distance_sq,
+                                            inout bool has_surface_point)
 {
     vec4 normal = triangle_geometry[triangle_index].normal;
     if (normal.w == 0.0) {
@@ -123,6 +123,6 @@ bool update_nearest_contact(uint triangle_index,
     best_distance_sq = distance_sq;
     best_closest_point = closest_point;
     best_normal = unit_normal;
-    has_candidate = true;
+    has_surface_point = true;
     return true;
 }

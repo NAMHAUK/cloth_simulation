@@ -139,7 +139,7 @@ void main()
     vec3 best_closest_point = vec3(0.0);
     vec3 best_normal = vec3(0.0, 1.0, 0.0);
     float best_distance_sq = max_float;
-    bool has_candidate = false;
+    bool has_surface_point = false;
 
     uint node_index_stack[max_bvh_stack_depth];
     float node_distance_stack[max_bvh_stack_depth];
@@ -160,12 +160,12 @@ void main()
             if (is_leaf_node(current_node)) {
                 for (uint triangle_offset = 0u; triangle_offset < current_node.element_count; ++triangle_offset) {
                     uint triangle_index = current_node.first_element_index + triangle_offset;
-                    if (update_nearest_contact(triangle_index,
-                                               cloth_position,
-                                               best_closest_point,
-                                               best_normal,
-                                               best_distance_sq,
-                                               has_candidate)) {
+                    if (update_nearest_character_surface_point(triangle_index,
+                                                               cloth_position,
+                                                               best_closest_point,
+                                                               best_normal,
+                                                               best_distance_sq,
+                                                               has_surface_point)) {
                         best_triangle_index = triangle_index;
                     }
                 }
@@ -180,10 +180,10 @@ void main()
         }
     }
 
-    vec3 best_barycentric = has_candidate
+    vec3 best_barycentric = has_surface_point
         ? barycentric_on_triangle(best_triangle_index, best_closest_point)
         : vec3(1.0, 0.0, 0.0);
 
     attachment_indices[constraint_index] = uvec2(cloth_vertex_index, best_triangle_index);
-    barycentric_offsets[constraint_index] = vec4(best_barycentric, has_candidate ? uSurfaceOffset : 0.0);
+    barycentric_offsets[constraint_index] = vec4(best_barycentric, has_surface_point ? uSurfaceOffset : 0.0);
 }

@@ -2,7 +2,7 @@
 
 #include "gpu/body/CharacterGpuDataTypes.h"
 #include "gpu/cloth/ClothGpuDataTypes.h"
-#include "gpu/scene/CollisionContactBuffers.h"
+#include "gpu/scene/CollisionPairBuffers.h"
 #include "simulation/SimulationGpuViews.h"
 #include "simulation/collision/BodyVertexClothFaceCollisionSolver.h"
 #include "simulation/collision/ClothEdgeBodyEdgeCollisionSolver.h"

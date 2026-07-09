@@ -25,7 +25,7 @@ uniform float uVelocityDamping;
 
 const float pushout_normal_epsilon = 1.0e-20;
 
-void remove_inward_contact_velocity(inout vec3 velocity, vec3 unit_normal)
+void remove_inward_collision_velocity(inout vec3 velocity, vec3 unit_normal)
 {
     float normal_velocity = dot(velocity, unit_normal);
     if (normal_velocity < 0.0) {
@@ -48,7 +48,7 @@ void main()
                         previous_positions[position_base + 1u],
                         previous_positions[position_base + 2u]);
 
-    // collsion solver velocity 제외
+    // collsion solver velocity ?�외
     vec4 collision_state = collision_states[vertex_index];
     vec3 solved_velocity = (current - previous - collision_state.xyz) / uDeltaTime;
 
@@ -56,7 +56,7 @@ void main()
     // remove inward velocity along the pushout direction
     float pushout_length_sq = dot(collision_state.xyz, collision_state.xyz);
     if (pushout_length_sq > pushout_normal_epsilon) {
-        remove_inward_contact_velocity(solved_velocity, collision_state.xyz * inversesqrt(pushout_length_sq));
+        remove_inward_collision_velocity(solved_velocity, collision_state.xyz * inversesqrt(pushout_length_sq));
     }
 
     collision_states[vertex_index] = vec4(0.0);

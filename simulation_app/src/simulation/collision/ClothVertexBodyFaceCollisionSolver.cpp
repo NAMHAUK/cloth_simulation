@@ -70,16 +70,16 @@ bool ClothVertexBodyFaceCollisionSolver::initialize(const std::filesystem::path&
 bool ClothVertexBodyFaceCollisionSolver::can_solve(const ClothMotionBufferView& motion_view,
                                                    const ClothCollisionStateBufferView& collision_view,
                                                    const TriangleGeometryResources& character_geometry,
-                                                   const CollisionContactBufferView& collision_contact_view) const
+                                                   const CollisionPairBufferView& collision_pair_view) const
 {
     return is_initialized() &&
            is_valid_motion_view(motion_view) &&
            is_valid_collision_state_view(collision_view) &&
            motion_view.vertex_count == collision_view.vertex_count &&
            is_valid_triangle_geometry_resource(character_geometry) &&
-           is_valid_collision_contact_buffer_view(collision_contact_view) &&
-           collision_contact_view.vertex_capacity >= motion_view.vertex_count &&
-           collision_contact_view.cloth_vertex_body_face.capacity >= motion_view.vertex_count * CollisionContactBuffers::pair_capacity_multiplier &&
+           is_valid_collision_pair_buffer_view(collision_pair_view) &&
+           collision_pair_view.vertex_capacity >= motion_view.vertex_count &&
+           collision_pair_view.cloth_vertex_body_face.capacity >= motion_view.vertex_count * CollisionPairBuffers::pair_capacity_multiplier &&
            collision_thickness_ > 0.0f &&
            max_correction_length_ > 0.0f;
 }
@@ -87,14 +87,14 @@ bool ClothVertexBodyFaceCollisionSolver::can_solve(const ClothMotionBufferView& 
 void ClothVertexBodyFaceCollisionSolver::solve(const ClothMotionBufferView& motion_view,
                                                const ClothCollisionStateBufferView& collision_view,
                                                const TriangleGeometryResources& character_geometry,
-                                               const CollisionContactBufferView& collision_contact_view,
+                                               const CollisionPairBufferView& collision_pair_view,
                                                QOpenGLFunctions_4_5_Core& gl) const
 {
-    assert(can_solve(motion_view, collision_view, character_geometry, collision_contact_view));
+    assert(can_solve(motion_view, collision_view, character_geometry, collision_pair_view));
 
-    collision_contact_view.clear_correction_sums(gl);
-    run_pair_accumulation_stage(motion_view, character_geometry, collision_contact_view, gl);
-    run_pair_apply_stage(motion_view, collision_view, collision_contact_view, gl);
+    collision_pair_view.clear_correction_sums(gl);
+    run_pair_accumulation_stage(motion_view, character_geometry, collision_pair_view, gl);
+    run_pair_apply_stage(motion_view, collision_view, collision_pair_view, gl);
 }
 
 void ClothVertexBodyFaceCollisionSolver::release(QOpenGLFunctions_4_5_Core& gl)
@@ -114,23 +114,23 @@ void ClothVertexBodyFaceCollisionSolver::release(QOpenGLFunctions_4_5_Core& gl)
 
 void ClothVertexBodyFaceCollisionSolver::run_pair_accumulation_stage(const ClothMotionBufferView& motion_view,
                                                                      const TriangleGeometryResources& character_geometry,
-                                                                     const CollisionContactBufferView& collision_contact_view,
+                                                                     const CollisionPairBufferView& collision_pair_view,
                                                                      QOpenGLFunctions_4_5_Core& gl) const
 {
 #if CLOTH_SIM_COLLISION_GPU_TIMING
     const bool gpu_timing_started = accumulate_timer_.begin(gl);
 #endif
-    const ContactPairBuffers& contact_pairs = collision_contact_view.cloth_vertex_body_face;
+    const CollisionPairBuffer& collision_pairs = collision_pair_view.cloth_vertex_body_face;
     gl.glUseProgram(accumulate_.program);
     gl.glBindBufferBase(GL_SHADER_STORAGE_BUFFER, accumulate_binding::cloth_current, motion_view.current_position_buffer);
     gl.glBindBufferBase(GL_SHADER_STORAGE_BUFFER, accumulate_binding::cloth_previous, motion_view.previous_position_buffer);
     gl.glBindBufferBase(GL_SHADER_STORAGE_BUFFER, accumulate_binding::body_triangle_geometry, character_geometry.triangle_geometry_buffer);
-    gl.glBindBufferBase(GL_SHADER_STORAGE_BUFFER, accumulate_binding::pair_records, contact_pairs.pairs);
-    gl.glBindBufferBase(GL_SHADER_STORAGE_BUFFER, accumulate_binding::pair_count, contact_pairs.pair_count);
-    gl.glBindBufferBase(GL_SHADER_STORAGE_BUFFER, accumulate_binding::correction_sums, collision_contact_view.correction_sum_buffer);
-    gl.glProgramUniform1ui(accumulate_.program, accumulate_.max_pairs, contact_pairs.capacity);
+    gl.glBindBufferBase(GL_SHADER_STORAGE_BUFFER, accumulate_binding::pair_records, collision_pairs.pairs);
+    gl.glBindBufferBase(GL_SHADER_STORAGE_BUFFER, accumulate_binding::pair_count, collision_pairs.pair_count);
+    gl.glBindBufferBase(GL_SHADER_STORAGE_BUFFER, accumulate_binding::correction_sums, collision_pair_view.correction_sum_buffer);
+    gl.glProgramUniform1ui(accumulate_.program, accumulate_.max_pairs, collision_pairs.capacity);
     gl.glProgramUniform1f(accumulate_.program, accumulate_.thickness, collision_thickness_);
-    gl.glBindBuffer(GL_DISPATCH_INDIRECT_BUFFER, contact_pairs.dispatch_size);
+    gl.glBindBuffer(GL_DISPATCH_INDIRECT_BUFFER, collision_pairs.dispatch_size);
     gl.glDispatchComputeIndirect(0);
     gl.glBindBuffer(GL_DISPATCH_INDIRECT_BUFFER, 0);
     gl.glMemoryBarrier(GL_SHADER_STORAGE_BARRIER_BIT);
@@ -143,7 +143,7 @@ void ClothVertexBodyFaceCollisionSolver::run_pair_accumulation_stage(const Cloth
 
 void ClothVertexBodyFaceCollisionSolver::run_pair_apply_stage(const ClothMotionBufferView& motion_view,
                                                               const ClothCollisionStateBufferView& collision_view,
-                                                              const CollisionContactBufferView& collision_contact_view,
+                                                              const CollisionPairBufferView& collision_pair_view,
                                                               QOpenGLFunctions_4_5_Core& gl) const
 {
 #if CLOTH_SIM_COLLISION_GPU_TIMING
@@ -152,7 +152,7 @@ void ClothVertexBodyFaceCollisionSolver::run_pair_apply_stage(const ClothMotionB
     gl.glUseProgram(apply_.program);
     gl.glBindBufferBase(GL_SHADER_STORAGE_BUFFER, apply_binding::cloth_current, motion_view.current_position_buffer);
     gl.glBindBufferBase(GL_SHADER_STORAGE_BUFFER, apply_binding::collision_states, collision_view.collision_state_buffer);
-    gl.glBindBufferBase(GL_SHADER_STORAGE_BUFFER, apply_binding::correction_sums, collision_contact_view.correction_sum_buffer);
+    gl.glBindBufferBase(GL_SHADER_STORAGE_BUFFER, apply_binding::correction_sums, collision_pair_view.correction_sum_buffer);
     gl.glProgramUniform1ui(apply_.program, apply_.vertex_count, motion_view.vertex_count);
     gl.glProgramUniform1f(apply_.program, apply_.max_correction, max_correction_length_);
     gl.glDispatchCompute(compute_group_count(motion_view.vertex_count, pair_apply_local_size), 1, 1);

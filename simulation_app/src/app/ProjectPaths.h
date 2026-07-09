@@ -18,14 +18,14 @@ struct ShaderPaths {
     std::filesystem::path cloth_bending_constraint_compute;
     std::filesystem::path cloth_attachment_constraint_compute;
     std::filesystem::path cloth_ground_collision_compute;
-    std::filesystem::path contact_pair_dispatch_size_compute;
-    std::filesystem::path cloth_vertex_body_face_pair_generate_compute;
+    std::filesystem::path collision_pair_dispatch_size_compute;
+    std::filesystem::path cloth_vertex_body_face_pair_detect_compute;
     std::filesystem::path cloth_vertex_body_face_pair_accumulate_compute;
     std::filesystem::path cloth_vertex_body_face_pair_apply_compute;
-    std::filesystem::path body_vertex_cloth_face_pair_generate_compute;
+    std::filesystem::path body_vertex_cloth_face_pair_detect_compute;
     std::filesystem::path body_vertex_cloth_face_pair_accumulate_compute;
     std::filesystem::path body_vertex_cloth_face_pair_apply_compute;
-    std::filesystem::path cloth_edge_body_edge_pair_generate_compute;
+    std::filesystem::path cloth_edge_body_edge_pair_detect_compute;
     std::filesystem::path cloth_edge_body_edge_pair_accumulate_compute;
     std::filesystem::path garment_prefit_compute;
     std::filesystem::path garment_attachment_target_build_compute;
@@ -63,14 +63,14 @@ inline ShaderPaths make_shader_paths(const std::filesystem::path& project_root)
         shader_dir / "cloth" / "constraints" / "cloth_bending_constraint.comp",
         shader_dir / "cloth" / "constraints" / "cloth_attachment_constraint.comp",
         shader_dir / "collision" / "cloth_ground_collision.comp",
-        shader_dir / "collision" / "contact_pair_dispatch_size.comp",
-        shader_dir / "collision" / "cloth_vertex_body_face_pair_generate.comp",
+        shader_dir / "collision" / "collision_pair_dispatch_size.comp",
+        shader_dir / "collision" / "cloth_vertex_body_face_pair_detect.comp",
         shader_dir / "collision" / "cloth_vertex_body_face_pair_accumulate.comp",
         shader_dir / "collision" / "cloth_vertex_body_face_pair_apply.comp",
-        shader_dir / "collision" / "body_vertex_cloth_face_pair_generate.comp",
+        shader_dir / "collision" / "body_vertex_cloth_face_pair_detect.comp",
         shader_dir / "collision" / "body_vertex_cloth_face_pair_accumulate.comp",
         shader_dir / "collision" / "body_vertex_cloth_face_pair_apply.comp",
-        shader_dir / "collision" / "cloth_edge_body_edge_pair_generate.comp",
+        shader_dir / "collision" / "cloth_edge_body_edge_pair_detect.comp",
         shader_dir / "collision" / "cloth_edge_body_edge_pair_accumulate.comp",
         shader_dir / "cloth" / "setup" / "garment_prefit.comp",
         shader_dir / "cloth" / "setup" / "garment_attachment_target_build.comp",

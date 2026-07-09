@@ -1,6 +1,6 @@
 #pragma once
 
-#include "gpu/scene/CollisionContactBuffers.h"
+#include "gpu/scene/CollisionPairBuffers.h"
 #include "simulation/SimulationGpuViews.h"
 #include "utils/GpuElapsedTimer.h"
 
@@ -20,9 +20,9 @@ public:
     ClothBodyCollisionDetector& operator=(const ClothBodyCollisionDetector&) = delete;
 
     bool is_initialized() const;
-    bool initialize(const std::filesystem::path& cloth_vertex_body_face_generate_shader_path,
-                    const std::filesystem::path& cloth_edge_body_edge_generate_shader_path,
-                    const std::filesystem::path& cloth_face_body_vertex_generate_shader_path,
+    bool initialize(const std::filesystem::path& cloth_vertex_body_face_detect_shader_path,
+                    const std::filesystem::path& cloth_edge_body_edge_detect_shader_path,
+                    const std::filesystem::path& cloth_face_body_vertex_detect_shader_path,
                     const std::filesystem::path& dispatch_size_shader_path,
                     float collision_thickness,
                     std::uint32_t ignored_body_part_mask,
@@ -45,21 +45,21 @@ private:
         GLint local_size = -1;
     };
 
-    void detect_cloth_vertex_body_face_contacts(const ClothMotionBufferView& motion_view,
-                                                const TriangleBvhResources& character_bvh,
-                                                const ContactPairBuffers& contact_pairs,
-                                                QOpenGLFunctions_4_5_Core& gl) const;
-    void detect_cloth_edge_body_edge_contacts(const ClothMotionBufferView& motion_view,
-                                              const DistanceConstraintBufferView& cloth_edges,
-                                              const EdgeBvhResources& body_edge_bvh,
-                                              const ContactPairBuffers& contact_pairs,
-                                              QOpenGLFunctions_4_5_Core& gl) const;
-    void detect_cloth_face_body_vertex_contacts(const ClothMotionBufferView& motion_view,
-                                                const ClothMeshTopologyResources& cloth_topology,
-                                                const VertexBvhResources& body_vertex_bvh,
-                                                const ContactPairBuffers& contact_pairs,
-                                                QOpenGLFunctions_4_5_Core& gl) const;
-    void build_dispatch_size(const ContactPairBuffers& contact_pairs, QOpenGLFunctions_4_5_Core& gl) const;
+    void detect_cloth_vertex_body_face_collision_pairs(const ClothMotionBufferView& motion_view,
+                                                       const TriangleBvhResources& character_bvh,
+                                                       const CollisionPairBuffer& collision_pairs,
+                                                       QOpenGLFunctions_4_5_Core& gl) const;
+    void detect_cloth_edge_body_edge_collision_pairs(const ClothMotionBufferView& motion_view,
+                                                     const DistanceConstraintBufferView& cloth_edges,
+                                                     const EdgeBvhResources& body_edge_bvh,
+                                                     const CollisionPairBuffer& collision_pairs,
+                                                     QOpenGLFunctions_4_5_Core& gl) const;
+    void detect_cloth_face_body_vertex_collision_pairs(const ClothMotionBufferView& motion_view,
+                                                       const ClothMeshTopologyResources& cloth_topology,
+                                                       const VertexBvhResources& body_vertex_bvh,
+                                                       const CollisionPairBuffer& collision_pairs,
+                                                       QOpenGLFunctions_4_5_Core& gl) const;
+    void build_dispatch_size(const CollisionPairBuffer& collision_pairs, QOpenGLFunctions_4_5_Core& gl) const;
     bool has_programs() const;
 
     PairDetectionProgram cloth_vertex_body_face_;

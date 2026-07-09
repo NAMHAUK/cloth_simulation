@@ -58,10 +58,10 @@ bool SimulationPipeline::initialize(const ShaderPaths& shader_paths, QOpenGLFunc
         bending_constraint_solver_.initialize(shader_paths.cloth_bending_constraint_compute, simulation_settings::bending_stiffness, gl) &&
         attachment_constraint_solver_.initialize(shader_paths.cloth_attachment_constraint_compute, simulation_settings::attachment_stiffness, gl) &&
         ground_collision_solver_.initialize(shader_paths.cloth_ground_collision_compute, floor_height, gl) &&
-        cloth_body_collision_detector_.initialize(shader_paths.cloth_vertex_body_face_pair_generate_compute,
-                                                  shader_paths.cloth_edge_body_edge_pair_generate_compute,
-                                                  shader_paths.body_vertex_cloth_face_pair_generate_compute,
-                                                  shader_paths.contact_pair_dispatch_size_compute,
+        cloth_body_collision_detector_.initialize(shader_paths.cloth_vertex_body_face_pair_detect_compute,
+                                                  shader_paths.cloth_edge_body_edge_pair_detect_compute,
+                                                  shader_paths.body_vertex_cloth_face_pair_detect_compute,
+                                                  shader_paths.collision_pair_dispatch_size_compute,
                                                   simulation_settings::character_collision_thickness,
                                                   simulation_settings::ignored_body_part_mask,
                                                   gl) &&
@@ -188,7 +188,7 @@ SimulationGpuViews SimulationPipeline::collect_gpu_views(const SceneGpuState& gp
     views.character_bvh = gpu_state.character_gpu_state().character_bvh_resources();
     views.body_vertex_bvh = gpu_state.character_gpu_state().body_vertex_bvh_resources();
     views.body_edge_bvh = gpu_state.character_gpu_state().body_edge_bvh_resources();
-    views.collision_contacts = gpu_state.collision_contact_buffer_view();
+    views.collision_pairs = gpu_state.collision_pair_buffer_view();
     views.stretch_constraints = gpu_state.cloth_gpu_state().stretch_constraint_buffer_view();
     views.bending_constraints = gpu_state.cloth_gpu_state().bending_constraint_buffer_view();
     views.attachment_constraints = gpu_state.cloth_gpu_state().attachment_constraint_buffer_view();

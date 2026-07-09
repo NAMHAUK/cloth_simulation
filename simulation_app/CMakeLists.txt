@@ -78,8 +78,8 @@ add_executable(simulation_app
     src/rendering/GroundGridMesh.h
     src/gpu/scene/SceneGpuState.cpp
     src/gpu/scene/SceneGpuState.h
-    src/gpu/scene/CollisionContactBuffers.cpp
-    src/gpu/scene/CollisionContactBuffers.h
+    src/gpu/scene/CollisionPairBuffers.cpp
+    src/gpu/scene/CollisionPairBuffers.h
     src/gpu/scene/AttachmentTargetBuilder.cpp
     src/gpu/scene/AttachmentTargetBuilder.h
     src/gpu/scene/NormalUpdater.cpp
@@ -121,19 +121,19 @@ add_executable(simulation_app
     shaders/cloth/constraints/cloth_bending_constraint.comp
     shaders/cloth/constraints/cloth_attachment_constraint.comp
     shaders/collision/cloth_ground_collision.comp
-    shaders/collision/contact_pair_dispatch_size.comp
-    shaders/collision/cloth_vertex_body_face_pair_generate.comp
+    shaders/collision/collision_pair_dispatch_size.comp
+    shaders/collision/cloth_vertex_body_face_pair_detect.comp
     shaders/collision/cloth_vertex_body_face_pair_accumulate.comp
     shaders/collision/cloth_vertex_body_face_pair_apply.comp
-    shaders/collision/body_vertex_cloth_face_pair_generate.comp
+    shaders/collision/body_vertex_cloth_face_pair_detect.comp
     shaders/collision/body_vertex_cloth_face_pair_accumulate.comp
     shaders/collision/body_vertex_cloth_face_pair_apply.comp
-    shaders/collision/cloth_edge_body_edge_pair_generate.comp
+    shaders/collision/cloth_edge_body_edge_pair_detect.comp
     shaders/collision/cloth_edge_body_edge_pair_accumulate.comp
     shaders/character/body_bvh_common.glsl
     shaders/collision/common/collision_position_io.glsl
     shaders/collision/common/collision_correction_common.glsl
-    shaders/collision/common/contact_pair_output.glsl
+    shaders/collision/common/collision_pair_output.glsl
     shaders/cloth/setup/garment_prefit.comp
     shaders/cloth/setup/garment_attachment_target_build.comp
     shaders/cloth/setup/character_mesh_search.glsl

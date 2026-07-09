@@ -2,7 +2,7 @@
 
 #include "gpu/body/CharacterGpuDataTypes.h"
 #include "gpu/cloth/ClothGpuDataTypes.h"
-#include "gpu/scene/CollisionContactBuffers.h"
+#include "gpu/scene/CollisionPairBuffers.h"
 #include "utils/GpuElapsedTimer.h"
 
 #include <filesystem>
@@ -29,12 +29,12 @@ public:
                    const ClothCollisionStateBufferView& collision_view,
                    const ClothMeshTopologyResources& cloth_topology,
                    const CharacterVertexBufferView& character_vertex_view,
-                   const CollisionContactBufferView& collision_contact_view) const;
+                   const CollisionPairBufferView& collision_pair_view) const;
     void solve(const ClothMotionBufferView& motion_view,
                const ClothCollisionStateBufferView& collision_view,
                const ClothMeshTopologyResources& cloth_topology,
                const CharacterVertexBufferView& character_vertex_view,
-               const CollisionContactBufferView& collision_contact_view,
+               const CollisionPairBufferView& collision_pair_view,
                QOpenGLFunctions_4_5_Core& gl) const;
     void release(QOpenGLFunctions_4_5_Core& gl);
 
@@ -51,8 +51,8 @@ private:
         GLint max_correction = -1;
     };
 
-    void run_pair_accumulation_stage(const ClothMotionBufferView& motion_view, const ClothMeshTopologyResources& cloth_topology, const CharacterVertexBufferView& character_vertex_view, const CollisionContactBufferView& collision_contact_view, QOpenGLFunctions_4_5_Core& gl) const;
-    void run_pair_apply_stage(const ClothMotionBufferView& motion_view, const ClothCollisionStateBufferView& collision_view, const CollisionContactBufferView& collision_contact_view, QOpenGLFunctions_4_5_Core& gl) const;
+    void run_pair_accumulation_stage(const ClothMotionBufferView& motion_view, const ClothMeshTopologyResources& cloth_topology, const CharacterVertexBufferView& character_vertex_view, const CollisionPairBufferView& collision_pair_view, QOpenGLFunctions_4_5_Core& gl) const;
+    void run_pair_apply_stage(const ClothMotionBufferView& motion_view, const ClothCollisionStateBufferView& collision_view, const CollisionPairBufferView& collision_pair_view, QOpenGLFunctions_4_5_Core& gl) const;
     bool has_pair_programs() const;
 
     AccumulateStage accumulate_;

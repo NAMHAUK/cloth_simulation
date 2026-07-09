@@ -51,7 +51,7 @@ const uint group_pair_capacity = 512u;
 
 #define COLLISION_POSITION_IO_CLOTH_SWEEP
 #include "common/collision_position_io.glsl"
-#include "common/contact_pair_output.glsl"
+#include "common/collision_pair_output.glsl"
 
 Aabb build_cloth_edge_swept_aabb(uint cloth_edge_id)
 {
