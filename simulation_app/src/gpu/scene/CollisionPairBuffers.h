@@ -26,7 +26,7 @@ struct CollisionPairBufferView final {
 
 class CollisionPairBuffers final {
 public:
-    static constexpr std::uint32_t pair_capacity_multiplier = 4;
+    static constexpr std::uint32_t pair_capacity_multiplier = 8;
 
     CollisionPairBuffers() = default;
     CollisionPairBuffers(const CollisionPairBuffers&) = delete;

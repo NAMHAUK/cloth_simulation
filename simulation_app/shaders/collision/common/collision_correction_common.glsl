@@ -5,13 +5,17 @@ const float correction_fixed_point_scale = 1000000.0;
 const float correction_component_limit = 1073741823.0;
 
 #ifdef COLLISION_CORRECTION_ACCUMULATE
-void accumulate_vertex_correction(uint vertex_index, vec3 correction)
+ivec3 encode_correction(vec3 correction)
 {
     vec3 scaled_correction = round(correction * correction_fixed_point_scale);
-    ivec3 encoded_correction = ivec3(clamp(scaled_correction,
-                                           vec3(-correction_component_limit),
-                                           vec3(correction_component_limit)));
+    return ivec3(clamp(scaled_correction,
+                       vec3(-correction_component_limit),
+                       vec3(correction_component_limit)));
+}
 
+void accumulate_vertex_normal_correction(uint vertex_index, vec3 correction)
+{
+    ivec3 encoded_correction = encode_correction(correction);
     atomicAdd(normal_correction_sums[vertex_index].x, encoded_correction.x);
     atomicAdd(normal_correction_sums[vertex_index].y, encoded_correction.y);
     atomicAdd(normal_correction_sums[vertex_index].z, encoded_correction.z);
@@ -26,11 +30,7 @@ vec3 compute_friction_correction(vec3 normal, vec3 cloth_delta, vec3 body_delta)
 
 void accumulate_vertex_friction_correction(uint vertex_index, vec3 friction_correction)
 {
-    vec3 scaled_correction = round(friction_correction * correction_fixed_point_scale);
-    ivec3 encoded_correction = ivec3(clamp(scaled_correction,
-                                           vec3(-correction_component_limit),
-                                           vec3(correction_component_limit)));
-
+    ivec3 encoded_correction = encode_correction(friction_correction);
     atomicAdd(friction_correction_sums[vertex_index].x, encoded_correction.x);
     atomicAdd(friction_correction_sums[vertex_index].y, encoded_correction.y);
     atomicAdd(friction_correction_sums[vertex_index].z, encoded_correction.z);
@@ -76,9 +76,7 @@ void apply_position_correction(uint vertex_index, vec3 normal_correction, vec3 f
     vec3 corrected_position = read_cloth_current_position(vertex_index) + normal_correction + friction_correction;
     write_cloth_current_position(vertex_index, corrected_position);
 
-    vec4 collision_pushout = collision_pushouts[vertex_index];
-    collision_pushout.xyz += normal_correction;
-    collision_pushouts[vertex_index] = collision_pushout;
+    collision_pushouts[vertex_index].xyz += normal_correction;
 }
 #endif
 

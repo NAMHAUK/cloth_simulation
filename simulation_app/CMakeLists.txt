@@ -132,6 +132,7 @@ add_executable(simulation_app
     shaders/collision/cloth_edge_body_edge_pair_accumulate.comp
     shaders/character/body_bvh_common.glsl
     shaders/collision/common/collision_position_io.glsl
+    shaders/collision/common/collision_geometry_common.glsl
     shaders/collision/common/collision_correction_common.glsl
     shaders/collision/common/collision_pair_output.glsl
     shaders/cloth/setup/garment_prefit.comp
@@ -160,7 +161,7 @@ target_include_directories(garment_converter PRIVATE
 
 target_compile_definitions(simulation_app PRIVATE
     PROJECT_ROOT_DIR="${REPO_ROOT}"
-    CLOTH_SIM_COLLISION_SOLVER_GPU_TIMING=1
+    CLOTH_SIM_COLLISION_SOLVER_GPU_TIMING=0
 )
 
 target_link_libraries(simulation_app PRIVATE

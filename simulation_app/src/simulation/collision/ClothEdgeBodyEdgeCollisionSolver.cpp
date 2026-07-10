@@ -21,6 +21,7 @@ constexpr GLuint pair_records = 6;
 constexpr GLuint pair_count = 7;
 constexpr GLuint normal_correction_sums = 8;
 constexpr GLuint friction_correction_sums = 9;
+constexpr GLuint collision_pushouts = 10;
 }
 
 namespace apply_binding {
@@ -115,7 +116,7 @@ void ClothEdgeBodyEdgeCollisionSolver::solve(const ClothMotionBufferView& motion
     assert(can_solve(motion_view, collision_pushout_view, cloth_edges, character_vertex_view, body_edge_bvh, collision_pair_view));
 
     collision_pair_view.clear_correction_sums(gl);
-    run_pair_accumulation_stage(motion_view, cloth_edges, character_vertex_view, body_edge_bvh, collision_pair_view, gl);
+    run_pair_accumulation_stage(motion_view, collision_pushout_view, cloth_edges, character_vertex_view, body_edge_bvh, collision_pair_view, gl);
     run_pair_apply_stage(motion_view, collision_pushout_view, collision_pair_view, gl);
 }
 
@@ -137,6 +138,7 @@ void ClothEdgeBodyEdgeCollisionSolver::release(QOpenGLFunctions_4_5_Core& gl)
 }
 
 void ClothEdgeBodyEdgeCollisionSolver::run_pair_accumulation_stage(const ClothMotionBufferView& motion_view,
+                                                                   const ClothCollisionPushoutBufferView& collision_pushout_view,
                                                                    const DistanceConstraintBufferView& cloth_edges,
                                                                    const CharacterVertexBufferView& character_vertex_view,
                                                                    const EdgeBvhResources& body_edge_bvh,
@@ -158,6 +160,7 @@ void ClothEdgeBodyEdgeCollisionSolver::run_pair_accumulation_stage(const ClothMo
     gl.glBindBufferBase(GL_SHADER_STORAGE_BUFFER, accumulate_binding::pair_count, collision_pairs.pair_count);
     gl.glBindBufferBase(GL_SHADER_STORAGE_BUFFER, accumulate_binding::normal_correction_sums, collision_pair_view.normal_correction_sum_buffer);
     gl.glBindBufferBase(GL_SHADER_STORAGE_BUFFER, accumulate_binding::friction_correction_sums, collision_pair_view.friction_correction_sum_buffer);
+    gl.glBindBufferBase(GL_SHADER_STORAGE_BUFFER, accumulate_binding::collision_pushouts, collision_pushout_view.collision_pushout_buffer);
     gl.glProgramUniform1ui(accumulate_.program, accumulate_.max_pairs, collision_pairs.capacity);
     gl.glProgramUniform1f(accumulate_.program, accumulate_.thickness, collision_thickness_);
     gl.glBindBuffer(GL_DISPATCH_INDIRECT_BUFFER, collision_pairs.dispatch_size);

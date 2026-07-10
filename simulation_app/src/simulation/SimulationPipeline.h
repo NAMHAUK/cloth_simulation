@@ -18,7 +18,7 @@
 
 // GPU timing stays opt-in at compile time because GL_TIME_ELAPSED has runtime cost.
 #ifndef CLOTH_SIM_SUBSTEP_GPU_TIMING
-#define CLOTH_SIM_SUBSTEP_GPU_TIMING 1
+#define CLOTH_SIM_SUBSTEP_GPU_TIMING 0
 #endif
 
 class SceneGpuState;

@@ -10,12 +10,12 @@ inline constexpr int simulation_tick_ms = 1000 / static_cast<int>(cloth_simulati
 
 inline constexpr float fixed_dt = 1.0f / static_cast<float>(cloth_simulation_fps);
 inline constexpr float gravity = -9.8f;
-inline constexpr float velocity_damping = 0.998f;
+inline constexpr float velocity_damping = 0.99792f;
 
 inline constexpr float ground_y = 0.0f;
 inline constexpr float ground_collision_offset = 0.001f;
 inline constexpr float character_collision_thickness = 0.005f;
-inline constexpr float character_collision_max_correction_length = 0.005f;
+inline constexpr float character_collision_max_correction_length = 0.003f;
 inline constexpr std::uint32_t ignored_body_part_mask = (1u << 6u) | (1u << 7u);
 
 // Defaults target dry cotton fabric against a skin-like body surface:

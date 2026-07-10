@@ -57,7 +57,7 @@ private:
         GLint dynamic_friction = -1;
     };
 
-    void run_pair_accumulation_stage(const ClothMotionBufferView& motion_view, const CharacterMeshTopologyResources& character_topology, const CharacterVertexBufferView& character_vertex_view, const TriangleGeometryResources& character_geometry, const CollisionPairBufferView& collision_pair_view, QOpenGLFunctions_4_5_Core& gl) const;
+    void run_pair_accumulation_stage(const ClothMotionBufferView& motion_view, const ClothCollisionPushoutBufferView& collision_pushout_view, const CharacterMeshTopologyResources& character_topology, const CharacterVertexBufferView& character_vertex_view, const TriangleGeometryResources& character_geometry, const CollisionPairBufferView& collision_pair_view, QOpenGLFunctions_4_5_Core& gl) const;
     void run_pair_apply_stage(const ClothMotionBufferView& motion_view, const ClothCollisionPushoutBufferView& collision_pushout_view, const CollisionPairBufferView& collision_pair_view, QOpenGLFunctions_4_5_Core& gl) const;
     bool has_pair_programs() const;
 
