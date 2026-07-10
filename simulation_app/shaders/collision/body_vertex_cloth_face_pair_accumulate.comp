@@ -150,6 +150,7 @@ void accumulate_contact_for_vertex(uint vertex_index, AcceptedContact contact, f
 
     float weight_scale = vertex_weight * inverse_denominator;
     accumulate_vertex_normal_correction(vertex_index, contact.normal * contact.depth * weight_scale);
+    atomicAdd(normal_correction_sums[vertex_index].w, 1);
     accumulate_vertex_friction_correction(vertex_index, contact.friction_correction * weight_scale);
 }
 

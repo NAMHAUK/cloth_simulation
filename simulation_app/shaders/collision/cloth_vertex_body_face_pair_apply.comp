@@ -44,8 +44,10 @@ void main()
     vec3 correction_sum = vec3(accumulated.xyz) / correction_fixed_point_scale;
     vec3 averaged_correction = correction_sum / float(accumulated.w);
     vec3 final_normal_correction = clamp_correction(averaged_correction);
+
     vec3 friction_sum = vec3(friction_correction_sums[vertex_index].xyz) / correction_fixed_point_scale;
     vec3 averaged_friction = friction_sum / float(accumulated.w);
     vec3 final_friction_correction = clamp_friction_correction(final_normal_correction, averaged_friction);
+    
     apply_position_correction(vertex_index, final_normal_correction, final_friction_correction);
 }

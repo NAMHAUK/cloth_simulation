@@ -10,63 +10,6 @@ namespace {
 constexpr std::uint32_t collision_pair_detect_local_size = 128;
 constexpr std::uint32_t collision_pair_accumulate_local_size = 128;
 constexpr std::uint32_t gpu_timing_log_interval = 100u;
-constexpr std::uint32_t overflow_log_interval = 100u;
-
-struct OverflowStats final {
-    std::uint64_t total = 0;
-    std::uint32_t maximum = 0;
-
-    void add(std::uint32_t count)
-    {
-        total += count;
-        if (count > maximum) {
-            maximum = count;
-        }
-    }
-};
-
-std::uint32_t read_overflow_count(const CollisionPairBuffer& collision_pairs,
-                                  QOpenGLFunctions_4_5_Core& gl)
-{
-    std::uint32_t overflow_count = 0;
-    gl.glGetNamedBufferSubData(collision_pairs.overflow_count,
-                               0,
-                               static_cast<GLsizeiptr>(sizeof(overflow_count)),
-                               &overflow_count);
-    return overflow_count;
-}
-
-void log_collision_pair_overflow_counts(const CollisionPairBufferView& collision_pairs,
-                                        QOpenGLFunctions_4_5_Core& gl)
-{
-    static std::uint32_t sample_count = 0;
-    static OverflowStats cloth_vertex_body_face;
-    static OverflowStats cloth_edge_body_edge;
-    static OverflowStats cloth_face_body_vertex;
-
-    gl.glMemoryBarrier(GL_BUFFER_UPDATE_BARRIER_BIT);
-    cloth_vertex_body_face.add(read_overflow_count(collision_pairs.cloth_vertex_body_face, gl));
-    cloth_edge_body_edge.add(read_overflow_count(collision_pairs.cloth_edge_body_edge, gl));
-    cloth_face_body_vertex.add(read_overflow_count(collision_pairs.cloth_face_body_vertex, gl));
-
-    ++sample_count;
-    if (sample_count < overflow_log_interval) {
-        return;
-    }
-
-    std::cerr << "[COLLISION PAIR OVERFLOW] samples=" << sample_count
-              << " cloth_vertex_body_face(total=" << cloth_vertex_body_face.total
-              << ", max=" << cloth_vertex_body_face.maximum << ')'
-              << " cloth_edge_body_edge(total=" << cloth_edge_body_edge.total
-              << ", max=" << cloth_edge_body_edge.maximum << ')'
-              << " cloth_face_body_vertex(total=" << cloth_face_body_vertex.total
-              << ", max=" << cloth_face_body_vertex.maximum << ")\n";
-
-    sample_count = 0;
-    cloth_vertex_body_face = {};
-    cloth_edge_body_edge = {};
-    cloth_face_body_vertex = {};
-}
 
 namespace cloth_vertex_body_face_binding {
 constexpr GLuint cloth_current = 0;
@@ -223,7 +166,6 @@ void ClothBodyCollisionDetector::detect(const SimulationGpuViews& views, QOpenGL
                                                   views.collision_pairs.cloth_face_body_vertex,
                                                   gl);
     build_dispatch_size(views.collision_pairs.cloth_face_body_vertex, gl);
-    log_collision_pair_overflow_counts(views.collision_pairs, gl);
 }
 
 void ClothBodyCollisionDetector::release(QOpenGLFunctions_4_5_Core& gl)
