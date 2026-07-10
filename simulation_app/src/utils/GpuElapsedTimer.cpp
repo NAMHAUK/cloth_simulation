@@ -8,10 +8,19 @@ void GpuElapsedTimer::initialize(std::string label,
                                  std::uint32_t log_interval,
                                  QOpenGLFunctions_4_5_Core& gl)
 {
+    initialize(std::move(label), log_interval, 1u, gl);
+}
+
+void GpuElapsedTimer::initialize(std::string label,
+                                 std::uint32_t log_interval,
+                                 std::uint32_t calls_per_sample,
+                                 QOpenGLFunctions_4_5_Core& gl)
+{
     release(gl);
 
     label_ = std::move(label);
     log_interval_ = std::max(log_interval, 1u);
+    calls_per_sample_ = std::max(calls_per_sample, 1u);
     gl.glGenQueries(static_cast<GLsizei>(start_queries_.size()), start_queries_.data());
     gl.glGenQueries(static_cast<GLsizei>(end_queries_.size()), end_queries_.data());
     query_pending_.fill(false);
@@ -21,6 +30,8 @@ void GpuElapsedTimer::initialize(std::string label,
     sample_count_ = 0u;
     window_sample_count_ = 0u;
     window_total_ms_ = 0.0;
+    group_call_count_ = 0u;
+    group_total_ms_ = 0.0;
 
     if (is_initialized()) {
         std::cerr << "[GPU TIMING] " << label_ << " timestamp timing enabled.\n";
@@ -37,6 +48,7 @@ void GpuElapsedTimer::release(QOpenGLFunctions_4_5_Core& gl)
     }
 
     label_.clear();
+    calls_per_sample_ = 1u;
     start_queries_.fill(0u);
     end_queries_.fill(0u);
     query_pending_.fill(false);
@@ -46,6 +58,8 @@ void GpuElapsedTimer::release(QOpenGLFunctions_4_5_Core& gl)
     sample_count_ = 0u;
     window_sample_count_ = 0u;
     window_total_ms_ = 0.0;
+    group_call_count_ = 0u;
+    group_total_ms_ = 0.0;
 }
 
 bool GpuElapsedTimer::begin(QOpenGLFunctions_4_5_Core& gl) const
@@ -106,9 +120,17 @@ void GpuElapsedTimer::collect(QOpenGLFunctions_4_5_Core& gl) const
             end_nanoseconds > start_nanoseconds ? end_nanoseconds - start_nanoseconds : 0u;
         const double elapsed_ms =
             static_cast<double>(elapsed_nanoseconds) * nanoseconds_to_milliseconds;
+        ++group_call_count_;
+        group_total_ms_ += elapsed_ms;
+        if (group_call_count_ < calls_per_sample_) {
+            continue;
+        }
+
         ++sample_count_;
         ++window_sample_count_;
-        window_total_ms_ += elapsed_ms;
+        window_total_ms_ += group_total_ms_;
+        group_call_count_ = 0u;
+        group_total_ms_ = 0.0;
 
         if (window_sample_count_ >= log_interval_) {
             const double average_ms = window_total_ms_ / static_cast<double>(window_sample_count_);

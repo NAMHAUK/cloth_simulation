@@ -79,7 +79,7 @@ void ExternalForceSolver::solve(const ClothMotionBufferView& motion_view,
 
     // shader가 외부 가속도에 따른 위치 변화량 계산 (GPU에서 바로 업데이트)
     gl.glDispatchCompute(compute_group_count(motion_view.vertex_count, external_force_local_size), 1, 1);
-    gl.glMemoryBarrier(GL_SHADER_STORAGE_BARRIER_BIT | GL_VERTEX_ATTRIB_ARRAY_BARRIER_BIT);
+    gl.glMemoryBarrier(GL_SHADER_STORAGE_BARRIER_BIT);
 }
 
 void ExternalForceSolver::release(QOpenGLFunctions_4_5_Core& gl)

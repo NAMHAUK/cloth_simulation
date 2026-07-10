@@ -74,7 +74,7 @@ void GarmentPrefitSolver::solve(const ClothMotionBufferView& motion_view,
     gl.glProgramUniform1f(program_, pushout_margin_location_, pushout_margin_);
 
     gl.glDispatchCompute(compute_group_count(motion_view.vertex_count, garment_prefit_local_size), 1, 1);
-    gl.glMemoryBarrier(GL_SHADER_STORAGE_BARRIER_BIT | GL_VERTEX_ATTRIB_ARRAY_BARRIER_BIT);
+    gl.glMemoryBarrier(GL_SHADER_STORAGE_BARRIER_BIT);
 }
 
 void GarmentPrefitSolver::release(QOpenGLFunctions_4_5_Core& gl)

@@ -80,7 +80,7 @@ void GroundCollisionSolver::solve(const ClothMotionBufferView& motion_view,
 
     // shader가 바닥과 충돌 처리 (GPU에서 바로 업데이트)
     gl.glDispatchCompute(compute_group_count(motion_view.vertex_count, ground_collision_local_size), 1, 1);
-    gl.glMemoryBarrier(GL_SHADER_STORAGE_BARRIER_BIT | GL_VERTEX_ATTRIB_ARRAY_BARRIER_BIT);
+    gl.glMemoryBarrier(GL_SHADER_STORAGE_BARRIER_BIT);
 }
 
 void GroundCollisionSolver::release(QOpenGLFunctions_4_5_Core& gl)

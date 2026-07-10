@@ -36,15 +36,18 @@ void main()
         return;
     }
 
-    ivec3 accumulated_correction_sum = normal_correction_sums[vertex_index].xyz;
-    if (accumulated_correction_sum == ivec3(0)) {
+    ivec4 accumulated = normal_correction_sums[vertex_index];
+    if (accumulated.w <= 0) {
         return;
     }
 
-    vec3 accumulated_correction = vec3(accumulated_correction_sum) / correction_fixed_point_scale;
-    vec3 final_normal_correction = clamp_correction(accumulated_correction);
-    vec3 friction_correction = vec3(friction_correction_sums[vertex_index].xyz) / correction_fixed_point_scale;
-    vec3 final_friction_correction = clamp_friction_correction(final_normal_correction, friction_correction);
+    vec3 correction_sum = vec3(accumulated.xyz) / correction_fixed_point_scale;
+    vec3 averaged_correction = correction_sum / float(accumulated.w);
+    vec3 final_normal_correction = clamp_correction(averaged_correction);
+
+    vec3 friction_sum = vec3(friction_correction_sums[vertex_index].xyz) / correction_fixed_point_scale;
+    vec3 averaged_friction = friction_sum / float(accumulated.w);
+    vec3 final_friction_correction = clamp_friction_correction(final_normal_correction, averaged_friction);
 
     apply_position_correction(vertex_index, final_normal_correction, final_friction_correction);
 }

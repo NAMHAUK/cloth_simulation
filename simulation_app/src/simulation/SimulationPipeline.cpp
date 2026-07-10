@@ -70,11 +70,9 @@ bool SimulationPipeline::initialize(const ShaderPaths& shader_paths, QOpenGLFunc
                                                   simulation_settings::ignored_body_part_mask,
                                                   gl) &&
         cloth_body_collision_solver_.initialize(shader_paths.cloth_vertex_body_face_pair_accumulate_compute,
-                                                shader_paths.cloth_vertex_body_face_pair_apply_compute,
                                                 shader_paths.cloth_edge_body_edge_pair_accumulate_compute,
-                                                shader_paths.cloth_vertex_body_face_pair_apply_compute,
                                                 shader_paths.body_vertex_cloth_face_pair_accumulate_compute,
-                                                shader_paths.cloth_vertex_body_face_pair_apply_compute,
+                                                shader_paths.cloth_body_collision_apply_compute,
                                                 simulation_settings::character_collision_thickness,
                                                 simulation_settings::character_collision_max_correction_length,
                                                 simulation_settings::static_friction,
