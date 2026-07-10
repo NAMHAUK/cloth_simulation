@@ -29,8 +29,24 @@ layout(std430, binding = 4) readonly buffer PairCount {
     uint pair_count;
 };
 
-layout(std430, binding = 5) buffer CorrectionSums {
-    ivec4 correction_sums[];
+layout(std430, binding = 5) buffer NormalCorrectionSums {
+    ivec4 normal_correction_sums[];
+};
+
+layout(std430, binding = 6) buffer FrictionCorrectionSums {
+    ivec4 friction_correction_sums[];
+};
+
+layout(std430, binding = 7) readonly buffer BodyPreviousPositions {
+    float body_previous_positions[];
+};
+
+layout(std430, binding = 8) readonly buffer BodyCurrentPositions {
+    float body_current_positions[];
+};
+
+layout(std430, binding = 9) readonly buffer BodyTriangleIndices {
+    uint body_triangle_indices[];
 };
 
 uniform uint uMaxPairCount;
@@ -38,8 +54,9 @@ uniform float uCollisionThickness;
 
 const float triangle_edge_tolerance = -1.0e-6;
 const float penetration_tolerance = 0.0005;
+const float pbd_denominator_epsilon = 1.0e-8;
 
-#define COLLISION_POSITION_IO_CLOTH_SWEEP
+#define COLLISION_POSITION_IO_CLOTH_BODY_SWEEP
 #include "common/collision_position_io.glsl"
 
 #define COLLISION_CORRECTION_ACCUMULATE
@@ -47,7 +64,9 @@ const float penetration_tolerance = 0.0005;
 
 struct VertexFaceContact {
     uint cloth_vertex_id;
+    uint triangle_index;
     vec3 normal;
+    vec3 barycentric;
     float depth;
 };
 
@@ -61,10 +80,37 @@ bool point_inside_triangle(vec3 point, vec3 a, vec3 b, vec3 c, vec3 normal)
            dot(cross(ca, point - c), normal) >= triangle_edge_tolerance;
 }
 
+bool compute_barycentric(vec3 point, vec3 a, vec3 b, vec3 c, out vec3 barycentric)
+{
+    vec3 ab = b - a;
+    vec3 ac = c - a;
+    vec3 ap = point - a;
+
+    float d00 = dot(ab, ab);
+    float d01 = dot(ab, ac);
+    float d11 = dot(ac, ac);
+    float d20 = dot(ap, ab);
+    float d21 = dot(ap, ac);
+    float denominator = d00 * d11 - d01 * d01;
+    if (abs(denominator) <= pbd_denominator_epsilon) {
+        barycentric = vec3(0.0);
+        return false;
+    }
+
+    barycentric.z = (d00 * d21 - d01 * d20) / denominator;
+    barycentric.y = (d11 * d20 - d01 * d21) / denominator;
+    barycentric.x = 1.0 - barycentric.y - barycentric.z;
+    return barycentric.x >= triangle_edge_tolerance &&
+           barycentric.y >= triangle_edge_tolerance &&
+           barycentric.z >= triangle_edge_tolerance;
+}
+
 bool compute_vertex_triangle_contact(uint cloth_vertex_id, uint triangle_index, out VertexFaceContact contact)
 {
     contact.cloth_vertex_id = cloth_vertex_id;
+    contact.triangle_index = triangle_index;
     contact.normal = vec3(0.0, 1.0, 0.0);
+    contact.barycentric = vec3(0.0);
     contact.depth = 0.0;
 
     vec4 stored_normal = triangle_geometry[triangle_index].normal;
@@ -94,11 +140,17 @@ bool compute_vertex_triangle_contact(uint cloth_vertex_id, uint triangle_index, 
                                 (uCollisionThickness - previous_signed_distance) / denominator);
         vec3 surface_position = hit_position - normal * uCollisionThickness;
         swept_contact = point_inside_triangle(surface_position, a, b, c, normal);
+        if (swept_contact && !compute_barycentric(surface_position, a, b, c, contact.barycentric)) {
+            return false;
+        }
     }
 
     if (!swept_contact) {
         vec3 surface_position = current_position - normal * current_signed_distance;
         if (!point_inside_triangle(surface_position, a, b, c, normal)) {
+            return false;
+        }
+        if (!compute_barycentric(surface_position, a, b, c, contact.barycentric)) {
             return false;
         }
     }
@@ -112,7 +164,24 @@ void accumulate_contact(VertexFaceContact contact)
 {
     vec3 correction = contact.normal * contact.depth;
     accumulate_vertex_correction(contact.cloth_vertex_id, correction);
-    atomicAdd(correction_sums[contact.cloth_vertex_id].w, 1);
+    atomicAdd(normal_correction_sums[contact.cloth_vertex_id].w, 1);
+
+    uint triangle_base = contact.triangle_index * 3u;
+    uvec3 body_vertices = uvec3(body_triangle_indices[triangle_base],
+                                body_triangle_indices[triangle_base + 1u],
+                                body_triangle_indices[triangle_base + 2u]);
+    vec3 previous_body_contact = read_body_previous_position(body_vertices.x) * contact.barycentric.x
+                               + read_body_previous_position(body_vertices.y) * contact.barycentric.y
+                               + read_body_previous_position(body_vertices.z) * contact.barycentric.z;
+    vec3 current_body_contact = read_body_current_position(body_vertices.x) * contact.barycentric.x
+                              + read_body_current_position(body_vertices.y) * contact.barycentric.y
+                              + read_body_current_position(body_vertices.z) * contact.barycentric.z;
+    vec3 cloth_delta = read_cloth_current_position(contact.cloth_vertex_id) -
+                       read_cloth_previous_position(contact.cloth_vertex_id);
+    vec3 friction_correction = compute_friction_correction(contact.normal,
+                                                           cloth_delta,
+                                                           current_body_contact - previous_body_contact);
+    accumulate_vertex_friction_correction(contact.cloth_vertex_id, friction_correction);
 }
 
 void main()

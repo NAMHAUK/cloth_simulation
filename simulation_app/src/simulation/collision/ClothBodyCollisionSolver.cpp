@@ -17,6 +17,8 @@ bool ClothBodyCollisionSolver::initialize(const std::filesystem::path& cloth_ver
                                           const std::filesystem::path& body_vertex_cloth_face_apply_shader_path,
                                           float collision_thickness,
                                           float max_correction_length,
+                                          float static_friction,
+                                          float dynamic_friction,
                                           QOpenGLFunctions_4_5_Core& gl)
 {
     const bool initialized =
@@ -24,16 +26,22 @@ bool ClothBodyCollisionSolver::initialize(const std::filesystem::path& cloth_ver
                                            cloth_vertex_body_face_apply_shader_path,
                                            collision_thickness,
                                            max_correction_length,
+                                           static_friction,
+                                           dynamic_friction,
                                            gl) &&
         cloth_edge_body_edge_.initialize(cloth_edge_body_edge_accumulate_shader_path,
                                          cloth_edge_body_edge_apply_shader_path,
                                          collision_thickness,
                                          max_correction_length,
+                                         static_friction,
+                                         dynamic_friction,
                                          gl) &&
         body_vertex_cloth_face_.initialize(body_vertex_cloth_face_accumulate_shader_path,
                                            body_vertex_cloth_face_apply_shader_path,
                                            collision_thickness,
                                            max_correction_length,
+                                           static_friction,
+                                           dynamic_friction,
                                            gl);
 
     if (!initialized) {
@@ -47,17 +55,19 @@ bool ClothBodyCollisionSolver::initialize(const std::filesystem::path& cloth_ver
 bool ClothBodyCollisionSolver::can_solve(const SimulationGpuViews& views) const
 {
     return cloth_vertex_body_face_.can_solve(views.cloth_motion,
-                                            views.cloth_collision,
+                                            views.cloth_collision_pushout,
+                                            views.character_topology,
+                                            views.character_vertices,
                                             views.character_geometry,
                                             views.collision_pairs) &&
            cloth_edge_body_edge_.can_solve(views.cloth_motion,
-                                           views.cloth_collision,
+                                           views.cloth_collision_pushout,
                                            views.stretch_constraints,
                                            views.character_vertices,
                                            views.body_edge_bvh,
                                            views.collision_pairs) &&
            body_vertex_cloth_face_.can_solve(views.cloth_motion,
-                                             views.cloth_collision,
+                                             views.cloth_collision_pushout,
                                              views.cloth_topology,
                                              views.character_vertices,
                                              views.collision_pairs);
@@ -68,19 +78,21 @@ void ClothBodyCollisionSolver::solve(const SimulationGpuViews& views, QOpenGLFun
     assert(can_solve(views));
 
     cloth_vertex_body_face_.solve(views.cloth_motion,
-                                  views.cloth_collision,
+                                  views.cloth_collision_pushout,
+                                  views.character_topology,
+                                  views.character_vertices,
                                   views.character_geometry,
                                   views.collision_pairs,
                                   gl);
     cloth_edge_body_edge_.solve(views.cloth_motion,
-                                views.cloth_collision,
+                                views.cloth_collision_pushout,
                                 views.stretch_constraints,
                                 views.character_vertices,
                                 views.body_edge_bvh,
                                 views.collision_pairs,
                                 gl);
     body_vertex_cloth_face_.solve(views.cloth_motion,
-                                  views.cloth_collision,
+                                  views.cloth_collision_pushout,
                                   views.cloth_topology,
                                   views.character_vertices,
                                   views.collision_pairs,

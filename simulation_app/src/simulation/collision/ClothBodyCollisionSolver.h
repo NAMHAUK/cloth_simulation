@@ -27,6 +27,8 @@ public:
                     const std::filesystem::path& body_vertex_cloth_face_apply_shader_path,
                     float collision_thickness,
                     float max_correction_length,
+                    float static_friction,
+                    float dynamic_friction,
                     QOpenGLFunctions_4_5_Core& gl);
     bool can_solve(const SimulationGpuViews& views) const;
     void solve(const SimulationGpuViews& views, QOpenGLFunctions_4_5_Core& gl) const;

@@ -7,7 +7,7 @@
 #include <glm/vec3.hpp>
 
 struct ClothMotionBufferView;
-struct ClothCollisionStateBufferView;
+struct ClothCollisionPushoutBufferView;
 
 class ExternalForceSolver final {
 public:
@@ -18,7 +18,7 @@ public:
     bool is_initialized() const;
     bool initialize(const std::filesystem::path& shader_path, QOpenGLFunctions_4_5_Core& gl);
     void solve(const ClothMotionBufferView& motion_view,
-               const ClothCollisionStateBufferView& collision_view,
+               const ClothCollisionPushoutBufferView& collision_pushout_view,
                float dt,
                const glm::vec3& external_acceleration,
                float velocity_damping,

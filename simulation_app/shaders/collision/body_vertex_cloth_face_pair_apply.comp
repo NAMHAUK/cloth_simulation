@@ -6,16 +6,22 @@ layout(std430, binding = 0) buffer ClothCurrentPositions {
     float cloth_current_positions[];
 };
 
-layout(std430, binding = 1) buffer CollisionStates {
-    vec4 collision_states[];
+layout(std430, binding = 1) buffer CollisionPushouts {
+    vec4 collision_pushouts[];
 };
 
-layout(std430, binding = 2) readonly buffer CorrectionSums {
-    ivec4 correction_sums[];
+layout(std430, binding = 2) readonly buffer NormalCorrectionSums {
+    ivec4 normal_correction_sums[];
+};
+
+layout(std430, binding = 3) readonly buffer FrictionCorrectionSums {
+    ivec4 friction_correction_sums[];
 };
 
 uniform uint uVertexCount;
 uniform float uMaxCorrectionLength;
+uniform float uStaticFriction;
+uniform float uDynamicFriction;
 
 #define COLLISION_POSITION_IO_CLOTH_APPLY
 #include "common/collision_position_io.glsl"
@@ -30,13 +36,15 @@ void main()
         return;
     }
 
-    ivec3 accumulated_correction_sum = correction_sums[vertex_index].xyz;
+    ivec3 accumulated_correction_sum = normal_correction_sums[vertex_index].xyz;
     if (accumulated_correction_sum == ivec3(0)) {
         return;
     }
 
     vec3 accumulated_correction = vec3(accumulated_correction_sum) / correction_fixed_point_scale;
-    vec3 final_correction = clamp_correction(accumulated_correction);
+    vec3 final_normal_correction = clamp_correction(accumulated_correction);
+    vec3 friction_correction = vec3(friction_correction_sums[vertex_index].xyz) / correction_fixed_point_scale;
+    vec3 final_friction_correction = clamp_friction_correction(final_normal_correction, friction_correction);
 
-    apply_position_correction(vertex_index, final_correction);
+    apply_position_correction(vertex_index, final_normal_correction, final_friction_correction);
 }

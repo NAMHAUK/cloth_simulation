@@ -34,8 +34,12 @@ layout(std430, binding = 7) buffer PairCount {
     uint pair_count;
 };
 
-layout(std430, binding = 8) buffer CorrectionSums {
-    ivec4 correction_sums[];
+layout(std430, binding = 8) buffer NormalCorrectionSums {
+    ivec4 normal_correction_sums[];
+};
+
+layout(std430, binding = 9) buffer FrictionCorrectionSums {
+    ivec4 friction_correction_sums[];
 };
 
 uniform uint uMaxPairCount;
@@ -55,6 +59,7 @@ const float pbd_denominator_epsilon = 1.0e-8;
 struct EdgeContact {
     vec3 normal;
     float cloth_t;
+    vec3 friction_correction;
     float depth;
 };
 
@@ -213,6 +218,12 @@ bool compute_pair_contact(uint pair_index, out uvec2 cloth_vertices, out EdgeCon
 
             contact.normal = normal;
             contact.cloth_t = current_cloth_t;
+            contact.friction_correction =
+                compute_friction_correction(normal,
+                                            mix(current_cloth_a, current_cloth_b, current_cloth_t) -
+                                                mix(previous_cloth_a, previous_cloth_b, current_cloth_t),
+                                            mix(current_body_a, current_body_b, current_body_t) -
+                                                mix(previous_body_a, previous_body_b, current_body_t));
             contact.depth = uCollisionThickness - dot(current_delta, normal) - penetration_tolerance;
             return contact.depth > 0.0;
         }
@@ -245,6 +256,12 @@ bool compute_pair_contact(uint pair_index, out uvec2 cloth_vertices, out EdgeCon
 
     contact.normal = normal;
     contact.cloth_t = current_cloth_t;
+    contact.friction_correction =
+        compute_friction_correction(normal,
+                                    mix(current_cloth_a, current_cloth_b, current_cloth_t) -
+                                        mix(previous_cloth_a, previous_cloth_b, current_cloth_t),
+                                    mix(current_body_a, current_body_b, current_body_t) -
+                                        mix(previous_body_a, previous_body_b, current_body_t));
     contact.depth = uCollisionThickness - current_signed_distance - penetration_tolerance;
     return contact.depth > 0.0;
 }
@@ -260,6 +277,8 @@ void accumulate_contact_for_vertex(uint vertex_index,
 
     vec3 correction = contact.normal * contact.depth * vertex_weight * inverse_denominator;
     accumulate_vertex_correction(vertex_index, correction);
+    accumulate_vertex_friction_correction(vertex_index,
+                                          contact.friction_correction * vertex_weight * inverse_denominator);
 }
 
 void main()

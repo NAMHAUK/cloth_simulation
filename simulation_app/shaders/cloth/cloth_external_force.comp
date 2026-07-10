@@ -14,8 +14,8 @@ layout(std430, binding = 2) buffer Velocities {
     float velocities[];
 };
 
-layout(std430, binding = 3) buffer CollisionStates {
-    vec4 collision_states[];
+layout(std430, binding = 3) buffer CollisionPushouts {
+    vec4 collision_pushouts[];
 };
 
 uniform uint uVertexCount;
@@ -49,17 +49,17 @@ void main()
                         previous_positions[position_base + 2u]);
 
     // collsion solver velocity ?œì™¸
-    vec4 collision_state = collision_states[vertex_index];
-    vec3 solved_velocity = (current - previous - collision_state.xyz) / uDeltaTime;
+    vec4 collision_pushout = collision_pushouts[vertex_index];
+    vec3 solved_velocity = (current - previous - collision_pushout.xyz) / uDeltaTime;
 
     
     // remove inward velocity along the pushout direction
-    float pushout_length_sq = dot(collision_state.xyz, collision_state.xyz);
+    float pushout_length_sq = dot(collision_pushout.xyz, collision_pushout.xyz);
     if (pushout_length_sq > pushout_normal_epsilon) {
-        remove_inward_collision_velocity(solved_velocity, collision_state.xyz * inversesqrt(pushout_length_sq));
+        remove_inward_collision_velocity(solved_velocity, collision_pushout.xyz * inversesqrt(pushout_length_sq));
     }
 
-    collision_states[vertex_index] = vec4(0.0);
+    collision_pushouts[vertex_index] = vec4(0.0);
      
     // update pos, vel
     vec3 velocity = solved_velocity * uVelocityDamping + uExternalAcceleration * uDeltaTime;

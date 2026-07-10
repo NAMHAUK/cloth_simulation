@@ -34,8 +34,12 @@ layout(std430, binding = 7) buffer PairCount {
     uint pair_count;
 };
 
-layout(std430, binding = 8) buffer CorrectionSums {
-    ivec4 correction_sums[];
+layout(std430, binding = 8) buffer NormalCorrectionSums {
+    ivec4 normal_correction_sums[];
+};
+
+layout(std430, binding = 9) buffer FrictionCorrectionSums {
+    ivec4 friction_correction_sums[];
 };
 
 uniform uint uMaxPairCount;
@@ -55,6 +59,7 @@ const float pbd_denominator_epsilon = 1.0e-8;
 struct AcceptedContact {
     vec3 normal;
     vec3 barycentric;
+    vec3 friction_correction;
     float depth;
 };
 
@@ -138,6 +143,13 @@ bool compute_pair_contact(uint pair_index, out uvec3 cloth_vertices, out Accepte
             return false;
         }
 
+        vec3 previous_cloth_contact = previous_a * contact.barycentric.x
+                                    + previous_b * contact.barycentric.y
+                                    + previous_c * contact.barycentric.z;
+        contact.friction_correction = compute_friction_correction(contact.normal,
+                                                                  current_cloth_contact - previous_cloth_contact,
+                                                                  read_body_current_position(body_vertex_id) -
+                                                                      read_body_previous_position(body_vertex_id));
         contact.depth = current_depth;
         return true;
     }
@@ -165,6 +177,14 @@ bool compute_pair_contact(uint pair_index, out uvec3 cloth_vertices, out Accepte
     if (depth <= 0.0) {
         return false;
     }
+    vec3 previous_cloth_contact = previous_a * contact.barycentric.x
+                                + previous_b * contact.barycentric.y
+                                + previous_c * contact.barycentric.z;
+    contact.friction_correction =
+        compute_friction_correction(contact.normal,
+                                    current_cloth_contact - previous_cloth_contact,
+                                    read_body_current_position(body_vertex_id) -
+                                        read_body_previous_position(body_vertex_id));
     contact.depth = depth;
 
     return true;
@@ -181,6 +201,8 @@ void accumulate_contact_for_vertex(uint vertex_index,
 
     vec3 correction = contact.normal * contact.depth * vertex_weight * inverse_denominator;
     accumulate_vertex_correction(vertex_index, correction);
+    accumulate_vertex_friction_correction(vertex_index,
+                                          contact.friction_correction * vertex_weight * inverse_denominator);
 }
 
 void main()
