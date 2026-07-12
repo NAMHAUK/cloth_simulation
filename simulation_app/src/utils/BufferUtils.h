@@ -12,10 +12,10 @@ inline bool is_valid_motion_view(const ClothMotionBufferView& motion_view)
            motion_view.vertex_count != 0;
 }
 
-inline bool is_valid_collision_state_view(const ClothCollisionStateBufferView& collision_view)
+inline bool is_valid_collision_pushout_view(const ClothCollisionPushoutBufferView& collision_pushout_view)
 {
-    return collision_view.collision_state_buffer != 0 &&
-           collision_view.vertex_count != 0;
+    return collision_pushout_view.collision_pushout_buffer != 0 &&
+           collision_pushout_view.vertex_count != 0;
 }
 
 inline bool is_valid_character_vertex_buffer_view(const CharacterVertexBufferView& vertex_view)
@@ -93,6 +93,7 @@ inline bool is_valid_collision_pair_buffer_view(const CollisionPairBufferView& c
     return is_valid_collision_pair_buffer(collision_pair_view.cloth_vertex_body_face) &&
            is_valid_collision_pair_buffer(collision_pair_view.cloth_edge_body_edge) &&
            is_valid_collision_pair_buffer(collision_pair_view.cloth_face_body_vertex) &&
-           collision_pair_view.correction_sum_buffer != 0 &&
+           collision_pair_view.normal_correction_sum_buffer != 0 &&
+           collision_pair_view.friction_correction_sum_buffer != 0 &&
            collision_pair_view.vertex_capacity != 0;
 }

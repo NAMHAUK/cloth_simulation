@@ -7,6 +7,10 @@
 #include <iostream>
 
 namespace {
+#ifndef CLOTH_SIM_CHARACTER_BVH_GPU_TIMING
+#define CLOTH_SIM_CHARACTER_BVH_GPU_TIMING 0
+#endif
+
 constexpr GLuint character_triangle_geometry_binding = 0;
 constexpr GLuint character_triangle_indices_binding = 1;
 constexpr GLuint body_current_positions_binding = 2;
@@ -103,7 +107,9 @@ bool CharacterBvhBoundsUpdater::initialize(const std::filesystem::path& shader_p
         return false;
     }
 
+#if CLOTH_SIM_CHARACTER_BVH_GPU_TIMING
     update_timer_.initialize("character BVH bounds update", gpu_timing_log_interval, gl);
+#endif
     return true;
 }
 
@@ -132,7 +138,9 @@ void CharacterBvhBoundsUpdater::update(const CharacterMeshTopologyResources& top
         return;
     }
 
+#if CLOTH_SIM_CHARACTER_BVH_GPU_TIMING
     const bool gpu_timing_started = update_timer_.begin(gl);
+#endif
 
     gl.glUseProgram(program_);
     gl.glBindBufferBase(GL_SHADER_STORAGE_BUFFER, character_triangle_geometry_binding, character_geometry.triangle_geometry_buffer);
@@ -181,14 +189,18 @@ void CharacterBvhBoundsUpdater::update(const CharacterMeshTopologyResources& top
         gl.glMemoryBarrier(GL_SHADER_STORAGE_BARRIER_BIT);
     }
 
+#if CLOTH_SIM_CHARACTER_BVH_GPU_TIMING
     if (gpu_timing_started) {
         update_timer_.end(gl);
     }
+#endif
 }
 
 void CharacterBvhBoundsUpdater::release(QOpenGLFunctions_4_5_Core& gl)
 {
+#if CLOTH_SIM_CHARACTER_BVH_GPU_TIMING
     update_timer_.release(gl);
+#endif
     gl.glDeleteProgram(program_);
 
     program_ = 0;

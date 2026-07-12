@@ -31,7 +31,7 @@ vec3 read_body_current_position(uint vertex_index)
 }
 #endif
 
-#ifdef COLLISION_POSITION_IO_CLOTH_BODY_SWEEP
+#if defined(COLLISION_POSITION_IO_CLOTH_BODY_SWEEP) || defined(COLLISION_POSITION_IO_BODY_PREVIOUS)
 vec3 read_body_previous_position(uint vertex_index)
 {
     uint base_index = vertex_index * 3u;

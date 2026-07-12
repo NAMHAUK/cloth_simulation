@@ -66,7 +66,8 @@ bool CollisionPairBuffers::ensure_capacity(std::uint32_t vertex_count,
     if (has_collision_pair_buffer(buffers_.cloth_vertex_body_face) &&
         has_collision_pair_buffer(buffers_.cloth_edge_body_edge) &&
         has_collision_pair_buffer(buffers_.cloth_face_body_vertex) &&
-        buffers_.correction_sum_buffer != 0 &&
+        buffers_.normal_correction_sum_buffer != 0 &&
+        buffers_.friction_correction_sum_buffer != 0 &&
         buffers_.vertex_capacity >= vertex_count &&
         buffers_.cloth_vertex_body_face.capacity >= cloth_vertex_body_face_capacity &&
         buffers_.cloth_edge_body_edge.capacity >= cloth_edge_body_edge_capacity &&
@@ -80,12 +81,14 @@ bool CollisionPairBuffers::ensure_capacity(std::uint32_t vertex_count,
     create_collision_pair_buffer(buffers_.cloth_vertex_body_face, cloth_vertex_body_face_capacity, gl);
     create_collision_pair_buffer(buffers_.cloth_edge_body_edge, cloth_edge_body_edge_capacity, gl);
     create_collision_pair_buffer(buffers_.cloth_face_body_vertex, cloth_face_body_vertex_capacity, gl);
-    create_buffer(buffers_.correction_sum_buffer, static_cast<GLsizeiptr>(vertex_count * sizeof(std::int32_t) * 4u), gl);
+    create_buffer(buffers_.normal_correction_sum_buffer, static_cast<GLsizeiptr>(vertex_count * sizeof(std::int32_t) * 4u), gl);
+    create_buffer(buffers_.friction_correction_sum_buffer, static_cast<GLsizeiptr>(vertex_count * sizeof(std::int32_t) * 4u), gl);
 
     return has_collision_pair_buffer(buffers_.cloth_vertex_body_face) &&
            has_collision_pair_buffer(buffers_.cloth_edge_body_edge) &&
            has_collision_pair_buffer(buffers_.cloth_face_body_vertex) &&
-           buffers_.correction_sum_buffer != 0;
+           buffers_.normal_correction_sum_buffer != 0 &&
+           buffers_.friction_correction_sum_buffer != 0;
 }
 
 void CollisionPairBufferView::clear_pair_counts(QOpenGLFunctions_4_5_Core& gl) const
@@ -99,7 +102,12 @@ void CollisionPairBufferView::clear_pair_counts(QOpenGLFunctions_4_5_Core& gl) c
 void CollisionPairBufferView::clear_correction_sums(QOpenGLFunctions_4_5_Core& gl) const
 {
     const std::int32_t zero_int[4] = {};
-    gl.glClearNamedBufferData(correction_sum_buffer,
+    gl.glClearNamedBufferData(normal_correction_sum_buffer,
+                              GL_RGBA32I,
+                              GL_RGBA_INTEGER,
+                              GL_INT,
+                              zero_int);
+    gl.glClearNamedBufferData(friction_correction_sum_buffer,
                               GL_RGBA32I,
                               GL_RGBA_INTEGER,
                               GL_INT,
@@ -117,6 +125,7 @@ void CollisionPairBuffers::release(QOpenGLFunctions_4_5_Core& gl)
     delete_collision_pair_buffer(buffers_.cloth_vertex_body_face, gl);
     delete_collision_pair_buffer(buffers_.cloth_edge_body_edge, gl);
     delete_collision_pair_buffer(buffers_.cloth_face_body_vertex, gl);
-    gl.glDeleteBuffers(1, &buffers_.correction_sum_buffer);
+    gl.glDeleteBuffers(1, &buffers_.normal_correction_sum_buffer);
+    gl.glDeleteBuffers(1, &buffers_.friction_correction_sum_buffer);
     buffers_ = {};
 }

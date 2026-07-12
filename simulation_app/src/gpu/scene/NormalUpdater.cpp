@@ -177,5 +177,5 @@ void NormalUpdater::update_vertex_normals(GLuint triangle_normal_source_buffer,
         gl.glProgramUniform1ui(vertex_program_, triangle_normal_offset_location_, triangle_normal_offset);
     }
     gl.glDispatchCompute(compute_group_count(vertex_count, normal_update_local_size), 1, 1);
-    gl.glMemoryBarrier(GL_SHADER_STORAGE_BARRIER_BIT);
+    gl.glMemoryBarrier(GL_SHADER_STORAGE_BARRIER_BIT | GL_VERTEX_ATTRIB_ARRAY_BARRIER_BIT);
 }

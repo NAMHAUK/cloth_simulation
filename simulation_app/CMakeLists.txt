@@ -39,12 +39,6 @@ add_executable(simulation_app
     src/simulation/constraints/AttachmentConstraintSolver.h
     src/simulation/collision/GroundCollisionSolver.cpp
     src/simulation/collision/GroundCollisionSolver.h
-    src/simulation/collision/BodyVertexClothFaceCollisionSolver.cpp
-    src/simulation/collision/BodyVertexClothFaceCollisionSolver.h
-    src/simulation/collision/ClothEdgeBodyEdgeCollisionSolver.cpp
-    src/simulation/collision/ClothEdgeBodyEdgeCollisionSolver.h
-    src/simulation/collision/ClothVertexBodyFaceCollisionSolver.cpp
-    src/simulation/collision/ClothVertexBodyFaceCollisionSolver.h
     src/simulation/collision/ClothBodyCollisionDetector.cpp
     src/simulation/collision/ClothBodyCollisionDetector.h
     src/simulation/collision/ClothBodyCollisionSolver.cpp
@@ -124,14 +118,14 @@ add_executable(simulation_app
     shaders/collision/collision_pair_dispatch_size.comp
     shaders/collision/cloth_vertex_body_face_pair_detect.comp
     shaders/collision/cloth_vertex_body_face_pair_accumulate.comp
-    shaders/collision/cloth_vertex_body_face_pair_apply.comp
     shaders/collision/body_vertex_cloth_face_pair_detect.comp
     shaders/collision/body_vertex_cloth_face_pair_accumulate.comp
-    shaders/collision/body_vertex_cloth_face_pair_apply.comp
     shaders/collision/cloth_edge_body_edge_pair_detect.comp
     shaders/collision/cloth_edge_body_edge_pair_accumulate.comp
+    shaders/collision/cloth_body_collision_apply.comp
     shaders/character/body_bvh_common.glsl
     shaders/collision/common/collision_position_io.glsl
+    shaders/collision/common/collision_geometry_common.glsl
     shaders/collision/common/collision_correction_common.glsl
     shaders/collision/common/collision_pair_output.glsl
     shaders/cloth/setup/garment_prefit.comp
@@ -160,6 +154,7 @@ target_include_directories(garment_converter PRIVATE
 
 target_compile_definitions(simulation_app PRIVATE
     PROJECT_ROOT_DIR="${REPO_ROOT}"
+    CLOTH_SIM_COLLISION_SOLVER_GPU_TIMING=1
 )
 
 target_link_libraries(simulation_app PRIVATE

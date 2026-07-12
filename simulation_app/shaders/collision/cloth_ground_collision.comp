@@ -6,12 +6,20 @@ layout(std430, binding = 0) buffer CurrentPositions {
     float current_positions[];
 };
 
-layout(std430, binding = 1) buffer CollisionStates {
-    vec4 collision_states[];
+layout(std430, binding = 1) readonly buffer PreviousPositions {
+    float previous_positions[];
+};
+
+layout(std430, binding = 2) buffer CollisionPushouts {
+    vec4 collision_pushouts[];
 };
 
 uniform uint uVertexCount;
 uniform float uFloorHeight;
+uniform float uStaticFriction;
+uniform float uDynamicFriction;
+
+const float friction_epsilon = 1.0e-8;
 
 void main()
 {
@@ -26,9 +34,26 @@ void main()
 
     if (current_y < uFloorHeight) {
         float pushout_depth = uFloorHeight - current_y;
+        vec3 friction_correction = -vec3(current_positions[position_base] - previous_positions[position_base],
+                                         0.0,
+                                         current_positions[position_base + 2u] - previous_positions[position_base + 2u]);
+        float friction_length_sq = dot(friction_correction, friction_correction);
+        vec3 final_friction_correction = vec3(0.0);
+        if (pushout_depth > friction_epsilon && friction_length_sq > friction_epsilon * friction_epsilon) {
+            float friction_length = sqrt(friction_length_sq);
+            float static_limit = uStaticFriction * pushout_depth;
+            if (friction_length <= static_limit) {
+                final_friction_correction = friction_correction;
+            } else {
+                final_friction_correction = friction_correction * ((uDynamicFriction * pushout_depth) / friction_length);
+            }
+        }
+
+        current_positions[position_base] += final_friction_correction.x;
         current_positions[position_base + 1u] = uFloorHeight;
-        vec4 collision_state = collision_states[vertex_index];
-        collision_state.y += pushout_depth;
-        collision_states[vertex_index] = collision_state;
+        current_positions[position_base + 2u] += final_friction_correction.z;
+        vec4 collision_pushout = collision_pushouts[vertex_index];
+        collision_pushout.y += pushout_depth;
+        collision_pushouts[vertex_index] = collision_pushout;
     }
 }

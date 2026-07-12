@@ -16,7 +16,8 @@ struct CollisionPairBufferView final {
     CollisionPairBuffer cloth_vertex_body_face;
     CollisionPairBuffer cloth_edge_body_edge;
     CollisionPairBuffer cloth_face_body_vertex;
-    GLuint correction_sum_buffer = 0;
+    GLuint normal_correction_sum_buffer = 0;
+    GLuint friction_correction_sum_buffer = 0;
     std::uint32_t vertex_capacity = 0;
 
     void clear_pair_counts(QOpenGLFunctions_4_5_Core& gl) const;
@@ -25,7 +26,7 @@ struct CollisionPairBufferView final {
 
 class CollisionPairBuffers final {
 public:
-    static constexpr std::uint32_t pair_capacity_multiplier = 4;
+    static constexpr std::uint32_t pair_capacity_multiplier = 8;
 
     CollisionPairBuffers() = default;
     CollisionPairBuffers(const CollisionPairBuffers&) = delete;

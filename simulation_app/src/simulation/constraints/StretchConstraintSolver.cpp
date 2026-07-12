@@ -70,7 +70,7 @@ void StretchConstraintSolver::solve(const ClothMotionBufferView& motion_view,
         gl.glProgramUniform1ui(program_, constraint_offset_location_, range.offset);
         gl.glProgramUniform1ui(program_, constraint_count_location_, range.count);
         gl.glDispatchCompute(compute_group_count(range.count, stretch_constraint_local_size), 1, 1);
-        gl.glMemoryBarrier(GL_SHADER_STORAGE_BARRIER_BIT | GL_VERTEX_ATTRIB_ARRAY_BARRIER_BIT);
+        gl.glMemoryBarrier(GL_SHADER_STORAGE_BARRIER_BIT);
     }
 }
 

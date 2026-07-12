@@ -6,8 +6,9 @@
 
 struct SimulationGpuViews final {
     ClothMotionBufferView cloth_motion;
-    ClothCollisionStateBufferView cloth_collision;
+    ClothCollisionPushoutBufferView cloth_collision_pushout;
     ClothMeshTopologyResources cloth_topology;
+    CharacterMeshTopologyResources character_topology;
     CharacterVertexBufferView character_vertices;
     TriangleGeometryResources character_geometry;
     TriangleBvhResources character_bvh;
