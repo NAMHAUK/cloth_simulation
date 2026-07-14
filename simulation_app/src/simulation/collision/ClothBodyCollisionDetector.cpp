@@ -148,7 +148,7 @@ void ClothBodyCollisionDetector::detect(const SimulationGpuViews& views, QOpenGL
 {
     assert(can_detect(views));
 
-    views.collision_pairs.clear_pair_counts(gl);
+    views.collision_pairs.clear_cloth_body_pair_counts(gl);
     detect_cloth_vertex_body_face_collision_pairs(views.cloth_motion,
                                                   views.character_bvh,
                                                   views.collision_pairs.cloth_vertex_body_face,

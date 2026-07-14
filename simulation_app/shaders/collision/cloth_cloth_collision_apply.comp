@@ -14,20 +14,13 @@ layout(std430, binding = 2) readonly buffer NormalCorrectionSums {
     ivec4 normal_correction_sums[];
 };
 
-layout(std430, binding = 3) readonly buffer FrictionCorrectionSums {
-    ivec4 friction_correction_sums[];
-};
-
 uniform uint uVertexCount;
 uniform float uMaxCorrectionLength;
-uniform float uStaticFriction;
-uniform float uDynamicFriction;
 
 #define COLLISION_POSITION_IO_CLOTH_APPLY
 #include "common/collision_position_io.glsl"
 
 #define COLLISION_CORRECTION_APPLY
-#define COLLISION_CORRECTION_FRICTION_APPLY
 #include "common/collision_correction_common.glsl"
 
 void main()
@@ -44,11 +37,8 @@ void main()
 
     vec3 correction_sum = vec3(accumulated.xyz) / correction_fixed_point_scale;
     vec3 averaged_correction = correction_sum / float(accumulated.w);
-    vec3 final_normal_correction = clamp_correction(averaged_correction);
-
-    vec3 friction_sum = vec3(friction_correction_sums[vertex_index].xyz) / correction_fixed_point_scale;
-    vec3 averaged_friction = friction_sum / float(accumulated.w);
-    vec3 final_friction_correction = clamp_friction_correction(final_normal_correction, averaged_friction);
-
-    apply_position_correction(vertex_index, final_normal_correction, final_friction_correction);
+    vec3 final_correction = clamp_correction(averaged_correction);
+    vec3 corrected_position = read_cloth_current_position(vertex_index) + final_correction;
+    write_cloth_current_position(vertex_index, corrected_position);
+    collision_pushouts[vertex_index].xyz += final_correction;
 }

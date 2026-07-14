@@ -58,6 +58,7 @@ const float ccd_parallel_epsilon = 1.0e-8;
 #include "common/collision_geometry_common.glsl"
 
 #define COLLISION_CORRECTION_ACCUMULATE
+#define COLLISION_CORRECTION_FRICTION_ACCUMULATE
 #include "common/collision_correction_common.glsl"
 
 struct EdgeContact {

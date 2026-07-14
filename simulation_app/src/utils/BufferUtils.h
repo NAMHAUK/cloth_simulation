@@ -109,3 +109,10 @@ inline bool is_valid_collision_pair_buffer_view(const CollisionPairBufferView& c
            collision_pair_view.friction_correction_sum_buffer != 0 &&
            collision_pair_view.vertex_capacity != 0;
 }
+
+inline bool is_valid_cloth_cloth_pair_buffer_view(const CollisionPairBufferView& collision_pair_view)
+{
+    return is_valid_collision_pair_buffer(collision_pair_view.cloth_cloth_vertex_face) &&
+           collision_pair_view.normal_correction_sum_buffer != 0 &&
+           collision_pair_view.vertex_capacity != 0;
+}

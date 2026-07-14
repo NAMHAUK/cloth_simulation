@@ -79,6 +79,16 @@ bool SimulationPipeline::initialize(const ShaderPaths& shader_paths, QOpenGLFunc
                                                 simulation_settings::static_friction,
                                                 simulation_settings::dynamic_friction,
                                                 gl) &&
+        cloth_cloth_collision_detector_.initialize(shader_paths.cloth_cloth_vertex_face_pair_detect_compute,
+                                                   shader_paths.collision_pair_dispatch_size_compute,
+                                                   gl) &&
+        cloth_cloth_collision_solver_.initialize(shader_paths.cloth_cloth_vertex_face_pair_accumulate_compute,
+                                                 shader_paths.cloth_cloth_collision_apply_compute,
+                                                 simulation_settings::cloth_cloth_collision_gap,
+                                                 simulation_settings::cloth_cloth_barrier_stiffness,
+                                                 simulation_settings::cloth_cloth_penetration_tolerance,
+                                                 simulation_settings::cloth_cloth_max_correction_length,
+                                                 gl) &&
         garment_prefit_solver_.initialize(shader_paths.garment_prefit_compute,
                                           simulation_settings::prefit_search_radius,
                                           simulation_settings::prefit_pushout_margin,
@@ -117,6 +127,17 @@ bool SimulationPipeline::prefit_garments(SceneState& scene, SceneGpuState& gpu_s
         return false;
     }
 
+    if (!cloth_cloth_collision_detector_.can_detect(views) ||
+        !cloth_cloth_collision_solver_.can_solve(views)) {
+        std::cerr << "Cannot resolve initial cloth-cloth contacts because required GPU resources are invalid.\n";
+        return false;
+    }
+
+    cloth_cloth_collision_detector_.detect(views, gl);
+    for (std::uint32_t iteration = 0; iteration < simulation_settings::solver_iteration_count; ++iteration) {
+        cloth_cloth_collision_solver_.solve(views, gl);
+    }
+
     gpu_state.cloth_gpu_state().copy_current_positions_to_previous(gl);
     gpu_state.update_mesh_normals(gl);
     return true;
@@ -130,6 +151,7 @@ bool SimulationPipeline::step(SceneState& scene, SceneGpuState& gpu_state, std::
 
     const auto views = collect_gpu_views(gpu_state);
     if (!can_solve_constraint_iteration(views)) {
+        std::cerr << "Cannot run simulation because required constraint or collision GPU resources are invalid.\n";
         return false;
     }
 
@@ -158,12 +180,14 @@ bool SimulationPipeline::step(SceneState& scene, SceneGpuState& gpu_state, std::
         }
 
         cloth_body_collision_detector_.detect(views, gl);
+        cloth_cloth_collision_detector_.detect(views, gl);
 
         for (std::uint32_t iteration = 0; iteration < simulation_settings::solver_iteration_count; ++iteration) {
             stretch_constraint_solver_.solve(views.cloth_motion, views.stretch_constraints, gl);
             bending_constraint_solver_.solve(views.cloth_motion, views.bending_constraints, gl);
             attachment_constraint_solver_.solve(views.cloth_motion, views.attachment_constraints, views.character_geometry, gl);
             cloth_body_collision_solver_.solve(views, gl);
+            cloth_cloth_collision_solver_.solve(views, gl);
             ground_collision_solver_.solve(views.cloth_motion, views.cloth_collision_pushout, gl);
         }
 
@@ -174,6 +198,7 @@ bool SimulationPipeline::step(SceneState& scene, SceneGpuState& gpu_state, std::
 #endif
     }
 
+    cloth_cloth_collision_detector_.log_diagnostics(views, motion_step_index, gl);
     gpu_state.update_mesh_normals(gl);
     return true;
 }
@@ -184,6 +209,8 @@ void SimulationPipeline::release(QOpenGLFunctions_4_5_Core& gl)
     substep_gpu_timer_.release(gl);
 #endif
     garment_prefit_solver_.release(gl);
+    cloth_cloth_collision_solver_.release(gl);
+    cloth_cloth_collision_detector_.release(gl);
     cloth_body_collision_solver_.release(gl);
     cloth_body_collision_detector_.release(gl);
     ground_collision_solver_.release(gl);
@@ -240,5 +267,7 @@ bool SimulationPipeline::can_solve_constraint_iteration(const SimulationGpuViews
             attachment_constraint_solver_.can_solve(views.cloth_motion, views.attachment_constraints, views.character_geometry)) &&
             cloth_body_collision_detector_.can_detect(views) &&
             cloth_body_collision_solver_.can_solve(views) &&
+            cloth_cloth_collision_detector_.can_detect(views) &&
+            cloth_cloth_collision_solver_.can_solve(views) &&
             ground_collision_solver_.can_solve(views.cloth_motion, views.cloth_collision_pushout);
 }

@@ -43,6 +43,10 @@ add_executable(simulation_app
     src/simulation/collision/ClothBodyCollisionDetector.h
     src/simulation/collision/ClothBodyCollisionSolver.cpp
     src/simulation/collision/ClothBodyCollisionSolver.h
+    src/simulation/collision/ClothClothCollisionDetector.cpp
+    src/simulation/collision/ClothClothCollisionDetector.h
+    src/simulation/collision/ClothClothCollisionSolver.cpp
+    src/simulation/collision/ClothClothCollisionSolver.h
     src/simulation/collision/GarmentPrefitSolver.cpp
     src/simulation/collision/GarmentPrefitSolver.h
     src/asset/MeshGeometryUtils.cpp
@@ -121,6 +125,9 @@ add_executable(simulation_app
     shaders/cloth/constraints/cloth_attachment_constraint.comp
     shaders/collision/cloth_ground_collision.comp
     shaders/collision/collision_pair_dispatch_size.comp
+    shaders/collision/cloth_cloth_vertex_face_pair_detect.comp
+    shaders/collision/cloth_cloth_vertex_face_pair_accumulate.comp
+    shaders/collision/cloth_cloth_collision_apply.comp
     shaders/collision/cloth_vertex_body_face_pair_detect.comp
     shaders/collision/cloth_vertex_body_face_pair_accumulate.comp
     shaders/collision/body_vertex_cloth_face_pair_detect.comp
@@ -133,6 +140,7 @@ add_executable(simulation_app
     shaders/collision/common/collision_geometry_common.glsl
     shaders/collision/common/collision_correction_common.glsl
     shaders/collision/common/collision_pair_output.glsl
+    shaders/collision/common/cloth_cloth_pair_output.glsl
     shaders/cloth/setup/garment_prefit.comp
     shaders/cloth/setup/garment_attachment_target_build.comp
     shaders/cloth/setup/character_mesh_search.glsl

@@ -5,6 +5,7 @@
 #include "simulation/SimulationSettings.h"
 
 #include <iostream>
+#include <limits>
 
 namespace {
 CharacterFrameInterpolation make_single_frame_interpolation(std::uint32_t frame_index)
@@ -142,13 +143,20 @@ void SceneGpuState::update_garment_meshes(const SceneState& scene, QOpenGLFuncti
         std::cerr << "Failed to rebuild cloth BVH resources.\n";
     }
     if (cloth_gpu_state_.is_initialized()) {
+        if (scene.garments().size() > std::numeric_limits<std::uint32_t>::max()) {
+            std::cerr << "Cannot prepare collision pair buffers because the garment count exceeds the supported range.\n";
+            collision_pair_buffers_.release(gl);
+            return;
+        }
+
         const ClothMotionBufferView motion_view = cloth_gpu_state_.motion_buffer_view();
         const ClothMeshTopologyResources topology = cloth_gpu_state_.mesh_topology_resources();
         const DistanceConstraintBufferView stretch_constraints = cloth_gpu_state_.stretch_constraint_buffer_view();
         if (!collision_pair_buffers_.ensure_capacity(motion_view.vertex_count,
-                                                        topology.triangle_count,
-                                                        stretch_constraints.constraint_count,
-                                                        gl)) {
+                                                     topology.triangle_count,
+                                                     stretch_constraints.constraint_count,
+                                                     static_cast<std::uint32_t>(scene.garments().size()),
+                                                     gl)) {
             std::cerr << "Failed to prepare collision pair buffers.\n";
         }
     } else {

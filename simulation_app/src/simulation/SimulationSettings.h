@@ -18,9 +18,13 @@ inline constexpr float character_collision_thickness = 0.005f;
 inline constexpr float character_collision_max_correction_length = 0.005f;
 inline constexpr std::uint32_t ignored_body_part_mask = (1u << 6u) | (1u << 7u);
 
-// Keep the current BVH update exact until the cloth-cloth collision gap and
-// broad-phase activation margin are approved together.
-inline constexpr float cloth_bvh_bounds_margin = 0.0f;
+inline constexpr float cloth_cloth_collision_gap = 0.003f;
+inline constexpr float cloth_cloth_activation_margin = 0.002f;
+inline constexpr float cloth_bvh_bounds_margin =
+    cloth_cloth_collision_gap + cloth_cloth_activation_margin;
+inline constexpr float cloth_cloth_barrier_stiffness = 0.8f;
+inline constexpr float cloth_cloth_penetration_tolerance = 0.0005f;
+inline constexpr float cloth_cloth_max_correction_length = 0.003f;
 
 // Defaults target dry cotton fabric against a skin-like body surface:
 // reported kinetic COF is about 0.46-0.58, and dynamic COF is commonly
@@ -44,7 +48,12 @@ static_assert(cloth_simulation_fps % character_motion_fps == 0);
 static_assert(velocity_damping >= 0.0f && velocity_damping <= 1.0f);
 static_assert(character_collision_thickness > 0.0f);
 static_assert(character_collision_max_correction_length > 0.0f);
-static_assert(cloth_bvh_bounds_margin >= 0.0f);
+static_assert(cloth_cloth_collision_gap > 0.0f);
+static_assert(cloth_cloth_activation_margin >= 0.0f);
+static_assert(cloth_bvh_bounds_margin >= cloth_cloth_collision_gap);
+static_assert(cloth_cloth_barrier_stiffness >= 0.0f && cloth_cloth_barrier_stiffness <= 1.0f);
+static_assert(cloth_cloth_penetration_tolerance >= 0.0f);
+static_assert(cloth_cloth_max_correction_length > 0.0f);
 static_assert(dynamic_friction >= 0.0f);
 static_assert(static_friction >= dynamic_friction && static_friction <= 1.0f);
 static_assert(prefit_pushout_margin > 0.0f);
