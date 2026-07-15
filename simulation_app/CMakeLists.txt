@@ -54,15 +54,12 @@ add_executable(simulation_app
     src/gpu/body/CharacterGpuResources.cpp
     src/gpu/body/CharacterGpuDataTypes.h
     src/gpu/body/CharacterGpuResources.h
-    src/gpu/bvh/TriangleBvhBuilder.cpp
     src/gpu/bvh/BvhDataTypes.h
+    src/gpu/bvh/BvhDataTypes.cpp
     src/gpu/bvh/BvhBuildUtils.cpp
     src/gpu/bvh/BvhBuildUtils.h
-    src/gpu/bvh/TriangleBvhBuilder.h
-    src/gpu/bvh/VertexBvhBuilder.cpp
-    src/gpu/bvh/VertexBvhBuilder.h
-    src/gpu/bvh/EdgeBvhBuilder.cpp
-    src/gpu/bvh/EdgeBvhBuilder.h
+    src/gpu/bvh/MeshBvhBuilder.cpp
+    src/gpu/bvh/MeshBvhBuilder.h
     src/gpu/bvh/CharacterBvhBoundsUpdater.cpp
     src/gpu/bvh/CharacterBvhBoundsUpdater.h
     src/gpu/bvh/ClothBvhBoundsUpdater.cpp

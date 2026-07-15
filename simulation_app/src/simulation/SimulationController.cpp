@@ -1,9 +1,7 @@
 #include "simulation/SimulationController.h"
 
 #include "app/ProjectPaths.h"
-#include "gpu/bvh/EdgeBvhBuilder.h"
-#include "gpu/bvh/TriangleBvhBuilder.h"
-#include "gpu/bvh/VertexBvhBuilder.h"
+#include "gpu/bvh/MeshBvhBuilder.h"
 #include "simulation/SimulationSettings.h"
 
 #include <cassert>
@@ -85,7 +83,7 @@ void SimulationController::load_default_character_mesh(CharacterMesh mesh,
                                                        const std::vector<std::uint8_t>& triangle_part_labels,
                                                        QOpenGLFunctions_4_5_Core& gl)
 {
-    TriangleBvhBuilder bvh_builder(
+    MeshBvhBuilder bvh_builder(
         mesh.vertex_count,
         mesh.triangle_vertex_indices,
         mesh.vertices,
@@ -97,25 +95,13 @@ void SimulationController::load_default_character_mesh(CharacterMesh mesh,
         return;
     }
 
-    VertexBvhBuilder vertex_bvh_builder(
-        mesh.vertex_count,
-        mesh.triangle_vertex_indices,
-        mesh.vertices,
-        triangle_part_labels
-    );
-    VertexBvhData default_body_vertex_bvh_data = vertex_bvh_builder.build_vertex_bvh();
+    VertexBvhData default_body_vertex_bvh_data = bvh_builder.build_vertex_bvh();
     if (!default_body_vertex_bvh_data.is_valid(mesh.vertex_count)) {
         std::cerr << "Failed to build default body vertex BVH.\n";
         return;
     }
 
-    EdgeBvhBuilder edge_bvh_builder(
-        mesh.vertex_count,
-        mesh.triangle_vertex_indices,
-        mesh.vertices,
-        triangle_part_labels
-    );
-    EdgeBvhData default_body_edge_bvh_data = edge_bvh_builder.build_edge_bvh();
+    EdgeBvhData default_body_edge_bvh_data = bvh_builder.build_edge_bvh();
     if (!default_body_edge_bvh_data.is_valid()) {
         std::cerr << "Failed to build default body edge BVH.\n";
         return;
@@ -221,7 +207,7 @@ bool SimulationController::build_cloth_triangle_bvh(std::uint32_t garment_id)
     const GarmentMesh& mesh = garment->mesh;
     const auto vertex_count = static_cast<std::uint32_t>(mesh.vertices.size() / 3u);
     const auto triangle_count = static_cast<std::uint32_t>(mesh.triangle_vertex_indices.size() / 3u);
-    TriangleBvhBuilder bvh_builder(vertex_count, mesh.triangle_vertex_indices, mesh.vertices);
+    MeshBvhBuilder bvh_builder(vertex_count, mesh.triangle_vertex_indices, mesh.vertices);
     TriangleBvhData cloth_triangle_bvh = bvh_builder.build_triangle_bvh();
     if (!cloth_triangle_bvh.is_valid(triangle_count)) {
         return false;
