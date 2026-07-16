@@ -62,9 +62,11 @@ std::uint32_t SceneState::add_garment_mesh(GarmentMesh mesh)
     }
 
     const std::uint32_t garment_id = next_garment_id_++;
+    const std::uint32_t garment_layer = next_garment_layer_++;
     GarmentMesh source_mesh = mesh;
     garments_.push_back({
         garment_id,
+        garment_layer,
         std::move(source_mesh),
         std::move(mesh),
         true,
@@ -153,6 +155,7 @@ void SceneState::clear_garments()
 {
     garments_.clear();
     next_garment_id_ = 1;
+    next_garment_layer_ = 0;
 }
 
 const std::vector<GarmentObject>& SceneState::garments() const

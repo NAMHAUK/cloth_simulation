@@ -1,19 +1,22 @@
 #pragma once
 
 #include "asset/AssetDataTypes.h"
-#include "gpu/body/bvh/BvhDataTypes.h"
+#include "gpu/bvh/BvhDataTypes.h"
 
 #include <cstddef>
 #include <cstdint>
+#include <optional>
 #include <vector>
 
 #include <glm/vec3.hpp>
 
 struct GarmentObject {
     std::uint32_t id = 0;
+    std::uint32_t layer = 0;
     GarmentMesh source_mesh;
     GarmentMesh mesh;
     bool visible = true;
+    std::optional<TriangleBvhData> cloth_triangle_bvh;
 };
 
 struct CharacterFrameInterpolation final {
@@ -58,6 +61,7 @@ private:
     // Garments
     std::vector<GarmentObject> garments_;
     std::uint32_t next_garment_id_ = 1;
+    std::uint32_t next_garment_layer_ = 0;
 
     // Playback
     std::uint32_t current_character_frame_ = 0;

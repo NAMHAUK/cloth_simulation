@@ -2,7 +2,7 @@
 
 #include "gpu/body/CharacterGpuDataTypes.h"
 #include "gpu/body/CharacterGpuResources.h"
-#include "gpu/body/bvh/CharacterBvhBoundsUpdater.h"
+#include "gpu/bvh/CharacterBvhBoundsUpdater.h"
 #include "gpu/scene/NormalUpdater.h"
 #include "scene/SceneState.h"
 #include "utils/BufferUtils.h"

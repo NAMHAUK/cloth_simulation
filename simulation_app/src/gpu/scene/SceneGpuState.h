@@ -2,7 +2,8 @@
 
 #include "gpu/body/CharacterGpuStateUpdater.h"
 #include "gpu/body/CharacterGpuResources.h"
-#include "gpu/body/bvh/CharacterBvhBoundsUpdater.h"
+#include "gpu/bvh/CharacterBvhBoundsUpdater.h"
+#include "gpu/cloth/ClothBvhResources.h"
 #include "gpu/cloth/ClothGpuResources.h"
 #include "gpu/scene/AttachmentTargetBuilder.h"
 #include "gpu/scene/CollisionPairBuffers.h"
@@ -33,6 +34,7 @@ public:
     void set_character_mesh(const SceneState& scene, QOpenGLFunctions_4_5_Core& gl);
 
     const ClothGpuResources& cloth_gpu_state() const;
+    ClothBvhBufferView cloth_bvh_buffer_view() const;
     CollisionPairBufferView collision_pair_buffer_view() const;
     void update_garment_meshes(const SceneState& scene, QOpenGLFunctions_4_5_Core& gl);
     bool update_garment_placement(const GarmentObject& garment,
@@ -51,6 +53,7 @@ private:
     NormalUpdater normal_updater_;
     CharacterGpuStateUpdater character_gpu_state_updater_;
     ClothGpuResources cloth_gpu_state_;
+    ClothBvhResources cloth_bvh_resources_;
     CollisionPairBuffers collision_pair_buffers_;
     AttachmentTargetBuilder attachment_target_builder_;
 

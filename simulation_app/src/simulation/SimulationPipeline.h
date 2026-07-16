@@ -1,5 +1,6 @@
 #pragma once
 
+#include "gpu/bvh/ClothBvhBoundsUpdater.h"
 #include "simulation/SimulationGpuViews.h"
 #include "simulation/forces/SimulationForceField.h"
 #include "simulation/forces/ExternalForceSolver.h"
@@ -39,8 +40,11 @@ public:
 
 private:
     static SimulationGpuViews collect_gpu_views(const SceneGpuState& gpu_state);
+    bool update_cloth_bvh_bounds(const SimulationGpuViews& views,
+                                 QOpenGLFunctions_4_5_Core& gl) const;
     bool can_solve_constraint_iteration(const SimulationGpuViews& views) const;
 
+    ClothBvhBoundsUpdater cloth_bvh_bounds_updater_;
     SimulationForceField force_field_;
     ExternalForceSolver external_force_solver_;
     StretchConstraintSolver stretch_constraint_solver_;

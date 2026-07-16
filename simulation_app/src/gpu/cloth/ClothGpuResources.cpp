@@ -1317,6 +1317,11 @@ bool ClothGpuResources::is_initialized() const
 
 // getter //
 
+const std::vector<GarmentBufferRanges>& ClothGpuResources::garment_buffer_ranges() const
+{
+    return garments_;
+}
+
 ClothMotionBufferView ClothGpuResources::motion_buffer_view() const
 {
     ClothMotionBufferView view;

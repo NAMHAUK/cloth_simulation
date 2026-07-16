@@ -1,4 +1,4 @@
-#include "gpu/body/bvh/TriangleBvhBuilder.h"
+#include "gpu/bvh/TriangleBvhBuilder.h"
 
 #include "asset/MeshGeometryUtils.h"
 

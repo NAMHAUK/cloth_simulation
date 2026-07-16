@@ -1,4 +1,4 @@
-#include "gpu/body/bvh/BvhBuildUtils.h"
+#include "gpu/bvh/BvhBuildUtils.h"
 
 #include <algorithm>
 #include <array>

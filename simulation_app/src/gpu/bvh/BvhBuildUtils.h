@@ -1,6 +1,6 @@
 #pragma once
 
-#include "gpu/body/bvh/BvhDataTypes.h"
+#include "gpu/bvh/BvhDataTypes.h"
 
 #include <cstddef>
 #include <cstdint>

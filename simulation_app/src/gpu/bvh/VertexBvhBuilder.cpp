@@ -1,4 +1,4 @@
-#include "gpu/body/bvh/VertexBvhBuilder.h"
+#include "gpu/bvh/VertexBvhBuilder.h"
 
 #include "asset/MeshGeometryUtils.h"
 

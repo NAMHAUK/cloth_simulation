@@ -1,7 +1,7 @@
 #pragma once
 
 #include "gpu/body/CharacterGpuDataTypes.h"
-#include "gpu/body/bvh/BvhDataTypes.h"
+#include "gpu/bvh/BvhDataTypes.h"
 #include "utils/GpuElapsedTimer.h"
 
 #include <filesystem>

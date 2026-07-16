@@ -2,7 +2,7 @@
 
 #include "asset/AssetDataTypes.h"
 #include "gpu/body/CharacterGpuDataTypes.h"
-#include "gpu/body/bvh/BvhDataTypes.h"
+#include "gpu/bvh/BvhDataTypes.h"
 
 #include <cstdint>
 

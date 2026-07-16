@@ -50,22 +50,26 @@ add_executable(simulation_app
     src/gpu/body/CharacterGpuResources.cpp
     src/gpu/body/CharacterGpuDataTypes.h
     src/gpu/body/CharacterGpuResources.h
-    src/gpu/body/bvh/TriangleBvhBuilder.cpp
-    src/gpu/body/bvh/BvhDataTypes.h
-    src/gpu/body/bvh/BvhBuildUtils.cpp
-    src/gpu/body/bvh/BvhBuildUtils.h
-    src/gpu/body/bvh/TriangleBvhBuilder.h
-    src/gpu/body/bvh/VertexBvhBuilder.cpp
-    src/gpu/body/bvh/VertexBvhBuilder.h
-    src/gpu/body/bvh/EdgeBvhBuilder.cpp
-    src/gpu/body/bvh/EdgeBvhBuilder.h
-    src/gpu/body/bvh/CharacterBvhBoundsUpdater.cpp
-    src/gpu/body/bvh/CharacterBvhBoundsUpdater.h
+    src/gpu/bvh/TriangleBvhBuilder.cpp
+    src/gpu/bvh/BvhDataTypes.h
+    src/gpu/bvh/BvhBuildUtils.cpp
+    src/gpu/bvh/BvhBuildUtils.h
+    src/gpu/bvh/TriangleBvhBuilder.h
+    src/gpu/bvh/VertexBvhBuilder.cpp
+    src/gpu/bvh/VertexBvhBuilder.h
+    src/gpu/bvh/EdgeBvhBuilder.cpp
+    src/gpu/bvh/EdgeBvhBuilder.h
+    src/gpu/bvh/CharacterBvhBoundsUpdater.cpp
+    src/gpu/bvh/CharacterBvhBoundsUpdater.h
+    src/gpu/bvh/ClothBvhBoundsUpdater.cpp
+    src/gpu/bvh/ClothBvhBoundsUpdater.h
     src/gpu/body/CharacterGpuStateUpdater.cpp
     src/gpu/body/CharacterGpuStateUpdater.h
     src/gpu/cloth/ClothGpuResources.cpp
     src/gpu/cloth/ClothGpuDataTypes.h
     src/gpu/cloth/ClothGpuResources.h
+    src/gpu/cloth/ClothBvhResources.cpp
+    src/gpu/cloth/ClothBvhResources.h
     src/rendering/BackgroundGradient.cpp
     src/rendering/BackgroundGradient.h
     src/rendering/GroundGridMesh.cpp
@@ -111,6 +115,7 @@ add_executable(simulation_app
     shaders/character/character_triangle_geometry_update.comp
     shaders/character/character_bvh_bounds_update.comp
     shaders/cloth/cloth_external_force.comp
+    shaders/cloth/cloth_bvh_bounds_update.comp
     shaders/cloth/constraints/cloth_stretch_constraint.comp
     shaders/cloth/constraints/cloth_bending_constraint.comp
     shaders/cloth/constraints/cloth_attachment_constraint.comp

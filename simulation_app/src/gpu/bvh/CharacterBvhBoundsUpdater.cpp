@@ -1,4 +1,4 @@
-#include "gpu/body/bvh/CharacterBvhBoundsUpdater.h"
+#include "gpu/bvh/CharacterBvhBoundsUpdater.h"
 
 #include "utils/BufferUtils.h"
 #include "utils/ShaderUtils.h"

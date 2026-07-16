@@ -67,6 +67,7 @@ void SceneGpuState::update_mesh_normals(QOpenGLFunctions_4_5_Core& gl)
 void SceneGpuState::release(QOpenGLFunctions_4_5_Core& gl)
 {
     collision_pair_buffers_.release(gl);
+    cloth_bvh_resources_.release(gl);
     cloth_gpu_state_.release(gl);
     character_gpu_state_.release(gl);
     character_gpu_state_updater_.release(gl);
@@ -124,6 +125,11 @@ const ClothGpuResources& SceneGpuState::cloth_gpu_state() const
     return cloth_gpu_state_;
 }
 
+ClothBvhBufferView SceneGpuState::cloth_bvh_buffer_view() const
+{
+    return cloth_bvh_resources_.buffer_view();
+}
+
 CollisionPairBufferView SceneGpuState::collision_pair_buffer_view() const
 {
     return collision_pair_buffers_.view();
@@ -132,6 +138,9 @@ CollisionPairBufferView SceneGpuState::collision_pair_buffer_view() const
 void SceneGpuState::update_garment_meshes(const SceneState& scene, QOpenGLFunctions_4_5_Core& gl)
 {
     cloth_gpu_state_.update_garment_buffers(scene.garments(), gl);
+    if (!cloth_bvh_resources_.rebuild(scene.garments(), gl)) {
+        std::cerr << "Failed to rebuild cloth BVH resources.\n";
+    }
     if (cloth_gpu_state_.is_initialized()) {
         const ClothMotionBufferView motion_view = cloth_gpu_state_.motion_buffer_view();
         const ClothMeshTopologyResources topology = cloth_gpu_state_.mesh_topology_resources();

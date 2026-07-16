@@ -31,6 +31,7 @@ public:
     bool save_base_positions(QOpenGLFunctions_4_5_Core& gl);
     bool restore_base_positions(QOpenGLFunctions_4_5_Core& gl) const;
     void clear_base_positions(QOpenGLFunctions_4_5_Core& gl);
+    const std::vector<GarmentBufferRanges>& garment_buffer_ranges() const;
     ClothMotionBufferView motion_buffer_view() const;
     ClothCollisionPushoutBufferView collision_pushout_buffer_view() const;
     void copy_current_positions_to_previous(QOpenGLFunctions_4_5_Core& gl) const;

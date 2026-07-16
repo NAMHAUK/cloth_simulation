@@ -1,7 +1,7 @@
 #pragma once
 
-#include "gpu/body/bvh/BvhDataTypes.h"
-#include "gpu/body/bvh/BvhBuildUtils.h"
+#include "gpu/bvh/BvhDataTypes.h"
+#include "gpu/bvh/BvhBuildUtils.h"
 
 #include <cstddef>
 #include <cstdint>

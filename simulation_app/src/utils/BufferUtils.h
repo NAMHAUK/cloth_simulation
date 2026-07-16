@@ -1,6 +1,7 @@
 #pragma once
 
 #include "gpu/body/CharacterGpuDataTypes.h"
+#include "gpu/cloth/ClothBvhResources.h"
 #include "gpu/cloth/ClothGpuResources.h"
 #include "gpu/scene/CollisionPairBuffers.h"
 
@@ -31,6 +32,17 @@ inline bool is_valid_cloth_mesh_topology_resource(const ClothMeshTopologyResourc
     return topology.triangle_index_buffer != 0 &&
            topology.vertex_count != 0 &&
            topology.triangle_count != 0;
+}
+
+inline bool is_valid_cloth_bvh_buffer_view(const ClothBvhBufferView& view)
+{
+    return view.collision_triangle_index_buffer != 0 &&
+           view.node_buffer != 0 &&
+           view.triangle_bounds_buffer != 0 &&
+           view.triangle_count != 0 &&
+           view.node_count != 0 &&
+           view.garment_layouts != nullptr &&
+           !view.garment_layouts->empty();
 }
 
 inline bool is_valid_character_mesh_topology_resource(const CharacterMeshTopologyResources& topology)

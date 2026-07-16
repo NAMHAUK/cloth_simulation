@@ -48,11 +48,10 @@ void main()
                         previous_positions[position_base + 1u],
                         previous_positions[position_base + 2u]);
 
-    // collsion solver velocity ?�외
+    // collsion solver pushout 제외
     vec4 collision_pushout = collision_pushouts[vertex_index];
     vec3 solved_velocity = (current - previous - collision_pushout.xyz) / uDeltaTime;
 
-    
     // remove inward velocity along the pushout direction
     float pushout_length_sq = dot(collision_pushout.xyz, collision_pushout.xyz);
     if (pushout_length_sq > pushout_normal_epsilon) {

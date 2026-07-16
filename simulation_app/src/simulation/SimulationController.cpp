@@ -1,9 +1,9 @@
 #include "simulation/SimulationController.h"
 
 #include "app/ProjectPaths.h"
-#include "gpu/body/bvh/EdgeBvhBuilder.h"
-#include "gpu/body/bvh/TriangleBvhBuilder.h"
-#include "gpu/body/bvh/VertexBvhBuilder.h"
+#include "gpu/bvh/EdgeBvhBuilder.h"
+#include "gpu/bvh/TriangleBvhBuilder.h"
+#include "gpu/bvh/VertexBvhBuilder.h"
 #include "simulation/SimulationSettings.h"
 
 #include <cassert>
@@ -178,6 +178,10 @@ void SimulationController::add_garment_mesh(GarmentMesh mesh)
         // 새 garment 추가
         garment_placement_.clear();
         garment_placement_.garment_id = scene_.add_garment_mesh(std::move(mesh));
+        if (!build_cloth_triangle_bvh(garment_placement_.garment_id)) {
+            std::cerr << "Failed to build cloth triangle BVH for garment id "
+                      << garment_placement_.garment_id << ".\n";
+        }
         gpu_state_.update_garment_meshes(scene_, gl);
         gpu_state_.clear_base_positions(gl);
         has_base_positions_ = false;
@@ -201,6 +205,26 @@ void SimulationController::set_current_garment_placement(QOpenGLFunctions_4_5_Co
     }
 
     garment_placement_.clear_update();
+}
+
+bool SimulationController::build_cloth_triangle_bvh(std::uint32_t garment_id)
+{
+    GarmentObject* garment = scene_.find_garment(garment_id);
+    if (garment == nullptr) {
+        return false;
+    }
+
+    const GarmentMesh& mesh = garment->mesh;
+    const auto vertex_count = static_cast<std::uint32_t>(mesh.vertices.size() / 3u);
+    const auto triangle_count = static_cast<std::uint32_t>(mesh.triangle_vertex_indices.size() / 3u);
+    TriangleBvhBuilder bvh_builder(vertex_count, mesh.triangle_vertex_indices, mesh.vertices);
+    TriangleBvhData cloth_triangle_bvh = bvh_builder.build_triangle_bvh();
+    if (!cloth_triangle_bvh.is_valid(triangle_count)) {
+        return false;
+    }
+
+    garment->cloth_triangle_bvh = std::move(cloth_triangle_bvh);
+    return true;
 }
 
 void SimulationController::reset_scene_to_default()
@@ -274,7 +298,10 @@ void SimulationController::confirm_garment_placement()
 
     viewport_callbacks_.run_with_gl_context([this](QOpenGLFunctions_4_5_Core& gl) {
         set_current_garment_placement(gl);
-        simulation_pipeline_.prefit_garments(scene_, gpu_state_, gl);
+        if (!simulation_pipeline_.prefit_garments(scene_, gpu_state_, gl)) {
+            std::cerr << "Cannot confirm garment placement because garment pre-fit failed.\n";
+            return;
+        }
         gpu_state_.build_garment_attachment_targets(scene_, garment_placement_.garment_id, gl);
         garment_placement_.clear();
         gpu_state_.clear_base_positions(gl);

@@ -95,6 +95,7 @@ private:
     void set_character_mesh_state(CharacterMesh mesh, QOpenGLFunctions_4_5_Core& gl);
     bool has_garment_placement_update() const;
     void set_current_garment_placement(QOpenGLFunctions_4_5_Core& gl);
+    bool build_cloth_triangle_bvh(std::uint32_t garment_id);
 
     // CPU-side scene state //
     SceneState scene_;
