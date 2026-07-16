@@ -1,5 +1,5 @@
-#ifndef BODY_BVH_COMMON_GLSL
-#define BODY_BVH_COMMON_GLSL
+#ifndef BVH_COMMON_GLSL
+#define BVH_COMMON_GLSL
 
 struct BvhNode {
     vec4 min_bounds;
@@ -11,8 +11,8 @@ struct BvhNode {
 };
 
 struct Aabb {
-    vec3 min_bounds;
-    vec3 max_bounds;
+    vec4 min_bounds;
+    vec4 max_bounds;
 };
 
 bool is_leaf_node(BvhNode node)
@@ -28,20 +28,21 @@ bool is_ignored_body_part_node(BvhNode node, uint ignored_body_part_mask)
 
 Aabb build_swept_aabb(vec3 previous_position, vec3 current_position)
 {
-    return Aabb(min(previous_position, current_position),
-                max(previous_position, current_position));
+    return Aabb(vec4(min(previous_position, current_position), 0.0),
+                vec4(max(previous_position, current_position), 0.0));
 }
 
 Aabb expand_aabb(Aabb bounds, vec3 expansion)
 {
-    return Aabb(bounds.min_bounds - expansion,
-                bounds.max_bounds + expansion);
+    vec4 expansion4 = vec4(expansion, 0.0);
+    return Aabb(bounds.min_bounds - expansion4,
+                bounds.max_bounds + expansion4);
 }
 
-bool overlaps_aabb(Aabb left_bounds, vec3 right_min_bounds, vec3 right_max_bounds)
+bool overlaps_aabb(Aabb left_bounds, vec4 right_min_bounds, vec4 right_max_bounds)
 {
-    return all(lessThanEqual(left_bounds.min_bounds, right_max_bounds)) &&
-           all(greaterThanEqual(left_bounds.max_bounds, right_min_bounds));
+    return all(lessThanEqual(left_bounds.min_bounds.xyz, right_max_bounds.xyz)) &&
+           all(greaterThanEqual(left_bounds.max_bounds.xyz, right_min_bounds.xyz));
 }
 
 #endif

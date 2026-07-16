@@ -52,8 +52,9 @@ const uint lower_vertex_higher_face_role = 1u;
 const float distance_delta_epsilon = 1.0e-8;
 const float normal_length_epsilon = 1.0e-12;
 
-#define COLLISION_POSITION_IO_CLOTH_SWEEP
-#include "common/collision_position_io.glsl"
+#define POSITION_IO_CLOTH_CURRENT
+#define POSITION_IO_CLOTH_PREVIOUS
+#include "../mesh/position_io.glsl"
 #include "common/collision_geometry_common.glsl"
 
 #define COLLISION_CORRECTION_ACCUMULATE

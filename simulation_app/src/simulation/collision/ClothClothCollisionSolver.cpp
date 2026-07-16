@@ -45,6 +45,24 @@ constexpr GLuint cloth_current = 0;
 constexpr GLuint collision_pushouts = 1;
 constexpr GLuint normal_correction_sums = 2;
 }
+
+template <typename... Locations>
+bool are_uniform_locations_valid(Locations... locations)
+{
+    return ((locations >= 0) && ...);
+}
+
+bool has_valid_common_solve_views(const SimulationGpuViews& views)
+{
+    return is_valid_motion_view(views.cloth_motion) &&
+           is_valid_collision_pushout_view(views.cloth_collision_pushout) &&
+           views.cloth_motion.vertex_count == views.cloth_collision_pushout.vertex_count &&
+           is_valid_cloth_bvh_buffer_view(views.cloth_bvh) &&
+           (views.cloth_bvh.garment_layouts->size() < 2u ||
+            (is_valid_triangle_geometry_resource(views.character_geometry) &&
+             is_valid_cloth_cloth_pair_buffer_view(views.collision_pairs) &&
+             views.collision_pairs.vertex_capacity >= views.cloth_motion.vertex_count));
+}
 }
 
 bool ClothClothCollisionSolver::is_initialized() const
@@ -66,6 +84,16 @@ bool ClothClothCollisionSolver::initialize(const std::filesystem::path& accumula
                                            float surface_search_radius,
                                            QOpenGLFunctions_4_5_Core& gl)
 {
+    if (!std::isfinite(collision_gap) || collision_gap <= 0.0f ||
+        !std::isfinite(barrier_stiffness) || barrier_stiffness < 0.0f || barrier_stiffness > 1.0f ||
+        !std::isfinite(penetration_tolerance) || penetration_tolerance < 0.0f ||
+        !std::isfinite(max_correction_length) || max_correction_length <= 0.0f ||
+        !std::isfinite(surface_search_radius) || surface_search_radius <= 0.0f) {
+        std::cerr << "Cloth-cloth collision settings are invalid.\n";
+        release(gl);
+        return false;
+    }
+
     accumulate_.program = load_compute_program(accumulate_shader_path,
                                                "Cloth-cloth vertex-face pair accumulation",
                                                gl);
@@ -92,26 +120,20 @@ bool ClothClothCollisionSolver::initialize(const std::filesystem::path& accumula
     initial_accumulate_.collision_gap = gl.glGetUniformLocation(initial_accumulate_.program, "uCollisionGap");
     initial_accumulate_.barrier_stiffness = gl.glGetUniformLocation(initial_accumulate_.program, "uBarrierStiffness");
     initial_accumulate_.penetration_tolerance = gl.glGetUniformLocation(initial_accumulate_.program, "uPenetrationTolerance");
-    initial_accumulate_.search_radius = gl.glGetUniformLocation(initial_accumulate_.program, "uSearchRadius");
+    initial_accumulate_.search_radius_squared = gl.glGetUniformLocation(initial_accumulate_.program, "uSearchRadiusSquared");
     body_triangle_id_build_.vertex_count = gl.glGetUniformLocation(body_triangle_id_build_.program, "uVertexCount");
-    body_triangle_id_build_.search_radius = gl.glGetUniformLocation(body_triangle_id_build_.program, "uSearchRadius");
+    body_triangle_id_build_.search_radius_squared = gl.glGetUniformLocation(body_triangle_id_build_.program, "uSearchRadiusSquared");
     apply_.vertex_count = gl.glGetUniformLocation(apply_.program, "uVertexCount");
     apply_.max_correction = gl.glGetUniformLocation(apply_.program, "uMaxCorrectionLength");
 
-    if (accumulate_.max_pairs < 0 ||
-        accumulate_.collision_gap < 0 ||
-        accumulate_.barrier_stiffness < 0 ||
-        accumulate_.penetration_tolerance < 0 ||
-        accumulate_.character_triangle_count < 0 ||
-        initial_accumulate_.max_pairs < 0 ||
-        initial_accumulate_.collision_gap < 0 ||
-        initial_accumulate_.barrier_stiffness < 0 ||
-        initial_accumulate_.penetration_tolerance < 0 ||
-        initial_accumulate_.search_radius < 0 ||
-        body_triangle_id_build_.vertex_count < 0 ||
-        body_triangle_id_build_.search_radius < 0 ||
-        apply_.vertex_count < 0 ||
-        apply_.max_correction < 0) {
+    if (!are_uniform_locations_valid(
+            accumulate_.max_pairs, accumulate_.collision_gap, accumulate_.barrier_stiffness,
+            accumulate_.penetration_tolerance, accumulate_.character_triangle_count,
+            initial_accumulate_.max_pairs, initial_accumulate_.collision_gap,
+            initial_accumulate_.barrier_stiffness, initial_accumulate_.penetration_tolerance,
+            initial_accumulate_.search_radius_squared,
+            body_triangle_id_build_.vertex_count, body_triangle_id_build_.search_radius_squared,
+            apply_.vertex_count, apply_.max_correction)) {
         std::cerr << "Cloth-cloth collision compute shader missing required uniforms.\n";
         release(gl);
         return false;
@@ -131,33 +153,17 @@ bool ClothClothCollisionSolver::initialize(const std::filesystem::path& accumula
 
 bool ClothClothCollisionSolver::can_solve(const SimulationGpuViews& views) const
 {
-    if (!is_initialized() ||
-        !is_valid_motion_view(views.cloth_motion) ||
-        !is_valid_collision_pushout_view(views.cloth_collision_pushout) ||
-        views.cloth_motion.vertex_count != views.cloth_collision_pushout.vertex_count ||
-        !is_valid_cloth_bvh_buffer_view(views.cloth_bvh) ||
-        !std::isfinite(collision_gap_) || collision_gap_ <= 0.0f ||
-        !std::isfinite(barrier_stiffness_) || barrier_stiffness_ < 0.0f || barrier_stiffness_ > 1.0f ||
-        !std::isfinite(penetration_tolerance_) || penetration_tolerance_ < 0.0f ||
-        !std::isfinite(max_correction_length_) || max_correction_length_ <= 0.0f ||
-        !std::isfinite(surface_search_radius_) || surface_search_radius_ <= 0.0f) {
-        return false;
-    }
-
-    if (views.cloth_bvh.garment_layouts->size() < 2u) {
-        return true;
-    }
-
-    return is_valid_triangle_geometry_resource(views.character_geometry) &&
-           is_valid_body_triangle_id_view(views.cloth_body_triangle_ids) &&
-           views.cloth_body_triangle_ids.vertex_count == views.cloth_motion.vertex_count &&
-           is_valid_cloth_cloth_pair_buffer_view(views.collision_pairs) &&
-           views.collision_pairs.vertex_capacity >= views.cloth_motion.vertex_count;
+    return is_initialized() &&
+           has_valid_common_solve_views(views) &&
+           (views.cloth_bvh.garment_layouts->size() < 2u ||
+            (is_valid_body_triangle_id_view(views.cloth_body_triangle_ids) &&
+             views.cloth_body_triangle_ids.vertex_count == views.cloth_motion.vertex_count));
 }
 
 bool ClothClothCollisionSolver::can_solve_initial(const SimulationGpuViews& views) const
 {
-    return can_solve(views) &&
+    return is_initialized() &&
+           has_valid_common_solve_views(views) &&
            (views.cloth_bvh.garment_layouts->size() < 2u ||
             is_valid_triangle_bvh_resource(views.character_bvh));
 }
@@ -169,9 +175,7 @@ bool ClothClothCollisionSolver::can_build_body_triangle_ids(const SimulationGpuV
            is_valid_body_triangle_id_view(views.cloth_body_triangle_ids) &&
            views.cloth_body_triangle_ids.vertex_count == views.cloth_motion.vertex_count &&
            is_valid_triangle_geometry_resource(views.character_geometry) &&
-           is_valid_triangle_bvh_resource(views.character_bvh) &&
-           std::isfinite(surface_search_radius_) &&
-           surface_search_radius_ > 0.0f;
+           is_valid_triangle_bvh_resource(views.character_bvh);
 }
 
 bool ClothClothCollisionSolver::build_body_triangle_ids(const SimulationGpuViews& views,
@@ -198,8 +202,8 @@ bool ClothClothCollisionSolver::build_body_triangle_ids(const SimulationGpuViews
                            body_triangle_id_build_.vertex_count,
                            views.cloth_motion.vertex_count);
     gl.glProgramUniform1f(body_triangle_id_build_.program,
-                          body_triangle_id_build_.search_radius,
-                          surface_search_radius_);
+                          body_triangle_id_build_.search_radius_squared,
+                          surface_search_radius_ * surface_search_radius_);
     gl.glDispatchCompute(compute_group_count(views.cloth_motion.vertex_count,
                                              body_triangle_id_build_local_size),
                          1,
@@ -274,7 +278,9 @@ void ClothClothCollisionSolver::solve_initial(const SimulationGpuViews& views,
     gl.glProgramUniform1f(initial_accumulate_.program, initial_accumulate_.collision_gap, collision_gap_);
     gl.glProgramUniform1f(initial_accumulate_.program, initial_accumulate_.barrier_stiffness, barrier_stiffness_);
     gl.glProgramUniform1f(initial_accumulate_.program, initial_accumulate_.penetration_tolerance, penetration_tolerance_);
-    gl.glProgramUniform1f(initial_accumulate_.program, initial_accumulate_.search_radius, surface_search_radius_);
+    gl.glProgramUniform1f(initial_accumulate_.program,
+                          initial_accumulate_.search_radius_squared,
+                          surface_search_radius_ * surface_search_radius_);
     gl.glBindBuffer(GL_DISPATCH_INDIRECT_BUFFER, collision_pairs.dispatch_size);
     gl.glDispatchComputeIndirect(0);
     gl.glBindBuffer(GL_DISPATCH_INDIRECT_BUFFER, 0);

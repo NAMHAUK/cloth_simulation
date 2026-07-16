@@ -1,7 +1,7 @@
-#ifndef COLLISION_POSITION_IO_GLSL
-#define COLLISION_POSITION_IO_GLSL
+#ifndef POSITION_IO_GLSL
+#define POSITION_IO_GLSL
 
-#if defined(COLLISION_POSITION_IO_CLOTH_SWEEP) || defined(COLLISION_POSITION_IO_CLOTH_BODY_SWEEP) || defined(COLLISION_POSITION_IO_CLOTH_APPLY)
+#ifdef POSITION_IO_CLOTH_CURRENT
 vec3 read_cloth_current_position(uint vertex_index)
 {
     uint base_index = vertex_index * 3u;
@@ -11,7 +11,7 @@ vec3 read_cloth_current_position(uint vertex_index)
 }
 #endif
 
-#if defined(COLLISION_POSITION_IO_CLOTH_SWEEP) || defined(COLLISION_POSITION_IO_CLOTH_BODY_SWEEP)
+#ifdef POSITION_IO_CLOTH_PREVIOUS
 vec3 read_cloth_previous_position(uint vertex_index)
 {
     uint base_index = vertex_index * 3u;
@@ -21,7 +21,7 @@ vec3 read_cloth_previous_position(uint vertex_index)
 }
 #endif
 
-#ifdef COLLISION_POSITION_IO_CLOTH_BODY_SWEEP
+#ifdef POSITION_IO_BODY_CURRENT
 vec3 read_body_current_position(uint vertex_index)
 {
     uint base_index = vertex_index * 3u;
@@ -31,7 +31,7 @@ vec3 read_body_current_position(uint vertex_index)
 }
 #endif
 
-#if defined(COLLISION_POSITION_IO_CLOTH_BODY_SWEEP) || defined(COLLISION_POSITION_IO_BODY_PREVIOUS)
+#ifdef POSITION_IO_BODY_PREVIOUS
 vec3 read_body_previous_position(uint vertex_index)
 {
     uint base_index = vertex_index * 3u;
@@ -41,7 +41,7 @@ vec3 read_body_previous_position(uint vertex_index)
 }
 #endif
 
-#ifdef COLLISION_POSITION_IO_CLOTH_APPLY
+#ifdef POSITION_IO_CLOTH_WRITE
 void write_cloth_current_position(uint vertex_index, vec3 position)
 {
     uint base_index = vertex_index * 3u;

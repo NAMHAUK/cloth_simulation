@@ -3,6 +3,7 @@
 
 const float triangle_area_sq_epsilon = 1.0e-20;
 const float triangle_edge_tolerance = -1.0e-6;
+const float penetration_tolerance = 0.0005;
 const float segment_length_sq_epsilon = 1.0e-8;
 const float segment_parallel_tolerance = 1.0e-8;
 const float max_float = 3.402823e+38;

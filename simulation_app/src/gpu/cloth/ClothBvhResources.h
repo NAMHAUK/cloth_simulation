@@ -24,14 +24,11 @@ public:
     ClothBvhResources(const ClothBvhResources&) = delete;
     ClothBvhResources& operator=(const ClothBvhResources&) = delete;
 
-    bool is_initialized() const;
     ClothBvhBufferView buffer_view() const;
     bool rebuild(const std::vector<GarmentObject>& garments, QOpenGLFunctions_4_5_Core& gl);
     void release(QOpenGLFunctions_4_5_Core& gl);
 
 private:
-    void reset_resources() noexcept;
-
     GLuint collision_triangle_index_ = 0;
     GLuint bvh_node_ = 0;
     GLuint triangle_bounds_ = 0;

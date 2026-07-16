@@ -34,10 +34,6 @@ bool build_packed_data(const std::vector<GarmentObject>& garments, PackedClothBv
         }
 
         const TriangleBvhData& bvh = *garment.cloth_triangle_bvh;
-        if (bvh.triangle_indices.size() % triangle_vertex_count != 0u) {
-            return false;
-        }
-
         const std::size_t triangle_count = bvh.triangle_indices.size() / triangle_vertex_count;
         if (!can_append(packed_data.triangle_count, triangle_count) ||
             !can_append(packed_data.node_count, bvh.nodes.size())) {
@@ -82,26 +78,9 @@ void delete_buffers(GLuint& collision_triangle_index,
 }
 }
 
-bool ClothBvhResources::is_initialized() const
-{
-    return collision_triangle_index_ != 0 &&
-           bvh_node_ != 0 &&
-           triangle_bounds_ != 0 &&
-           !garment_layouts_.empty() &&
-           triangle_count_ > 0 &&
-           node_count_ > 0;
-}
-
 ClothBvhBufferView ClothBvhResources::buffer_view() const
 {
-    ClothBvhBufferView view;
-    view.collision_triangle_index_buffer = collision_triangle_index_;
-    view.node_buffer = bvh_node_;
-    view.triangle_bounds_buffer = triangle_bounds_;
-    view.triangle_count = triangle_count_;
-    view.node_count = node_count_;
-    view.garment_layouts = &garment_layouts_;
-    return view;
+    return {collision_triangle_index_, bvh_node_, triangle_bounds_, triangle_count_, node_count_, &garment_layouts_};
 }
 
 bool ClothBvhResources::rebuild(const std::vector<GarmentObject>& garments, QOpenGLFunctions_4_5_Core& gl)
@@ -131,7 +110,7 @@ bool ClothBvhResources::rebuild(const std::vector<GarmentObject>& garments, QOpe
 
     const GLsizeiptr triangle_index_bytes = static_cast<GLsizeiptr>(packed_data.triangle_indices.size() * sizeof(std::uint32_t));
     const GLsizeiptr bvh_node_bytes = static_cast<GLsizeiptr>(packed_data.nodes.size() * sizeof(BvhNode));
-    const GLsizeiptr triangle_bounds_bytes = static_cast<GLsizeiptr>(static_cast<std::size_t>(packed_data.triangle_count) * sizeof(BvhBounds));
+    const GLsizeiptr triangle_bounds_bytes = static_cast<GLsizeiptr>(static_cast<std::size_t>(packed_data.triangle_count) * sizeof(Aabb));
     gl.glNamedBufferData(next_collision_triangle_index,
                          triangle_index_bytes,
                          packed_data.triangle_indices.data(),
@@ -152,11 +131,6 @@ bool ClothBvhResources::rebuild(const std::vector<GarmentObject>& garments, QOpe
 void ClothBvhResources::release(QOpenGLFunctions_4_5_Core& gl)
 {
     delete_buffers(collision_triangle_index_, bvh_node_, triangle_bounds_, gl);
-    reset_resources();
-}
-
-void ClothBvhResources::reset_resources() noexcept
-{
     garment_layouts_.clear();
     triangle_count_ = 0;
     node_count_ = 0;

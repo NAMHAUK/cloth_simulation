@@ -18,12 +18,12 @@ struct BvhNode final {
 
 static_assert(sizeof(BvhNode) == 48u);
 
-struct BvhBounds final {
+struct Aabb final {
     glm::vec4 min_bounds{};
     glm::vec4 max_bounds{};
 };
 
-static_assert(sizeof(BvhBounds) == 32u);
+static_assert(sizeof(Aabb) == 32u);
 
 struct BvhBufferRange final {
     std::uint32_t offset = 0;

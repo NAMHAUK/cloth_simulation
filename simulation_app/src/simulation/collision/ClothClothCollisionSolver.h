@@ -50,7 +50,7 @@ private:
     struct BodyTriangleIdBuildStage final {
         GLuint program = 0;
         GLint vertex_count = -1;
-        GLint search_radius = -1;
+        GLint search_radius_squared = -1;
     };
 
     struct ApplyStage final {
@@ -66,7 +66,7 @@ private:
         GLint collision_gap = -1;
         GLint barrier_stiffness = -1;
         GLint penetration_tolerance = -1;
-        GLint search_radius = -1;
+        GLint search_radius_squared = -1;
     } initial_accumulate_;
     BodyTriangleIdBuildStage body_triangle_id_build_;
     ApplyStage apply_;

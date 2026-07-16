@@ -2,6 +2,8 @@
 
 layout(local_size_x = 128) in;
 
+#include "../../mesh/bvh_common.glsl"
+
 layout(std430, binding = 0) readonly buffer ClothCurrentPositions {
     float cloth_current_positions[];
 };
@@ -17,15 +19,6 @@ struct CharacterTriangleGeometry {
     vec4 normal;
 };
 
-struct BvhNode {
-    vec4 min_bounds;
-    vec4 max_bounds;
-    uint left_child_index;
-    uint right_child_index;
-    uint first_element_index;
-    uint element_count;
-};
-
 layout(std430, binding = 2) readonly buffer CharacterTriangleGeometryBuffer {
     CharacterTriangleGeometry triangle_geometry[];
 };
@@ -35,31 +28,13 @@ layout(std430, binding = 3) readonly buffer CharacterBvhNodeBuffer {
 };
 
 uniform uint uVertexCount;
-uniform float uSearchRadius;
+uniform float uSearchRadiusSquared;
 
 const uint invalid_triangle_id = 0xffffffffu;
-const uint max_bvh_stack_depth = 32u;
-const uint bvh_root_node = 0u;
 
-bool is_leaf_node(BvhNode node)
-{
-    return node.element_count > 0u;
-}
-
-float length_squared(vec3 value)
-{
-    return dot(value, value);
-}
-
-#include "character_mesh_search.glsl"
-
-vec3 read_cloth_position(uint vertex_index)
-{
-    uint base = vertex_index * 3u;
-    return vec3(cloth_current_positions[base],
-                cloth_current_positions[base + 1u],
-                cloth_current_positions[base + 2u]);
-}
+#define POSITION_IO_CLOTH_CURRENT
+#include "../../mesh/position_io.glsl"
+#include "../../character/character_mesh_search.glsl"
 
 void main()
 {
@@ -68,52 +43,9 @@ void main()
         return;
     }
 
-    vec3 cloth_position = read_cloth_position(vertex_index);
-    vec3 best_closest_point = vec3(0.0);
-    vec3 best_normal = vec3(0.0);
-    float best_distance_sq = uSearchRadius * uSearchRadius;
-    uint best_triangle_id = invalid_triangle_id;
-    bool has_surface_point = false;
-
-    uint node_index_stack[max_bvh_stack_depth];
-    float node_distance_stack[max_bvh_stack_depth];
-    uint stack_count = 0u;
-
-    BvhNode root_node = bvh_nodes[bvh_root_node];
-    node_index_stack[stack_count] = bvh_root_node;
-    node_distance_stack[stack_count] = squared_distance_to_bounds(cloth_position, root_node);
-    ++stack_count;
-
-    while (stack_count > 0u) {
-        --stack_count;
-        uint current_node_index = node_index_stack[stack_count];
-        float distance_to_node_sq = node_distance_stack[stack_count];
-        if (distance_to_node_sq > best_distance_sq) {
-            continue;
-        }
-
-        BvhNode current_node = bvh_nodes[current_node_index];
-        if (is_leaf_node(current_node)) {
-            for (uint triangle_offset = 0u; triangle_offset < current_node.element_count; ++triangle_offset) {
-                uint triangle_id = current_node.first_element_index + triangle_offset;
-                if (update_nearest_character_surface_point(triangle_id,
-                                                           cloth_position,
-                                                           best_closest_point,
-                                                           best_normal,
-                                                           best_distance_sq,
-                                                           has_surface_point)) {
-                    best_triangle_id = triangle_id;
-                }
-            }
-        } else {
-            push_child_nodes(cloth_position,
-                             current_node,
-                             best_distance_sq,
-                             node_index_stack,
-                             node_distance_stack,
-                             stack_count);
-        }
-    }
-
-    cloth_body_triangle_ids[vertex_index] = best_triangle_id;
+    vec3 cloth_position = read_cloth_current_position(vertex_index);
+    NearestCharacterSurface nearest_surface;
+    bool has_surface = find_nearest_character_surface(cloth_position, uSearchRadiusSquared, nearest_surface);
+    cloth_body_triangle_ids[vertex_index] = has_surface ? nearest_surface.triangle_index
+                                                        : invalid_triangle_id;
 }

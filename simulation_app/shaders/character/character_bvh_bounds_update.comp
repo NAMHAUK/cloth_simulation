@@ -2,6 +2,8 @@
 
 layout(local_size_x = 128) in;
 
+#include "../mesh/bvh_common.glsl"
+
 const float max_float = 3.402823e+38;
 
 struct CharacterTriangleGeometry {
@@ -10,25 +12,6 @@ struct CharacterTriangleGeometry {
     vec4 c;
     vec4 normal;
 };
-
-struct BvhNode {
-    vec4 min_bounds;
-    vec4 max_bounds;
-    uint left_child_index;
-    uint right_child_index;
-    uint first_element_index;
-    uint element_count;
-};
-
-struct BodyElementAabb {
-    vec4 min_bounds;
-    vec4 max_bounds;
-};
-
-bool is_leaf_node(BvhNode node)
-{
-    return node.element_count > 0u;
-}
 
 layout(std430, binding = 0) readonly buffer CharacterTriangleGeometryBuffer {
     CharacterTriangleGeometry triangle_geometry[];
@@ -51,7 +34,7 @@ layout(std430, binding = 4) buffer CharacterBvhNodes {
 };
 
 layout(std430, binding = 5) buffer BodyTriangleBounds {
-    BodyElementAabb body_triangle_bounds[];
+    Aabb body_triangle_bounds[];
 };
 
 layout(std430, binding = 6) readonly buffer BodyVertexIds {
@@ -63,7 +46,7 @@ layout(std430, binding = 7) buffer BodyVertexBvhNodes {
 };
 
 layout(std430, binding = 8) buffer BodyVertexBounds {
-    BodyElementAabb body_vertex_bounds[];
+    Aabb body_vertex_bounds[];
 };
 
 layout(std430, binding = 9) readonly buffer BodyEdgeIndices {
@@ -75,7 +58,7 @@ layout(std430, binding = 10) buffer BodyEdgeBvhNodes {
 };
 
 layout(std430, binding = 11) buffer BodyEdgeBounds {
-    BodyElementAabb body_edge_bounds[];
+    Aabb body_edge_bounds[];
 };
 
 uniform uint uTriangleFirstNode;
@@ -86,21 +69,9 @@ uniform uint uEdgeFirstNode;
 uniform uint uEdgeNodeCount;
 uniform float uCollisionThickness;
 
-vec3 load_body_current_position(uint vertex_index)
-{
-    uint base_index = vertex_index * 3u;
-    return vec3(body_current_positions[base_index],
-                body_current_positions[base_index + 1u],
-                body_current_positions[base_index + 2u]);
-}
-
-vec3 load_body_previous_position(uint vertex_index)
-{
-    uint base_index = vertex_index * 3u;
-    return vec3(body_previous_positions[base_index],
-                body_previous_positions[base_index + 1u],
-                body_previous_positions[base_index + 2u]);
-}
+#define POSITION_IO_BODY_CURRENT
+#define POSITION_IO_BODY_PREVIOUS
+#include "../mesh/position_io.glsl"
 
 void update_triangle_leaf_bounds(uint node_index, BvhNode node)
 {
@@ -109,9 +80,9 @@ void update_triangle_leaf_bounds(uint node_index, BvhNode node)
     for (uint triangle_offset = 0u; triangle_offset < node.element_count; ++triangle_offset) {
         uint triangle_index = node.first_element_index + triangle_offset;
         uint index_base = triangle_index * 3u;
-        vec3 previous_a = load_body_previous_position(triangle_indices[index_base]);
-        vec3 previous_b = load_body_previous_position(triangle_indices[index_base + 1u]);
-        vec3 previous_c = load_body_previous_position(triangle_indices[index_base + 2u]);
+        vec3 previous_a = read_body_previous_position(triangle_indices[index_base]);
+        vec3 previous_b = read_body_previous_position(triangle_indices[index_base + 1u]);
+        vec3 previous_c = read_body_previous_position(triangle_indices[index_base + 2u]);
 
         CharacterTriangleGeometry triangle = triangle_geometry[triangle_index];
         vec3 current_a = triangle.a.xyz;
@@ -147,8 +118,8 @@ void update_vertex_leaf_bounds(uint node_index, BvhNode node)
     vec3 max_bounds = vec3(-max_float);
     for (uint vertex_offset = 0u; vertex_offset < node.element_count; ++vertex_offset) {
         uint vertex_id = body_vertex_ids[node.first_element_index + vertex_offset];
-        vec3 previous_position = load_body_previous_position(vertex_id);
-        vec3 current_position = load_body_current_position(vertex_id);
+        vec3 previous_position = read_body_previous_position(vertex_id);
+        vec3 current_position = read_body_current_position(vertex_id);
         vec3 vertex_min_bounds = min(previous_position, current_position);
         vec3 vertex_max_bounds = max(previous_position, current_position);
         body_vertex_bounds[vertex_id].min_bounds = vec4(vertex_min_bounds - uCollisionThickness, 0.0);
@@ -181,10 +152,10 @@ void update_edge_leaf_bounds(uint node_index, BvhNode node)
         uint edge_base = edge_index * 2u;
         uint vertex_a = body_edge_indices[edge_base];
         uint vertex_b = body_edge_indices[edge_base + 1u];
-        vec3 previous_a = load_body_previous_position(vertex_a);
-        vec3 previous_b = load_body_previous_position(vertex_b);
-        vec3 current_a = load_body_current_position(vertex_a);
-        vec3 current_b = load_body_current_position(vertex_b);
+        vec3 previous_a = read_body_previous_position(vertex_a);
+        vec3 previous_b = read_body_previous_position(vertex_b);
+        vec3 current_a = read_body_current_position(vertex_a);
+        vec3 current_b = read_body_current_position(vertex_b);
         vec3 edge_min_bounds = min(min(previous_a, previous_b), min(current_a, current_b));
         vec3 edge_max_bounds = max(max(previous_a, previous_b), max(current_a, current_b));
         body_edge_bounds[edge_index].min_bounds = vec4(edge_min_bounds - uCollisionThickness, 0.0);

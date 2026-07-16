@@ -33,7 +33,7 @@ private:
     GLuint program_ = 0;
     GLint vertex_offset_location_ = -1;
     GLint vertex_count_location_ = -1;
-    GLint search_radius_location_ = -1;
+    GLint search_radius_squared_location_ = -1;
     GLint pushout_margin_location_ = -1;
     float search_radius_ = 0.0f;
     float pushout_margin_ = 0.0f;

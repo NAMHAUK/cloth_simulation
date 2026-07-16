@@ -1,10 +1,27 @@
+#ifndef CHARACTER_MESH_SEARCH_GLSL
+#define CHARACTER_MESH_SEARCH_GLSL
+
+const uint max_bvh_stack_depth = 32u;
+const uint bvh_root_node = 0u;
+
+struct NearestCharacterSurface {
+    uint triangle_index;
+    vec3 point;
+    vec3 normal;
+};
+
+float length_squared(vec3 value)
+{
+    return dot(value, value);
+}
+
 float squared_distance_to_bounds(vec3 point, in BvhNode node)
 {
     vec3 clamped_point = clamp(point, node.min_bounds.xyz, node.max_bounds.xyz);
     return length_squared(point - clamped_point);
 }
 
-void push_child_nodes(vec3 cloth_position,
+void push_child_nodes(vec3 point,
                       BvhNode current_node,
                       float best_distance_sq,
                       inout uint node_index_stack[max_bvh_stack_depth],
@@ -13,8 +30,8 @@ void push_child_nodes(vec3 cloth_position,
 {
     uint left_child_index = current_node.left_child_index;
     uint right_child_index = current_node.right_child_index;
-    float distance_to_left_node_sq = squared_distance_to_bounds(cloth_position, bvh_nodes[left_child_index]);
-    float distance_to_right_node_sq = squared_distance_to_bounds(cloth_position, bvh_nodes[right_child_index]);
+    float distance_to_left_node_sq = squared_distance_to_bounds(point, bvh_nodes[left_child_index]);
+    float distance_to_right_node_sq = squared_distance_to_bounds(point, bvh_nodes[right_child_index]);
 
     if (distance_to_right_node_sq < distance_to_left_node_sq) {
         if (distance_to_left_node_sq <= best_distance_sq) {
@@ -84,18 +101,16 @@ vec3 closest_point_on_triangle(vec3 point, vec3 a, vec3 b, vec3 c)
         return b + w * (ac - ab);
     }
 
-    float denom = 1.0 / (va + vb + vc);
-    float v = vb * denom;
-    float w = vc * denom;
+    float inverse_denominator = 1.0 / (va + vb + vc);
+    float v = vb * inverse_denominator;
+    float w = vc * inverse_denominator;
     return a + ab * v + ac * w;
 }
 
-bool update_nearest_character_surface_point(uint triangle_index,
-                                            vec3 cloth_position,
-                                            inout vec3 best_closest_point,
-                                            inout vec3 best_normal,
-                                            inout float best_distance_sq,
-                                            inout bool has_surface_point)
+bool update_nearest_character_surface(uint triangle_index,
+                                      vec3 point,
+                                      inout float best_distance_sq,
+                                      inout NearestCharacterSurface nearest_surface)
 {
     vec4 normal = triangle_geometry[triangle_index].normal;
     if (normal.w == 0.0) {
@@ -107,22 +122,69 @@ bool update_nearest_character_surface_point(uint triangle_index,
     vec3 c = triangle_geometry[triangle_index].c.xyz;
     vec3 unit_normal = normal.xyz;
 
-    float plane_distance = dot(cloth_position - a, unit_normal);
+    float plane_distance = dot(point - a, unit_normal);
     if (plane_distance * plane_distance > best_distance_sq) {
         return false;
     }
 
-    vec3 closest_point = closest_point_on_triangle(cloth_position, a, b, c);
-    vec3 offset = cloth_position - closest_point;
-    float distance_sq = length_squared(offset);
-
+    vec3 closest_point = closest_point_on_triangle(point, a, b, c);
+    float distance_sq = length_squared(point - closest_point);
     if (distance_sq > best_distance_sq) {
         return false;
     }
 
     best_distance_sq = distance_sq;
-    best_closest_point = closest_point;
-    best_normal = unit_normal;
-    has_surface_point = true;
+    nearest_surface.triangle_index = triangle_index;
+    nearest_surface.point = closest_point;
+    nearest_surface.normal = unit_normal;
     return true;
 }
+
+bool find_nearest_character_surface(vec3 point,
+                                    float max_distance_sq,
+                                    out NearestCharacterSurface nearest_surface)
+{
+    nearest_surface.triangle_index = 0u;
+    nearest_surface.point = vec3(0.0);
+    nearest_surface.normal = vec3(0.0);
+
+    float best_distance_sq = max_distance_sq;
+    bool has_surface = false;
+    uint node_index_stack[max_bvh_stack_depth];
+    float node_distance_stack[max_bvh_stack_depth];
+    uint stack_count = 1u;
+    node_index_stack[0] = bvh_root_node;
+    node_distance_stack[0] = squared_distance_to_bounds(point, bvh_nodes[bvh_root_node]);
+
+    while (stack_count > 0u) {
+        --stack_count;
+        uint current_node_index = node_index_stack[stack_count];
+        float distance_to_node_sq = node_distance_stack[stack_count];
+        if (distance_to_node_sq > best_distance_sq) {
+            continue;
+        }
+
+        BvhNode current_node = bvh_nodes[current_node_index];
+        if (is_leaf_node(current_node)) {
+            for (uint triangle_offset = 0u; triangle_offset < current_node.element_count; ++triangle_offset) {
+                if (update_nearest_character_surface(current_node.first_element_index + triangle_offset,
+                                                     point,
+                                                     best_distance_sq,
+                                                     nearest_surface)) {
+                    has_surface = true;
+                }
+            }
+        } else {
+            push_child_nodes(point,
+                             current_node,
+                             best_distance_sq,
+                             node_index_stack,
+                             node_distance_stack,
+                             stack_count);
+        }
+    }
+
+    return has_surface;
+}
+
+#endif

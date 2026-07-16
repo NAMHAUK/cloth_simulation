@@ -2,6 +2,8 @@
 
 layout(local_size_x = 128) in;
 
+#include "../mesh/bvh_common.glsl"
+
 layout(std430, binding = 0) readonly buffer ClothCurrentPositions {
     float cloth_current_positions[];
 };
@@ -29,15 +31,6 @@ struct CharacterTriangleGeometry {
     vec4 normal;
 };
 
-struct BvhNode {
-    vec4 min_bounds;
-    vec4 max_bounds;
-    uint left_child_index;
-    uint right_child_index;
-    uint first_element_index;
-    uint element_count;
-};
-
 layout(std430, binding = 5) readonly buffer CharacterTriangleGeometryBuffer {
     CharacterTriangleGeometry triangle_geometry[];
 };
@@ -50,24 +43,14 @@ uniform uint uMaxPairCount;
 uniform float uCollisionGap;
 uniform float uBarrierStiffness;
 uniform float uPenetrationTolerance;
-uniform float uSearchRadius;
+uniform float uSearchRadiusSquared;
 
 const uint higher_vertex_lower_face_role = 0u;
 const uint lower_vertex_higher_face_role = 1u;
-const uint max_bvh_stack_depth = 32u;
-const uint bvh_root_node = 0u;
 
-bool is_leaf_node(BvhNode node)
-{
-    return node.element_count > 0u;
-}
-
-float length_squared(vec3 value)
-{
-    return dot(value, value);
-}
-
-#include "../cloth/setup/character_mesh_search.glsl"
+#define POSITION_IO_CLOTH_CURRENT
+#include "../mesh/position_io.glsl"
+#include "../character/character_mesh_search.glsl"
 #include "common/collision_geometry_common.glsl"
 
 #define COLLISION_CORRECTION_ACCUMULATE
@@ -79,14 +62,6 @@ struct VertexFaceContact {
     float depth;
 };
 
-vec3 read_cloth_position(uint vertex_index)
-{
-    uint base = vertex_index * 3u;
-    return vec3(cloth_current_positions[base],
-                cloth_current_positions[base + 1u],
-                cloth_current_positions[base + 2u]);
-}
-
 uvec3 load_target_vertices(uvec4 pair_record)
 {
     uint triangle_base = pair_record.y * 3u;
@@ -97,48 +72,15 @@ uvec3 load_target_vertices(uvec4 pair_record)
 
 bool find_character_outward_normal(vec3 surface_point, out vec3 outward_normal)
 {
-    vec3 best_closest_point = vec3(0.0);
-    float best_distance_sq = uSearchRadius * uSearchRadius;
-    bool has_surface_point = false;
-
-    uint node_index_stack[max_bvh_stack_depth];
-    float node_distance_stack[max_bvh_stack_depth];
-    uint stack_count = 0u;
-
-    BvhNode root_node = bvh_nodes[bvh_root_node];
-    node_index_stack[stack_count] = bvh_root_node;
-    node_distance_stack[stack_count] = squared_distance_to_bounds(surface_point, root_node);
-    ++stack_count;
-
-    while (stack_count > 0u) {
-        --stack_count;
-        uint current_node_index = node_index_stack[stack_count];
-        float distance_to_node_sq = node_distance_stack[stack_count];
-        if (distance_to_node_sq > best_distance_sq) {
-            continue;
-        }
-
-        BvhNode current_node = bvh_nodes[current_node_index];
-        if (is_leaf_node(current_node)) {
-            for (uint triangle_offset = 0u; triangle_offset < current_node.element_count; ++triangle_offset) {
-                update_nearest_character_surface_point(current_node.first_element_index + triangle_offset,
-                                                       surface_point,
-                                                       best_closest_point,
-                                                       outward_normal,
-                                                       best_distance_sq,
-                                                       has_surface_point);
-            }
-        } else {
-            push_child_nodes(surface_point,
-                             current_node,
-                             best_distance_sq,
-                             node_index_stack,
-                             node_distance_stack,
-                             stack_count);
-        }
+    NearestCharacterSurface nearest_surface;
+    if (!find_nearest_character_surface(surface_point,
+                                        uSearchRadiusSquared,
+                                        nearest_surface)) {
+        return false;
     }
 
-    return has_surface_point;
+    outward_normal = nearest_surface.normal;
+    return true;
 }
 
 bool compute_contact(uvec4 pair_record, uvec3 target_vertices, out VertexFaceContact contact)
@@ -148,10 +90,10 @@ bool compute_contact(uvec4 pair_record, uvec3 target_vertices, out VertexFaceCon
         return false;
     }
 
-    vec3 query = read_cloth_position(pair_record.x);
-    vec3 a = read_cloth_position(target_vertices.x);
-    vec3 b = read_cloth_position(target_vertices.y);
-    vec3 c = read_cloth_position(target_vertices.z);
+    vec3 query = read_cloth_current_position(pair_record.x);
+    vec3 a = read_cloth_current_position(target_vertices.x);
+    vec3 b = read_cloth_current_position(target_vertices.y);
+    vec3 c = read_cloth_current_position(target_vertices.z);
 
     vec3 face_normal;
     if (!compute_triangle_normal(a, b, c, face_normal)) {

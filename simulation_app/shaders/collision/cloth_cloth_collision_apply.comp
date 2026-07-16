@@ -17,8 +17,9 @@ layout(std430, binding = 2) readonly buffer NormalCorrectionSums {
 uniform uint uVertexCount;
 uniform float uMaxCorrectionLength;
 
-#define COLLISION_POSITION_IO_CLOTH_APPLY
-#include "common/collision_position_io.glsl"
+#define POSITION_IO_CLOTH_CURRENT
+#define POSITION_IO_CLOTH_WRITE
+#include "../mesh/position_io.glsl"
 
 #define COLLISION_CORRECTION_APPLY
 #include "common/collision_correction_common.glsl"

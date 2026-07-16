@@ -49,11 +49,13 @@ layout(std430, binding = 10) readonly buffer CollisionPushouts {
 uniform uint uMaxPairCount;
 uniform float uCollisionThickness;
 
-const float penetration_tolerance = 0.0005;
 const float ccd_parallel_epsilon = 1.0e-8;
 
-#define COLLISION_POSITION_IO_CLOTH_BODY_SWEEP
-#include "common/collision_position_io.glsl"
+#define POSITION_IO_CLOTH_CURRENT
+#define POSITION_IO_CLOTH_PREVIOUS
+#define POSITION_IO_BODY_CURRENT
+#define POSITION_IO_BODY_PREVIOUS
+#include "../mesh/position_io.glsl"
 
 #include "common/collision_geometry_common.glsl"
 

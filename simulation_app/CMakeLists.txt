@@ -137,15 +137,15 @@ add_executable(simulation_app
     shaders/collision/cloth_edge_body_edge_pair_detect.comp
     shaders/collision/cloth_edge_body_edge_pair_accumulate.comp
     shaders/collision/cloth_body_collision_apply.comp
-    shaders/character/body_bvh_common.glsl
-    shaders/collision/common/collision_position_io.glsl
+    shaders/mesh/bvh_common.glsl
+    shaders/mesh/position_io.glsl
     shaders/collision/common/collision_geometry_common.glsl
     shaders/collision/common/collision_correction_common.glsl
     shaders/collision/common/collision_pair_output.glsl
     shaders/collision/common/cloth_cloth_pair_output.glsl
     shaders/cloth/setup/garment_prefit.comp
     shaders/cloth/setup/garment_attachment_target_build.comp
-    shaders/cloth/setup/character_mesh_search.glsl
+    shaders/character/character_mesh_search.glsl
 )
 
 add_executable(garment_converter

@@ -30,12 +30,12 @@ bool GarmentPrefitSolver::initialize(const std::filesystem::path& shader_path,
 
     vertex_offset_location_ = gl.glGetUniformLocation(program_, "uVertexOffset");
     vertex_count_location_ = gl.glGetUniformLocation(program_, "uVertexCount");
-    search_radius_location_ = gl.glGetUniformLocation(program_, "uSearchRadius");
+    search_radius_squared_location_ = gl.glGetUniformLocation(program_, "uSearchRadiusSquared");
     pushout_margin_location_ = gl.glGetUniformLocation(program_, "uPushoutMargin");
 
     if (vertex_offset_location_ < 0 ||
         vertex_count_location_ < 0 ||
-        search_radius_location_ < 0 ||
+        search_radius_squared_location_ < 0 ||
         pushout_margin_location_ < 0) {
         std::cerr << "Garment pre-fit compute shader missing required uniforms.\n";
         release(gl);
@@ -78,7 +78,7 @@ void GarmentPrefitSolver::solve(const ClothMotionBufferView& motion_view,
 
     gl.glProgramUniform1ui(program_, vertex_offset_location_, garment_range.vertex_offset);
     gl.glProgramUniform1ui(program_, vertex_count_location_, garment_range.vertex_count);
-    gl.glProgramUniform1f(program_, search_radius_location_, search_radius_);
+    gl.glProgramUniform1f(program_, search_radius_squared_location_, search_radius_ * search_radius_);
     gl.glProgramUniform1f(program_, pushout_margin_location_, pushout_margin_);
 
     gl.glDispatchCompute(compute_group_count(garment_range.vertex_count, garment_prefit_local_size), 1, 1);
@@ -92,7 +92,7 @@ void GarmentPrefitSolver::release(QOpenGLFunctions_4_5_Core& gl)
     program_ = 0;
     vertex_offset_location_ = -1;
     vertex_count_location_ = -1;
-    search_radius_location_ = -1;
+    search_radius_squared_location_ = -1;
     pushout_margin_location_ = -1;
     search_radius_ = 0.0f;
     pushout_margin_ = 0.0f;
