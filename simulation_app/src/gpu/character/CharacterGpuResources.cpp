@@ -6,9 +6,8 @@
 
 namespace {
 constexpr std::size_t vertex_position_components = 3;
+constexpr std::size_t endpoint_position_components = 4;
 constexpr std::size_t character_triangle_geometry_components = 16;
-constexpr std::size_t primitive_bounds_components = 8;
-constexpr std::size_t body_edge_bounds_components = 8;
 
 std::size_t frame_position_component_count(const CharacterMesh& character_mesh)
 {
@@ -19,7 +18,7 @@ std::size_t frame_position_component_count(const CharacterMesh& character_mesh)
 
 std::size_t vertex_position_component_count(std::uint32_t vertex_count)
 {
-    return static_cast<std::size_t>(vertex_count) * vertex_position_components;
+    return static_cast<std::size_t>(vertex_count) * endpoint_position_components;
 }
 
 bool is_uploadable_mesh(const CharacterMesh& character_mesh)
@@ -117,13 +116,13 @@ void CharacterGpuResources::upload_mesh(const CharacterMesh& character_mesh,
     const GLsizeiptr endpoint_position_bytes = static_cast<GLsizeiptr>(vertex_position_component_count(character_mesh.vertex_count) * sizeof(float));
     const GLsizeiptr triangle_index_bytes = static_cast<GLsizeiptr>(default_body_triangle_bvh_data.triangle_indices.size() * sizeof(std::uint32_t));
     const GLsizeiptr bvh_node_bytes = static_cast<GLsizeiptr>(default_body_triangle_bvh_data.nodes.size() * sizeof(BvhNode));
-    const GLsizeiptr body_triangle_bounds_bytes = static_cast<GLsizeiptr>(static_cast<std::size_t>(default_body_triangle_bvh_data.collision_triangle_count) * primitive_bounds_components * sizeof(float));
+    const GLsizeiptr body_triangle_bounds_bytes = static_cast<GLsizeiptr>(static_cast<std::size_t>(default_body_triangle_bvh_data.collision_triangle_count) * sizeof(Aabb));
     const GLsizeiptr body_vertex_bvh_node_bytes = static_cast<GLsizeiptr>(default_body_vertex_bvh_data.nodes.size() * sizeof(BvhNode));
     const GLsizeiptr body_vertex_bvh_vertex_id_bytes = static_cast<GLsizeiptr>(default_body_vertex_bvh_data.vertex_ids.size() * sizeof(std::uint32_t));
-    const GLsizeiptr body_vertex_bounds_bytes = static_cast<GLsizeiptr>(static_cast<std::size_t>(character_mesh.vertex_count) * primitive_bounds_components * sizeof(float));
+    const GLsizeiptr body_vertex_bounds_bytes = static_cast<GLsizeiptr>(static_cast<std::size_t>(character_mesh.vertex_count) * sizeof(Aabb));
     const GLsizeiptr body_edge_bvh_node_bytes = static_cast<GLsizeiptr>(default_body_edge_bvh_data.nodes.size() * sizeof(BvhNode));
     const GLsizeiptr body_edge_index_bytes = static_cast<GLsizeiptr>(default_body_edge_bvh_data.edge_vertex_indices.size() * sizeof(std::uint32_t));
-    const GLsizeiptr body_edge_bounds_bytes = static_cast<GLsizeiptr>(static_cast<std::size_t>(default_body_edge_bvh_data.edge_count()) * body_edge_bounds_components * sizeof(float));
+    const GLsizeiptr body_edge_bounds_bytes = static_cast<GLsizeiptr>(static_cast<std::size_t>(default_body_edge_bvh_data.edge_count()) * sizeof(Aabb));
     const GLsizeiptr adjacent_triangle_offsets_bytes = static_cast<GLsizeiptr>(adjacency.offsets.size() * sizeof(std::uint32_t));
     const GLsizeiptr adjacent_triangle_indices_bytes = static_cast<GLsizeiptr>(adjacency.face_indices.size() * sizeof(std::uint32_t));
     const GLsizeiptr triangle_geometry_bytes = static_cast<GLsizeiptr>(static_cast<std::size_t>(adjacency.face_count) * character_triangle_geometry_components * sizeof(float));

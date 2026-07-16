@@ -5,11 +5,11 @@
 layout(local_size_x = 128) in;
 
 layout(std430, binding = 0) readonly buffer ClothCurrentPositions {
-    float cloth_current_positions[];
+    vec4 cloth_current_positions[];
 };
 
 layout(std430, binding = 1) readonly buffer ClothPreviousPositions {
-    float cloth_previous_positions[];
+    vec4 cloth_previous_positions[];
 };
 
 layout(std430, binding = 2) readonly buffer ClothTriangleIndices {

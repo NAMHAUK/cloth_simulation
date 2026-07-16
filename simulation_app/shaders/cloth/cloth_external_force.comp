@@ -3,15 +3,15 @@
 layout(local_size_x = 128) in;
 
 layout(std430, binding = 0) buffer CurrentPositions {
-    float current_positions[];
+    vec4 current_positions[];
 };
 
 layout(std430, binding = 1) buffer PreviousPositions {
-    float previous_positions[];
+    vec4 previous_positions[];
 };
 
 layout(std430, binding = 2) buffer Velocities {
-    float velocities[];
+    vec4 velocities[];
 };
 
 layout(std430, binding = 3) buffer CollisionPushouts {
@@ -40,22 +40,17 @@ void main()
         return;
     }
 
-    uint position_base = vertex_index * 3u;
-    vec3 current = vec3(current_positions[position_base],
-                        current_positions[position_base + 1u],
-                        current_positions[position_base + 2u]);
-    vec3 previous = vec3(previous_positions[position_base],
-                        previous_positions[position_base + 1u],
-                        previous_positions[position_base + 2u]);
+    vec3 current = current_positions[vertex_index].xyz;
+    vec3 previous = previous_positions[vertex_index].xyz;
 
     // collsion solver pushout 제외
-    vec4 collision_pushout = collision_pushouts[vertex_index];
-    vec3 solved_velocity = (current - previous - collision_pushout.xyz) / uDeltaTime;
+    vec3 collision_pushout = collision_pushouts[vertex_index].xyz;
+    vec3 solved_velocity = (current - previous - collision_pushout) / uDeltaTime;
 
     // remove inward velocity along the pushout direction
-    float pushout_length_sq = dot(collision_pushout.xyz, collision_pushout.xyz);
+    float pushout_length_sq = dot(collision_pushout, collision_pushout);
     if (pushout_length_sq > pushout_normal_epsilon) {
-        remove_inward_collision_velocity(solved_velocity, collision_pushout.xyz * inversesqrt(pushout_length_sq));
+        remove_inward_collision_velocity(solved_velocity, collision_pushout * inversesqrt(pushout_length_sq));
     }
 
     collision_pushouts[vertex_index] = vec4(0.0);
@@ -64,15 +59,7 @@ void main()
     vec3 velocity = solved_velocity * uVelocityDamping + uExternalAcceleration * uDeltaTime;
     vec3 predicted_position = current + velocity * uDeltaTime;
 
-    previous_positions[position_base] = current.x;
-    previous_positions[position_base + 1u] = current.y;
-    previous_positions[position_base + 2u] = current.z;
-
-    current_positions[position_base] = predicted_position.x;
-    current_positions[position_base + 1u] = predicted_position.y;
-    current_positions[position_base + 2u] = predicted_position.z;
-
-    velocities[position_base] = velocity.x;
-    velocities[position_base + 1u] = velocity.y;
-    velocities[position_base + 2u] = velocity.z;
+    previous_positions[vertex_index] = vec4(current, 0.0);
+    current_positions[vertex_index] = vec4(predicted_position, 0.0);
+    velocities[vertex_index] = vec4(velocity, 0.0);
 }

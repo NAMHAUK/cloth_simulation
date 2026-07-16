@@ -7,11 +7,11 @@ layout(local_size_x = 128) in;
 const float max_float = 3.402823e+38;
 
 layout(std430, binding = 0) readonly buffer ClothCurrentPositions {
-    float cloth_current_positions[];
+    vec4 cloth_current_positions[];
 };
 
 layout(std430, binding = 1) readonly buffer ClothPreviousPositions {
-    float cloth_previous_positions[];
+    vec4 cloth_previous_positions[];
 };
 
 layout(std430, binding = 2) readonly buffer CollisionTriangleIndices {
@@ -69,17 +69,17 @@ void update_leaf_bounds(uint packed_node_index, BvhNode node)
         leaf_max_bounds = max(leaf_max_bounds, triangle_max_bounds);
     }
 
-    bvh_nodes[packed_node_index].bounds = Aabb(vec4(leaf_min_bounds, 0.0), vec4(leaf_max_bounds, node.bounds.max_bounds.w));
+    bvh_nodes[packed_node_index].bounds = Aabb(vec4(leaf_min_bounds, 0.0), vec4(leaf_max_bounds, 0.0));
 }
 
 void update_internal_bounds(uint packed_node_index, BvhNode node)
 {
     BvhNode left_child = bvh_nodes[uBvhNodeOffset + node.left_child_index];
     BvhNode right_child = bvh_nodes[uBvhNodeOffset + node.right_child_index];
-    vec3 min_bounds = min(left_child.bounds.min_bounds.xyz, right_child.bounds.min_bounds.xyz);
-    vec3 max_bounds = max(left_child.bounds.max_bounds.xyz, right_child.bounds.max_bounds.xyz);
+    vec4 min_bounds = min(left_child.bounds.min_bounds, right_child.bounds.min_bounds);
+    vec4 max_bounds = max(left_child.bounds.max_bounds, right_child.bounds.max_bounds);
 
-    bvh_nodes[packed_node_index].bounds = Aabb(vec4(min_bounds, 0.0), vec4(max_bounds, node.bounds.max_bounds.w));
+    bvh_nodes[packed_node_index].bounds = Aabb(min_bounds, max_bounds);
 }
 
 void main()

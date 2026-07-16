@@ -1,5 +1,6 @@
 #pragma once
 
+#include <cstddef>
 #include <cstdint>
 #include <vector>
 
@@ -8,10 +9,11 @@
 inline constexpr std::uint32_t invalid_bvh_node = 0xFFFFFFFFu;
 
 struct Aabb final {
-    glm::vec4 min_bounds{};
-    glm::vec4 max_bounds{};
+    alignas(16) glm::vec4 min_bounds{};
+    alignas(16) glm::vec4 max_bounds{};
 };
 
+static_assert(offsetof(Aabb, max_bounds) == 16u);
 static_assert(sizeof(Aabb) == 32u);
 
 struct BvhNode final {

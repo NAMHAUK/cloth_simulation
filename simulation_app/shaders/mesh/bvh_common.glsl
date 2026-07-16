@@ -27,9 +27,8 @@ Aabb build_swept_aabb(vec3 previous_position, vec3 current_position)
 
 Aabb expand_aabb(Aabb bounds, vec3 expansion)
 {
-    vec4 expansion4 = vec4(expansion, 0.0);
-    return Aabb(bounds.min_bounds - expansion4,
-                bounds.max_bounds + expansion4);
+    return Aabb(vec4(bounds.min_bounds.xyz - expansion, 0.0),
+                vec4(bounds.max_bounds.xyz + expansion, 0.0));
 }
 
 bool overlaps_aabb(Aabb left_bounds, Aabb right_bounds)

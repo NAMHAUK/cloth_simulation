@@ -275,6 +275,7 @@ std::uint32_t build_bvh_tree(BvhBuildContext& context, std::size_t begin, std::s
 
     BvhBuildNode& node = context.nodes.back();
     compute_node_bounds(context.primitives, begin, end, node.min_bounds, node.max_bounds);
+
     const std::size_t primitive_count = end - begin;
     if (const auto middle = split_mixed_part_labels(context.primitives, begin, end, context.split_by_part_labels)) {
         const std::uint32_t left_child_index = build_bvh_tree(context, begin, *middle);
