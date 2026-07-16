@@ -197,6 +197,7 @@ bool SimulationPipeline::step(SceneState& scene, SceneGpuState& gpu_state, std::
         return false;
     }
 
+    const bool has_multiple_garments = views.cloth_bvh.garment_layouts->size() >= 2u;
     const glm::vec3 external_acceleration = force_field_.external_acceleration();
     for (std::uint32_t substep = 0; substep < simulation_settings::substep_count; ++substep) {
 #if CLOTH_SIM_SUBSTEP_GPU_TIMING
@@ -214,25 +215,25 @@ bool SimulationPipeline::step(SceneState& scene, SceneGpuState& gpu_state, std::
 
         cloth_body_collision_detector_.detect(views, gl);
 
+        if (has_multiple_garments) {
+            if (!update_cloth_bvh_bounds(views,
+                                         simulation_settings::cloth_bvh_bounds_margin,
+                                         gl)) {
+#if CLOTH_SIM_SUBSTEP_GPU_TIMING
+                if (gpu_timing_started) {
+                    substep_gpu_timer_.end(gl);
+                }
+#endif
+                return false;
+            }
+            cloth_cloth_collision_detector_.detect(views, gl);
+        }
+
         for (std::uint32_t iteration = 0; iteration < simulation_settings::solver_iteration_count; ++iteration) {
             stretch_constraint_solver_.solve(views.cloth_motion, views.stretch_constraints, gl);
             bending_constraint_solver_.solve(views.cloth_motion, views.bending_constraints, gl);
             attachment_constraint_solver_.solve(views.cloth_motion, views.attachment_constraints, views.character_geometry, gl);
             cloth_body_collision_solver_.solve(views, gl);
-            if (views.cloth_bvh.garment_layouts->size() >= 2u &&
-                iteration % simulation_settings::cloth_cloth_detection_iteration_stride == 0u) {
-                if (!update_cloth_bvh_bounds(views,
-                                             simulation_settings::cloth_bvh_bounds_margin,
-                                             gl)) {
-#if CLOTH_SIM_SUBSTEP_GPU_TIMING
-                    if (gpu_timing_started) {
-                        substep_gpu_timer_.end(gl);
-                    }
-#endif
-                    return false;
-                }
-                cloth_cloth_collision_detector_.detect(views, gl);
-            }
             cloth_cloth_collision_solver_.solve(views, gl);
             ground_collision_solver_.solve(views.cloth_motion, views.cloth_collision_pushout, gl);
         }

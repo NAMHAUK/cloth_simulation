@@ -13,8 +13,6 @@ namespace {
 constexpr std::uint32_t pair_detect_local_size = 128u;
 constexpr std::uint32_t pair_accumulate_local_size = 128u;
 constexpr std::uint32_t diagnostic_log_interval = 100u;
-constexpr std::uint32_t higher_vertex_lower_face_role = 0u;
-constexpr std::uint32_t lower_vertex_higher_face_role = 1u;
 constexpr std::uint32_t gpu_timing_log_interval = 100u;
 
 namespace pair_detect_binding {
@@ -105,24 +103,26 @@ bool ClothClothCollisionDetector::initialize(const std::filesystem::path& pair_d
         return false;
     }
 
-    pair_detect_.query_vertex_offset = gl.glGetUniformLocation(pair_detect_.program, "uQueryVertexOffset");
-    pair_detect_.query_vertex_count = gl.glGetUniformLocation(pair_detect_.program, "uQueryVertexCount");
-    pair_detect_.query_bvh_node_offset = gl.glGetUniformLocation(pair_detect_.program, "uQueryBvhNodeOffset");
-    pair_detect_.target_vertex_offset = gl.glGetUniformLocation(pair_detect_.program, "uTargetVertexOffset");
-    pair_detect_.target_triangle_offset = gl.glGetUniformLocation(pair_detect_.program, "uTargetTriangleOffset");
-    pair_detect_.target_bvh_node_offset = gl.glGetUniformLocation(pair_detect_.program, "uTargetBvhNodeOffset");
-    pair_detect_.query_role = gl.glGetUniformLocation(pair_detect_.program, "uQueryRole");
+    pair_detect_.higher_vertex_offset = gl.glGetUniformLocation(pair_detect_.program, "uHigherVertexOffset");
+    pair_detect_.higher_vertex_count = gl.glGetUniformLocation(pair_detect_.program, "uHigherVertexCount");
+    pair_detect_.higher_triangle_offset = gl.glGetUniformLocation(pair_detect_.program, "uHigherTriangleOffset");
+    pair_detect_.higher_bvh_node_offset = gl.glGetUniformLocation(pair_detect_.program, "uHigherBvhNodeOffset");
+    pair_detect_.lower_vertex_offset = gl.glGetUniformLocation(pair_detect_.program, "uLowerVertexOffset");
+    pair_detect_.lower_vertex_count = gl.glGetUniformLocation(pair_detect_.program, "uLowerVertexCount");
+    pair_detect_.lower_triangle_offset = gl.glGetUniformLocation(pair_detect_.program, "uLowerTriangleOffset");
+    pair_detect_.lower_bvh_node_offset = gl.glGetUniformLocation(pair_detect_.program, "uLowerBvhNodeOffset");
     pair_detect_.max_pairs = gl.glGetUniformLocation(pair_detect_.program, "uMaxPairCount");
     dispatch_size_.max_pairs = gl.glGetUniformLocation(dispatch_size_.program, "uMaxPairCount");
     dispatch_size_.local_size = gl.glGetUniformLocation(dispatch_size_.program, "uLocalSize");
 
-    if (pair_detect_.query_vertex_offset < 0 ||
-        pair_detect_.query_vertex_count < 0 ||
-        pair_detect_.query_bvh_node_offset < 0 ||
-        pair_detect_.target_vertex_offset < 0 ||
-        pair_detect_.target_triangle_offset < 0 ||
-        pair_detect_.target_bvh_node_offset < 0 ||
-        pair_detect_.query_role < 0 ||
+    if (pair_detect_.higher_vertex_offset < 0 ||
+        pair_detect_.higher_vertex_count < 0 ||
+        pair_detect_.higher_triangle_offset < 0 ||
+        pair_detect_.higher_bvh_node_offset < 0 ||
+        pair_detect_.lower_vertex_offset < 0 ||
+        pair_detect_.lower_vertex_count < 0 ||
+        pair_detect_.lower_triangle_offset < 0 ||
+        pair_detect_.lower_bvh_node_offset < 0 ||
         pair_detect_.max_pairs < 0 ||
         dispatch_size_.max_pairs < 0 ||
         dispatch_size_.local_size < 0) {
@@ -201,20 +201,12 @@ void ClothClothCollisionDetector::detect(const SimulationGpuViews& views,
             const GarmentBufferRanges* lower_range =
                 find_garment_range(*views.garment_buffer_ranges, lower_layout->range.garment_id);
 
-            detect_direction(*higher_range,
-                             *higher_layout,
-                             *lower_range,
-                             *lower_layout,
-                             higher_vertex_lower_face_role,
-                             collision_pairs,
-                             gl);
-            detect_direction(*lower_range,
-                             *lower_layout,
-                             *higher_range,
-                             *higher_layout,
-                             lower_vertex_higher_face_role,
-                             collision_pairs,
-                             gl);
+            detect_pair(*higher_range,
+                        *higher_layout,
+                        *lower_range,
+                        *lower_layout,
+                        collision_pairs,
+                        gl);
         }
     }
 
@@ -264,23 +256,25 @@ void ClothClothCollisionDetector::release(QOpenGLFunctions_4_5_Core& gl)
     dispatch_size_ = {};
 }
 
-void ClothClothCollisionDetector::detect_direction(
-    const GarmentBufferRanges& query_range,
-    const GarmentBvhLayout& query_layout,
-    const GarmentBufferRanges& target_range,
-    const GarmentBvhLayout& target_layout,
-    std::uint32_t query_role,
+void ClothClothCollisionDetector::detect_pair(
+    const GarmentBufferRanges& higher_range,
+    const GarmentBvhLayout& higher_layout,
+    const GarmentBufferRanges& lower_range,
+    const GarmentBvhLayout& lower_layout,
     const CollisionPairBuffer& collision_pairs,
     QOpenGLFunctions_4_5_Core& gl) const
 {
-    gl.glProgramUniform1ui(pair_detect_.program, pair_detect_.query_vertex_offset, query_range.vertex_offset);
-    gl.glProgramUniform1ui(pair_detect_.program, pair_detect_.query_vertex_count, query_range.vertex_count);
-    gl.glProgramUniform1ui(pair_detect_.program, pair_detect_.query_bvh_node_offset, query_layout.range.bvh_nodes.offset);
-    gl.glProgramUniform1ui(pair_detect_.program, pair_detect_.target_vertex_offset, target_range.vertex_offset);
-    gl.glProgramUniform1ui(pair_detect_.program, pair_detect_.target_triangle_offset, target_layout.range.collision_triangles.offset);
-    gl.glProgramUniform1ui(pair_detect_.program, pair_detect_.target_bvh_node_offset, target_layout.range.bvh_nodes.offset);
-    gl.glProgramUniform1ui(pair_detect_.program, pair_detect_.query_role, query_role);
-    gl.glDispatchCompute(compute_group_count(query_range.vertex_count, pair_detect_local_size), 1, 1);
+    gl.glProgramUniform1ui(pair_detect_.program, pair_detect_.higher_vertex_offset, higher_range.vertex_offset);
+    gl.glProgramUniform1ui(pair_detect_.program, pair_detect_.higher_vertex_count, higher_range.vertex_count);
+    gl.glProgramUniform1ui(pair_detect_.program, pair_detect_.higher_triangle_offset, higher_layout.range.collision_triangles.offset);
+    gl.glProgramUniform1ui(pair_detect_.program, pair_detect_.higher_bvh_node_offset, higher_layout.range.bvh_nodes.offset);
+    gl.glProgramUniform1ui(pair_detect_.program, pair_detect_.lower_vertex_offset, lower_range.vertex_offset);
+    gl.glProgramUniform1ui(pair_detect_.program, pair_detect_.lower_vertex_count, lower_range.vertex_count);
+    gl.glProgramUniform1ui(pair_detect_.program, pair_detect_.lower_triangle_offset, lower_layout.range.collision_triangles.offset);
+    gl.glProgramUniform1ui(pair_detect_.program, pair_detect_.lower_bvh_node_offset, lower_layout.range.bvh_nodes.offset);
+
+    const std::uint32_t query_vertex_count = higher_range.vertex_count + lower_range.vertex_count;
+    gl.glDispatchCompute(compute_group_count(query_vertex_count, pair_detect_local_size), 1, 1);
     gl.glMemoryBarrier(GL_SHADER_STORAGE_BARRIER_BIT);
 }
 

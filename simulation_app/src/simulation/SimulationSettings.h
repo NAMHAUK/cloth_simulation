@@ -37,7 +37,6 @@ inline constexpr float prefit_search_radius = 0.15f;
 
 inline constexpr std::uint32_t substep_count = 8;
 inline constexpr std::uint32_t solver_iteration_count = 4;
-inline constexpr std::uint32_t cloth_cloth_detection_iteration_stride = 2;
 inline constexpr std::uint32_t prefit_iteration_count = 32;
 inline constexpr float stretch_stiffness = 0.8f;
 inline constexpr float bending_stiffness = 0.15f;
@@ -61,8 +60,6 @@ static_assert(static_friction >= dynamic_friction && static_friction <= 1.0f);
 static_assert(prefit_pushout_margin > 0.0f);
 static_assert(prefit_search_radius >= prefit_pushout_margin);
 static_assert(solver_iteration_count > 0);
-static_assert(cloth_cloth_detection_iteration_stride > 0 &&
-              cloth_cloth_detection_iteration_stride <= solver_iteration_count);
 static_assert(substep_count > 0);
 static_assert(prefit_iteration_count > 0);
 static_assert(stretch_stiffness >= 0.0f && stretch_stiffness <= 1.0f);

@@ -32,13 +32,14 @@ public:
 private:
     struct PairDetectionProgram final {
         GLuint program = 0;
-        GLint query_vertex_offset = -1;
-        GLint query_vertex_count = -1;
-        GLint query_bvh_node_offset = -1;
-        GLint target_vertex_offset = -1;
-        GLint target_triangle_offset = -1;
-        GLint target_bvh_node_offset = -1;
-        GLint query_role = -1;
+        GLint higher_vertex_offset = -1;
+        GLint higher_vertex_count = -1;
+        GLint higher_triangle_offset = -1;
+        GLint higher_bvh_node_offset = -1;
+        GLint lower_vertex_offset = -1;
+        GLint lower_vertex_count = -1;
+        GLint lower_triangle_offset = -1;
+        GLint lower_bvh_node_offset = -1;
         GLint max_pairs = -1;
     };
 
@@ -48,13 +49,12 @@ private:
         GLint local_size = -1;
     };
 
-    void detect_direction(const GarmentBufferRanges& query_range,
-                          const GarmentBvhLayout& query_layout,
-                          const GarmentBufferRanges& target_range,
-                          const GarmentBvhLayout& target_layout,
-                          std::uint32_t query_role,
-                          const CollisionPairBuffer& collision_pairs,
-                          QOpenGLFunctions_4_5_Core& gl) const;
+    void detect_pair(const GarmentBufferRanges& higher_range,
+                     const GarmentBvhLayout& higher_layout,
+                     const GarmentBufferRanges& lower_range,
+                     const GarmentBvhLayout& lower_layout,
+                     const CollisionPairBuffer& collision_pairs,
+                     QOpenGLFunctions_4_5_Core& gl) const;
     void build_dispatch_size(const CollisionPairBuffer& collision_pairs,
                              QOpenGLFunctions_4_5_Core& gl) const;
 

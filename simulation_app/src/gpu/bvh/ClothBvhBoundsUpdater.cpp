@@ -139,21 +139,31 @@ bool ClothBvhBoundsUpdater::update(
     gl.glBindBufferBase(GL_SHADER_STORAGE_BUFFER, cloth_triangle_bounds_binding, bvh_view.triangle_bounds_buffer);
     gl.glProgramUniform1f(program_, bounds_margin_location_, bounds_margin);
 
+    std::size_t level_count = 0;
     for (const GarmentBvhLayout& layout : *bvh_view.garment_layouts) {
-        const GarmentBvhRange& bvh_range = layout.range;
-        const GarmentBufferRanges* garment_range =
-            find_garment_buffer_ranges(garment_buffer_ranges, bvh_range.garment_id);
+        level_count = std::max(level_count, layout.node_ranges_by_level.size());
+    }
 
-        gl.glProgramUniform1ui(program_, vertex_offset_location_, garment_range->vertex_offset);
-        gl.glProgramUniform1ui(program_, collision_triangle_offset_location_, bvh_range.collision_triangles.offset);
-        gl.glProgramUniform1ui(program_, bvh_node_offset_location_, bvh_range.bvh_nodes.offset);
+    for (std::size_t level_index = 0; level_index < level_count; ++level_index) {
+        for (const GarmentBvhLayout& layout : *bvh_view.garment_layouts) {
+            if (level_index >= layout.node_ranges_by_level.size()) {
+                continue;
+            }
 
-        for (const BvhNodeRange& level_range : layout.node_ranges_by_level) {
+            const GarmentBvhRange& bvh_range = layout.range;
+            const GarmentBufferRanges* garment_range =
+                find_garment_buffer_ranges(garment_buffer_ranges, bvh_range.garment_id);
+            const BvhNodeRange& level_range = layout.node_ranges_by_level[level_index];
+
+            gl.glProgramUniform1ui(program_, vertex_offset_location_, garment_range->vertex_offset);
+            gl.glProgramUniform1ui(program_, collision_triangle_offset_location_, bvh_range.collision_triangles.offset);
+            gl.glProgramUniform1ui(program_, bvh_node_offset_location_, bvh_range.bvh_nodes.offset);
             gl.glProgramUniform1ui(program_, level_first_node_location_, level_range.first_node);
             gl.glProgramUniform1ui(program_, level_node_count_location_, level_range.node_count);
             gl.glDispatchCompute(compute_group_count(level_range.node_count, bvh_bounds_update_local_size), 1, 1);
-            gl.glMemoryBarrier(GL_SHADER_STORAGE_BARRIER_BIT);
         }
+
+        gl.glMemoryBarrier(GL_SHADER_STORAGE_BARRIER_BIT);
     }
 
     return true;
