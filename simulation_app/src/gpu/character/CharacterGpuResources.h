@@ -67,6 +67,7 @@ private:
     std::uint32_t triangle_count_ = 0;
 
     // Body collision BVH data
+    std::uint32_t body_collision_triangle_count_ = 0;
     std::uint32_t body_triangle_bvh_node_count_ = 0;
     std::uint32_t body_vertex_bvh_node_count_ = 0;
     std::uint32_t body_edge_bvh_node_count_ = 0;

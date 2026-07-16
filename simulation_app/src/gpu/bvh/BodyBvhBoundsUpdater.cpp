@@ -69,6 +69,7 @@ bool BodyBvhBoundsUpdater::can_update(const CharacterMeshTopologyResources& topo
            vertex_view.vertex_count != 0 &&
            is_valid_triangle_geometry_resource(body_triangle_geometry) &&
            topology.triangle_count == body_triangle_geometry.triangle_count &&
+           body_triangle_bvh.triangle_count <= topology.triangle_count &&
            topology.vertex_count == vertex_view.vertex_count &&
            is_valid_triangle_bvh_resource(body_triangle_bvh) &&
            is_valid_vertex_bvh_resource(body_vertex_bvh) &&

@@ -25,7 +25,6 @@ public:
                     const std::filesystem::path& cloth_face_body_vertex_detect_shader_path,
                     const std::filesystem::path& dispatch_size_shader_path,
                     float collision_thickness,
-                    std::uint32_t ignored_body_part_mask,
                     QOpenGLFunctions_4_5_Core& gl);
     bool can_detect(const SimulationGpuViews& views) const;
     void detect(const SimulationGpuViews& views, QOpenGLFunctions_4_5_Core& gl) const;
@@ -36,7 +35,6 @@ private:
         GLuint program = 0;
         GLint item_count = -1;
         GLint max_candidates = -1;
-        GLint ignored_body_part_mask = -1;
     };
 
     struct DispatchSizeProgram final {
@@ -70,5 +68,4 @@ private:
     mutable GpuElapsedTimer cloth_vertex_body_face_timer_;
 #endif
     float collision_thickness_ = 0.0f;
-    std::uint32_t ignored_body_part_mask_ = 0;
 };

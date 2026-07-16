@@ -38,7 +38,6 @@ layout(std430, binding = 9) buffer OverflowCount {
 
 uniform uint uEdgeCount;
 uniform uint uMaxCandidateCount;
-uniform uint uIgnoredBodyPartMask;
 
 const uint max_bvh_stack_depth = 32u;
 const uint bvh_root_node = 0u;
@@ -88,10 +87,6 @@ void main()
         while (stack_count > 0u) {
             --stack_count;
             BvhNode current_node = body_edge_bvh_nodes[node_index_stack[stack_count]];
-            if (is_ignored_body_part_node(current_node, uIgnoredBodyPartMask)) {
-                continue;
-            }
-
             if (!overlaps_aabb(cloth_swept_bounds, current_node.bounds)) {
                 continue;
             }

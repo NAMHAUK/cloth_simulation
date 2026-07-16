@@ -50,6 +50,7 @@ struct TriangleBvhData final {
     std::vector<std::uint32_t> triangle_indices;
     std::vector<BvhNode> nodes;
     std::vector<BvhNodeRange> node_ranges_by_level;
+    std::uint32_t collision_triangle_count = 0;
 
     bool is_valid(std::uint32_t triangle_count) const;
 };

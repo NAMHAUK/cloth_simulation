@@ -87,7 +87,8 @@ void SimulationController::load_default_character_mesh(CharacterMesh mesh,
         mesh.vertex_count,
         mesh.triangle_vertex_indices,
         mesh.vertices,
-        triangle_part_labels
+        triangle_part_labels,
+        body_bvh_excluded_part_mask
     );
     TriangleBvhData default_body_triangle_bvh_data = bvh_builder.build_triangle_bvh();
     if (!default_body_triangle_bvh_data.is_valid(mesh.triangle_count)) {

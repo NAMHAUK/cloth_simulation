@@ -77,7 +77,8 @@ inline bool is_valid_triangle_bvh_resource(const TriangleBvhResources& triangle_
 {
     return triangle_bvh.node_buffer != 0 &&
            triangle_bvh.triangle_bounds_buffer != 0 &&
-           triangle_bvh.node_count != 0;
+           triangle_bvh.node_count != 0 &&
+           triangle_bvh.triangle_count != 0;
 }
 
 inline bool is_valid_vertex_bvh_resource(const VertexBvhResources& vertex_bvh)

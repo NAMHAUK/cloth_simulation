@@ -15,29 +15,33 @@ constexpr std::uint32_t triangle_vertex_count = 3;
 bool TriangleBvhData::is_valid(std::uint32_t triangle_count) const
 {
     if (triangle_count == 0 ||
+        collision_triangle_count == 0 ||
+        collision_triangle_count > triangle_count ||
         nodes.empty() ||
         node_ranges_by_level.empty() ||
         triangle_indices.size() != static_cast<std::size_t>(triangle_count) * triangle_vertex_count) {
         return false;
     }
 
-    return bvh_build::has_valid_bvh_node_topology(nodes, triangle_count);
+    return bvh_build::has_valid_bvh_node_topology(nodes, collision_triangle_count);
 }
 
 bool VertexBvhData::is_valid(std::uint32_t vertex_count) const
 {
     if (vertex_count == 0 ||
+        vertex_ids.empty() ||
+        vertex_ids.size() > vertex_count ||
         nodes.empty() ||
-        node_ranges_by_level.empty() ||
-        vertex_ids.size() != vertex_count) {
+        node_ranges_by_level.empty()) {
         return false;
     }
 
-    if (!bvh_build::has_valid_bvh_node_topology(nodes, vertex_count)) {
+    if (!bvh_build::has_valid_bvh_node_topology(nodes, static_cast<std::uint32_t>(vertex_ids.size()))) {
         return false;
     }
 
     std::vector<std::uint8_t> used_vertices(vertex_count, 0u);
+    std::size_t used_vertex_count = 0;
     for (const BvhNode& node : nodes) {
         if (bvh_build::is_leaf_node(node.element_count)) {
             for (std::uint32_t offset = 0; offset < node.element_count; ++offset) {
@@ -46,13 +50,12 @@ bool VertexBvhData::is_valid(std::uint32_t vertex_count) const
                     return false;
                 }
                 used_vertices[vertex_id] = 1u;
+                ++used_vertex_count;
             }
         }
     }
 
-    return std::all_of(used_vertices.begin(), used_vertices.end(), [](std::uint8_t used) {
-        return used != 0u;
-    });
+    return used_vertex_count == vertex_ids.size();
 }
 
 std::uint32_t EdgeBvhData::edge_count() const

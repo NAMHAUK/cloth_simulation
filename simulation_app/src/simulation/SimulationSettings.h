@@ -15,7 +15,6 @@ inline constexpr float velocity_damping = 0.99792f;
 inline constexpr float ground_collision_height = 0.001f;
 inline constexpr float body_collision_thickness = 0.005f;
 inline constexpr float body_collision_max_correction_length = 0.005f;
-inline constexpr std::uint32_t ignored_body_part_mask = (1u << 6u) | (1u << 7u);
 
 inline constexpr float cloth_collision_thickness = 0.007f;
 inline constexpr float cloth_collision_detection_margin = 0.002f;
