@@ -19,14 +19,18 @@ public:
 
     bool is_initialized() const;
     bool initialize(const std::filesystem::path& accumulate_shader_path,
+                    const std::filesystem::path& initial_accumulate_shader_path,
                     const std::filesystem::path& apply_shader_path,
                     float collision_gap,
                     float barrier_stiffness,
                     float penetration_tolerance,
                     float max_correction_length,
+                    float initial_surface_search_radius,
                     QOpenGLFunctions_4_5_Core& gl);
     bool can_solve(const SimulationGpuViews& views) const;
+    bool can_solve_initial(const SimulationGpuViews& views) const;
     void solve(const SimulationGpuViews& views, QOpenGLFunctions_4_5_Core& gl) const;
+    void solve_initial(const SimulationGpuViews& views, QOpenGLFunctions_4_5_Core& gl) const;
     void release(QOpenGLFunctions_4_5_Core& gl);
 
 private:
@@ -45,6 +49,14 @@ private:
     };
 
     AccumulateStage accumulate_;
+    struct InitialAccumulateStage final {
+        GLuint program = 0;
+        GLint max_pairs = -1;
+        GLint collision_gap = -1;
+        GLint barrier_stiffness = -1;
+        GLint penetration_tolerance = -1;
+        GLint search_radius = -1;
+    } initial_accumulate_;
     ApplyStage apply_;
 #if CLOTH_SIM_COLLISION_SOLVER_GPU_TIMING
     mutable GpuElapsedTimer accumulate_timer_;
@@ -54,4 +66,8 @@ private:
     float barrier_stiffness_ = 0.0f;
     float penetration_tolerance_ = 0.0f;
     float max_correction_length_ = 0.0f;
+    float initial_surface_search_radius_ = 0.0f;
+
+    void apply_corrections(const SimulationGpuViews& views,
+                           QOpenGLFunctions_4_5_Core& gl) const;
 };

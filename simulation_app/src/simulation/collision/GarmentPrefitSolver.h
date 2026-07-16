@@ -19,9 +19,11 @@ public:
                     float pushout_margin,
                     QOpenGLFunctions_4_5_Core& gl);
     bool can_solve(const ClothMotionBufferView& motion_view,
+                   const GarmentBufferRanges& garment_range,
                    const TriangleGeometryResources& character_geometry,
                    const TriangleBvhResources& character_bvh) const;
     void solve(const ClothMotionBufferView& motion_view,
+               const GarmentBufferRanges& garment_range,
                const TriangleGeometryResources& character_geometry,
                const TriangleBvhResources& character_bvh,
                QOpenGLFunctions_4_5_Core& gl) const;
@@ -29,7 +31,8 @@ public:
 
 private:
     GLuint program_ = 0;
-    GLint cloth_vertex_count_location_ = -1;
+    GLint vertex_offset_location_ = -1;
+    GLint vertex_count_location_ = -1;
     GLint search_radius_location_ = -1;
     GLint pushout_margin_location_ = -1;
     float search_radius_ = 0.0f;

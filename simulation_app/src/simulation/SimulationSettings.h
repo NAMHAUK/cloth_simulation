@@ -20,8 +20,7 @@ inline constexpr std::uint32_t ignored_body_part_mask = (1u << 6u) | (1u << 7u);
 
 inline constexpr float cloth_cloth_collision_gap = 0.003f;
 inline constexpr float cloth_cloth_activation_margin = 0.002f;
-inline constexpr float cloth_bvh_bounds_margin =
-    cloth_cloth_collision_gap + cloth_cloth_activation_margin;
+inline constexpr float cloth_bvh_bounds_margin = cloth_cloth_collision_gap + cloth_cloth_activation_margin;
 inline constexpr float cloth_cloth_barrier_stiffness = 0.8f;
 inline constexpr float cloth_cloth_penetration_tolerance = 0.0005f;
 inline constexpr float cloth_cloth_max_correction_length = 0.003f;

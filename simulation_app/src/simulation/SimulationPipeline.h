@@ -36,7 +36,10 @@ public:
 
     bool is_initialized() const;
     bool initialize(const ShaderPaths& shader_paths, QOpenGLFunctions_4_5_Core& gl);
-    bool prefit_garments(SceneState& scene, SceneGpuState& gpu_state, QOpenGLFunctions_4_5_Core& gl);
+    bool prefit_garments(SceneState& scene,
+                         SceneGpuState& gpu_state,
+                         std::uint32_t garment_id,
+                         QOpenGLFunctions_4_5_Core& gl);
     bool step(SceneState& scene, SceneGpuState& gpu_state, std::uint64_t motion_step_index, QOpenGLFunctions_4_5_Core& gl);
     void release(QOpenGLFunctions_4_5_Core& gl);
 

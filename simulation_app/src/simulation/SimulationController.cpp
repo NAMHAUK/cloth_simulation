@@ -298,7 +298,7 @@ void SimulationController::confirm_garment_placement()
 
     viewport_callbacks_.run_with_gl_context([this](QOpenGLFunctions_4_5_Core& gl) {
         set_current_garment_placement(gl);
-        if (!simulation_pipeline_.prefit_garments(scene_, gpu_state_, gl)) {
+        if (!simulation_pipeline_.prefit_garments(scene_, gpu_state_, garment_placement_.garment_id, gl)) {
             std::cerr << "Cannot confirm garment placement because garment pre-fit failed.\n";
             return;
         }

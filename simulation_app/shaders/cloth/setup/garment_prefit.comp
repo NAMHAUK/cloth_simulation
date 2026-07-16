@@ -32,7 +32,8 @@ layout(std430, binding = 3) readonly buffer BvhNodeBuffer {
 
 uniform float uSearchRadius;
 
-uniform uint uClothVertexCount;
+uniform uint uVertexOffset;
+uniform uint uVertexCount;
 uniform float uPushoutMargin;
 
 const uint max_bvh_stack_depth = 32u;
@@ -66,10 +67,11 @@ void store_cloth_position(uint vertex_index, vec3 position)
 
 void main()
 {
-    uint cloth_vertex_index = gl_GlobalInvocationID.x;
-    if (cloth_vertex_index >= uClothVertexCount) {
+    uint local_vertex_index = gl_GlobalInvocationID.x;
+    if (local_vertex_index >= uVertexCount) {
         return;
     }
+    uint cloth_vertex_index = uVertexOffset + local_vertex_index;
 
     vec3 cloth_position = load_cloth_position(cloth_vertex_index);
 

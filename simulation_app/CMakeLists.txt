@@ -127,6 +127,7 @@ add_executable(simulation_app
     shaders/collision/collision_pair_dispatch_size.comp
     shaders/collision/cloth_cloth_vertex_face_pair_detect.comp
     shaders/collision/cloth_cloth_vertex_face_pair_accumulate.comp
+    shaders/collision/cloth_cloth_initial_layer_pair_accumulate.comp
     shaders/collision/cloth_cloth_collision_apply.comp
     shaders/collision/cloth_vertex_body_face_pair_detect.comp
     shaders/collision/cloth_vertex_body_face_pair_accumulate.comp

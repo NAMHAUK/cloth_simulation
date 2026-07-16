@@ -14,6 +14,17 @@ namespace {
 
 constexpr std::uint32_t gpu_timing_log_interval = 100u;
 
+const GarmentBufferRanges* find_garment_range(
+    const std::vector<GarmentBufferRanges>& garment_ranges,
+    std::uint32_t garment_id)
+{
+    const auto iter = std::find_if(garment_ranges.begin(), garment_ranges.end(),
+        [garment_id](const GarmentBufferRanges& range) {
+            return range.id == garment_id;
+        });
+    return iter == garment_ranges.end() ? nullptr : &(*iter);
+}
+
 float character_frame_time(std::uint64_t motion_step_index, std::uint32_t substep)
 {
     if (simulation_settings::character_frame_stride == 0 || simulation_settings::substep_count == 0) {
@@ -83,11 +94,13 @@ bool SimulationPipeline::initialize(const ShaderPaths& shader_paths, QOpenGLFunc
                                                    shader_paths.collision_pair_dispatch_size_compute,
                                                    gl) &&
         cloth_cloth_collision_solver_.initialize(shader_paths.cloth_cloth_vertex_face_pair_accumulate_compute,
+                                                 shader_paths.cloth_cloth_initial_layer_pair_accumulate_compute,
                                                  shader_paths.cloth_cloth_collision_apply_compute,
                                                  simulation_settings::cloth_cloth_collision_gap,
                                                  simulation_settings::cloth_cloth_barrier_stiffness,
                                                  simulation_settings::cloth_cloth_penetration_tolerance,
                                                  simulation_settings::cloth_cloth_max_correction_length,
+                                                 simulation_settings::prefit_search_radius,
                                                  gl) &&
         garment_prefit_solver_.initialize(shader_paths.garment_prefit_compute,
                                           simulation_settings::prefit_search_radius,
@@ -106,7 +119,10 @@ bool SimulationPipeline::initialize(const ShaderPaths& shader_paths, QOpenGLFunc
     return true;
 }
 
-bool SimulationPipeline::prefit_garments(SceneState& scene, SceneGpuState& gpu_state, QOpenGLFunctions_4_5_Core& gl)
+bool SimulationPipeline::prefit_garments(SceneState& scene,
+                                         SceneGpuState& gpu_state,
+                                         std::uint32_t garment_id,
+                                         QOpenGLFunctions_4_5_Core& gl)
 {
     if (!initialized_) {
         std::cerr << "Cannot pre-fit garments before simulation pipeline initialization.\n";
@@ -114,31 +130,49 @@ bool SimulationPipeline::prefit_garments(SceneState& scene, SceneGpuState& gpu_s
     }
 
     const auto views = collect_gpu_views(gpu_state);
-    if (!garment_prefit_solver_.can_solve(views.cloth_motion, views.character_geometry, views.character_bvh)) {
+    if (views.garment_buffer_ranges == nullptr) {
+        std::cerr << "Cannot pre-fit garment because garment buffer ranges are missing.\n";
+        return false;
+    }
+
+    const GarmentBufferRanges* garment_range =
+        find_garment_range(*views.garment_buffer_ranges, garment_id);
+    if (garment_range == nullptr ||
+        !garment_prefit_solver_.can_solve(views.cloth_motion,
+                                         *garment_range,
+                                         views.character_geometry,
+                                         views.character_bvh)) {
         std::cerr << "Cannot pre-fit garments because required GPU buffers are missing.\n";
         return false;
     }
 
     for (std::uint32_t iteration = 0; iteration < simulation_settings::prefit_iteration_count; ++iteration) {
-        garment_prefit_solver_.solve(views.cloth_motion, views.character_geometry, views.character_bvh, gl);
+        garment_prefit_solver_.solve(views.cloth_motion,
+                                     *garment_range,
+                                     views.character_geometry,
+                                     views.character_bvh,
+                                     gl);
     }
 
-    if (!update_cloth_bvh_bounds(views, gl)) {
-        return false;
-    }
+    gpu_state.cloth_gpu_state().copy_current_positions_to_previous(gl);
 
     if (!cloth_cloth_collision_detector_.can_detect(views) ||
-        !cloth_cloth_collision_solver_.can_solve(views)) {
+        !cloth_cloth_collision_solver_.can_solve_initial(views)) {
         std::cerr << "Cannot resolve initial cloth-cloth contacts because required GPU resources are invalid.\n";
         return false;
     }
 
-    cloth_cloth_collision_detector_.detect(views, gl);
-    for (std::uint32_t iteration = 0; iteration < simulation_settings::solver_iteration_count; ++iteration) {
-        cloth_cloth_collision_solver_.solve(views, gl);
+    if (views.cloth_bvh.garment_layouts->size() >= 2u) {
+        for (std::uint32_t iteration = 0; iteration < simulation_settings::solver_iteration_count; ++iteration) {
+            if (!update_cloth_bvh_bounds(views, gl)) {
+                return false;
+            }
+            cloth_cloth_collision_detector_.detect(views, gl);
+            cloth_cloth_collision_solver_.solve_initial(views, gl);
+            gpu_state.cloth_gpu_state().copy_current_positions_to_previous(gl);
+        }
     }
 
-    gpu_state.cloth_gpu_state().copy_current_positions_to_previous(gl);
     gpu_state.update_mesh_normals(gl);
     return true;
 }
