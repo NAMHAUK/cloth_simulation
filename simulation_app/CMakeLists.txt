@@ -167,8 +167,8 @@ target_include_directories(garment_converter PRIVATE
 
 target_compile_definitions(simulation_app PRIVATE
     PROJECT_ROOT_DIR="${REPO_ROOT}"
+    CLOTH_SIM_COLLISION_GPU_TIMING=1
     CLOTH_SIM_COLLISION_SOLVER_GPU_TIMING=1
-    $<$<CONFIG:Debug>:CLOTH_SIM_CLOTH_CLOTH_COLLISION_GPU_TIMING=1>
 )
 
 target_link_libraries(simulation_app PRIVATE

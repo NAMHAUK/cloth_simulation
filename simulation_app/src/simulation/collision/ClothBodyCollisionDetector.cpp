@@ -118,8 +118,6 @@ bool ClothBodyCollisionDetector::initialize(const std::filesystem::path& cloth_v
     ignored_body_part_mask_ = ignored_body_part_mask;
 #if CLOTH_SIM_COLLISION_GPU_TIMING
     cloth_vertex_body_face_timer_.initialize("cloth vertex - body face collision candidate detection", gpu_timing_log_interval, gl);
-    cloth_edge_body_edge_timer_.initialize("cloth edge - body edge collision candidate detection", gpu_timing_log_interval, gl);
-    cloth_face_body_vertex_timer_.initialize("body vertex - cloth face collision candidate detection", gpu_timing_log_interval, gl);
 #endif
     return true;
 }
@@ -176,8 +174,6 @@ void ClothBodyCollisionDetector::release(QOpenGLFunctions_4_5_Core& gl)
     gl.glDeleteProgram(dispatch_size_.program);
 #if CLOTH_SIM_COLLISION_GPU_TIMING
     cloth_vertex_body_face_timer_.release(gl);
-    cloth_edge_body_edge_timer_.release(gl);
-    cloth_face_body_vertex_timer_.release(gl);
 #endif
 
     cloth_vertex_body_face_ = {};
@@ -222,9 +218,6 @@ void ClothBodyCollisionDetector::detect_cloth_edge_body_edge_collision_candidate
                                                                              const CollisionCandidateBuffer& collision_candidates,
                                                                              QOpenGLFunctions_4_5_Core& gl) const
 {
-#if CLOTH_SIM_COLLISION_GPU_TIMING
-    const bool gpu_timing_started = cloth_edge_body_edge_timer_.begin(gl);
-#endif
     gl.glUseProgram(cloth_edge_body_edge_.program);
     gl.glBindBufferBase(GL_SHADER_STORAGE_BUFFER, cloth_edge_body_edge_binding::cloth_current, motion_view.current_position_buffer);
     gl.glBindBufferBase(GL_SHADER_STORAGE_BUFFER, cloth_edge_body_edge_binding::cloth_previous, motion_view.previous_position_buffer);
@@ -239,11 +232,6 @@ void ClothBodyCollisionDetector::detect_cloth_edge_body_edge_collision_candidate
     gl.glProgramUniform1ui(cloth_edge_body_edge_.program, cloth_edge_body_edge_.ignored_body_part_mask, ignored_body_part_mask_);
     gl.glDispatchCompute(compute_group_count(cloth_edges.constraint_count, collision_candidate_detect_local_size), 1, 1);
     gl.glMemoryBarrier(GL_SHADER_STORAGE_BARRIER_BIT);
-#if CLOTH_SIM_COLLISION_GPU_TIMING
-    if (gpu_timing_started) {
-        cloth_edge_body_edge_timer_.end(gl);
-    }
-#endif
 }
 
 void ClothBodyCollisionDetector::detect_cloth_face_body_vertex_collision_candidates(const ClothMotionBufferView& motion_view,
@@ -252,9 +240,6 @@ void ClothBodyCollisionDetector::detect_cloth_face_body_vertex_collision_candida
                                                                                const CollisionCandidateBuffer& collision_candidates,
                                                                                QOpenGLFunctions_4_5_Core& gl) const
 {
-#if CLOTH_SIM_COLLISION_GPU_TIMING
-    const bool gpu_timing_started = cloth_face_body_vertex_timer_.begin(gl);
-#endif
     gl.glUseProgram(cloth_face_body_vertex_.program);
     gl.glBindBufferBase(GL_SHADER_STORAGE_BUFFER, cloth_face_body_vertex_binding::cloth_current, motion_view.current_position_buffer);
     gl.glBindBufferBase(GL_SHADER_STORAGE_BUFFER, cloth_face_body_vertex_binding::cloth_previous, motion_view.previous_position_buffer);
@@ -270,11 +255,6 @@ void ClothBodyCollisionDetector::detect_cloth_face_body_vertex_collision_candida
     gl.glProgramUniform1ui(cloth_face_body_vertex_.program, cloth_face_body_vertex_.ignored_body_part_mask, ignored_body_part_mask_);
     gl.glDispatchCompute(compute_group_count(cloth_topology.triangle_count, collision_candidate_detect_local_size), 1, 1);
     gl.glMemoryBarrier(GL_SHADER_STORAGE_BARRIER_BIT);
-#if CLOTH_SIM_COLLISION_GPU_TIMING
-    if (gpu_timing_started) {
-        cloth_face_body_vertex_timer_.end(gl);
-    }
-#endif
 }
 
 void ClothBodyCollisionDetector::build_dispatch_size(const CollisionCandidateBuffer& collision_candidates, QOpenGLFunctions_4_5_Core& gl) const

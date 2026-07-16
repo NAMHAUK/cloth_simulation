@@ -1,16 +1,10 @@
 #pragma once
 
 #include "simulation/SimulationGpuViews.h"
-#include "utils/GpuElapsedTimer.h"
-
 #include <cstdint>
 #include <filesystem>
 
 #include <QOpenGLFunctions_4_5_Core>
-
-#ifndef CLOTH_SIM_CLOTH_CLOTH_COLLISION_GPU_TIMING
-#define CLOTH_SIM_CLOTH_CLOTH_COLLISION_GPU_TIMING 0
-#endif
 
 class ClothClothCollisionDetector final {
 public:
@@ -24,9 +18,6 @@ public:
                     QOpenGLFunctions_4_5_Core& gl);
     bool can_detect(const SimulationGpuViews& views) const;
     void detect(const SimulationGpuViews& views, QOpenGLFunctions_4_5_Core& gl) const;
-    void log_diagnostics(const SimulationGpuViews& views,
-                         std::uint64_t simulation_step,
-                         QOpenGLFunctions_4_5_Core& gl) const;
     void release(QOpenGLFunctions_4_5_Core& gl);
 
 private:
@@ -60,7 +51,4 @@ private:
 
     CandidateDetectionProgram candidate_detect_;
     DispatchSizeProgram dispatch_size_;
-#if CLOTH_SIM_CLOTH_CLOTH_COLLISION_GPU_TIMING
-    mutable GpuElapsedTimer detection_timer_;
-#endif
 };

@@ -74,6 +74,11 @@ bool compute_vertex_triangle_contact(uint cloth_vertex_id,
                                                        body_triangle.b.xyz,
                                                        body_triangle.c.xyz);
     vec3 body_normal = body_triangle.normal.xyz;
+    uint body_triangle_index_base = triangle_index * 3u;
+    uvec3 body_triangle_vertices = uvec3(body_triangle_indices[body_triangle_index_base],
+                                         body_triangle_indices[body_triangle_index_base + 1u],
+                                         body_triangle_indices[body_triangle_index_base + 2u]);
+    TrianglePositions previous_body = read_body_previous_triangle(body_triangle_vertices);
 
     float current_signed_distance = dot(current_cloth_position - current_body.a, body_normal);
     float penetration_depth = uCollisionThickness - current_signed_distance - penetration_tolerance;
@@ -82,7 +87,7 @@ bool compute_vertex_triangle_contact(uint cloth_vertex_id,
     }
 
     vec3 previous_cloth_position = read_cloth_previous_position(cloth_vertex_id);
-    float previous_signed_distance = dot(previous_cloth_position - current_body.a, body_normal);
+    float previous_signed_distance = dot(previous_cloth_position - previous_body.a, body_normal);
     vec3 barycentric;
 
     bool has_swept_contact = false;
@@ -90,8 +95,9 @@ bool compute_vertex_triangle_contact(uint cloth_vertex_id,
         float signed_distance_delta = current_signed_distance - previous_signed_distance;
         float hit_time = (uCollisionThickness - previous_signed_distance) / signed_distance_delta;
         vec3 swept_cloth_position = mix(previous_cloth_position, current_cloth_position, hit_time);
+        TrianglePositions hit_body = interpolate_triangle_positions(previous_body, current_body, hit_time);
         vec3 swept_surface_position = swept_cloth_position - body_normal * uCollisionThickness;
-        has_swept_contact = compute_barycentric_if_inside(swept_surface_position, current_body, barycentric);
+        has_swept_contact = compute_barycentric_if_inside(swept_surface_position, hit_body, barycentric);
     }
 
     if (!has_swept_contact) {
@@ -101,11 +107,6 @@ bool compute_vertex_triangle_contact(uint cloth_vertex_id,
         }
     }
 
-    uint body_triangle_index_base = triangle_index * 3u;
-    uvec3 body_triangle_vertices = uvec3(body_triangle_indices[body_triangle_index_base],
-                                         body_triangle_indices[body_triangle_index_base + 1u],
-                                         body_triangle_indices[body_triangle_index_base + 2u]);
-    TrianglePositions previous_body = read_body_previous_triangle(body_triangle_vertices);
     vec3 previous_body_contact = interpolate_triangle_position(previous_body, barycentric);
     vec3 current_body_contact = interpolate_triangle_position(current_body, barycentric);
     vec3 cloth_delta = current_cloth_position - previous_cloth_position - collision_pushouts[cloth_vertex_id].xyz;

@@ -86,10 +86,12 @@ void update_triangle_leaf_bounds(uint node_index, BvhNode node)
 
         vec3 current_min_bounds = min(current_a, min(current_b, current_c));
         vec3 current_max_bounds = max(current_a, max(current_b, current_c));
-        body_triangle_bounds[triangle_index].min_bounds = vec4(current_min_bounds - uCollisionThickness, 0.0);
-        body_triangle_bounds[triangle_index].max_bounds = vec4(current_max_bounds + uCollisionThickness, triangle.normal.w);
-        min_bounds = min(min_bounds, min(min(previous_a, min(previous_b, previous_c)), current_min_bounds));
-        max_bounds = max(max_bounds, max(max(previous_a, max(previous_b, previous_c)), current_max_bounds));
+        vec3 swept_min_bounds = min(min(previous_a, min(previous_b, previous_c)), current_min_bounds);
+        vec3 swept_max_bounds = max(max(previous_a, max(previous_b, previous_c)), current_max_bounds);
+        body_triangle_bounds[triangle_index].min_bounds = vec4(swept_min_bounds - uCollisionThickness, 0.0);
+        body_triangle_bounds[triangle_index].max_bounds = vec4(swept_max_bounds + uCollisionThickness, triangle.normal.w);
+        min_bounds = min(min_bounds, swept_min_bounds);
+        max_bounds = max(max_bounds, swept_max_bounds);
     }
 
     body_triangle_bvh_nodes[node_index].bounds = Aabb(vec4(min_bounds - uCollisionThickness, 0.0),

@@ -2,6 +2,7 @@
 
 #include "gpu/bvh/ClothBvhBoundsUpdater.h"
 #include "simulation/SimulationGpuViews.h"
+#include "simulation/SimulationSettings.h"
 #include "simulation/forces/SimulationForceField.h"
 #include "simulation/forces/ExternalForceSolver.h"
 #include "simulation/constraints/StretchConstraintSolver.h"
@@ -66,5 +67,6 @@ private:
     mutable GpuElapsedTimer substep_gpu_timer_;
 #endif
     float substep_dt_ = 0.0f;
+    std::uint64_t timing_step_count_ = 0u;
     bool initialized_ = false;
 };

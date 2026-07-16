@@ -9,6 +9,8 @@
 
 class GpuElapsedTimer final {
 public:
+    static void set_sample_recording_enabled(bool is_enabled);
+
     void initialize(std::string label, std::uint32_t log_interval, QOpenGLFunctions_4_5_Core& gl);
     void initialize(std::string label,
                     std::uint32_t log_interval,
@@ -19,7 +21,6 @@ public:
     bool begin(QOpenGLFunctions_4_5_Core& gl) const;
     void end(QOpenGLFunctions_4_5_Core& gl) const;
     void collect(QOpenGLFunctions_4_5_Core& gl) const;
-
     bool is_initialized() const;
 
 private:
@@ -32,6 +33,7 @@ private:
     mutable std::array<GLuint, query_count> start_queries_{};
     mutable std::array<GLuint, query_count> end_queries_{};
     mutable std::array<bool, query_count> query_pending_{};
+    mutable std::array<bool, query_count> query_sample_recording_{};
     mutable std::size_t next_query_ = 0u;
     mutable std::size_t active_query_ = 0u;
     mutable bool active_ = false;
@@ -40,4 +42,6 @@ private:
     mutable double window_total_ms_ = 0.0;
     mutable std::uint32_t group_call_count_ = 0u;
     mutable double group_total_ms_ = 0.0;
+    void collect_pending(bool wait_for_results, QOpenGLFunctions_4_5_Core& gl) const;
+    void record_elapsed(double elapsed_ms) const;
 };

@@ -4,6 +4,15 @@
 #include <iostream>
 #include <utility>
 
+namespace {
+bool is_sample_recording_enabled = false;
+}
+
+void GpuElapsedTimer::set_sample_recording_enabled(bool is_enabled)
+{
+    is_sample_recording_enabled = is_enabled;
+}
+
 void GpuElapsedTimer::initialize(std::string label,
                                  std::uint32_t log_interval,
                                  QOpenGLFunctions_4_5_Core& gl)
@@ -24,6 +33,7 @@ void GpuElapsedTimer::initialize(std::string label,
     gl.glGenQueries(static_cast<GLsizei>(start_queries_.size()), start_queries_.data());
     gl.glGenQueries(static_cast<GLsizei>(end_queries_.size()), end_queries_.data());
     query_pending_.fill(false);
+    query_sample_recording_.fill(false);
     next_query_ = 0u;
     active_query_ = 0u;
     active_ = false;
@@ -32,7 +42,6 @@ void GpuElapsedTimer::initialize(std::string label,
     window_total_ms_ = 0.0;
     group_call_count_ = 0u;
     group_total_ms_ = 0.0;
-
     if (is_initialized()) {
         std::cerr << "[GPU TIMING] " << label_ << " timestamp timing enabled.\n";
     }
@@ -40,6 +49,13 @@ void GpuElapsedTimer::initialize(std::string label,
 
 void GpuElapsedTimer::release(QOpenGLFunctions_4_5_Core& gl)
 {
+    if (active_) {
+        end(gl);
+    }
+    if (is_initialized()) {
+        collect_pending(true, gl);
+    }
+
     if (start_queries_[0] != 0u) {
         gl.glDeleteQueries(static_cast<GLsizei>(start_queries_.size()), start_queries_.data());
     }
@@ -52,6 +68,7 @@ void GpuElapsedTimer::release(QOpenGLFunctions_4_5_Core& gl)
     start_queries_.fill(0u);
     end_queries_.fill(0u);
     query_pending_.fill(false);
+    query_sample_recording_.fill(false);
     next_query_ = 0u;
     active_query_ = 0u;
     active_ = false;
@@ -77,6 +94,7 @@ bool GpuElapsedTimer::begin(QOpenGLFunctions_4_5_Core& gl) const
 
     gl.glQueryCounter(start_queries_[query_index], GL_TIMESTAMP);
     query_pending_[query_index] = true;
+    query_sample_recording_[query_index] = is_sample_recording_enabled;
     active_query_ = query_index;
     active_ = true;
     next_query_ = (next_query_ + 1u) % start_queries_.size();
@@ -95,6 +113,12 @@ void GpuElapsedTimer::end(QOpenGLFunctions_4_5_Core& gl) const
 
 void GpuElapsedTimer::collect(QOpenGLFunctions_4_5_Core& gl) const
 {
+    collect_pending(false, gl);
+}
+
+void GpuElapsedTimer::collect_pending(bool wait_for_results,
+                                      QOpenGLFunctions_4_5_Core& gl) const
+{
     if (!is_initialized()) {
         return;
     }
@@ -104,10 +128,12 @@ void GpuElapsedTimer::collect(QOpenGLFunctions_4_5_Core& gl) const
             continue;
         }
 
-        GLuint is_available = GL_FALSE;
-        gl.glGetQueryObjectuiv(end_queries_[query_index], GL_QUERY_RESULT_AVAILABLE, &is_available);
-        if (is_available == GL_FALSE) {
-            continue;
+        if (!wait_for_results) {
+            GLuint is_available = GL_FALSE;
+            gl.glGetQueryObjectuiv(end_queries_[query_index], GL_QUERY_RESULT_AVAILABLE, &is_available);
+            if (is_available == GL_FALSE) {
+                continue;
+            }
         }
 
         GLuint64 start_nanoseconds = 0u;
@@ -120,26 +146,35 @@ void GpuElapsedTimer::collect(QOpenGLFunctions_4_5_Core& gl) const
             end_nanoseconds > start_nanoseconds ? end_nanoseconds - start_nanoseconds : 0u;
         const double elapsed_ms =
             static_cast<double>(elapsed_nanoseconds) * nanoseconds_to_milliseconds;
-        ++group_call_count_;
-        group_total_ms_ += elapsed_ms;
-        if (group_call_count_ < calls_per_sample_) {
-            continue;
+        const bool should_record_sample = query_sample_recording_[query_index];
+        query_sample_recording_[query_index] = false;
+        if (should_record_sample) {
+            record_elapsed(elapsed_ms);
         }
+    }
+}
 
-        ++sample_count_;
-        ++window_sample_count_;
-        window_total_ms_ += group_total_ms_;
-        group_call_count_ = 0u;
-        group_total_ms_ = 0.0;
+void GpuElapsedTimer::record_elapsed(double elapsed_ms) const
+{
+    ++group_call_count_;
+    group_total_ms_ += elapsed_ms;
+    if (group_call_count_ < calls_per_sample_) {
+        return;
+    }
 
-        if (window_sample_count_ >= log_interval_) {
-            const double average_ms = window_total_ms_ / static_cast<double>(window_sample_count_);
-            std::cerr << "[GPU TIMING] " << label_ << " average " << average_ms
-                      << " ms over " << window_sample_count_
-                      << " samples, total samples " << sample_count_ << ".\n";
-            window_sample_count_ = 0u;
-            window_total_ms_ = 0.0;
-        }
+    ++sample_count_;
+    ++window_sample_count_;
+    window_total_ms_ += group_total_ms_;
+    group_call_count_ = 0u;
+    group_total_ms_ = 0.0;
+
+    if (window_sample_count_ >= log_interval_) {
+        const double average_ms = window_total_ms_ / static_cast<double>(window_sample_count_);
+        std::cerr << "[GPU TIMING] " << label_ << " average " << average_ms
+                  << " ms over " << window_sample_count_
+                  << " samples, total samples " << sample_count_ << ".\n";
+        window_sample_count_ = 0u;
+        window_total_ms_ = 0.0;
     }
 }
 

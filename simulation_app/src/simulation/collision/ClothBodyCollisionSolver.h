@@ -58,9 +58,7 @@ private:
     ApplyStage apply_;
 #if CLOTH_SIM_COLLISION_SOLVER_GPU_TIMING
     mutable GpuElapsedTimer vf_accumulate_timer_;
-    mutable GpuElapsedTimer ee_accumulate_timer_;
-    mutable GpuElapsedTimer bf_accumulate_timer_;
-    mutable GpuElapsedTimer apply_timer_;
+    mutable GpuElapsedTimer vf_apply_timer_;
 #endif
     float collision_thickness_ = 0.0f;
     float max_correction_length_ = 0.0f;
