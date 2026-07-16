@@ -46,6 +46,7 @@ public:
 private:
     static SimulationGpuViews collect_gpu_views(const SceneGpuState& gpu_state);
     bool update_cloth_bvh_bounds(const SimulationGpuViews& views,
+                                 float bounds_margin,
                                  QOpenGLFunctions_4_5_Core& gl) const;
     bool can_solve_constraint_iteration(const SimulationGpuViews& views) const;
 

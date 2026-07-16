@@ -18,9 +18,10 @@ inline constexpr float character_collision_thickness = 0.005f;
 inline constexpr float character_collision_max_correction_length = 0.005f;
 inline constexpr std::uint32_t ignored_body_part_mask = (1u << 6u) | (1u << 7u);
 
-inline constexpr float cloth_cloth_collision_gap = 0.003f;
+inline constexpr float cloth_cloth_collision_gap = 0.005f;
 inline constexpr float cloth_cloth_activation_margin = 0.002f;
 inline constexpr float cloth_bvh_bounds_margin = cloth_cloth_collision_gap + cloth_cloth_activation_margin;
+inline constexpr float cloth_cloth_prefit_bounds_margin = 0.012f;
 inline constexpr float cloth_cloth_barrier_stiffness = 0.8f;
 inline constexpr float cloth_cloth_penetration_tolerance = 0.0005f;
 inline constexpr float cloth_cloth_max_correction_length = 0.003f;
@@ -36,6 +37,7 @@ inline constexpr float prefit_search_radius = 0.15f;
 
 inline constexpr std::uint32_t substep_count = 8;
 inline constexpr std::uint32_t solver_iteration_count = 4;
+inline constexpr std::uint32_t cloth_cloth_detection_iteration_stride = 2;
 inline constexpr std::uint32_t prefit_iteration_count = 32;
 inline constexpr float stretch_stiffness = 0.8f;
 inline constexpr float bending_stiffness = 0.15f;
@@ -50,6 +52,7 @@ static_assert(character_collision_max_correction_length > 0.0f);
 static_assert(cloth_cloth_collision_gap > 0.0f);
 static_assert(cloth_cloth_activation_margin >= 0.0f);
 static_assert(cloth_bvh_bounds_margin >= cloth_cloth_collision_gap);
+static_assert(cloth_cloth_prefit_bounds_margin >= cloth_cloth_collision_gap);
 static_assert(cloth_cloth_barrier_stiffness >= 0.0f && cloth_cloth_barrier_stiffness <= 1.0f);
 static_assert(cloth_cloth_penetration_tolerance >= 0.0f);
 static_assert(cloth_cloth_max_correction_length > 0.0f);
@@ -58,6 +61,8 @@ static_assert(static_friction >= dynamic_friction && static_friction <= 1.0f);
 static_assert(prefit_pushout_margin > 0.0f);
 static_assert(prefit_search_radius >= prefit_pushout_margin);
 static_assert(solver_iteration_count > 0);
+static_assert(cloth_cloth_detection_iteration_stride > 0 &&
+              cloth_cloth_detection_iteration_stride <= solver_iteration_count);
 static_assert(substep_count > 0);
 static_assert(prefit_iteration_count > 0);
 static_assert(stretch_stiffness >= 0.0f && stretch_stiffness <= 1.0f);

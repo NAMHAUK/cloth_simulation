@@ -23,6 +23,7 @@ struct ShaderPaths {
     std::filesystem::path cloth_cloth_vertex_face_pair_detect_compute;
     std::filesystem::path cloth_cloth_vertex_face_pair_accumulate_compute;
     std::filesystem::path cloth_cloth_initial_layer_pair_accumulate_compute;
+    std::filesystem::path cloth_body_triangle_id_build_compute;
     std::filesystem::path cloth_cloth_collision_apply_compute;
     std::filesystem::path cloth_vertex_body_face_pair_detect_compute;
     std::filesystem::path cloth_vertex_body_face_pair_accumulate_compute;
@@ -72,6 +73,7 @@ inline ShaderPaths make_shader_paths(const std::filesystem::path& project_root)
         shader_dir / "collision" / "cloth_cloth_vertex_face_pair_detect.comp",
         shader_dir / "collision" / "cloth_cloth_vertex_face_pair_accumulate.comp",
         shader_dir / "collision" / "cloth_cloth_initial_layer_pair_accumulate.comp",
+        shader_dir / "cloth" / "setup" / "cloth_body_triangle_id_build.comp",
         shader_dir / "collision" / "cloth_cloth_collision_apply.comp",
         shader_dir / "collision" / "cloth_vertex_body_face_pair_detect.comp",
         shader_dir / "collision" / "cloth_vertex_body_face_pair_accumulate.comp",

@@ -34,6 +34,12 @@ inline bool is_valid_cloth_mesh_topology_resource(const ClothMeshTopologyResourc
            topology.triangle_count != 0;
 }
 
+inline bool is_valid_body_triangle_id_view(const ClothBodyTriangleIdBufferView& body_triangle_id_view)
+{
+    return body_triangle_id_view.body_triangle_id_buffer != 0 &&
+           body_triangle_id_view.vertex_count != 0;
+}
+
 inline bool is_valid_cloth_bvh_buffer_view(const ClothBvhBufferView& view)
 {
     return view.collision_triangle_index_buffer != 0 &&

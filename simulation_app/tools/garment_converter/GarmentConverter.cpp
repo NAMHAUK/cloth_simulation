@@ -510,6 +510,19 @@ bool read_garment_obj(const std::filesystem::path& obj_path,
         return false;
     }
 
+    std::uint32_t flipped_triangle_count = 0u;
+    if (!orient_triangle_winding_outward(vertex_count,
+                                         next_mesh.vertices,
+                                         next_mesh.bounds_center,
+                                         next_mesh.triangle_vertex_indices,
+                                         flipped_triangle_count)) {
+        return fail("Cannot orient garment triangle winding consistently.");
+    }
+    if (flipped_triangle_count > 0u) {
+        std::cout << "Oriented garment triangle winding: flipped "
+                  << flipped_triangle_count << " triangles.\n";
+    }
+
     if (!build_garment_simulation_data(next_mesh, vertex_count, attachment_type)) {
         return false;
     }

@@ -178,6 +178,10 @@ void SimulationController::add_garment_mesh(GarmentMesh mesh)
         // 새 garment 추가
         garment_placement_.clear();
         garment_placement_.garment_id = scene_.add_garment_mesh(std::move(mesh));
+        if (garment_placement_.garment_id == 0u) {
+            std::cerr << "Failed to add garment mesh.\n";
+            return;
+        }
         if (!build_cloth_triangle_bvh(garment_placement_.garment_id)) {
             std::cerr << "Failed to build cloth triangle BVH for garment id "
                       << garment_placement_.garment_id << ".\n";

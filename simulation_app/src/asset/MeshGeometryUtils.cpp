@@ -41,6 +41,17 @@ struct EdgeOppositeVertex final {
     std::uint32_t edge_opposite_vertex = 0;
 };
 
+struct TriangleEdgeUse final {
+    MeshEdge edge;
+    std::uint32_t triangle_index = 0;
+    bool follows_edge_order = false;
+};
+
+struct TriangleWindingNeighbor final {
+    std::uint32_t triangle_index = 0;
+    bool requires_opposite_flip = false;
+};
+
 bool can_add_edge(const MeshEdgeGroup& group, const MeshEdge& edge)
 {
     return group.used_vertices[edge.vertex_a] == 0u &&
@@ -66,6 +77,136 @@ void add_edge_opposite_vertex(std::vector<EdgeOppositeVertex>& edge_opposite_ver
     edge_opposite_vertices.push_back({make_edge(vertex_a, vertex_b), edge_opposite_vertex});
 }
 
+void add_triangle_edge_use(std::vector<TriangleEdgeUse>& edge_uses,
+                           std::uint32_t triangle_index,
+                           std::uint32_t vertex_a,
+                           std::uint32_t vertex_b)
+{
+    edge_uses.push_back({make_edge(vertex_a, vertex_b), triangle_index, vertex_a < vertex_b});
+}
+
+}
+
+bool orient_triangle_winding_outward(std::uint32_t vertex_count,
+                                     const std::vector<float>& vertices,
+                                     const glm::vec3& reference_point,
+                                     std::vector<std::uint32_t>& triangle_indices,
+                                     std::uint32_t& flipped_triangle_count)
+{
+    flipped_triangle_count = 0u;
+    if (vertex_count == 0u ||
+        vertices.size() != static_cast<std::size_t>(vertex_count) * vertex_position_components ||
+        triangle_indices.empty() ||
+        triangle_indices.size() % 3u != 0u) {
+        return false;
+    }
+
+    const auto triangle_count = static_cast<std::uint32_t>(triangle_indices.size() / 3u);
+    std::vector<TriangleEdgeUse> edge_uses;
+    edge_uses.reserve(triangle_indices.size());
+    for (std::uint32_t triangle_index = 0u; triangle_index < triangle_count; ++triangle_index) {
+        const std::size_t index_base = static_cast<std::size_t>(triangle_index) * 3u;
+        const std::uint32_t vertex_a = triangle_indices[index_base];
+        const std::uint32_t vertex_b = triangle_indices[index_base + 1u];
+        const std::uint32_t vertex_c = triangle_indices[index_base + 2u];
+        if (vertex_a >= vertex_count || vertex_b >= vertex_count || vertex_c >= vertex_count ||
+            vertex_a == vertex_b || vertex_b == vertex_c || vertex_c == vertex_a) {
+            return false;
+        }
+
+        add_triangle_edge_use(edge_uses, triangle_index, vertex_a, vertex_b);
+        add_triangle_edge_use(edge_uses, triangle_index, vertex_b, vertex_c);
+        add_triangle_edge_use(edge_uses, triangle_index, vertex_c, vertex_a);
+    }
+
+    std::sort(edge_uses.begin(), edge_uses.end(),
+              [](const TriangleEdgeUse& lhs, const TriangleEdgeUse& rhs) {
+                  if (!is_same_edge(lhs.edge, rhs.edge)) {
+                      return is_less_edge(lhs.edge, rhs.edge);
+                  }
+                  return lhs.triangle_index < rhs.triangle_index;
+              });
+
+    std::vector<std::vector<TriangleWindingNeighbor>> neighbors(triangle_count);
+    for (std::size_t group_begin = 0u; group_begin < edge_uses.size();) {
+        std::size_t group_end = group_begin + 1u;
+        while (group_end < edge_uses.size() &&
+               is_same_edge(edge_uses[group_begin].edge, edge_uses[group_end].edge)) {
+            ++group_end;
+        }
+
+        const std::size_t edge_use_count = group_end - group_begin;
+        if (edge_use_count == 2u) {
+            const TriangleEdgeUse& first = edge_uses[group_begin];
+            const TriangleEdgeUse& second = edge_uses[group_begin + 1u];
+            const bool requires_opposite_flip = first.follows_edge_order == second.follows_edge_order;
+            neighbors[first.triangle_index].push_back({second.triangle_index, requires_opposite_flip});
+            neighbors[second.triangle_index].push_back({first.triangle_index, requires_opposite_flip});
+        }
+
+        group_begin = group_end;
+    }
+
+    std::vector<std::int8_t> should_flip(triangle_count, -1);
+    std::vector<std::uint32_t> stack;
+    std::vector<std::uint32_t> component_triangles;
+    for (std::uint32_t root_triangle = 0u; root_triangle < triangle_count; ++root_triangle) {
+        if (should_flip[root_triangle] >= 0) {
+            continue;
+        }
+
+        should_flip[root_triangle] = 0;
+        stack.push_back(root_triangle);
+        component_triangles.clear();
+        while (!stack.empty()) {
+            const std::uint32_t triangle_index = stack.back();
+            stack.pop_back();
+            component_triangles.push_back(triangle_index);
+
+            for (const TriangleWindingNeighbor& neighbor : neighbors[triangle_index]) {
+                const std::int8_t required_flip = static_cast<std::int8_t>(
+                    should_flip[triangle_index] ^ (neighbor.requires_opposite_flip ? 1 : 0));
+                if (should_flip[neighbor.triangle_index] < 0) {
+                    should_flip[neighbor.triangle_index] = required_flip;
+                    stack.push_back(neighbor.triangle_index);
+                } else if (should_flip[neighbor.triangle_index] != required_flip) {
+                    return false;
+                }
+            }
+        }
+
+        double orientation_score = 0.0;
+        for (std::uint32_t triangle_index : component_triangles) {
+            const std::size_t index_base = static_cast<std::size_t>(triangle_index) * 3u;
+            const glm::vec3 position_a = get_vertex_position(vertices, triangle_indices[index_base]);
+            glm::vec3 position_b = get_vertex_position(vertices, triangle_indices[index_base + 1u]);
+            glm::vec3 position_c = get_vertex_position(vertices, triangle_indices[index_base + 2u]);
+            if (should_flip[triangle_index] != 0) {
+                std::swap(position_b, position_c);
+            }
+
+            const glm::vec3 area_normal = glm::cross(position_b - position_a, position_c - position_a);
+            const glm::vec3 centroid = (position_a + position_b + position_c) / 3.0f;
+            orientation_score += static_cast<double>(glm::dot(area_normal, centroid - reference_point));
+        }
+
+        if (orientation_score < 0.0) {
+            for (std::uint32_t triangle_index : component_triangles) {
+                should_flip[triangle_index] ^= 1;
+            }
+        }
+    }
+
+    for (std::uint32_t triangle_index = 0u; triangle_index < triangle_count; ++triangle_index) {
+        if (should_flip[triangle_index] == 0) {
+            continue;
+        }
+
+        const std::size_t index_base = static_cast<std::size_t>(triangle_index) * 3u;
+        std::swap(triangle_indices[index_base + 1u], triangle_indices[index_base + 2u]);
+        ++flipped_triangle_count;
+    }
+    return true;
 }
 
 // vertex position //

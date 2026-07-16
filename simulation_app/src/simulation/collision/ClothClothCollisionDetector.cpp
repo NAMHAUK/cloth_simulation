@@ -131,7 +131,7 @@ bool ClothClothCollisionDetector::initialize(const std::filesystem::path& pair_d
         return false;
     }
 
-#if CLOTH_SIM_COLLISION_GPU_TIMING
+#if CLOTH_SIM_CLOTH_CLOTH_COLLISION_GPU_TIMING
     detection_timer_.initialize("cloth-cloth vertex-face pair detection", gpu_timing_log_interval, gl);
 #endif
     return true;
@@ -171,7 +171,7 @@ void ClothClothCollisionDetector::detect(const SimulationGpuViews& views,
         return;
     }
 
-#if CLOTH_SIM_COLLISION_GPU_TIMING
+#if CLOTH_SIM_CLOTH_CLOTH_COLLISION_GPU_TIMING
     const bool gpu_timing_started = detection_timer_.begin(gl);
 #endif
     views.collision_pairs.clear_cloth_cloth_pair_counts(gl);
@@ -219,7 +219,7 @@ void ClothClothCollisionDetector::detect(const SimulationGpuViews& views,
     }
 
     build_dispatch_size(collision_pairs, gl);
-#if CLOTH_SIM_COLLISION_GPU_TIMING
+#if CLOTH_SIM_CLOTH_CLOTH_COLLISION_GPU_TIMING
     if (gpu_timing_started) {
         detection_timer_.end(gl);
     }
@@ -257,7 +257,7 @@ void ClothClothCollisionDetector::release(QOpenGLFunctions_4_5_Core& gl)
 {
     gl.glDeleteProgram(dispatch_size_.program);
     gl.glDeleteProgram(pair_detect_.program);
-#if CLOTH_SIM_COLLISION_GPU_TIMING
+#if CLOTH_SIM_CLOTH_CLOTH_COLLISION_GPU_TIMING
     detection_timer_.release(gl);
 #endif
     pair_detect_ = {};

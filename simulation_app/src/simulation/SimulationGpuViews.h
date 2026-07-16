@@ -8,6 +8,7 @@
 struct SimulationGpuViews final {
     ClothMotionBufferView cloth_motion;
     ClothCollisionPushoutBufferView cloth_collision_pushout;
+    ClothBodyTriangleIdBufferView cloth_body_triangle_ids;
     ClothMeshTopologyResources cloth_topology;
     ClothBvhBufferView cloth_bvh;
     const std::vector<GarmentBufferRanges>* garment_buffer_ranges = nullptr;

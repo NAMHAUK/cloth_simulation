@@ -8,8 +8,8 @@
 
 #include <QOpenGLFunctions_4_5_Core>
 
-#ifndef CLOTH_SIM_COLLISION_GPU_TIMING
-#define CLOTH_SIM_COLLISION_GPU_TIMING 0
+#ifndef CLOTH_SIM_CLOTH_CLOTH_COLLISION_GPU_TIMING
+#define CLOTH_SIM_CLOTH_CLOTH_COLLISION_GPU_TIMING 0
 #endif
 
 class ClothClothCollisionDetector final {
@@ -60,7 +60,7 @@ private:
 
     PairDetectionProgram pair_detect_;
     DispatchSizeProgram dispatch_size_;
-#if CLOTH_SIM_COLLISION_GPU_TIMING
+#if CLOTH_SIM_CLOTH_CLOTH_COLLISION_GPU_TIMING
     mutable GpuElapsedTimer detection_timer_;
 #endif
 };

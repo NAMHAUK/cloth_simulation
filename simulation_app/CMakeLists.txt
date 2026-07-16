@@ -128,6 +128,7 @@ add_executable(simulation_app
     shaders/collision/cloth_cloth_vertex_face_pair_detect.comp
     shaders/collision/cloth_cloth_vertex_face_pair_accumulate.comp
     shaders/collision/cloth_cloth_initial_layer_pair_accumulate.comp
+    shaders/cloth/setup/cloth_body_triangle_id_build.comp
     shaders/collision/cloth_cloth_collision_apply.comp
     shaders/collision/cloth_vertex_body_face_pair_detect.comp
     shaders/collision/cloth_vertex_body_face_pair_accumulate.comp
@@ -169,6 +170,7 @@ target_include_directories(garment_converter PRIVATE
 target_compile_definitions(simulation_app PRIVATE
     PROJECT_ROOT_DIR="${REPO_ROOT}"
     CLOTH_SIM_COLLISION_SOLVER_GPU_TIMING=1
+    $<$<CONFIG:Debug>:CLOTH_SIM_CLOTH_CLOTH_COLLISION_GPU_TIMING=1>
 )
 
 target_link_libraries(simulation_app PRIVATE
