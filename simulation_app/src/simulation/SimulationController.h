@@ -43,7 +43,7 @@ public:
     void load_default_character_mesh(CharacterMesh mesh,
                                      const std::vector<std::uint8_t>& triangle_part_labels,
                                      QOpenGLFunctions_4_5_Core& gl);
-    void add_garment_mesh(GarmentMesh mesh);
+    bool add_garment_mesh(GarmentMesh mesh);
     void set_garment_placement(const glm::vec3& position_offset, float scale);
     void confirm_garment_placement();
     void cancel_garment_placement();
@@ -59,6 +59,7 @@ public:
     bool is_default_pose() const;
     bool has_base_positions() const;
     bool has_garments() const;
+    bool can_start_garment_placement() const;
     void draw(const glm::mat4& mvp, QOpenGLFunctions_4_5_Core& gl);
     void release_gpu();
 

@@ -44,6 +44,7 @@ public:
     GarmentObject* find_garment(std::uint32_t garment_id);
     void clear_garments();
     const std::vector<GarmentObject>& garments() const;
+    bool has_multiple_garments() const;
 
     // Playback
     void update_character_frame(std::uint64_t simulation_step_count, std::uint32_t character_frame_stride);

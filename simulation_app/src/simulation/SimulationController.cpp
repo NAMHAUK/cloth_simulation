@@ -148,14 +148,19 @@ void SimulationController::set_character_mesh_state(CharacterMesh mesh, QOpenGLF
     viewport_callbacks_.reset_camera_to_character_root(scene_.character_root_position(0));
 }
 
-void SimulationController::add_garment_mesh(GarmentMesh mesh)
+bool SimulationController::add_garment_mesh(GarmentMesh mesh)
 {
     if (!is_viewport_ready()) {
         std::cerr << "Cannot add garment mesh before OpenGL initialization.\n";
-        return;
+        return false;
+    }
+    if (!can_start_garment_placement()) {
+        std::cerr << "Cannot add more than two garment meshes.\n";
+        return false;
     }
 
-    viewport_callbacks_.run_with_gl_context([this, &mesh](QOpenGLFunctions_4_5_Core& gl) {
+    bool garment_added = false;
+    viewport_callbacks_.run_with_gl_context([this, &mesh, &garment_added](QOpenGLFunctions_4_5_Core& gl) {
         // 배치중이던 garment 있으면 제거
         if (garment_placement_.garment_id != 0 && scene_.remove_garment(garment_placement_.garment_id)) {
             gpu_state_.update_garment_meshes(scene_, gl);
@@ -175,9 +180,11 @@ void SimulationController::add_garment_mesh(GarmentMesh mesh)
         gpu_state_.update_garment_meshes(scene_, gl);
         gpu_state_.clear_base_positions(gl);
         has_base_positions_ = false;
+        garment_added = true;
     });
 
     viewport_callbacks_.request_update();
+    return garment_added;
 }
 
 void SimulationController::set_current_garment_placement(QOpenGLFunctions_4_5_Core& gl)
@@ -357,6 +364,11 @@ bool SimulationController::has_base_positions() const
 bool SimulationController::has_garments() const
 {
     return !scene_.garments().empty();
+}
+
+bool SimulationController::can_start_garment_placement() const
+{
+    return garment_placement_.garment_id != 0u || !scene_.has_multiple_garments();
 }
 
 bool SimulationController::has_garment_placement_update() const

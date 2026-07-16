@@ -155,7 +155,7 @@ bool SimulationPipeline::prefit_garment(SceneState& scene,
 
     gpu_state.cloth_gpu_state().copy_current_positions_to_previous(gl);
 
-    const bool has_multiple_garments = views.garment_buffer_ranges->size() >= 2u;
+    const bool has_multiple_garments = scene.has_multiple_garments();
     if (has_multiple_garments) {
         if (!cloth_cloth_collision_detector_.can_detect(views) ||
             !cloth_cloth_collision_solver_.can_solve_initial(views)) {
@@ -195,7 +195,7 @@ bool SimulationPipeline::step(SceneState& scene, SceneGpuState& gpu_state, std::
         return false;
     }
 
-    const bool has_multiple_garments = views.cloth_bvh.garment_layouts->size() >= 2u;
+    const bool has_multiple_garments = scene.has_multiple_garments();
     const glm::vec3 external_acceleration = force_field_.external_acceleration();
     for (std::uint32_t substep = 0; substep < simulation_settings::substep_count; ++substep) {
 #if CLOTH_SIM_SUBSTEP_GPU_TIMING

@@ -185,6 +185,11 @@ const std::vector<GarmentObject>& SceneState::garments() const
     return garments_;
 }
 
+bool SceneState::has_multiple_garments() const
+{
+    return garments_.size() >= 2u;
+}
+
 // Playback // 
 void SceneState::update_character_frame(std::uint64_t simulation_step_count,
                                         std::uint32_t character_frame_stride)
