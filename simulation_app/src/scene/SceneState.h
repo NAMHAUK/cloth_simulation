@@ -16,7 +16,7 @@ struct GarmentObject {
     GarmentMesh source_mesh;
     GarmentMesh mesh;
     bool visible = true;
-    std::optional<TriangleBvhData> cloth_triangle_bvh;
+    std::optional<TriangleBvhData> garment_triangle_bvh;
 };
 
 struct CharacterFrameInterpolation final {
@@ -29,11 +29,11 @@ class SceneState final {
 public:
     // Character
     void set_character_mesh(CharacterMesh mesh);
-    void set_default_character_bvh_data(TriangleBvhData default_character_bvh_data);
+    void set_default_body_triangle_bvh_data(TriangleBvhData default_body_triangle_bvh_data);
     void set_default_body_vertex_bvh_data(VertexBvhData default_body_vertex_bvh_data);
     void set_default_body_edge_bvh_data(EdgeBvhData default_body_edge_bvh_data);
     const CharacterMesh& character_mesh() const;
-    const TriangleBvhData& default_character_bvh_data() const;
+    const TriangleBvhData& default_body_triangle_bvh_data() const;
     const VertexBvhData& default_body_vertex_bvh_data() const;
     const EdgeBvhData& default_body_edge_bvh_data() const;
 
@@ -54,7 +54,7 @@ public:
 private:
     // Character
     CharacterMesh character_mesh_;
-    TriangleBvhData default_character_bvh_data_;
+    TriangleBvhData default_body_triangle_bvh_data_;
     VertexBvhData default_body_vertex_bvh_data_;
     EdgeBvhData default_body_edge_bvh_data_;
 

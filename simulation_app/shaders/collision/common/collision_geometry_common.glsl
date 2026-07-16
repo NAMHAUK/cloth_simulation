@@ -1,6 +1,8 @@
 #ifndef COLLISION_GEOMETRY_COMMON_GLSL
 #define COLLISION_GEOMETRY_COMMON_GLSL
 
+#include "../../mesh/primitive_geometry.glsl"
+
 const float triangle_area_sq_epsilon = 1.0e-20;
 const float triangle_edge_tolerance = -1.0e-6;
 const float penetration_tolerance = 0.0005;
@@ -9,15 +11,14 @@ const float segment_parallel_tolerance = 1.0e-8;
 const float max_float = 3.402823e+38;
 
 struct SegmentState {
-    vec3 vertex0;
-    vec3 vertex1;
+    EdgePositions positions;
     float t;
     vec3 point;
 };
 
-bool compute_triangle_normal(vec3 a, vec3 b, vec3 c, out vec3 normal)
+bool compute_triangle_normal(TrianglePositions triangle, out vec3 normal)
 {
-    normal = cross(b - a, c - a);
+    normal = cross(triangle.b - triangle.a, triangle.c - triangle.a);
     float normal_length_sq = dot(normal, normal);
     if (normal_length_sq <= triangle_area_sq_epsilon) {
         return false;
@@ -51,14 +52,19 @@ bool compute_barycentric_if_inside(vec3 point, vec3 a, vec3 b, vec3 c, out vec3 
            barycentric.z >= triangle_edge_tolerance;
 }
 
+bool compute_barycentric_if_inside(vec3 point, TrianglePositions triangle, out vec3 barycentric)
+{
+    return compute_barycentric_if_inside(point, triangle.a, triangle.b, triangle.c, barycentric);
+}
+
 void update_closest_segments(float first_t,
                              float second_t,
                              inout SegmentState first,
                              inout SegmentState second,
                              inout float best_distance_sq)
 {
-    vec3 candidate_first_point = mix(first.vertex0, first.vertex1, first_t);
-    vec3 candidate_second_point = mix(second.vertex0, second.vertex1, second_t);
+    vec3 candidate_first_point = interpolate_edge_position(first.positions, first_t);
+    vec3 candidate_second_point = interpolate_edge_position(second.positions, second_t);
     vec3 candidate_delta = candidate_first_point - candidate_second_point;
     float candidate_distance_sq = dot(candidate_delta, candidate_delta);
 
@@ -73,9 +79,9 @@ void update_closest_segments(float first_t,
 
 bool closest_segment_points(inout SegmentState first, inout SegmentState second)
 {
-    vec3 first_direction = first.vertex1 - first.vertex0;
-    vec3 second_direction = second.vertex1 - second.vertex0;
-    vec3 segment_delta = first.vertex0 - second.vertex0;
+    vec3 first_direction = first.positions.b - first.positions.a;
+    vec3 second_direction = second.positions.b - second.positions.a;
+    vec3 segment_delta = first.positions.a - second.positions.a;
     float first_length_sq = dot(first_direction, first_direction);
     float second_length_sq = dot(second_direction, second_direction);
     if (first_length_sq <= segment_length_sq_epsilon ||
@@ -114,8 +120,8 @@ bool closest_segment_points(inout SegmentState first, inout SegmentState second)
         first.t = clamp((direction_dot - first_delta_dot) / first_length_sq, 0.0, 1.0);
     }
 
-    first.point = first.vertex0 + first_direction * first.t;
-    second.point = second.vertex0 + second_direction * second.t;
+    first.point = first.positions.a + first_direction * first.t;
+    second.point = second.positions.a + second_direction * second.t;
     return true;
 }
 

@@ -16,28 +16,28 @@ namespace accumulate_binding {
 constexpr GLuint cloth_current = 0;
 constexpr GLuint cloth_previous = 1;
 constexpr GLuint collision_triangles = 2;
-constexpr GLuint pair_records = 3;
-constexpr GLuint pair_count = 4;
+constexpr GLuint candidates = 3;
+constexpr GLuint candidate_count = 4;
 constexpr GLuint normal_correction_sums = 5;
-constexpr GLuint character_triangle_geometry = 6;
+constexpr GLuint body_triangle_geometry = 6;
 constexpr GLuint cloth_body_triangle_ids = 7;
 }
 
 namespace initial_accumulate_binding {
 constexpr GLuint cloth_current = 0;
 constexpr GLuint collision_triangles = 1;
-constexpr GLuint pair_records = 2;
-constexpr GLuint pair_count = 3;
+constexpr GLuint candidates = 2;
+constexpr GLuint candidate_count = 3;
 constexpr GLuint normal_correction_sums = 4;
-constexpr GLuint character_triangle_geometry = 5;
-constexpr GLuint character_bvh_nodes = 6;
+constexpr GLuint body_triangle_geometry = 5;
+constexpr GLuint body_triangle_bvh_nodes = 6;
 }
 
 namespace body_triangle_id_build_binding {
 constexpr GLuint cloth_current = 0;
 constexpr GLuint cloth_body_triangle_ids = 1;
-constexpr GLuint character_triangle_geometry = 2;
-constexpr GLuint character_bvh_nodes = 3;
+constexpr GLuint body_triangle_geometry = 2;
+constexpr GLuint body_triangle_bvh_nodes = 3;
 }
 
 namespace apply_binding {
@@ -59,9 +59,9 @@ bool has_valid_common_solve_views(const SimulationGpuViews& views)
            views.cloth_motion.vertex_count == views.cloth_collision_pushout.vertex_count &&
            is_valid_cloth_bvh_buffer_view(views.cloth_bvh) &&
            (views.cloth_bvh.garment_layouts->size() < 2u ||
-            (is_valid_triangle_geometry_resource(views.character_geometry) &&
-             is_valid_cloth_cloth_pair_buffer_view(views.collision_pairs) &&
-             views.collision_pairs.vertex_capacity >= views.cloth_motion.vertex_count));
+            (is_valid_triangle_geometry_resource(views.body_triangle_geometry) &&
+             is_valid_cloth_cloth_candidate_buffer_view(views.collision_candidates) &&
+             views.collision_candidates.vertex_capacity >= views.cloth_motion.vertex_count));
 }
 }
 
@@ -77,15 +77,15 @@ bool ClothClothCollisionSolver::initialize(const std::filesystem::path& accumula
                                            const std::filesystem::path& initial_accumulate_shader_path,
                                            const std::filesystem::path& body_triangle_id_build_shader_path,
                                            const std::filesystem::path& apply_shader_path,
-                                           float collision_gap,
-                                           float barrier_stiffness,
+                                           float collision_thickness,
+                                           float collision_stiffness,
                                            float penetration_tolerance,
                                            float max_correction_length,
                                            float surface_search_radius,
                                            QOpenGLFunctions_4_5_Core& gl)
 {
-    if (!std::isfinite(collision_gap) || collision_gap <= 0.0f ||
-        !std::isfinite(barrier_stiffness) || barrier_stiffness < 0.0f || barrier_stiffness > 1.0f ||
+    if (!std::isfinite(collision_thickness) || collision_thickness <= 0.0f ||
+        !std::isfinite(collision_stiffness) || collision_stiffness < 0.0f || collision_stiffness > 1.0f ||
         !std::isfinite(penetration_tolerance) || penetration_tolerance < 0.0f ||
         !std::isfinite(max_correction_length) || max_correction_length <= 0.0f ||
         !std::isfinite(surface_search_radius) || surface_search_radius <= 0.0f) {
@@ -95,10 +95,10 @@ bool ClothClothCollisionSolver::initialize(const std::filesystem::path& accumula
     }
 
     accumulate_.program = load_compute_program(accumulate_shader_path,
-                                               "Cloth-cloth vertex-face pair accumulation",
+                                               "Cloth-cloth vertex-face candidate accumulation",
                                                gl);
     initial_accumulate_.program = load_compute_program(initial_accumulate_shader_path,
-                                                       "Initial cloth-cloth layer pair accumulation",
+                                                       "Initial cloth-cloth layer candidate accumulation",
                                                        gl);
     body_triangle_id_build_.program = load_compute_program(body_triangle_id_build_shader_path,
                                                            "Cloth body triangle id build",
@@ -111,14 +111,14 @@ bool ClothClothCollisionSolver::initialize(const std::filesystem::path& accumula
         return false;
     }
 
-    accumulate_.max_pairs = gl.glGetUniformLocation(accumulate_.program, "uMaxPairCount");
-    accumulate_.collision_gap = gl.glGetUniformLocation(accumulate_.program, "uCollisionGap");
-    accumulate_.barrier_stiffness = gl.glGetUniformLocation(accumulate_.program, "uBarrierStiffness");
+    accumulate_.max_candidates = gl.glGetUniformLocation(accumulate_.program, "uMaxCandidateCount");
+    accumulate_.collision_thickness = gl.glGetUniformLocation(accumulate_.program, "uCollisionThickness");
+    accumulate_.collision_stiffness = gl.glGetUniformLocation(accumulate_.program, "uCollisionStiffness");
     accumulate_.penetration_tolerance = gl.glGetUniformLocation(accumulate_.program, "uPenetrationTolerance");
-    accumulate_.character_triangle_count = gl.glGetUniformLocation(accumulate_.program, "uCharacterTriangleCount");
-    initial_accumulate_.max_pairs = gl.glGetUniformLocation(initial_accumulate_.program, "uMaxPairCount");
-    initial_accumulate_.collision_gap = gl.glGetUniformLocation(initial_accumulate_.program, "uCollisionGap");
-    initial_accumulate_.barrier_stiffness = gl.glGetUniformLocation(initial_accumulate_.program, "uBarrierStiffness");
+    accumulate_.body_triangle_count = gl.glGetUniformLocation(accumulate_.program, "uBodyTriangleCount");
+    initial_accumulate_.max_candidates = gl.glGetUniformLocation(initial_accumulate_.program, "uMaxCandidateCount");
+    initial_accumulate_.collision_thickness = gl.glGetUniformLocation(initial_accumulate_.program, "uCollisionThickness");
+    initial_accumulate_.collision_stiffness = gl.glGetUniformLocation(initial_accumulate_.program, "uCollisionStiffness");
     initial_accumulate_.penetration_tolerance = gl.glGetUniformLocation(initial_accumulate_.program, "uPenetrationTolerance");
     initial_accumulate_.search_radius_squared = gl.glGetUniformLocation(initial_accumulate_.program, "uSearchRadiusSquared");
     body_triangle_id_build_.vertex_count = gl.glGetUniformLocation(body_triangle_id_build_.program, "uVertexCount");
@@ -127,10 +127,10 @@ bool ClothClothCollisionSolver::initialize(const std::filesystem::path& accumula
     apply_.max_correction = gl.glGetUniformLocation(apply_.program, "uMaxCorrectionLength");
 
     if (!are_uniform_locations_valid(
-            accumulate_.max_pairs, accumulate_.collision_gap, accumulate_.barrier_stiffness,
-            accumulate_.penetration_tolerance, accumulate_.character_triangle_count,
-            initial_accumulate_.max_pairs, initial_accumulate_.collision_gap,
-            initial_accumulate_.barrier_stiffness, initial_accumulate_.penetration_tolerance,
+            accumulate_.max_candidates, accumulate_.collision_thickness, accumulate_.collision_stiffness,
+            accumulate_.penetration_tolerance, accumulate_.body_triangle_count,
+            initial_accumulate_.max_candidates, initial_accumulate_.collision_thickness,
+            initial_accumulate_.collision_stiffness, initial_accumulate_.penetration_tolerance,
             initial_accumulate_.search_radius_squared,
             body_triangle_id_build_.vertex_count, body_triangle_id_build_.search_radius_squared,
             apply_.vertex_count, apply_.max_correction)) {
@@ -139,8 +139,8 @@ bool ClothClothCollisionSolver::initialize(const std::filesystem::path& accumula
         return false;
     }
 
-    collision_gap_ = collision_gap;
-    barrier_stiffness_ = barrier_stiffness;
+    collision_thickness_ = collision_thickness;
+    collision_stiffness_ = collision_stiffness;
     penetration_tolerance_ = penetration_tolerance;
     max_correction_length_ = max_correction_length;
     surface_search_radius_ = surface_search_radius;
@@ -165,7 +165,7 @@ bool ClothClothCollisionSolver::can_solve_initial(const SimulationGpuViews& view
     return is_initialized() &&
            has_valid_common_solve_views(views) &&
            (views.cloth_bvh.garment_layouts->size() < 2u ||
-            is_valid_triangle_bvh_resource(views.character_bvh));
+            is_valid_triangle_bvh_resource(views.body_triangle_bvh));
 }
 
 bool ClothClothCollisionSolver::can_build_body_triangle_ids(const SimulationGpuViews& views) const
@@ -174,8 +174,8 @@ bool ClothClothCollisionSolver::can_build_body_triangle_ids(const SimulationGpuV
            is_valid_motion_view(views.cloth_motion) &&
            is_valid_body_triangle_id_view(views.cloth_body_triangle_ids) &&
            views.cloth_body_triangle_ids.vertex_count == views.cloth_motion.vertex_count &&
-           is_valid_triangle_geometry_resource(views.character_geometry) &&
-           is_valid_triangle_bvh_resource(views.character_bvh);
+           is_valid_triangle_geometry_resource(views.body_triangle_geometry) &&
+           is_valid_triangle_bvh_resource(views.body_triangle_bvh);
 }
 
 bool ClothClothCollisionSolver::build_body_triangle_ids(const SimulationGpuViews& views,
@@ -193,11 +193,11 @@ bool ClothClothCollisionSolver::build_body_triangle_ids(const SimulationGpuViews
                         body_triangle_id_build_binding::cloth_body_triangle_ids,
                         views.cloth_body_triangle_ids.body_triangle_id_buffer);
     gl.glBindBufferBase(GL_SHADER_STORAGE_BUFFER,
-                        body_triangle_id_build_binding::character_triangle_geometry,
-                        views.character_geometry.triangle_geometry_buffer);
+                        body_triangle_id_build_binding::body_triangle_geometry,
+                        views.body_triangle_geometry.triangle_geometry_buffer);
     gl.glBindBufferBase(GL_SHADER_STORAGE_BUFFER,
-                        body_triangle_id_build_binding::character_bvh_nodes,
-                        views.character_bvh.node_buffer);
+                        body_triangle_id_build_binding::body_triangle_bvh_nodes,
+                        views.body_triangle_bvh.node_buffer);
     gl.glProgramUniform1ui(body_triangle_id_build_.program,
                            body_triangle_id_build_.vertex_count,
                            views.cloth_motion.vertex_count);
@@ -220,8 +220,8 @@ void ClothClothCollisionSolver::solve(const SimulationGpuViews& views,
         return;
     }
 
-    const CollisionPairBuffer& collision_pairs = views.collision_pairs.cloth_cloth_vertex_face;
-    views.collision_pairs.clear_normal_correction_sums(gl);
+    const CollisionCandidateBuffer& collision_candidates = views.collision_candidates.cloth_cloth_vertex_face;
+    views.collision_candidates.clear_normal_correction_sums(gl);
 
 #if CLOTH_SIM_COLLISION_SOLVER_GPU_TIMING
     const bool accumulate_timing_started = accumulate_timer_.begin(gl);
@@ -230,19 +230,19 @@ void ClothClothCollisionSolver::solve(const SimulationGpuViews& views,
     gl.glBindBufferBase(GL_SHADER_STORAGE_BUFFER, accumulate_binding::cloth_current, views.cloth_motion.current_position_buffer);
     gl.glBindBufferBase(GL_SHADER_STORAGE_BUFFER, accumulate_binding::cloth_previous, views.cloth_motion.previous_position_buffer);
     gl.glBindBufferBase(GL_SHADER_STORAGE_BUFFER, accumulate_binding::collision_triangles, views.cloth_bvh.collision_triangle_index_buffer);
-    gl.glBindBufferBase(GL_SHADER_STORAGE_BUFFER, accumulate_binding::pair_records, collision_pairs.pairs);
-    gl.glBindBufferBase(GL_SHADER_STORAGE_BUFFER, accumulate_binding::pair_count, collision_pairs.pair_count);
-    gl.glBindBufferBase(GL_SHADER_STORAGE_BUFFER, accumulate_binding::normal_correction_sums, views.collision_pairs.normal_correction_sum_buffer);
-    gl.glBindBufferBase(GL_SHADER_STORAGE_BUFFER, accumulate_binding::character_triangle_geometry, views.character_geometry.triangle_geometry_buffer);
+    gl.glBindBufferBase(GL_SHADER_STORAGE_BUFFER, accumulate_binding::candidates, collision_candidates.candidates);
+    gl.glBindBufferBase(GL_SHADER_STORAGE_BUFFER, accumulate_binding::candidate_count, collision_candidates.candidate_count);
+    gl.glBindBufferBase(GL_SHADER_STORAGE_BUFFER, accumulate_binding::normal_correction_sums, views.collision_candidates.normal_correction_sum_buffer);
+    gl.glBindBufferBase(GL_SHADER_STORAGE_BUFFER, accumulate_binding::body_triangle_geometry, views.body_triangle_geometry.triangle_geometry_buffer);
     gl.glBindBufferBase(GL_SHADER_STORAGE_BUFFER, accumulate_binding::cloth_body_triangle_ids, views.cloth_body_triangle_ids.body_triangle_id_buffer);
-    gl.glProgramUniform1ui(accumulate_.program, accumulate_.max_pairs, collision_pairs.capacity);
-    gl.glProgramUniform1f(accumulate_.program, accumulate_.collision_gap, collision_gap_);
-    gl.glProgramUniform1f(accumulate_.program, accumulate_.barrier_stiffness, barrier_stiffness_);
+    gl.glProgramUniform1ui(accumulate_.program, accumulate_.max_candidates, collision_candidates.capacity);
+    gl.glProgramUniform1f(accumulate_.program, accumulate_.collision_thickness, collision_thickness_);
+    gl.glProgramUniform1f(accumulate_.program, accumulate_.collision_stiffness, collision_stiffness_);
     gl.glProgramUniform1f(accumulate_.program, accumulate_.penetration_tolerance, penetration_tolerance_);
     gl.glProgramUniform1ui(accumulate_.program,
-                           accumulate_.character_triangle_count,
-                           views.character_geometry.triangle_count);
-    gl.glBindBuffer(GL_DISPATCH_INDIRECT_BUFFER, collision_pairs.dispatch_size);
+                           accumulate_.body_triangle_count,
+                           views.body_triangle_geometry.triangle_count);
+    gl.glBindBuffer(GL_DISPATCH_INDIRECT_BUFFER, collision_candidates.dispatch_size);
     gl.glDispatchComputeIndirect(0);
     gl.glBindBuffer(GL_DISPATCH_INDIRECT_BUFFER, 0);
     gl.glMemoryBarrier(GL_SHADER_STORAGE_BARRIER_BIT);
@@ -263,25 +263,25 @@ void ClothClothCollisionSolver::solve_initial(const SimulationGpuViews& views,
         return;
     }
 
-    const CollisionPairBuffer& collision_pairs = views.collision_pairs.cloth_cloth_vertex_face;
-    views.collision_pairs.clear_normal_correction_sums(gl);
+    const CollisionCandidateBuffer& collision_candidates = views.collision_candidates.cloth_cloth_vertex_face;
+    views.collision_candidates.clear_normal_correction_sums(gl);
 
     gl.glUseProgram(initial_accumulate_.program);
     gl.glBindBufferBase(GL_SHADER_STORAGE_BUFFER, initial_accumulate_binding::cloth_current, views.cloth_motion.current_position_buffer);
     gl.glBindBufferBase(GL_SHADER_STORAGE_BUFFER, initial_accumulate_binding::collision_triangles, views.cloth_bvh.collision_triangle_index_buffer);
-    gl.glBindBufferBase(GL_SHADER_STORAGE_BUFFER, initial_accumulate_binding::pair_records, collision_pairs.pairs);
-    gl.glBindBufferBase(GL_SHADER_STORAGE_BUFFER, initial_accumulate_binding::pair_count, collision_pairs.pair_count);
-    gl.glBindBufferBase(GL_SHADER_STORAGE_BUFFER, initial_accumulate_binding::normal_correction_sums, views.collision_pairs.normal_correction_sum_buffer);
-    gl.glBindBufferBase(GL_SHADER_STORAGE_BUFFER, initial_accumulate_binding::character_triangle_geometry, views.character_geometry.triangle_geometry_buffer);
-    gl.glBindBufferBase(GL_SHADER_STORAGE_BUFFER, initial_accumulate_binding::character_bvh_nodes, views.character_bvh.node_buffer);
-    gl.glProgramUniform1ui(initial_accumulate_.program, initial_accumulate_.max_pairs, collision_pairs.capacity);
-    gl.glProgramUniform1f(initial_accumulate_.program, initial_accumulate_.collision_gap, collision_gap_);
-    gl.glProgramUniform1f(initial_accumulate_.program, initial_accumulate_.barrier_stiffness, barrier_stiffness_);
+    gl.glBindBufferBase(GL_SHADER_STORAGE_BUFFER, initial_accumulate_binding::candidates, collision_candidates.candidates);
+    gl.glBindBufferBase(GL_SHADER_STORAGE_BUFFER, initial_accumulate_binding::candidate_count, collision_candidates.candidate_count);
+    gl.glBindBufferBase(GL_SHADER_STORAGE_BUFFER, initial_accumulate_binding::normal_correction_sums, views.collision_candidates.normal_correction_sum_buffer);
+    gl.glBindBufferBase(GL_SHADER_STORAGE_BUFFER, initial_accumulate_binding::body_triangle_geometry, views.body_triangle_geometry.triangle_geometry_buffer);
+    gl.glBindBufferBase(GL_SHADER_STORAGE_BUFFER, initial_accumulate_binding::body_triangle_bvh_nodes, views.body_triangle_bvh.node_buffer);
+    gl.glProgramUniform1ui(initial_accumulate_.program, initial_accumulate_.max_candidates, collision_candidates.capacity);
+    gl.glProgramUniform1f(initial_accumulate_.program, initial_accumulate_.collision_thickness, collision_thickness_);
+    gl.glProgramUniform1f(initial_accumulate_.program, initial_accumulate_.collision_stiffness, collision_stiffness_);
     gl.glProgramUniform1f(initial_accumulate_.program, initial_accumulate_.penetration_tolerance, penetration_tolerance_);
     gl.glProgramUniform1f(initial_accumulate_.program,
                           initial_accumulate_.search_radius_squared,
                           surface_search_radius_ * surface_search_radius_);
-    gl.glBindBuffer(GL_DISPATCH_INDIRECT_BUFFER, collision_pairs.dispatch_size);
+    gl.glBindBuffer(GL_DISPATCH_INDIRECT_BUFFER, collision_candidates.dispatch_size);
     gl.glDispatchComputeIndirect(0);
     gl.glBindBuffer(GL_DISPATCH_INDIRECT_BUFFER, 0);
     gl.glMemoryBarrier(GL_SHADER_STORAGE_BARRIER_BIT);
@@ -298,7 +298,7 @@ void ClothClothCollisionSolver::apply_corrections(const SimulationGpuViews& view
     gl.glUseProgram(apply_.program);
     gl.glBindBufferBase(GL_SHADER_STORAGE_BUFFER, apply_binding::cloth_current, views.cloth_motion.current_position_buffer);
     gl.glBindBufferBase(GL_SHADER_STORAGE_BUFFER, apply_binding::collision_pushouts, views.cloth_collision_pushout.collision_pushout_buffer);
-    gl.glBindBufferBase(GL_SHADER_STORAGE_BUFFER, apply_binding::normal_correction_sums, views.collision_pairs.normal_correction_sum_buffer);
+    gl.glBindBufferBase(GL_SHADER_STORAGE_BUFFER, apply_binding::normal_correction_sums, views.collision_candidates.normal_correction_sum_buffer);
     gl.glProgramUniform1ui(apply_.program, apply_.vertex_count, views.cloth_motion.vertex_count);
     gl.glProgramUniform1f(apply_.program, apply_.max_correction, max_correction_length_);
     gl.glDispatchCompute(compute_group_count(views.cloth_motion.vertex_count, apply_local_size), 1, 1);
@@ -324,8 +324,8 @@ void ClothClothCollisionSolver::release(QOpenGLFunctions_4_5_Core& gl)
     initial_accumulate_ = {};
     body_triangle_id_build_ = {};
     apply_ = {};
-    collision_gap_ = 0.0f;
-    barrier_stiffness_ = 0.0f;
+    collision_thickness_ = 0.0f;
+    collision_stiffness_ = 0.0f;
     penetration_tolerance_ = 0.0f;
     max_correction_length_ = 0.0f;
     surface_search_radius_ = 0.0f;

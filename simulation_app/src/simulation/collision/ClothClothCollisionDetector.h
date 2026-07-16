@@ -19,7 +19,7 @@ public:
     ClothClothCollisionDetector& operator=(const ClothClothCollisionDetector&) = delete;
 
     bool is_initialized() const;
-    bool initialize(const std::filesystem::path& pair_detect_shader_path,
+    bool initialize(const std::filesystem::path& candidate_detect_shader_path,
                     const std::filesystem::path& dispatch_size_shader_path,
                     QOpenGLFunctions_4_5_Core& gl);
     bool can_detect(const SimulationGpuViews& views) const;
@@ -30,35 +30,35 @@ public:
     void release(QOpenGLFunctions_4_5_Core& gl);
 
 private:
-    struct PairDetectionProgram final {
+    struct CandidateDetectionProgram final {
         GLuint program = 0;
-        GLint higher_vertex_offset = -1;
-        GLint higher_vertex_count = -1;
-        GLint higher_triangle_offset = -1;
-        GLint higher_bvh_node_offset = -1;
+        GLint upper_vertex_offset = -1;
+        GLint upper_vertex_count = -1;
+        GLint upper_triangle_offset = -1;
+        GLint upper_bvh_node_offset = -1;
         GLint lower_vertex_offset = -1;
         GLint lower_vertex_count = -1;
         GLint lower_triangle_offset = -1;
         GLint lower_bvh_node_offset = -1;
-        GLint max_pairs = -1;
+        GLint max_candidates = -1;
     };
 
     struct DispatchSizeProgram final {
         GLuint program = 0;
-        GLint max_pairs = -1;
+        GLint max_candidates = -1;
         GLint local_size = -1;
     };
 
-    void detect_pair(const GarmentBufferRanges& higher_range,
-                     const GarmentBvhLayout& higher_layout,
+    void detect_pair(const GarmentBufferRanges& upper_range,
+                     const GarmentBvhLayout& upper_layout,
                      const GarmentBufferRanges& lower_range,
                      const GarmentBvhLayout& lower_layout,
-                     const CollisionPairBuffer& collision_pairs,
+                     const CollisionCandidateBuffer& collision_candidates,
                      QOpenGLFunctions_4_5_Core& gl) const;
-    void build_dispatch_size(const CollisionPairBuffer& collision_pairs,
+    void build_dispatch_size(const CollisionCandidateBuffer& collision_candidates,
                              QOpenGLFunctions_4_5_Core& gl) const;
 
-    PairDetectionProgram pair_detect_;
+    CandidateDetectionProgram candidate_detect_;
     DispatchSizeProgram dispatch_size_;
 #if CLOTH_SIM_CLOTH_CLOTH_COLLISION_GPU_TIMING
     mutable GpuElapsedTimer detection_timer_;

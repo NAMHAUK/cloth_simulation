@@ -36,7 +36,7 @@ public:
 
     bool is_initialized() const;
     bool initialize(const ShaderPaths& shader_paths, QOpenGLFunctions_4_5_Core& gl);
-    bool prefit_garments(SceneState& scene,
+    bool prefit_garment(SceneState& scene,
                          SceneGpuState& gpu_state,
                          std::uint32_t garment_id,
                          QOpenGLFunctions_4_5_Core& gl);

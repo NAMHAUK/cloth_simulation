@@ -1,12 +1,12 @@
 #pragma once
 
-#include "gpu/body/CharacterGpuStateUpdater.h"
-#include "gpu/body/CharacterGpuResources.h"
-#include "gpu/bvh/CharacterBvhBoundsUpdater.h"
+#include "gpu/character/CharacterGpuStateUpdater.h"
+#include "gpu/character/CharacterGpuResources.h"
+#include "gpu/bvh/BodyBvhBoundsUpdater.h"
 #include "gpu/cloth/ClothBvhResources.h"
 #include "gpu/cloth/ClothGpuResources.h"
 #include "gpu/scene/AttachmentTargetBuilder.h"
-#include "gpu/scene/CollisionPairBuffers.h"
+#include "gpu/scene/CollisionCandidateBuffers.h"
 #include "gpu/scene/NormalUpdater.h"
 #include "scene/SceneState.h"
 
@@ -35,7 +35,7 @@ public:
 
     const ClothGpuResources& cloth_gpu_state() const;
     ClothBvhBufferView cloth_bvh_buffer_view() const;
-    CollisionPairBufferView collision_pair_buffer_view() const;
+    CollisionCandidateBufferView collision_candidate_buffer_view() const;
     void update_garment_meshes(const SceneState& scene, QOpenGLFunctions_4_5_Core& gl);
     bool update_garment_placement(const GarmentObject& garment,
                                   bool update_rest_lengths,
@@ -49,12 +49,12 @@ public:
 
 private:
     CharacterGpuResources character_gpu_state_;
-    CharacterBvhBoundsUpdater bvh_bounds_updater_;
+    BodyBvhBoundsUpdater bvh_bounds_updater_;
     NormalUpdater normal_updater_;
     CharacterGpuStateUpdater character_gpu_state_updater_;
     ClothGpuResources cloth_gpu_state_;
     ClothBvhResources cloth_bvh_resources_;
-    CollisionPairBuffers collision_pair_buffers_;
+    CollisionCandidateBuffers collision_candidate_buffers_;
     AttachmentTargetBuilder attachment_target_builder_;
 
     bool initialized_ = false;

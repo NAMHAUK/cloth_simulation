@@ -1,6 +1,6 @@
 #pragma once
 
-#include "gpu/body/CharacterGpuDataTypes.h"
+#include "gpu/character/CharacterGpuDataTypes.h"
 #include "gpu/cloth/ClothGpuDataTypes.h"
 
 #include <filesystem>
@@ -19,10 +19,10 @@ public:
     bool initialize(const std::filesystem::path& shader_path, float stiffness, QOpenGLFunctions_4_5_Core& gl);
     bool can_solve(const ClothMotionBufferView& motion_view,
                    const AttachmentConstraintBufferView& constraint_view,
-                   const TriangleGeometryResources& character_geometry) const;
+                   const TriangleGeometryResources& body_triangle_geometry) const;
     void solve(const ClothMotionBufferView& motion_view,
                const AttachmentConstraintBufferView& constraint_view,
-               const TriangleGeometryResources& character_geometry,
+               const TriangleGeometryResources& body_triangle_geometry,
                QOpenGLFunctions_4_5_Core& gl) const;
     void release(QOpenGLFunctions_4_5_Core& gl);
 

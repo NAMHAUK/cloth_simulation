@@ -46,7 +46,7 @@ public:
     void release(QOpenGLFunctions_4_5_Core& gl);
 
 private:
-    void rebuild_garment_buffers(const std::vector<GarmentObject>& garments, QOpenGLFunctions_4_5_Core& gl);
+    void rebuild_buffers(const std::vector<GarmentObject>& garments, QOpenGLFunctions_4_5_Core& gl);
     void replace_with_rebuild_buffers(ClothBufferSet rebuild_buffer_set,
                                       std::vector<GarmentBufferRanges> rebuild_ranges,
                                       std::vector<ElementRange> rebuild_stretch_color_ranges,

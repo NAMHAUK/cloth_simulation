@@ -8,15 +8,10 @@ layout(std430, binding = 0) buffer CurrentPositions {
     float cloth_current_positions[];
 };
 
-struct CharacterTriangleGeometry {
-    vec4 a;
-    vec4 b;
-    vec4 c;
-    vec4 normal;
-};
+#include "../../mesh/primitive_geometry.glsl"
 
-layout(std430, binding = 2) readonly buffer CharacterTriangleGeometryBuffer {
-    CharacterTriangleGeometry triangle_geometry[];
+layout(std430, binding = 2) readonly buffer BodyTriangleGeometryBuffer {
+    TriangleGeometry triangle_geometry[];
 };
 
 layout(std430, binding = 3) readonly buffer BvhNodeBuffer {
@@ -31,7 +26,7 @@ uniform float uPushoutMargin;
 
 #define POSITION_IO_CLOTH_CURRENT
 #include "../../mesh/position_io.glsl"
-#include "../../character/character_mesh_search.glsl"
+#include "../../body/body_mesh_search.glsl"
 
 void store_cloth_position(uint vertex_index, vec3 position)
 {
@@ -51,8 +46,8 @@ void main()
 
     vec3 cloth_position = read_cloth_current_position(cloth_vertex_index);
 
-    NearestCharacterSurface nearest_surface;
-    if (!find_nearest_character_surface(cloth_position, uSearchRadiusSquared, nearest_surface)) {
+    NearestBodySurface nearest_surface;
+    if (!find_nearest_body_surface(cloth_position, uSearchRadiusSquared, nearest_surface)) {
         return;
     }
 

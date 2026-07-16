@@ -1,6 +1,6 @@
 #pragma once
 
-#include "gpu/body/CharacterGpuDataTypes.h"
+#include "gpu/character/CharacterGpuDataTypes.h"
 #include "gpu/cloth/ClothGpuDataTypes.h"
 
 #include <filesystem>
@@ -20,12 +20,12 @@ public:
                     QOpenGLFunctions_4_5_Core& gl);
     bool can_solve(const ClothMotionBufferView& motion_view,
                    const GarmentBufferRanges& garment_range,
-                   const TriangleGeometryResources& character_geometry,
-                   const TriangleBvhResources& character_bvh) const;
+                   const TriangleGeometryResources& body_triangle_geometry,
+                   const TriangleBvhResources& body_triangle_bvh) const;
     void solve(const ClothMotionBufferView& motion_view,
                const GarmentBufferRanges& garment_range,
-               const TriangleGeometryResources& character_geometry,
-               const TriangleBvhResources& character_bvh,
+               const TriangleGeometryResources& body_triangle_geometry,
+               const TriangleBvhResources& body_triangle_bvh,
                QOpenGLFunctions_4_5_Core& gl) const;
     void release(QOpenGLFunctions_4_5_Core& gl);
 

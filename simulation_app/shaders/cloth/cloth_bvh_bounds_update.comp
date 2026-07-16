@@ -44,8 +44,8 @@ void update_leaf_bounds(uint packed_node_index, BvhNode node)
 
     for (uint triangle_offset = 0u; triangle_offset < node.element_count; ++triangle_offset) {
         uint local_triangle_index = node.first_element_index + triangle_offset;
-        uint packed_triangle_index = uCollisionTriangleOffset + local_triangle_index;
-        uint index_base = packed_triangle_index * 3u;
+        uint global_triangle_index = uCollisionTriangleOffset + local_triangle_index;
+        uint index_base = global_triangle_index * 3u;
 
         uint vertex_a = uVertexOffset + collision_triangle_indices[index_base];
         uint vertex_b = uVertexOffset + collision_triangle_indices[index_base + 1u];
@@ -63,25 +63,23 @@ void update_leaf_bounds(uint packed_node_index, BvhNode node)
         vec3 triangle_max_bounds = max(max(current_a, max(current_b, current_c)),
                                        max(previous_a, max(previous_b, previous_c))) + uBoundsMargin;
 
-        triangle_bounds[packed_triangle_index].min_bounds = vec4(triangle_min_bounds, 0.0);
-        triangle_bounds[packed_triangle_index].max_bounds = vec4(triangle_max_bounds, 0.0);
+        triangle_bounds[global_triangle_index].min_bounds = vec4(triangle_min_bounds, 0.0);
+        triangle_bounds[global_triangle_index].max_bounds = vec4(triangle_max_bounds, 0.0);
         leaf_min_bounds = min(leaf_min_bounds, triangle_min_bounds);
         leaf_max_bounds = max(leaf_max_bounds, triangle_max_bounds);
     }
 
-    bvh_nodes[packed_node_index].min_bounds = vec4(leaf_min_bounds, 0.0);
-    bvh_nodes[packed_node_index].max_bounds = vec4(leaf_max_bounds, node.max_bounds.w);
+    bvh_nodes[packed_node_index].bounds = Aabb(vec4(leaf_min_bounds, 0.0), vec4(leaf_max_bounds, node.bounds.max_bounds.w));
 }
 
 void update_internal_bounds(uint packed_node_index, BvhNode node)
 {
     BvhNode left_child = bvh_nodes[uBvhNodeOffset + node.left_child_index];
     BvhNode right_child = bvh_nodes[uBvhNodeOffset + node.right_child_index];
-    vec3 min_bounds = min(left_child.min_bounds.xyz, right_child.min_bounds.xyz);
-    vec3 max_bounds = max(left_child.max_bounds.xyz, right_child.max_bounds.xyz);
+    vec3 min_bounds = min(left_child.bounds.min_bounds.xyz, right_child.bounds.min_bounds.xyz);
+    vec3 max_bounds = max(left_child.bounds.max_bounds.xyz, right_child.bounds.max_bounds.xyz);
 
-    bvh_nodes[packed_node_index].min_bounds = vec4(min_bounds, 0.0);
-    bvh_nodes[packed_node_index].max_bounds = vec4(max_bounds, node.max_bounds.w);
+    bvh_nodes[packed_node_index].bounds = Aabb(vec4(min_bounds, 0.0), vec4(max_bounds, node.bounds.max_bounds.w));
 }
 
 void main()

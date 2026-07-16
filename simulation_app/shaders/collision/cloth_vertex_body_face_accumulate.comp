@@ -10,23 +10,18 @@ layout(std430, binding = 1) readonly buffer ClothPreviousPositions {
     float cloth_previous_positions[];
 };
 
-struct CharacterTriangleGeometry {
-    vec4 a;
-    vec4 b;
-    vec4 c;
-    vec4 normal;
+#include "../mesh/primitive_geometry.glsl"
+
+layout(std430, binding = 2) readonly buffer BodyTriangleGeometryBuffer {
+    TriangleGeometry triangle_geometry[];
 };
 
-layout(std430, binding = 2) readonly buffer CharacterTriangleGeometryBuffer {
-    CharacterTriangleGeometry triangle_geometry[];
+layout(std430, binding = 3) readonly buffer Candidates {
+    uvec2 candidates[];
 };
 
-layout(std430, binding = 3) readonly buffer PairRecords {
-    uvec2 pair_records[];
-};
-
-layout(std430, binding = 4) readonly buffer PairCount {
-    uint pair_count;
+layout(std430, binding = 4) readonly buffer CandidateCount {
+    uint candidate_count;
 };
 
 layout(std430, binding = 5) buffer NormalCorrectionSums {
@@ -49,7 +44,7 @@ layout(std430, binding = 9) readonly buffer CollisionPushouts {
     vec4 collision_pushouts[];
 };
 
-uniform uint uMaxPairCount;
+uniform uint uMaxCandidateCount;
 uniform float uCollisionThickness;
 
 #define POSITION_IO_CLOTH_CURRENT
@@ -73,21 +68,21 @@ bool compute_vertex_triangle_contact(uint cloth_vertex_id,
                                      uint triangle_index,
                                      out VertexFaceContact contact)
 {
-    CharacterTriangleGeometry body_triangle = triangle_geometry[triangle_index];
+    TriangleGeometry body_triangle = triangle_geometry[triangle_index];
     vec3 current_cloth_position = read_cloth_current_position(cloth_vertex_id);
-    vec3 body_a = body_triangle.a.xyz;
-    vec3 body_b = body_triangle.b.xyz;
-    vec3 body_c = body_triangle.c.xyz;
+    TrianglePositions current_body = TrianglePositions(body_triangle.a.xyz,
+                                                       body_triangle.b.xyz,
+                                                       body_triangle.c.xyz);
     vec3 body_normal = body_triangle.normal.xyz;
 
-    float current_signed_distance = dot(current_cloth_position - body_a, body_normal);
+    float current_signed_distance = dot(current_cloth_position - current_body.a, body_normal);
     float penetration_depth = uCollisionThickness - current_signed_distance - penetration_tolerance;
     if (penetration_depth <= 0.0) {
         return false;
     }
 
     vec3 previous_cloth_position = read_cloth_previous_position(cloth_vertex_id);
-    float previous_signed_distance = dot(previous_cloth_position - body_a, body_normal);
+    float previous_signed_distance = dot(previous_cloth_position - current_body.a, body_normal);
     vec3 barycentric;
 
     bool has_swept_contact = false;
@@ -96,16 +91,12 @@ bool compute_vertex_triangle_contact(uint cloth_vertex_id,
         float hit_time = (uCollisionThickness - previous_signed_distance) / signed_distance_delta;
         vec3 swept_cloth_position = mix(previous_cloth_position, current_cloth_position, hit_time);
         vec3 swept_surface_position = swept_cloth_position - body_normal * uCollisionThickness;
-        has_swept_contact = compute_barycentric_if_inside(swept_surface_position,
-                                                          body_a,
-                                                          body_b,
-                                                          body_c,
-                                                          barycentric);
+        has_swept_contact = compute_barycentric_if_inside(swept_surface_position, current_body, barycentric);
     }
 
     if (!has_swept_contact) {
         vec3 current_surface_position = current_cloth_position - body_normal * current_signed_distance;
-        if (!compute_barycentric_if_inside(current_surface_position, body_a, body_b, body_c, barycentric)) {
+        if (!compute_barycentric_if_inside(current_surface_position, current_body, barycentric)) {
             return false;
         }
     }
@@ -114,12 +105,9 @@ bool compute_vertex_triangle_contact(uint cloth_vertex_id,
     uvec3 body_triangle_vertices = uvec3(body_triangle_indices[body_triangle_index_base],
                                          body_triangle_indices[body_triangle_index_base + 1u],
                                          body_triangle_indices[body_triangle_index_base + 2u]);
-    vec3 previous_body_contact = read_body_previous_position(body_triangle_vertices.x) * barycentric.x
-                               + read_body_previous_position(body_triangle_vertices.y) * barycentric.y
-                               + read_body_previous_position(body_triangle_vertices.z) * barycentric.z;
-    vec3 current_body_contact = body_a * barycentric.x
-                              + body_b * barycentric.y
-                              + body_c * barycentric.z;
+    TrianglePositions previous_body = read_body_previous_triangle(body_triangle_vertices);
+    vec3 previous_body_contact = interpolate_triangle_position(previous_body, barycentric);
+    vec3 current_body_contact = interpolate_triangle_position(current_body, barycentric);
     vec3 cloth_delta = current_cloth_position - previous_cloth_position - collision_pushouts[cloth_vertex_id].xyz;
     vec3 body_delta = current_body_contact - previous_body_contact;
 
@@ -139,15 +127,15 @@ void accumulate_contact(uint cloth_vertex_id, VertexFaceContact contact)
 
 void main()
 {
-    uint pair_index = gl_GlobalInvocationID.x;
-    uint active_pair_count = min(pair_count, uMaxPairCount);
-    if (pair_index >= active_pair_count) {
+    uint candidate_index = gl_GlobalInvocationID.x;
+    uint active_candidate_count = min(candidate_count, uMaxCandidateCount);
+    if (candidate_index >= active_candidate_count) {
         return;
     }
 
-    uvec2 pair_record = pair_records[pair_index];
+    uvec2 candidate = candidates[candidate_index];
     VertexFaceContact contact;
-    if (compute_vertex_triangle_contact(pair_record.x, pair_record.y, contact)) {
-        accumulate_contact(pair_record.x, contact);
+    if (compute_vertex_triangle_contact(candidate.x, candidate.y, contact)) {
+        accumulate_contact(candidate.x, contact);
     }
 }

@@ -24,12 +24,12 @@ layout(std430, binding = 4) readonly buffer BvhNodes {
     BvhNode body_edge_bvh_nodes[];
 };
 
-layout(std430, binding = 7) buffer PairRecords {
-    uvec2 pair_records[];
+layout(std430, binding = 7) buffer Candidates {
+    uvec2 candidates[];
 };
 
-layout(std430, binding = 8) buffer PairCount {
-    uint pair_count;
+layout(std430, binding = 8) buffer CandidateCount {
+    uint candidate_count;
 };
 
 layout(std430, binding = 9) buffer OverflowCount {
@@ -37,17 +37,17 @@ layout(std430, binding = 9) buffer OverflowCount {
 };
 
 uniform uint uEdgeCount;
-uniform uint uMaxPairCount;
+uniform uint uMaxCandidateCount;
 uniform uint uIgnoredBodyPartMask;
 
 const uint max_bvh_stack_depth = 32u;
 const uint bvh_root_node = 0u;
-const uint group_pair_capacity = 512u;
+const uint group_candidate_capacity = 512u;
 
 #define POSITION_IO_CLOTH_CURRENT
 #define POSITION_IO_CLOTH_PREVIOUS
 #include "../mesh/position_io.glsl"
-#include "common/collision_pair_output.glsl"
+#include "common/collision_candidate_output.glsl"
 
 Aabb build_cloth_edge_swept_aabb(uint cloth_edge_id)
 {
@@ -73,7 +73,7 @@ Aabb build_body_edge_swept_aabb(uint body_edge_id)
 void main()
 {
     if (gl_LocalInvocationIndex == 0u) {
-        group_pair_count = 0u;
+        group_candidate_count = 0u;
     }
     barrier();
 
@@ -92,7 +92,7 @@ void main()
                 continue;
             }
 
-            if (!overlaps_aabb(cloth_swept_bounds, current_node.min_bounds, current_node.max_bounds)) {
+            if (!overlaps_aabb(cloth_swept_bounds, current_node.bounds)) {
                 continue;
             }
 
@@ -100,8 +100,8 @@ void main()
                 for (uint edge_offset = 0u; edge_offset < current_node.element_count; ++edge_offset) {
                     uint body_edge_id = current_node.first_element_index + edge_offset;
                     Aabb body_bounds = build_body_edge_swept_aabb(body_edge_id);
-                    if (overlaps_aabb(cloth_swept_bounds, body_bounds.min_bounds, body_bounds.max_bounds)) {
-                        append_pair(uvec2(cloth_edge_id, body_edge_id));
+                    if (overlaps_aabb(cloth_swept_bounds, body_bounds)) {
+                        append_candidate(uvec2(cloth_edge_id, body_edge_id));
                     }
                 }
             } else {
@@ -111,5 +111,5 @@ void main()
         }
     }
 
-    flush_group_pairs();
+    flush_group_candidates();
 }

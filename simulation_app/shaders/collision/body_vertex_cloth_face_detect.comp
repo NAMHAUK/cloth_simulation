@@ -28,12 +28,12 @@ layout(std430, binding = 5) readonly buffer BodyVertexBounds {
     Aabb body_vertex_bounds[];
 };
 
-layout(std430, binding = 7) buffer PairRecords {
-    uvec2 pair_records[];
+layout(std430, binding = 7) buffer Candidates {
+    uvec2 candidates[];
 };
 
-layout(std430, binding = 8) buffer PairCount {
-    uint pair_count;
+layout(std430, binding = 8) buffer CandidateCount {
+    uint candidate_count;
 };
 
 layout(std430, binding = 9) buffer OverflowCount {
@@ -41,17 +41,17 @@ layout(std430, binding = 9) buffer OverflowCount {
 };
 
 uniform uint uTriangleCount;
-uniform uint uMaxPairCount;
+uniform uint uMaxCandidateCount;
 uniform uint uIgnoredBodyPartMask;
 
 const uint max_bvh_stack_depth = 32u;
 const uint bvh_root_node = 0u;
-const uint group_pair_capacity = 512u;
+const uint group_candidate_capacity = 512u;
 
 #define POSITION_IO_CLOTH_CURRENT
 #define POSITION_IO_CLOTH_PREVIOUS
 #include "../mesh/position_io.glsl"
-#include "common/collision_pair_output.glsl"
+#include "common/collision_candidate_output.glsl"
 
 Aabb build_cloth_triangle_swept_aabb(uint cloth_triangle_id)
 {
@@ -82,7 +82,7 @@ Aabb build_body_vertex_swept_aabb(uint body_vertex_id)
 void main()
 {
     if (gl_LocalInvocationIndex == 0u) {
-        group_pair_count = 0u;
+        group_candidate_count = 0u;
     }
     barrier();
 
@@ -102,7 +102,7 @@ void main()
                 continue;
             }
 
-            if (!overlaps_aabb(cloth_swept_bounds, current_node.min_bounds, current_node.max_bounds)) {
+            if (!overlaps_aabb(cloth_swept_bounds, current_node.bounds)) {
                 continue;
             }
 
@@ -110,11 +110,11 @@ void main()
                 for (uint vertex_offset = 0u; vertex_offset < current_node.element_count; ++vertex_offset) {
                     uint body_vertex_id = body_vertex_ids[current_node.first_element_index + vertex_offset];
                     Aabb body_bounds = build_body_vertex_swept_aabb(body_vertex_id);
-                    if (!overlaps_aabb(cloth_swept_bounds, body_bounds.min_bounds, body_bounds.max_bounds)) {
+                    if (!overlaps_aabb(cloth_swept_bounds, body_bounds)) {
                         continue;
                     }
 
-                    append_pair(uvec2(cloth_triangle_id, body_vertex_id));
+                    append_candidate(uvec2(cloth_triangle_id, body_vertex_id));
                 }
             } else {
                 node_index_stack[stack_count++] = current_node.left_child_index;
@@ -123,5 +123,5 @@ void main()
         }
     }
 
-    flush_group_pairs();
+    flush_group_candidates();
 }

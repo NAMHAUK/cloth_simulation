@@ -140,7 +140,7 @@ std::uint32_t find_best_part_label_split_mask(const std::vector<BvhPrimitive>& p
                                               std::size_t end,
                                               std::uint32_t part_label_mask)
 {
-    std::array<PartLabelStats, character_part_label_count> stats_by_label;
+    std::array<PartLabelStats, body_part_label_count> stats_by_label;
     for (std::size_t primitive_index = begin; primitive_index < end; ++primitive_index) {
         const BvhPrimitive& primitive = primitives[primitive_index];
         PartLabelStats& stats = stats_by_label[primitive.part_label];
@@ -326,8 +326,10 @@ void write_level_ordered_bvh_data(std::uint32_t source_root_node,
         for (const std::uint32_t build_node_index : current_level_node_indices) {
             const auto& build_node = build_nodes[build_node_index];
             BvhNode& node = result_nodes.emplace_back();
-            node.min_bounds = glm::vec4(build_node.min_bounds, 0.0f);
-            node.max_bounds = glm::vec4(build_node.max_bounds, static_cast<float>(build_node.part_label_mask));
+            node.bounds = {
+                glm::vec4(build_node.min_bounds, 0.0f),
+                glm::vec4(build_node.max_bounds, static_cast<float>(build_node.part_label_mask))
+            };
 
             if (build_node.element_count > 0u) {
                 node.first_element_index = build_node.first_element_index;

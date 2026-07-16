@@ -29,11 +29,11 @@ bool build_packed_data(const std::vector<GarmentObject>& garments, PackedClothBv
     packed_data.garment_layouts.reserve(garments.size());
 
     for (const GarmentObject& garment : garments) {
-        if (!garment.cloth_triangle_bvh.has_value()) {
+        if (!garment.garment_triangle_bvh.has_value()) {
             return false;
         }
 
-        const TriangleBvhData& bvh = *garment.cloth_triangle_bvh;
+        const TriangleBvhData& bvh = *garment.garment_triangle_bvh;
         const std::size_t triangle_count = bvh.triangle_indices.size() / triangle_vertex_count;
         if (!can_append(packed_data.triangle_count, triangle_count) ||
             !can_append(packed_data.node_count, bvh.nodes.size())) {

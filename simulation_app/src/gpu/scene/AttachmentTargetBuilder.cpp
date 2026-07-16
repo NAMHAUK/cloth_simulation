@@ -10,8 +10,8 @@ namespace {
 constexpr GLuint current_positions_binding = 0;
 constexpr GLuint attachment_indices_binding = 1;
 constexpr GLuint attachment_barycentric_offsets_binding = 2;
-constexpr GLuint character_triangle_geometry_binding = 3;
-constexpr GLuint character_bvh_node_binding = 4;
+constexpr GLuint body_triangle_geometry_binding = 3;
+constexpr GLuint body_triangle_bvh_node_binding = 4;
 constexpr std::uint32_t attachment_target_local_size = 128;
 constexpr float attachment_surface_offset = 0.005f;
 
@@ -56,24 +56,24 @@ bool AttachmentTargetBuilder::initialize(const std::filesystem::path& shader_pat
 bool AttachmentTargetBuilder::can_build(const ClothMotionBufferView& motion_view,
                                         const AttachmentConstraintBufferView& attachment_view,
                                         const ElementRange& target_range,
-                                        const TriangleGeometryResources& character_geometry,
-                                        const TriangleBvhResources& character_bvh) const
+                                        const TriangleGeometryResources& body_triangle_geometry,
+                                        const TriangleBvhResources& body_triangle_bvh) const
 {
     return is_initialized() &&
            is_valid_motion_view(motion_view) &&
            is_valid_attachment_target_range(attachment_view, target_range) &&
-           is_valid_triangle_geometry_resource(character_geometry) &&
-           is_valid_triangle_bvh_resource(character_bvh);
+           is_valid_triangle_geometry_resource(body_triangle_geometry) &&
+           is_valid_triangle_bvh_resource(body_triangle_bvh);
 }
 
 bool AttachmentTargetBuilder::build(const ClothMotionBufferView& motion_view,
                                     const AttachmentConstraintBufferView& attachment_view,
                                     const ElementRange& target_range,
-                                    const TriangleGeometryResources& character_geometry,
-                                    const TriangleBvhResources& character_bvh,
+                                    const TriangleGeometryResources& body_triangle_geometry,
+                                    const TriangleBvhResources& body_triangle_bvh,
                                     QOpenGLFunctions_4_5_Core& gl) const
 {
-    if (!can_build(motion_view, attachment_view, target_range, character_geometry, character_bvh)) {
+    if (!can_build(motion_view, attachment_view, target_range, body_triangle_geometry, body_triangle_bvh)) {
         return false;
     }
 
@@ -81,8 +81,8 @@ bool AttachmentTargetBuilder::build(const ClothMotionBufferView& motion_view,
     gl.glBindBufferBase(GL_SHADER_STORAGE_BUFFER, current_positions_binding, motion_view.current_position_buffer);
     gl.glBindBufferBase(GL_SHADER_STORAGE_BUFFER, attachment_indices_binding, attachment_view.attachment_index_buffer);
     gl.glBindBufferBase(GL_SHADER_STORAGE_BUFFER, attachment_barycentric_offsets_binding, attachment_view.barycentric_offset_buffer);
-    gl.glBindBufferBase(GL_SHADER_STORAGE_BUFFER, character_triangle_geometry_binding, character_geometry.triangle_geometry_buffer);
-    gl.glBindBufferBase(GL_SHADER_STORAGE_BUFFER, character_bvh_node_binding, character_bvh.node_buffer);
+    gl.glBindBufferBase(GL_SHADER_STORAGE_BUFFER, body_triangle_geometry_binding, body_triangle_geometry.triangle_geometry_buffer);
+    gl.glBindBufferBase(GL_SHADER_STORAGE_BUFFER, body_triangle_bvh_node_binding, body_triangle_bvh.node_buffer);
 
     gl.glProgramUniform1ui(program_, constraint_offset_location_, target_range.offset);
     gl.glProgramUniform1ui(program_, constraint_count_location_, target_range.count);

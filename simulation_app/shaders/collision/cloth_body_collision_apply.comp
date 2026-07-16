@@ -43,13 +43,10 @@ void main()
         return;
     }
 
-    float inverse_accumulation_scale =
-        1.0 / (correction_fixed_point_scale * float(accumulated.w));
-    vec3 final_normal_correction =
-        clamp_correction(vec3(accumulated.xyz) * inverse_accumulation_scale);
-    vec3 final_friction_correction =
-        clamp_friction_correction(final_normal_correction,
-                                  vec3(friction_correction_sums[vertex_index].xyz) * inverse_accumulation_scale);
+    float inverse_accumulation_scale = 1.0 / (correction_fixed_point_scale * float(accumulated.w));
+    vec3 final_normal_correction = clamp_correction(vec3(accumulated.xyz) * inverse_accumulation_scale);
+    vec3 final_friction_correction = clamp_friction_correction(final_normal_correction,
+                                                               vec3(friction_correction_sums[vertex_index].xyz) * inverse_accumulation_scale);
 
     apply_position_correction(vertex_index, final_normal_correction, final_friction_correction);
 }

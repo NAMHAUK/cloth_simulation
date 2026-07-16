@@ -9,7 +9,7 @@ struct CharacterBufferSet final {
     GLuint previous_position = 0;
     GLuint current_position = 0;
     GLuint triangle_index = 0;
-    GLuint character_bvh_node = 0;
+    GLuint body_triangle_bvh_node = 0;
     GLuint body_triangle_bounds = 0;
     GLuint body_vertex_bvh_node = 0;
     GLuint body_vertex_bvh_vertex_id = 0;

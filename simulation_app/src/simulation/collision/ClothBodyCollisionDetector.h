@@ -1,6 +1,6 @@
 #pragma once
 
-#include "gpu/scene/CollisionPairBuffers.h"
+#include "gpu/scene/CollisionCandidateBuffers.h"
 #include "simulation/SimulationGpuViews.h"
 #include "utils/GpuElapsedTimer.h"
 
@@ -32,39 +32,39 @@ public:
     void release(QOpenGLFunctions_4_5_Core& gl);
 
 private:
-    struct PairDetectionProgram final {
+    struct CandidateDetectionProgram final {
         GLuint program = 0;
         GLint item_count = -1;
-        GLint max_pairs = -1;
+        GLint max_candidates = -1;
         GLint ignored_body_part_mask = -1;
     };
 
     struct DispatchSizeProgram final {
         GLuint program = 0;
-        GLint max_pairs = -1;
+        GLint max_candidates = -1;
         GLint local_size = -1;
     };
 
-    void detect_cloth_vertex_body_face_collision_pairs(const ClothMotionBufferView& motion_view,
-                                                       const TriangleBvhResources& character_bvh,
-                                                       const CollisionPairBuffer& collision_pairs,
+    void detect_cloth_vertex_body_face_collision_candidates(const ClothMotionBufferView& motion_view,
+                                                       const TriangleBvhResources& body_triangle_bvh,
+                                                       const CollisionCandidateBuffer& collision_candidates,
                                                        QOpenGLFunctions_4_5_Core& gl) const;
-    void detect_cloth_edge_body_edge_collision_pairs(const ClothMotionBufferView& motion_view,
+    void detect_cloth_edge_body_edge_collision_candidates(const ClothMotionBufferView& motion_view,
                                                      const DistanceConstraintBufferView& cloth_edges,
                                                      const EdgeBvhResources& body_edge_bvh,
-                                                     const CollisionPairBuffer& collision_pairs,
+                                                     const CollisionCandidateBuffer& collision_candidates,
                                                      QOpenGLFunctions_4_5_Core& gl) const;
-    void detect_cloth_face_body_vertex_collision_pairs(const ClothMotionBufferView& motion_view,
+    void detect_cloth_face_body_vertex_collision_candidates(const ClothMotionBufferView& motion_view,
                                                        const ClothMeshTopologyResources& cloth_topology,
                                                        const VertexBvhResources& body_vertex_bvh,
-                                                       const CollisionPairBuffer& collision_pairs,
+                                                       const CollisionCandidateBuffer& collision_candidates,
                                                        QOpenGLFunctions_4_5_Core& gl) const;
-    void build_dispatch_size(const CollisionPairBuffer& collision_pairs, QOpenGLFunctions_4_5_Core& gl) const;
+    void build_dispatch_size(const CollisionCandidateBuffer& collision_candidates, QOpenGLFunctions_4_5_Core& gl) const;
     bool has_programs() const;
 
-    PairDetectionProgram cloth_vertex_body_face_;
-    PairDetectionProgram cloth_edge_body_edge_;
-    PairDetectionProgram cloth_face_body_vertex_;
+    CandidateDetectionProgram cloth_vertex_body_face_;
+    CandidateDetectionProgram cloth_edge_body_edge_;
+    CandidateDetectionProgram cloth_face_body_vertex_;
     DispatchSizeProgram dispatch_size_;
 #if CLOTH_SIM_COLLISION_GPU_TIMING
     mutable GpuElapsedTimer cloth_vertex_body_face_timer_;

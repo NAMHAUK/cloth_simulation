@@ -26,12 +26,12 @@ layout(std430, binding = 5) readonly buffer BodyEdgeIndices {
     uint body_edge_indices[];
 };
 
-layout(std430, binding = 6) readonly buffer PairRecords {
-    uvec2 pair_records[];
+layout(std430, binding = 6) readonly buffer Candidates {
+    uvec2 candidates[];
 };
 
-layout(std430, binding = 7) readonly buffer PairCount {
-    uint pair_count;
+layout(std430, binding = 7) readonly buffer CandidateCount {
+    uint candidate_count;
 };
 
 layout(std430, binding = 8) buffer NormalCorrectionSums {
@@ -46,7 +46,7 @@ layout(std430, binding = 10) readonly buffer CollisionPushouts {
     vec4 collision_pushouts[];
 };
 
-uniform uint uMaxPairCount;
+uniform uint uMaxCandidateCount;
 uniform float uCollisionThickness;
 
 const float ccd_parallel_epsilon = 1.0e-8;
@@ -70,23 +70,21 @@ struct EdgeContact {
     float depth;
 };
 
-bool compute_pair_contact(uint pair_index, out uvec2 cloth_vertices, out EdgeContact contact)
+bool compute_candidate_contact(uint candidate_index, out uvec2 cloth_vertices, out EdgeContact contact)
 {
-    uvec2 pair_record = pair_records[pair_index];
-    uint cloth_edge_base = pair_record.x * 2u;
-    uint body_edge_base = pair_record.y * 2u;
+    uvec2 candidate = candidates[candidate_index];
+    uint cloth_edge_base = candidate.x * 2u;
+    uint body_edge_base = candidate.y * 2u;
     cloth_vertices = uvec2(cloth_edge_indices[cloth_edge_base],
                            cloth_edge_indices[cloth_edge_base + 1u]);
     uvec2 body_vertices = uvec2(body_edge_indices[body_edge_base],
                                 body_edge_indices[body_edge_base + 1u]);
 
-    vec3 current_cloth_a = read_cloth_current_position(cloth_vertices.x);
-    vec3 current_cloth_b = read_cloth_current_position(cloth_vertices.y);
-    vec3 current_body_a = read_body_current_position(body_vertices.x);
-    vec3 current_body_b = read_body_current_position(body_vertices.y);
+    EdgePositions current_cloth = read_cloth_current_edge(cloth_vertices);
+    EdgePositions current_body = read_body_current_edge(body_vertices);
 
-    SegmentState current_cloth_segment = SegmentState(current_cloth_a, current_cloth_b, 0.0, current_cloth_a);
-    SegmentState current_body_segment = SegmentState(current_body_a, current_body_b, 0.0, current_body_a);
+    SegmentState current_cloth_segment = SegmentState(current_cloth, 0.0, current_cloth.a);
+    SegmentState current_body_segment = SegmentState(current_body, 0.0, current_body.a);
     if (!closest_segment_points(current_cloth_segment, current_body_segment)) {
         return false;
     }
@@ -99,13 +97,11 @@ bool compute_pair_contact(uint pair_index, out uvec2 cloth_vertices, out EdgeCon
         return false;
     }
 
-    vec3 previous_cloth_a = read_cloth_previous_position(cloth_vertices.x);
-    vec3 previous_cloth_b = read_cloth_previous_position(cloth_vertices.y);
-    vec3 previous_body_a = read_body_previous_position(body_vertices.x);
-    vec3 previous_body_b = read_body_previous_position(body_vertices.y);
+    EdgePositions previous_cloth = read_cloth_previous_edge(cloth_vertices);
+    EdgePositions previous_body = read_body_previous_edge(body_vertices);
 
-    SegmentState previous_cloth_segment = SegmentState(previous_cloth_a, previous_cloth_b, 0.0, previous_cloth_a);
-    SegmentState previous_body_segment = SegmentState(previous_body_a, previous_body_b, 0.0, previous_body_a);
+    SegmentState previous_cloth_segment = SegmentState(previous_cloth, 0.0, previous_cloth.a);
+    SegmentState previous_body_segment = SegmentState(previous_body, 0.0, previous_body.a);
     if (!closest_segment_points(previous_cloth_segment, previous_body_segment)) {
         return false;
     }
@@ -136,9 +132,9 @@ bool compute_pair_contact(uint pair_index, out uvec2 cloth_vertices, out EdgeCon
                                        collision_pushouts[cloth_vertices.y].xyz,
                                        current_cloth_segment.t);
     vec3 cloth_delta = current_cloth_segment.point
-                     - mix(previous_cloth_a, previous_cloth_b, current_cloth_segment.t)
+                     - interpolate_edge_position(previous_cloth, current_cloth_segment.t)
                      - cloth_collision_pushout;
-    vec3 body_delta = current_body_segment.point - mix(previous_body_a, previous_body_b, current_body_segment.t);
+    vec3 body_delta = current_body_segment.point - interpolate_edge_position(previous_body, current_body_segment.t);
     contact.friction_correction = compute_friction_correction(normal, cloth_delta, body_delta);
     contact.depth = uCollisionThickness - current_signed_distance - penetration_tolerance;
     return true;
@@ -161,15 +157,15 @@ void accumulate_contact_for_vertex(uint vertex_index,
 
 void main()
 {
-    uint pair_index = gl_GlobalInvocationID.x;
-    uint active_pair_count = min(pair_count, uMaxPairCount);
-    if (pair_index >= active_pair_count) {
+    uint candidate_index = gl_GlobalInvocationID.x;
+    uint active_candidate_count = min(candidate_count, uMaxCandidateCount);
+    if (candidate_index >= active_candidate_count) {
         return;
     }
 
     uvec2 cloth_vertices;
     EdgeContact contact;
-    if (!compute_pair_contact(pair_index, cloth_vertices, contact)) {
+    if (!compute_candidate_contact(candidate_index, cloth_vertices, contact)) {
         return;
     }
 

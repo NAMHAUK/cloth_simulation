@@ -831,7 +831,7 @@ bool rebuild_buffer_data(const std::vector<BufferRebuildGarmentData>& rebuild_ga
 
         if (old_iter == old_garments.end() ||
             !copy_dynamic_state_buffers(*old_iter, buffer_ranges, old_buffer_set, rebuild_buffer_set, gl)) {
-            std::cerr << "Cannot rebuild garment position buffers for garment id " << buffer_ranges.id << ".\n";
+            std::cerr << "Cannot rebuild cloth position data for garment id " << buffer_ranges.id << ".\n";
             return false;
         }
 
@@ -843,7 +843,7 @@ bool rebuild_buffer_data(const std::vector<BufferRebuildGarmentData>& rebuild_ga
                                             rebuild_buffer_set,
                                             copied_attachment_target_count,
                                             gl)) {
-            std::cerr << "Cannot rebuild garment attachment target buffers for garment id " << buffer_ranges.id << ".\n";
+            std::cerr << "Cannot rebuild cloth attachment target data for garment id " << buffer_ranges.id << ".\n";
             return false;
         }
         if (copied_attachment_target_count > 0u) {
@@ -930,7 +930,7 @@ void ClothGpuResources::update_garment_buffers(const std::vector<GarmentObject>&
     }
     if (needs_buffer_rebuild) {
         //남길 garments 정보만 새로운 buffer에 재배치
-        rebuild_garment_buffers(garments, gl);
+        rebuild_buffers(garments, gl);
         return;
     }
 
@@ -1068,7 +1068,7 @@ void ClothGpuResources::clear_base_positions(QOpenGLFunctions_4_5_Core& gl)
     base_position_vertex_count_ = 0;
 }
 
-void ClothGpuResources::rebuild_garment_buffers(const std::vector<GarmentObject>& garments, QOpenGLFunctions_4_5_Core& gl)
+void ClothGpuResources::rebuild_buffers(const std::vector<GarmentObject>& garments, QOpenGLFunctions_4_5_Core& gl)
 {
     std::vector<BufferRebuildGarmentData> rebuild_garments;
     ClothBufferElementCounts rebuild_element_counts;

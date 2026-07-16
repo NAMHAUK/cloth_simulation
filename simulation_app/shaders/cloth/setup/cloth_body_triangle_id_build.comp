@@ -12,18 +12,13 @@ layout(std430, binding = 1) writeonly buffer ClothBodyTriangleIds {
     uint cloth_body_triangle_ids[];
 };
 
-struct CharacterTriangleGeometry {
-    vec4 a;
-    vec4 b;
-    vec4 c;
-    vec4 normal;
+#include "../../mesh/primitive_geometry.glsl"
+
+layout(std430, binding = 2) readonly buffer BodyTriangleGeometryBuffer {
+    TriangleGeometry triangle_geometry[];
 };
 
-layout(std430, binding = 2) readonly buffer CharacterTriangleGeometryBuffer {
-    CharacterTriangleGeometry triangle_geometry[];
-};
-
-layout(std430, binding = 3) readonly buffer CharacterBvhNodeBuffer {
+layout(std430, binding = 3) readonly buffer BodyTriangleBvhNodeBuffer {
     BvhNode bvh_nodes[];
 };
 
@@ -34,7 +29,7 @@ const uint invalid_triangle_id = 0xffffffffu;
 
 #define POSITION_IO_CLOTH_CURRENT
 #include "../../mesh/position_io.glsl"
-#include "../../character/character_mesh_search.glsl"
+#include "../../body/body_mesh_search.glsl"
 
 void main()
 {
@@ -44,8 +39,8 @@ void main()
     }
 
     vec3 cloth_position = read_cloth_current_position(vertex_index);
-    NearestCharacterSurface nearest_surface;
-    bool has_surface = find_nearest_character_surface(cloth_position, uSearchRadiusSquared, nearest_surface);
+    NearestBodySurface nearest_surface;
+    bool has_surface = find_nearest_body_surface(cloth_position, uSearchRadiusSquared, nearest_surface);
     cloth_body_triangle_ids[vertex_index] = has_surface ? nearest_surface.triangle_index
                                                         : invalid_triangle_id;
 }

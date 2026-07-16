@@ -20,12 +20,12 @@ layout(std430, binding = 3) readonly buffer BvhNodeBuffer {
     BvhNode bvh_nodes[];
 };
 
-layout(std430, binding = 4) buffer PairRecords {
-    uvec2 pair_records[];
+layout(std430, binding = 4) buffer Candidates {
+    uvec2 candidates[];
 };
 
-layout(std430, binding = 5) buffer PairCount {
-    uint pair_count;
+layout(std430, binding = 5) buffer CandidateCount {
+    uint candidate_count;
 };
 
 layout(std430, binding = 6) buffer OverflowCount {
@@ -33,17 +33,17 @@ layout(std430, binding = 6) buffer OverflowCount {
 };
 
 uniform uint uClothVertexCount;
-uniform uint uMaxPairCount;
+uniform uint uMaxCandidateCount;
 uniform uint uIgnoredBodyPartMask;
 
 const uint max_bvh_stack_depth = 32u;
 const uint bvh_root_node = 0u;
-const uint group_pair_capacity = 512u;
+const uint group_candidate_capacity = 512u;
 
 #define POSITION_IO_CLOTH_CURRENT
 #define POSITION_IO_CLOTH_PREVIOUS
 #include "../mesh/position_io.glsl"
-#include "common/collision_pair_output.glsl"
+#include "common/collision_candidate_output.glsl"
 
 Aabb build_swept_vertex_aabb(vec3 previous_position, vec3 current_position)
 {
@@ -58,7 +58,7 @@ Aabb build_body_triangle_aabb(uint triangle_index)
 void main()
 {
     if (gl_LocalInvocationIndex == 0u) {
-        group_pair_count = 0u;
+        group_candidate_count = 0u;
     }
     barrier();
 
@@ -79,7 +79,7 @@ void main()
                 continue;
             }
 
-            if (!overlaps_aabb(query_bounds, current_node.min_bounds, current_node.max_bounds)) {
+            if (!overlaps_aabb(query_bounds, current_node.bounds)) {
                 continue;
             }
 
@@ -91,8 +91,8 @@ void main()
                     }
 
                     Aabb triangle_bounds = build_body_triangle_aabb(triangle_index);
-                    if (overlaps_aabb(query_bounds, triangle_bounds.min_bounds, triangle_bounds.max_bounds)) {
-                        append_pair(uvec2(cloth_vertex_id, triangle_index));
+                    if (overlaps_aabb(query_bounds, triangle_bounds)) {
+                        append_candidate(uvec2(cloth_vertex_id, triangle_index));
                     }
                 }
             } else {
@@ -102,5 +102,5 @@ void main()
         }
     }
 
-    flush_group_pairs();
+    flush_group_candidates();
 }

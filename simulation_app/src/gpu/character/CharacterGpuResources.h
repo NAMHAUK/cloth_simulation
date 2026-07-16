@@ -1,7 +1,7 @@
 #pragma once
 
 #include "asset/AssetDataTypes.h"
-#include "gpu/body/CharacterGpuDataTypes.h"
+#include "gpu/character/CharacterGpuDataTypes.h"
 #include "gpu/bvh/BvhDataTypes.h"
 
 #include <cstdint>
@@ -19,7 +19,7 @@ public:
 
     // Mesh upload and playback
     void upload_mesh(const CharacterMesh& character_mesh,
-                     const TriangleBvhData& default_character_bvh_data,
+                     const TriangleBvhData& default_body_triangle_bvh_data,
                      const VertexBvhData& default_body_vertex_bvh_data,
                      const EdgeBvhData& default_body_edge_bvh_data,
                      QOpenGLFunctions_4_5_Core& gl);
@@ -39,7 +39,7 @@ public:
     CharacterVertexBufferView character_vertex_buffer_view() const;
     TriangleGeometryResources character_triangle_geometry_resources() const;
     CharacterNormalResources mesh_normal_resources() const;
-    TriangleBvhResources character_bvh_resources() const;
+    TriangleBvhResources body_triangle_bvh_resources() const;
     VertexBvhResources body_vertex_bvh_resources() const;
     EdgeBvhResources body_edge_bvh_resources() const;
 
@@ -66,8 +66,8 @@ private:
     // Mesh triangle and adjacent triangle data
     std::uint32_t triangle_count_ = 0;
 
-    // Character BVH data
-    std::uint32_t bvh_node_count_ = 0;
+    // Body collision BVH data
+    std::uint32_t body_triangle_bvh_node_count_ = 0;
     std::uint32_t body_vertex_bvh_node_count_ = 0;
     std::uint32_t body_edge_bvh_node_count_ = 0;
     std::uint32_t body_edge_count_ = 0;

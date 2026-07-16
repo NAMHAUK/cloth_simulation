@@ -6,18 +6,13 @@ layout(local_size_x = 128) in;
 
 const float max_float = 3.402823e+38;
 
-struct CharacterTriangleGeometry {
-    vec4 a;
-    vec4 b;
-    vec4 c;
-    vec4 normal;
+#include "../mesh/primitive_geometry.glsl"
+
+layout(std430, binding = 0) readonly buffer BodyTriangleGeometryBuffer {
+    TriangleGeometry triangle_geometry[];
 };
 
-layout(std430, binding = 0) readonly buffer CharacterTriangleGeometryBuffer {
-    CharacterTriangleGeometry triangle_geometry[];
-};
-
-layout(std430, binding = 1) readonly buffer CharacterTriangleIndices {
+layout(std430, binding = 1) readonly buffer BodyTriangleIndices {
     uint triangle_indices[];
 };
 
@@ -29,7 +24,7 @@ layout(std430, binding = 3) readonly buffer BodyPreviousPositions {
     float body_previous_positions[];
 };
 
-layout(std430, binding = 4) buffer CharacterBvhNodes {
+layout(std430, binding = 4) buffer BodyTriangleBvhNodes {
     BvhNode body_triangle_bvh_nodes[];
 };
 
@@ -84,7 +79,7 @@ void update_triangle_leaf_bounds(uint node_index, BvhNode node)
         vec3 previous_b = read_body_previous_position(triangle_indices[index_base + 1u]);
         vec3 previous_c = read_body_previous_position(triangle_indices[index_base + 2u]);
 
-        CharacterTriangleGeometry triangle = triangle_geometry[triangle_index];
+        TriangleGeometry triangle = triangle_geometry[triangle_index];
         vec3 current_a = triangle.a.xyz;
         vec3 current_b = triangle.b.xyz;
         vec3 current_c = triangle.c.xyz;
@@ -97,19 +92,18 @@ void update_triangle_leaf_bounds(uint node_index, BvhNode node)
         max_bounds = max(max_bounds, max(max(previous_a, max(previous_b, previous_c)), current_max_bounds));
     }
 
-    body_triangle_bvh_nodes[node_index].min_bounds = vec4(min_bounds - uCollisionThickness, 0.0);
-    body_triangle_bvh_nodes[node_index].max_bounds = vec4(max_bounds + uCollisionThickness, node.max_bounds.w);
+    body_triangle_bvh_nodes[node_index].bounds = Aabb(vec4(min_bounds - uCollisionThickness, 0.0),
+                                                      vec4(max_bounds + uCollisionThickness, node.bounds.max_bounds.w));
 }
 
 void update_triangle_internal_bounds(uint node_index, BvhNode node)
 {
-    vec3 min_bounds = min(body_triangle_bvh_nodes[node.left_child_index].min_bounds.xyz,
-                          body_triangle_bvh_nodes[node.right_child_index].min_bounds.xyz);
-    vec3 max_bounds = max(body_triangle_bvh_nodes[node.left_child_index].max_bounds.xyz,
-                          body_triangle_bvh_nodes[node.right_child_index].max_bounds.xyz);
+    vec3 min_bounds = min(body_triangle_bvh_nodes[node.left_child_index].bounds.min_bounds.xyz,
+                          body_triangle_bvh_nodes[node.right_child_index].bounds.min_bounds.xyz);
+    vec3 max_bounds = max(body_triangle_bvh_nodes[node.left_child_index].bounds.max_bounds.xyz,
+                          body_triangle_bvh_nodes[node.right_child_index].bounds.max_bounds.xyz);
 
-    body_triangle_bvh_nodes[node_index].min_bounds = vec4(min_bounds, 0.0);
-    body_triangle_bvh_nodes[node_index].max_bounds = vec4(max_bounds, node.max_bounds.w);
+    body_triangle_bvh_nodes[node_index].bounds = Aabb(vec4(min_bounds, 0.0), vec4(max_bounds, node.bounds.max_bounds.w));
 }
 
 void update_vertex_leaf_bounds(uint node_index, BvhNode node)
@@ -128,19 +122,18 @@ void update_vertex_leaf_bounds(uint node_index, BvhNode node)
         max_bounds = max(max_bounds, vertex_max_bounds);
     }
 
-    body_vertex_bvh_nodes[node_index].min_bounds = vec4(min_bounds - uCollisionThickness, 0.0);
-    body_vertex_bvh_nodes[node_index].max_bounds = vec4(max_bounds + uCollisionThickness, node.max_bounds.w);
+    body_vertex_bvh_nodes[node_index].bounds = Aabb(vec4(min_bounds - uCollisionThickness, 0.0),
+                                                    vec4(max_bounds + uCollisionThickness, node.bounds.max_bounds.w));
 }
 
 void update_vertex_internal_bounds(uint node_index, BvhNode node)
 {
-    vec3 min_bounds = min(body_vertex_bvh_nodes[node.left_child_index].min_bounds.xyz,
-                          body_vertex_bvh_nodes[node.right_child_index].min_bounds.xyz);
-    vec3 max_bounds = max(body_vertex_bvh_nodes[node.left_child_index].max_bounds.xyz,
-                          body_vertex_bvh_nodes[node.right_child_index].max_bounds.xyz);
+    vec3 min_bounds = min(body_vertex_bvh_nodes[node.left_child_index].bounds.min_bounds.xyz,
+                          body_vertex_bvh_nodes[node.right_child_index].bounds.min_bounds.xyz);
+    vec3 max_bounds = max(body_vertex_bvh_nodes[node.left_child_index].bounds.max_bounds.xyz,
+                          body_vertex_bvh_nodes[node.right_child_index].bounds.max_bounds.xyz);
 
-    body_vertex_bvh_nodes[node_index].min_bounds = vec4(min_bounds, 0.0);
-    body_vertex_bvh_nodes[node_index].max_bounds = vec4(max_bounds, node.max_bounds.w);
+    body_vertex_bvh_nodes[node_index].bounds = Aabb(vec4(min_bounds, 0.0), vec4(max_bounds, node.bounds.max_bounds.w));
 }
 
 void update_edge_leaf_bounds(uint node_index, BvhNode node)
@@ -164,19 +157,20 @@ void update_edge_leaf_bounds(uint node_index, BvhNode node)
         max_bounds = max(max_bounds, edge_max_bounds);
     }
 
-    body_edge_bvh_nodes[node_index].min_bounds = vec4(min_bounds - uCollisionThickness, 0.0);
-    body_edge_bvh_nodes[node_index].max_bounds = vec4(max_bounds + uCollisionThickness, node.max_bounds.w);
+    body_edge_bvh_nodes[node_index].bounds =
+        Aabb(vec4(min_bounds - uCollisionThickness, 0.0),
+             vec4(max_bounds + uCollisionThickness, node.bounds.max_bounds.w));
 }
 
 void update_edge_internal_bounds(uint node_index, BvhNode node)
 {
-    vec3 min_bounds = min(body_edge_bvh_nodes[node.left_child_index].min_bounds.xyz,
-                          body_edge_bvh_nodes[node.right_child_index].min_bounds.xyz);
-    vec3 max_bounds = max(body_edge_bvh_nodes[node.left_child_index].max_bounds.xyz,
-                          body_edge_bvh_nodes[node.right_child_index].max_bounds.xyz);
+    vec3 min_bounds = min(body_edge_bvh_nodes[node.left_child_index].bounds.min_bounds.xyz,
+                          body_edge_bvh_nodes[node.right_child_index].bounds.min_bounds.xyz);
+    vec3 max_bounds = max(body_edge_bvh_nodes[node.left_child_index].bounds.max_bounds.xyz,
+                          body_edge_bvh_nodes[node.right_child_index].bounds.max_bounds.xyz);
 
-    body_edge_bvh_nodes[node_index].min_bounds = vec4(min_bounds, 0.0);
-    body_edge_bvh_nodes[node_index].max_bounds = vec4(max_bounds, node.max_bounds.w);
+    body_edge_bvh_nodes[node_index].bounds =
+        Aabb(vec4(min_bounds, 0.0), vec4(max_bounds, node.bounds.max_bounds.w));
 }
 
 void update_triangle_bounds(uint local_node_index)

@@ -1,6 +1,6 @@
 #pragma once
 
-#include "gpu/body/CharacterGpuDataTypes.h"
+#include "gpu/character/CharacterGpuDataTypes.h"
 #include "gpu/bvh/BvhDataTypes.h"
 #include "utils/GpuElapsedTimer.h"
 
@@ -9,18 +9,18 @@
 
 #include <QOpenGLFunctions_4_5_Core>
 
-class CharacterBvhBoundsUpdater final {
+class BodyBvhBoundsUpdater final {
 public:
-    CharacterBvhBoundsUpdater() = default;
-    CharacterBvhBoundsUpdater(const CharacterBvhBoundsUpdater&) = delete;
-    CharacterBvhBoundsUpdater& operator=(const CharacterBvhBoundsUpdater&) = delete;
+    BodyBvhBoundsUpdater() = default;
+    BodyBvhBoundsUpdater(const BodyBvhBoundsUpdater&) = delete;
+    BodyBvhBoundsUpdater& operator=(const BodyBvhBoundsUpdater&) = delete;
 
     bool is_initialized() const;
     bool initialize(const std::filesystem::path& shader_path, QOpenGLFunctions_4_5_Core& gl);
     void update(const CharacterMeshTopologyResources& topology,
                 const CharacterVertexBufferView& vertex_view,
-                const TriangleGeometryResources& character_geometry,
-                const TriangleBvhResources& character_bvh,
+                const TriangleGeometryResources& body_triangle_geometry,
+                const TriangleBvhResources& body_triangle_bvh,
                 const VertexBvhResources& body_vertex_bvh,
                 const EdgeBvhResources& body_edge_bvh,
                 const std::vector<BvhNodeRange>& triangle_node_ranges_by_level,
@@ -33,8 +33,8 @@ public:
 private:
     bool can_update(const CharacterMeshTopologyResources& topology,
                     const CharacterVertexBufferView& vertex_view,
-                    const TriangleGeometryResources& character_geometry,
-                    const TriangleBvhResources& character_bvh,
+                    const TriangleGeometryResources& body_triangle_geometry,
+                    const TriangleBvhResources& body_triangle_bvh,
                     const VertexBvhResources& body_vertex_bvh,
                     const EdgeBvhResources& body_edge_bvh,
                     const std::vector<BvhNodeRange>& triangle_node_ranges_by_level,

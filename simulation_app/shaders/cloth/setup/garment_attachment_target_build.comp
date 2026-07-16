@@ -16,15 +16,10 @@ layout(std430, binding = 2) writeonly buffer AttachmentBarycentricOffsets {
     vec4 barycentric_offsets[];
 };
 
-struct CharacterTriangleGeometry {
-    vec4 a;
-    vec4 b;
-    vec4 c;
-    vec4 normal;
-};
+#include "../../mesh/primitive_geometry.glsl"
 
-layout(std430, binding = 3) readonly buffer CharacterTriangleGeometryBuffer {
-    CharacterTriangleGeometry triangle_geometry[];
+layout(std430, binding = 3) readonly buffer BodyTriangleGeometryBuffer {
+    TriangleGeometry triangle_geometry[];
 };
 
 layout(std430, binding = 4) readonly buffer BvhNodeBuffer {
@@ -39,7 +34,7 @@ uniform float uSurfaceOffset;
 
 #define POSITION_IO_CLOTH_CURRENT
 #include "../../mesh/position_io.glsl"
-#include "../../character/character_mesh_search.glsl"
+#include "../../body/body_mesh_search.glsl"
 
 vec3 barycentric_on_triangle(uint triangle_index, vec3 point)
 {
@@ -71,8 +66,8 @@ void main()
     uint cloth_vertex_index = attachment_indices[constraint_index].x;
     vec3 cloth_position = read_cloth_current_position(cloth_vertex_index);
 
-    NearestCharacterSurface nearest_surface;
-    bool has_surface = find_nearest_character_surface(cloth_position, max_float, nearest_surface);
+    NearestBodySurface nearest_surface;
+    bool has_surface = find_nearest_body_surface(cloth_position, max_float, nearest_surface);
 
     attachment_indices[constraint_index] = uvec2(cloth_vertex_index, nearest_surface.triangle_index);
     barycentric_offsets[constraint_index] = has_surface

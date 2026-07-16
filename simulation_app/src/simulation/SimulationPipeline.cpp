@@ -61,8 +61,6 @@ bool SimulationPipeline::initialize(const ShaderPaths& shader_paths, QOpenGLFunc
 {
     substep_dt_ = simulation_settings::fixed_dt / static_cast<float>(simulation_settings::substep_count);
 
-    const float floor_height = simulation_settings::ground_y + simulation_settings::ground_collision_offset;
-    
     const bool solvers_initialized =
         cloth_bvh_bounds_updater_.initialize(shader_paths.cloth_bvh_bounds_update_compute, gl) &&
         external_force_solver_.initialize(shader_paths.cloth_external_force_compute, gl) &&
@@ -70,41 +68,41 @@ bool SimulationPipeline::initialize(const ShaderPaths& shader_paths, QOpenGLFunc
         bending_constraint_solver_.initialize(shader_paths.cloth_bending_constraint_compute, simulation_settings::bending_stiffness, gl) &&
         attachment_constraint_solver_.initialize(shader_paths.cloth_attachment_constraint_compute, simulation_settings::attachment_stiffness, gl) &&
         ground_collision_solver_.initialize(shader_paths.cloth_ground_collision_compute,
-                                            floor_height,
+                                            simulation_settings::ground_collision_height,
                                             simulation_settings::static_friction,
                                             simulation_settings::dynamic_friction,
                                             gl) &&
-        cloth_body_collision_detector_.initialize(shader_paths.cloth_vertex_body_face_pair_detect_compute,
-                                                  shader_paths.cloth_edge_body_edge_pair_detect_compute,
-                                                  shader_paths.body_vertex_cloth_face_pair_detect_compute,
-                                                  shader_paths.collision_pair_dispatch_size_compute,
-                                                  simulation_settings::character_collision_thickness,
+        cloth_body_collision_detector_.initialize(shader_paths.cloth_vertex_body_face_detect_compute,
+                                                  shader_paths.cloth_edge_body_edge_detect_compute,
+                                                  shader_paths.body_vertex_cloth_face_detect_compute,
+                                                  shader_paths.collision_dispatch_size_compute,
+                                                  simulation_settings::body_collision_thickness,
                                                   simulation_settings::ignored_body_part_mask,
                                                   gl) &&
-        cloth_body_collision_solver_.initialize(shader_paths.cloth_vertex_body_face_pair_accumulate_compute,
-                                                shader_paths.cloth_edge_body_edge_pair_accumulate_compute,
-                                                shader_paths.body_vertex_cloth_face_pair_accumulate_compute,
+        cloth_body_collision_solver_.initialize(shader_paths.cloth_vertex_body_face_accumulate_compute,
+                                                shader_paths.cloth_edge_body_edge_accumulate_compute,
+                                                shader_paths.body_vertex_cloth_face_accumulate_compute,
                                                 shader_paths.cloth_body_collision_apply_compute,
-                                                simulation_settings::character_collision_thickness,
-                                                simulation_settings::character_collision_max_correction_length,
+                                                simulation_settings::body_collision_thickness,
+                                                simulation_settings::body_collision_max_correction_length,
                                                 simulation_settings::static_friction,
                                                 simulation_settings::dynamic_friction,
                                                 gl) &&
-        cloth_cloth_collision_detector_.initialize(shader_paths.cloth_cloth_vertex_face_pair_detect_compute,
-                                                   shader_paths.collision_pair_dispatch_size_compute,
+        cloth_cloth_collision_detector_.initialize(shader_paths.cloth_cloth_vertex_face_detect_compute,
+                                                   shader_paths.collision_dispatch_size_compute,
                                                    gl) &&
-        cloth_cloth_collision_solver_.initialize(shader_paths.cloth_cloth_vertex_face_pair_accumulate_compute,
-                                                 shader_paths.cloth_cloth_initial_layer_pair_accumulate_compute,
+        cloth_cloth_collision_solver_.initialize(shader_paths.cloth_cloth_vertex_face_accumulate_compute,
+                                                 shader_paths.cloth_cloth_initial_layer_accumulate_compute,
                                                  shader_paths.cloth_body_triangle_id_build_compute,
                                                  shader_paths.cloth_cloth_collision_apply_compute,
-                                                 simulation_settings::cloth_cloth_collision_gap,
-                                                 simulation_settings::cloth_cloth_barrier_stiffness,
-                                                 simulation_settings::cloth_cloth_penetration_tolerance,
-                                                 simulation_settings::cloth_cloth_max_correction_length,
-                                                 simulation_settings::prefit_search_radius,
+                                                 simulation_settings::cloth_collision_thickness,
+                                                 simulation_settings::cloth_collision_stiffness,
+                                                 simulation_settings::cloth_collision_penetration_tolerance,
+                                                 simulation_settings::cloth_collision_max_correction_length,
+                                                 simulation_settings::cloth_collision_body_search_radius,
                                                  gl) &&
         garment_prefit_solver_.initialize(shader_paths.garment_prefit_compute,
-                                          simulation_settings::prefit_search_radius,
+                                          simulation_settings::prefit_surface_search_radius,
                                           simulation_settings::prefit_pushout_margin,
                                           gl);
 
@@ -120,13 +118,13 @@ bool SimulationPipeline::initialize(const ShaderPaths& shader_paths, QOpenGLFunc
     return true;
 }
 
-bool SimulationPipeline::prefit_garments(SceneState& scene,
+bool SimulationPipeline::prefit_garment(SceneState& scene,
                                          SceneGpuState& gpu_state,
                                          std::uint32_t garment_id,
                                          QOpenGLFunctions_4_5_Core& gl)
 {
     if (!initialized_) {
-        std::cerr << "Cannot pre-fit garments before simulation pipeline initialization.\n";
+        std::cerr << "Cannot pre-fit garment before simulation pipeline initialization.\n";
         return false;
     }
 
@@ -141,33 +139,32 @@ bool SimulationPipeline::prefit_garments(SceneState& scene,
     if (garment_range == nullptr ||
         !garment_prefit_solver_.can_solve(views.cloth_motion,
                                          *garment_range,
-                                         views.character_geometry,
-                                         views.character_bvh)) {
-        std::cerr << "Cannot pre-fit garments because required GPU buffers are missing.\n";
+                                         views.body_triangle_geometry,
+                                         views.body_triangle_bvh)) {
+        std::cerr << "Cannot pre-fit garment because required GPU buffers are missing.\n";
         return false;
     }
 
     for (std::uint32_t iteration = 0; iteration < simulation_settings::prefit_iteration_count; ++iteration) {
         garment_prefit_solver_.solve(views.cloth_motion,
                                      *garment_range,
-                                     views.character_geometry,
-                                     views.character_bvh,
+                                     views.body_triangle_geometry,
+                                     views.body_triangle_bvh,
                                      gl);
     }
 
     gpu_state.cloth_gpu_state().copy_current_positions_to_previous(gl);
 
-    if (!cloth_cloth_collision_detector_.can_detect(views) ||
-        !cloth_cloth_collision_solver_.can_solve_initial(views)) {
-        std::cerr << "Cannot resolve initial cloth-cloth contacts because required GPU resources are invalid.\n";
-        return false;
-    }
+    const bool has_multiple_garments = views.garment_buffer_ranges->size() >= 2u;
+    if (has_multiple_garments) {
+        if (!cloth_cloth_collision_detector_.can_detect(views) ||
+            !cloth_cloth_collision_solver_.can_solve_initial(views)) {
+            std::cerr << "Cannot resolve initial cloth-cloth contacts because required GPU resources are invalid.\n";
+            return false;
+        }
 
-    if (views.cloth_bvh.garment_layouts->size() >= 2u) {
         for (std::uint32_t iteration = 0; iteration < simulation_settings::solver_iteration_count; ++iteration) {
-            if (!update_cloth_bvh_bounds(views,
-                                         simulation_settings::cloth_cloth_prefit_bounds_margin,
-                                         gl)) {
+            if (!update_cloth_bvh_bounds(views, simulation_settings::cloth_collision_initial_detection_distance, gl)) {
                 return false;
             }
             cloth_cloth_collision_detector_.detect(views, gl);
@@ -176,7 +173,8 @@ bool SimulationPipeline::prefit_garments(SceneState& scene,
         }
     }
 
-    if (!cloth_cloth_collision_solver_.build_body_triangle_ids(views, gl)) {
+    if (has_multiple_garments &&
+        !cloth_cloth_collision_solver_.build_body_triangle_ids(views, gl)) {
         std::cerr << "Cannot cache cloth body triangle ids after garment pre-fit.\n";
         return false;
     }
@@ -217,7 +215,7 @@ bool SimulationPipeline::step(SceneState& scene, SceneGpuState& gpu_state, std::
 
         if (has_multiple_garments) {
             if (!update_cloth_bvh_bounds(views,
-                                         simulation_settings::cloth_bvh_bounds_margin,
+                                         simulation_settings::cloth_collision_detection_distance,
                                          gl)) {
 #if CLOTH_SIM_SUBSTEP_GPU_TIMING
                 if (gpu_timing_started) {
@@ -232,9 +230,11 @@ bool SimulationPipeline::step(SceneState& scene, SceneGpuState& gpu_state, std::
         for (std::uint32_t iteration = 0; iteration < simulation_settings::solver_iteration_count; ++iteration) {
             stretch_constraint_solver_.solve(views.cloth_motion, views.stretch_constraints, gl);
             bending_constraint_solver_.solve(views.cloth_motion, views.bending_constraints, gl);
-            attachment_constraint_solver_.solve(views.cloth_motion, views.attachment_constraints, views.character_geometry, gl);
+            attachment_constraint_solver_.solve(views.cloth_motion, views.attachment_constraints, views.body_triangle_geometry, gl);
             cloth_body_collision_solver_.solve(views, gl);
-            cloth_cloth_collision_solver_.solve(views, gl);
+            if (has_multiple_garments) {
+                cloth_cloth_collision_solver_.solve(views, gl);
+            }
             ground_collision_solver_.solve(views.cloth_motion, views.cloth_collision_pushout, gl);
         }
 
@@ -279,13 +279,13 @@ SimulationGpuViews SimulationPipeline::collect_gpu_views(const SceneGpuState& gp
     views.cloth_topology = gpu_state.cloth_gpu_state().mesh_topology_resources();
     views.cloth_bvh = gpu_state.cloth_bvh_buffer_view();
     views.garment_buffer_ranges = &gpu_state.cloth_gpu_state().garment_buffer_ranges();
-    views.character_topology = gpu_state.character_gpu_state().mesh_topology_resources();
-    views.character_vertices = gpu_state.character_gpu_state().character_vertex_buffer_view();
-    views.character_geometry = gpu_state.character_gpu_state().character_triangle_geometry_resources();
-    views.character_bvh = gpu_state.character_gpu_state().character_bvh_resources();
+    views.body_topology = gpu_state.character_gpu_state().mesh_topology_resources();
+    views.body_vertices = gpu_state.character_gpu_state().character_vertex_buffer_view();
+    views.body_triangle_geometry = gpu_state.character_gpu_state().character_triangle_geometry_resources();
+    views.body_triangle_bvh = gpu_state.character_gpu_state().body_triangle_bvh_resources();
     views.body_vertex_bvh = gpu_state.character_gpu_state().body_vertex_bvh_resources();
     views.body_edge_bvh = gpu_state.character_gpu_state().body_edge_bvh_resources();
-    views.collision_pairs = gpu_state.collision_pair_buffer_view();
+    views.collision_candidates = gpu_state.collision_candidate_buffer_view();
     views.stretch_constraints = gpu_state.cloth_gpu_state().stretch_constraint_buffer_view();
     views.bending_constraints = gpu_state.cloth_gpu_state().bending_constraint_buffer_view();
     views.attachment_constraints = gpu_state.cloth_gpu_state().attachment_constraint_buffer_view();
@@ -313,7 +313,7 @@ bool SimulationPipeline::can_solve_constraint_iteration(const SimulationGpuViews
     return stretch_constraint_solver_.can_solve(views.cloth_motion, views.stretch_constraints) &&
            bending_constraint_solver_.can_solve(views.cloth_motion, views.bending_constraints) &&
            (views.attachment_constraints.constraint_count == 0 ||
-            attachment_constraint_solver_.can_solve(views.cloth_motion, views.attachment_constraints, views.character_geometry)) &&
+            attachment_constraint_solver_.can_solve(views.cloth_motion, views.attachment_constraints, views.body_triangle_geometry)) &&
             cloth_body_collision_detector_.can_detect(views) &&
             cloth_body_collision_solver_.can_solve(views) &&
             cloth_cloth_collision_detector_.can_detect(views) &&

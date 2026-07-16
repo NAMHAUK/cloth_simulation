@@ -133,7 +133,7 @@ std::vector<bvh_build::BvhPrimitive> MeshBvhBuilder::make_triangle_primitives() 
         }
 
         const std::uint8_t part_label = has_part_labels() ? (*triangle_part_labels_)[triangle_index] : 0u;
-        if (part_label >= bvh_build::character_part_label_count) {
+        if (part_label >= bvh_build::body_part_label_count) {
             return {};
         }
 
@@ -234,12 +234,12 @@ std::vector<std::uint8_t> MeshBvhBuilder::make_vertex_part_labels() const
         return {};
     }
 
-    using LabelCounts = std::array<std::uint32_t, bvh_build::character_part_label_count>;
+    using LabelCounts = std::array<std::uint32_t, bvh_build::body_part_label_count>;
     std::vector<LabelCounts> label_counts(vertex_count_, LabelCounts{});
 
     for (std::size_t triangle_index = 0; triangle_index < triangle_count; ++triangle_index) {
         const std::uint8_t part_label = (*triangle_part_labels_)[triangle_index];
-        if (part_label >= bvh_build::character_part_label_count) {
+        if (part_label >= bvh_build::body_part_label_count) {
             return {};
         }
 
@@ -274,7 +274,7 @@ std::vector<std::uint8_t> MeshBvhBuilder::make_edge_part_labels(
         return {};
     }
 
-    using LabelCounts = std::array<std::uint32_t, bvh_build::character_part_label_count>;
+    using LabelCounts = std::array<std::uint32_t, bvh_build::body_part_label_count>;
     std::vector<LabelCounts> label_counts(source_edges.size(), LabelCounts{});
     std::unordered_map<std::uint64_t, std::uint32_t> edge_indices_by_key;
     edge_indices_by_key.reserve(source_edges.size());
@@ -284,7 +284,7 @@ std::vector<std::uint8_t> MeshBvhBuilder::make_edge_part_labels(
 
     for (std::size_t triangle_index = 0; triangle_index < triangle_count; ++triangle_index) {
         const std::uint8_t part_label = (*triangle_part_labels_)[triangle_index];
-        if (part_label >= bvh_build::character_part_label_count) {
+        if (part_label >= bvh_build::body_part_label_count) {
             return {};
         }
 
