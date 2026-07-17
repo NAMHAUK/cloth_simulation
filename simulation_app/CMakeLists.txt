@@ -43,37 +43,42 @@ add_executable(simulation_app
     src/simulation/collision/ClothBodyCollisionDetector.h
     src/simulation/collision/ClothBodyCollisionSolver.cpp
     src/simulation/collision/ClothBodyCollisionSolver.h
+    src/simulation/collision/ClothClothCollisionDetector.cpp
+    src/simulation/collision/ClothClothCollisionDetector.h
+    src/simulation/collision/ClothClothCollisionSolver.cpp
+    src/simulation/collision/ClothClothCollisionSolver.h
     src/simulation/collision/GarmentPrefitSolver.cpp
     src/simulation/collision/GarmentPrefitSolver.h
     src/asset/MeshGeometryUtils.cpp
     src/asset/MeshGeometryUtils.h
-    src/gpu/body/CharacterGpuResources.cpp
-    src/gpu/body/CharacterGpuDataTypes.h
-    src/gpu/body/CharacterGpuResources.h
-    src/gpu/body/bvh/TriangleBvhBuilder.cpp
-    src/gpu/body/bvh/BvhDataTypes.h
-    src/gpu/body/bvh/BvhBuildUtils.cpp
-    src/gpu/body/bvh/BvhBuildUtils.h
-    src/gpu/body/bvh/TriangleBvhBuilder.h
-    src/gpu/body/bvh/VertexBvhBuilder.cpp
-    src/gpu/body/bvh/VertexBvhBuilder.h
-    src/gpu/body/bvh/EdgeBvhBuilder.cpp
-    src/gpu/body/bvh/EdgeBvhBuilder.h
-    src/gpu/body/bvh/CharacterBvhBoundsUpdater.cpp
-    src/gpu/body/bvh/CharacterBvhBoundsUpdater.h
-    src/gpu/body/CharacterGpuStateUpdater.cpp
-    src/gpu/body/CharacterGpuStateUpdater.h
+    src/gpu/character/CharacterGpuResources.cpp
+    src/gpu/character/CharacterGpuDataTypes.h
+    src/gpu/character/CharacterGpuResources.h
+    src/gpu/bvh/BvhDataTypes.h
+    src/gpu/bvh/BvhDataTypes.cpp
+    src/gpu/bvh/BvhBuildUtils.cpp
+    src/gpu/bvh/BvhBuildUtils.h
+    src/gpu/bvh/MeshBvhBuilder.cpp
+    src/gpu/bvh/MeshBvhBuilder.h
+    src/gpu/bvh/BodyBvhBoundsUpdater.cpp
+    src/gpu/bvh/BodyBvhBoundsUpdater.h
+    src/gpu/bvh/ClothBvhBoundsUpdater.cpp
+    src/gpu/bvh/ClothBvhBoundsUpdater.h
+    src/gpu/character/CharacterGpuStateUpdater.cpp
+    src/gpu/character/CharacterGpuStateUpdater.h
     src/gpu/cloth/ClothGpuResources.cpp
     src/gpu/cloth/ClothGpuDataTypes.h
     src/gpu/cloth/ClothGpuResources.h
+    src/gpu/cloth/ClothBvhResources.cpp
+    src/gpu/cloth/ClothBvhResources.h
     src/rendering/BackgroundGradient.cpp
     src/rendering/BackgroundGradient.h
     src/rendering/GroundGridMesh.cpp
     src/rendering/GroundGridMesh.h
     src/gpu/scene/SceneGpuState.cpp
     src/gpu/scene/SceneGpuState.h
-    src/gpu/scene/CollisionPairBuffers.cpp
-    src/gpu/scene/CollisionPairBuffers.h
+    src/gpu/scene/CollisionCandidateBuffers.cpp
+    src/gpu/scene/CollisionCandidateBuffers.h
     src/gpu/scene/AttachmentTargetBuilder.cpp
     src/gpu/scene/AttachmentTargetBuilder.h
     src/gpu/scene/NormalUpdater.cpp
@@ -109,28 +114,36 @@ add_executable(simulation_app
     shaders/mesh/vertex_normal.comp
     shaders/character/character_vertex_position_update.comp
     shaders/character/character_triangle_geometry_update.comp
-    shaders/character/character_bvh_bounds_update.comp
+    shaders/body/body_bvh_bounds_update.comp
     shaders/cloth/cloth_external_force.comp
+    shaders/cloth/cloth_bvh_bounds_update.comp
     shaders/cloth/constraints/cloth_stretch_constraint.comp
     shaders/cloth/constraints/cloth_bending_constraint.comp
     shaders/cloth/constraints/cloth_attachment_constraint.comp
     shaders/collision/cloth_ground_collision.comp
-    shaders/collision/collision_pair_dispatch_size.comp
-    shaders/collision/cloth_vertex_body_face_pair_detect.comp
-    shaders/collision/cloth_vertex_body_face_pair_accumulate.comp
-    shaders/collision/body_vertex_cloth_face_pair_detect.comp
-    shaders/collision/body_vertex_cloth_face_pair_accumulate.comp
-    shaders/collision/cloth_edge_body_edge_pair_detect.comp
-    shaders/collision/cloth_edge_body_edge_pair_accumulate.comp
+    shaders/collision/collision_dispatch_size.comp
+    shaders/collision/cloth_cloth_vertex_face_detect.comp
+    shaders/collision/cloth_cloth_vertex_face_accumulate.comp
+    shaders/collision/cloth_cloth_initial_layer_accumulate.comp
+    shaders/cloth/setup/cloth_body_triangle_id_build.comp
+    shaders/collision/cloth_cloth_collision_apply.comp
+    shaders/collision/cloth_vertex_body_face_detect.comp
+    shaders/collision/cloth_vertex_body_face_accumulate.comp
+    shaders/collision/body_vertex_cloth_face_detect.comp
+    shaders/collision/body_vertex_cloth_face_accumulate.comp
+    shaders/collision/cloth_edge_body_edge_detect.comp
+    shaders/collision/cloth_edge_body_edge_accumulate.comp
     shaders/collision/cloth_body_collision_apply.comp
-    shaders/character/body_bvh_common.glsl
-    shaders/collision/common/collision_position_io.glsl
+    shaders/mesh/bvh_common.glsl
+    shaders/mesh/primitive_geometry.glsl
+    shaders/mesh/position_io.glsl
     shaders/collision/common/collision_geometry_common.glsl
     shaders/collision/common/collision_correction_common.glsl
-    shaders/collision/common/collision_pair_output.glsl
+    shaders/collision/common/collision_candidate_output.glsl
+    shaders/collision/common/cloth_cloth_candidate_output.glsl
     shaders/cloth/setup/garment_prefit.comp
     shaders/cloth/setup/garment_attachment_target_build.comp
-    shaders/cloth/setup/character_mesh_search.glsl
+    shaders/body/body_mesh_search.glsl
 )
 
 add_executable(garment_converter
@@ -155,6 +168,7 @@ target_include_directories(garment_converter PRIVATE
 target_compile_definitions(simulation_app PRIVATE
     PROJECT_ROOT_DIR="${REPO_ROOT}"
     CLOTH_SIM_COLLISION_SOLVER_GPU_TIMING=1
+    $<$<CONFIG:Debug>:CLOTH_SIM_CLOTH_CLOTH_COLLISION_GPU_TIMING=1>
 )
 
 target_link_libraries(simulation_app PRIVATE

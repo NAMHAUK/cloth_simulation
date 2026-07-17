@@ -377,7 +377,9 @@ void MainWindow::setup_asset_loader_callbacks()
         QMessageBox::warning(this, "Load Failed", "Failed to load motion:\n" + to_q_string(motion_asset_path));
     });
     asset_loader_->set_garment_loaded_callback([this](GarmentMesh mesh) {
-        simulation_controller_->add_garment_mesh(std::move(mesh));
+        if (!simulation_controller_->add_garment_mesh(std::move(mesh))) {
+            return;
+        }
         has_editable_garment_ = true;
         garment_placement_panel_->reset_placement();
         update_simulation_controls();
@@ -486,7 +488,12 @@ void MainWindow::update_viewer_layout()
 // simulation control //
 void MainWindow::update_simulation_controls()
 {
-    if (!simulation_controller_ || !run_button_ || !stop_button_ || !reset_button_ || !garment_placement_panel_) {
+    if (!simulation_controller_ ||
+        !browser_panel_ ||
+        !run_button_ ||
+        !stop_button_ ||
+        !reset_button_ ||
+        !garment_placement_panel_) {
         return;
     }
 
@@ -506,6 +513,7 @@ void MainWindow::update_simulation_controls()
     run_button_->setEnabled(simulation_running || !placement_panel_visible);
     stop_button_->setEnabled(simulation_controller_->has_base_positions() && !placement_panel_visible);
     reset_button_->setEnabled(true);
+    browser_panel_->set_garment_selection_enabled(simulation_controller_->can_start_garment_placement());
     garment_placement_panel_->setVisible(placement_panel_visible);
     garment_placement_panel_->setEnabled(placement_available);
 }

@@ -1,6 +1,6 @@
 #include "gpu/scene/NormalUpdater.h"
 
-#include "gpu/body/CharacterGpuDataTypes.h"
+#include "gpu/character/CharacterGpuDataTypes.h"
 #include "gpu/cloth/ClothGpuResources.h"
 #include "utils/ShaderUtils.h"
 

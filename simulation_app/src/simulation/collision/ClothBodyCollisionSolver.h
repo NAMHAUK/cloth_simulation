@@ -34,7 +34,7 @@ public:
 private:
     struct AccumulateStage final {
         GLuint program = 0;
-        GLint max_pairs = -1;
+        GLint max_candidates = -1;
         GLint thickness = -1;
     };
 

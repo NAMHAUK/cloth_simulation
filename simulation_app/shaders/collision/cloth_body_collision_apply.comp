@@ -23,10 +23,12 @@ uniform float uMaxCorrectionLength;
 uniform float uStaticFriction;
 uniform float uDynamicFriction;
 
-#define COLLISION_POSITION_IO_CLOTH_APPLY
-#include "common/collision_position_io.glsl"
+#define POSITION_IO_CLOTH_CURRENT
+#define POSITION_IO_CLOTH_WRITE
+#include "../mesh/position_io.glsl"
 
 #define COLLISION_CORRECTION_APPLY
+#define COLLISION_CORRECTION_FRICTION_APPLY
 #include "common/collision_correction_common.glsl"
 
 void main()
@@ -41,13 +43,10 @@ void main()
         return;
     }
 
-    vec3 correction_sum = vec3(accumulated.xyz) / correction_fixed_point_scale;
-    vec3 averaged_correction = correction_sum / float(accumulated.w);
-    vec3 final_normal_correction = clamp_correction(averaged_correction);
-
-    vec3 friction_sum = vec3(friction_correction_sums[vertex_index].xyz) / correction_fixed_point_scale;
-    vec3 averaged_friction = friction_sum / float(accumulated.w);
-    vec3 final_friction_correction = clamp_friction_correction(final_normal_correction, averaged_friction);
+    float inverse_accumulation_scale = 1.0 / (correction_fixed_point_scale * float(accumulated.w));
+    vec3 final_normal_correction = clamp_correction(vec3(accumulated.xyz) * inverse_accumulation_scale);
+    vec3 final_friction_correction = clamp_friction_correction(final_normal_correction,
+                                                               vec3(friction_correction_sums[vertex_index].xyz) * inverse_accumulation_scale);
 
     apply_position_correction(vertex_index, final_normal_correction, final_friction_correction);
 }

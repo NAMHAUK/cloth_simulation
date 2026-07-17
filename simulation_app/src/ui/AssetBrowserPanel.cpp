@@ -48,6 +48,11 @@ AssetBrowserPanel::AssetBrowserPanel(QWidget* parent): QWidget(parent)
         "QPushButton:hover {"
         "  background-color: #4a4a4a;"
         "}"
+        "QPushButton:disabled {"
+        "  background-color: #555555;"
+        "  color: #bdbdbd;"
+        "  border-color: #444444;"
+        "}"
     );
 
     garment_button_ = new QPushButton("Garment", this);
@@ -174,6 +179,15 @@ void AssetBrowserPanel::set_expanded(bool expanded)
 void AssetBrowserPanel::set_expansion_changed_callback(std::function<void()> callback)
 {
     expansion_changed_callback_ = std::move(callback);
+}
+
+void AssetBrowserPanel::set_garment_selection_enabled(bool enabled)
+{
+    if (!enabled && expanded_ && panel_mode_ == AssetPanelMode::Garments) {
+        set_expanded(false);
+    }
+    garment_button_->setEnabled(enabled);
+    garment_button_->setToolTip(enabled ? "" : "Up to two garments can be added.");
 }
 
 // list 표시 //

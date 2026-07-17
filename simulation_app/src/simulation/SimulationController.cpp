@@ -1,9 +1,7 @@
 #include "simulation/SimulationController.h"
 
 #include "app/ProjectPaths.h"
-#include "gpu/body/bvh/EdgeBvhBuilder.h"
-#include "gpu/body/bvh/TriangleBvhBuilder.h"
-#include "gpu/body/bvh/VertexBvhBuilder.h"
+#include "gpu/bvh/MeshBvhBuilder.h"
 #include "simulation/SimulationSettings.h"
 
 #include <cassert>
@@ -85,43 +83,31 @@ void SimulationController::load_default_character_mesh(CharacterMesh mesh,
                                                        const std::vector<std::uint8_t>& triangle_part_labels,
                                                        QOpenGLFunctions_4_5_Core& gl)
 {
-    TriangleBvhBuilder bvh_builder(
+    MeshBvhBuilder bvh_builder(
         mesh.vertex_count,
         mesh.triangle_vertex_indices,
         mesh.vertices,
         triangle_part_labels
     );
-    TriangleBvhData default_character_bvh_data = bvh_builder.build_triangle_bvh();
-    if (!default_character_bvh_data.is_valid(mesh.triangle_count)) {
-        std::cerr << "Failed to build default character BVH.\n";
+    TriangleBvhData default_body_triangle_bvh_data = bvh_builder.build_triangle_bvh();
+    if (!default_body_triangle_bvh_data.is_valid(mesh.triangle_count)) {
+        std::cerr << "Failed to build default body triangle BVH.\n";
         return;
     }
 
-    VertexBvhBuilder vertex_bvh_builder(
-        mesh.vertex_count,
-        mesh.triangle_vertex_indices,
-        mesh.vertices,
-        triangle_part_labels
-    );
-    VertexBvhData default_body_vertex_bvh_data = vertex_bvh_builder.build_vertex_bvh();
+    VertexBvhData default_body_vertex_bvh_data = bvh_builder.build_vertex_bvh();
     if (!default_body_vertex_bvh_data.is_valid(mesh.vertex_count)) {
         std::cerr << "Failed to build default body vertex BVH.\n";
         return;
     }
 
-    EdgeBvhBuilder edge_bvh_builder(
-        mesh.vertex_count,
-        mesh.triangle_vertex_indices,
-        mesh.vertices,
-        triangle_part_labels
-    );
-    EdgeBvhData default_body_edge_bvh_data = edge_bvh_builder.build_edge_bvh();
+    EdgeBvhData default_body_edge_bvh_data = bvh_builder.build_edge_bvh();
     if (!default_body_edge_bvh_data.is_valid()) {
         std::cerr << "Failed to build default body edge BVH.\n";
         return;
     }
 
-    scene_.set_default_character_bvh_data(std::move(default_character_bvh_data));
+    scene_.set_default_body_triangle_bvh_data(std::move(default_body_triangle_bvh_data));
     scene_.set_default_body_vertex_bvh_data(std::move(default_body_vertex_bvh_data));
     scene_.set_default_body_edge_bvh_data(std::move(default_body_edge_bvh_data));
     default_character_mesh_ = std::move(mesh);
@@ -162,14 +148,19 @@ void SimulationController::set_character_mesh_state(CharacterMesh mesh, QOpenGLF
     viewport_callbacks_.reset_camera_to_character_root(scene_.character_root_position(0));
 }
 
-void SimulationController::add_garment_mesh(GarmentMesh mesh)
+bool SimulationController::add_garment_mesh(GarmentMesh mesh)
 {
     if (!is_viewport_ready()) {
         std::cerr << "Cannot add garment mesh before OpenGL initialization.\n";
-        return;
+        return false;
+    }
+    if (!can_start_garment_placement()) {
+        std::cerr << "Cannot add more than two garment meshes.\n";
+        return false;
     }
 
-    viewport_callbacks_.run_with_gl_context([this, &mesh](QOpenGLFunctions_4_5_Core& gl) {
+    bool garment_added = false;
+    viewport_callbacks_.run_with_gl_context([this, &mesh, &garment_added](QOpenGLFunctions_4_5_Core& gl) {
         // 배치중이던 garment 있으면 제거
         if (garment_placement_.garment_id != 0 && scene_.remove_garment(garment_placement_.garment_id)) {
             gpu_state_.update_garment_meshes(scene_, gl);
@@ -178,12 +169,22 @@ void SimulationController::add_garment_mesh(GarmentMesh mesh)
         // 새 garment 추가
         garment_placement_.clear();
         garment_placement_.garment_id = scene_.add_garment_mesh(std::move(mesh));
+        if (garment_placement_.garment_id == 0u) {
+            std::cerr << "Failed to add garment mesh.\n";
+            return;
+        }
+        if (!build_garment_triangle_bvh(garment_placement_.garment_id)) {
+            std::cerr << "Failed to build garment triangle BVH for garment id "
+                      << garment_placement_.garment_id << ".\n";
+        }
         gpu_state_.update_garment_meshes(scene_, gl);
         gpu_state_.clear_base_positions(gl);
         has_base_positions_ = false;
+        garment_added = true;
     });
 
     viewport_callbacks_.request_update();
+    return garment_added;
 }
 
 void SimulationController::set_current_garment_placement(QOpenGLFunctions_4_5_Core& gl)
@@ -201,6 +202,26 @@ void SimulationController::set_current_garment_placement(QOpenGLFunctions_4_5_Co
     }
 
     garment_placement_.clear_update();
+}
+
+bool SimulationController::build_garment_triangle_bvh(std::uint32_t garment_id)
+{
+    GarmentObject* garment = scene_.find_garment(garment_id);
+    if (garment == nullptr) {
+        return false;
+    }
+
+    const GarmentMesh& mesh = garment->mesh;
+    const auto vertex_count = static_cast<std::uint32_t>(mesh.vertices.size() / 3u);
+    const auto triangle_count = static_cast<std::uint32_t>(mesh.triangle_vertex_indices.size() / 3u);
+    MeshBvhBuilder bvh_builder(vertex_count, mesh.triangle_vertex_indices, mesh.vertices);
+    TriangleBvhData garment_triangle_bvh = bvh_builder.build_triangle_bvh();
+    if (!garment_triangle_bvh.is_valid(triangle_count)) {
+        return false;
+    }
+
+    garment->garment_triangle_bvh = std::move(garment_triangle_bvh);
+    return true;
 }
 
 void SimulationController::reset_scene_to_default()
@@ -274,7 +295,10 @@ void SimulationController::confirm_garment_placement()
 
     viewport_callbacks_.run_with_gl_context([this](QOpenGLFunctions_4_5_Core& gl) {
         set_current_garment_placement(gl);
-        simulation_pipeline_.prefit_garments(scene_, gpu_state_, gl);
+        if (!simulation_pipeline_.prefit_garment(scene_, gpu_state_, garment_placement_.garment_id, gl)) {
+            std::cerr << "Cannot confirm garment placement because garment pre-fit failed.\n";
+            return;
+        }
         gpu_state_.build_garment_attachment_targets(scene_, garment_placement_.garment_id, gl);
         garment_placement_.clear();
         gpu_state_.clear_base_positions(gl);
@@ -340,6 +364,11 @@ bool SimulationController::has_base_positions() const
 bool SimulationController::has_garments() const
 {
     return !scene_.garments().empty();
+}
+
+bool SimulationController::can_start_garment_placement() const
+{
+    return garment_placement_.garment_id != 0u || !scene_.has_multiple_garments();
 }
 
 bool SimulationController::has_garment_placement_update() const

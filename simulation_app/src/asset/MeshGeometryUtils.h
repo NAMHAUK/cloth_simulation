@@ -11,6 +11,12 @@ bool build_vertex_face_adjacency(std::uint32_t vertex_count,
                                  const std::vector<std::uint32_t>& triangle_indices,
                                  VertexFaceAdjacency& adjacency);
 
+bool orient_triangle_winding_outward(std::uint32_t vertex_count,
+                                     const std::vector<float>& vertices,
+                                     const glm::vec3& reference_point,
+                                     std::vector<std::uint32_t>& triangle_indices,
+                                     std::uint32_t& flipped_triangle_count);
+
 glm::vec3 get_vertex_position(const std::vector<float>& vertices, std::uint32_t vertex_index);
 
 std::vector<MeshEdge> build_unique_triangle_edges(std::uint32_t vertex_count,

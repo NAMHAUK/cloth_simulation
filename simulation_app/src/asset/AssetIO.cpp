@@ -17,7 +17,7 @@
 namespace {
 constexpr std::array<char, 7> garment_asset_signature = {'N', 'A', 'M', 'H', 'A', 'U', 'K'};
 constexpr std::array<char, 8> motion_asset_signature = {'S', 'M', 'P', 'L', 'M', 'O', 'T', 'N'};
-constexpr std::uint8_t max_character_part_label = 7u;
+constexpr std::uint8_t max_body_part_label = 7u;
 
 struct GarmentAssetCounts final {
     std::uint32_t vertex_count = 0;
@@ -225,7 +225,7 @@ bool read_motion_asset_labels(const std::filesystem::path& motion_asset_path,
     const bool has_invalid_label = std::any_of(
         triangle_part_labels.begin(),
         triangle_part_labels.end(),
-        [](std::uint8_t label) { return label > max_character_part_label; }
+        [](std::uint8_t label) { return label > max_body_part_label; }
     );
     if (has_invalid_label) {
         std::cerr << "Default motion asset contains invalid triangle part labels: " << motion_asset_path << '\n';

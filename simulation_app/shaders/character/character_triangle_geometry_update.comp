@@ -2,15 +2,10 @@
 
 layout(local_size_x = 128) in;
 
-struct CharacterTriangleGeometry {
-    vec4 a;
-    vec4 b;
-    vec4 c;
-    vec4 normal;
-};
+#include "../mesh/primitive_geometry.glsl"
 
 layout(std430, binding = 0) readonly buffer CharacterCurrentPositions {
-    float current_positions[];
+    float body_current_positions[];
 };
 
 layout(std430, binding = 1) readonly buffer CharacterIndices {
@@ -18,18 +13,15 @@ layout(std430, binding = 1) readonly buffer CharacterIndices {
 };
 
 layout(std430, binding = 2) writeonly buffer CharacterTriangleGeometryBuffer {
-    CharacterTriangleGeometry triangle_geometry[];
+    TriangleGeometry triangle_geometry[];
 };
 
 uniform uint uTriangleCount;
 
 const float epsilon = 1.0e-20;
 
-vec3 load_character_position(uint vertex_index)
-{
-    uint base = vertex_index * 3u;
-    return vec3(current_positions[base], current_positions[base + 1u], current_positions[base + 2u]);
-}
+#define POSITION_IO_BODY_CURRENT
+#include "../mesh/position_io.glsl"
 
 void main()
 {
@@ -39,9 +31,9 @@ void main()
     }
 
     uint index_base = triangle_index * 3u;
-    vec3 a = load_character_position(triangle_indices[index_base]);
-    vec3 b = load_character_position(triangle_indices[index_base + 1u]);
-    vec3 c = load_character_position(triangle_indices[index_base + 2u]);
+    vec3 a = read_body_current_position(triangle_indices[index_base]);
+    vec3 b = read_body_current_position(triangle_indices[index_base + 1u]);
+    vec3 c = read_body_current_position(triangle_indices[index_base + 2u]);
 
     vec3 face_normal = cross(b - a, c - a);
     float normal_length_sq = dot(face_normal, face_normal);

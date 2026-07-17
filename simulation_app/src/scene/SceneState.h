@@ -1,19 +1,22 @@
 #pragma once
 
 #include "asset/AssetDataTypes.h"
-#include "gpu/body/bvh/BvhDataTypes.h"
+#include "gpu/bvh/BvhDataTypes.h"
 
 #include <cstddef>
 #include <cstdint>
+#include <optional>
 #include <vector>
 
 #include <glm/vec3.hpp>
 
 struct GarmentObject {
     std::uint32_t id = 0;
+    std::uint32_t layer = 0;
     GarmentMesh source_mesh;
     GarmentMesh mesh;
     bool visible = true;
+    std::optional<TriangleBvhData> garment_triangle_bvh;
 };
 
 struct CharacterFrameInterpolation final {
@@ -26,11 +29,11 @@ class SceneState final {
 public:
     // Character
     void set_character_mesh(CharacterMesh mesh);
-    void set_default_character_bvh_data(TriangleBvhData default_character_bvh_data);
+    void set_default_body_triangle_bvh_data(TriangleBvhData default_body_triangle_bvh_data);
     void set_default_body_vertex_bvh_data(VertexBvhData default_body_vertex_bvh_data);
     void set_default_body_edge_bvh_data(EdgeBvhData default_body_edge_bvh_data);
     const CharacterMesh& character_mesh() const;
-    const TriangleBvhData& default_character_bvh_data() const;
+    const TriangleBvhData& default_body_triangle_bvh_data() const;
     const VertexBvhData& default_body_vertex_bvh_data() const;
     const EdgeBvhData& default_body_edge_bvh_data() const;
 
@@ -41,6 +44,7 @@ public:
     GarmentObject* find_garment(std::uint32_t garment_id);
     void clear_garments();
     const std::vector<GarmentObject>& garments() const;
+    bool has_multiple_garments() const;
 
     // Playback
     void update_character_frame(std::uint64_t simulation_step_count, std::uint32_t character_frame_stride);
@@ -51,13 +55,14 @@ public:
 private:
     // Character
     CharacterMesh character_mesh_;
-    TriangleBvhData default_character_bvh_data_;
+    TriangleBvhData default_body_triangle_bvh_data_;
     VertexBvhData default_body_vertex_bvh_data_;
     EdgeBvhData default_body_edge_bvh_data_;
 
     // Garments
     std::vector<GarmentObject> garments_;
     std::uint32_t next_garment_id_ = 1;
+    std::uint32_t next_garment_layer_ = 0;
 
     // Playback
     std::uint32_t current_character_frame_ = 0;

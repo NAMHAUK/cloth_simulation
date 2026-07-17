@@ -3,7 +3,7 @@
 layout(local_size_x = 128) in;
 
 layout(std430, binding = 0) buffer CurrentPositions {
-    float current_positions[];
+    float cloth_current_positions[];
 };
 
 layout(std430, binding = 1) readonly buffer AttachmentIndices {
@@ -14,33 +14,25 @@ layout(std430, binding = 2) readonly buffer AttachmentBarycentricOffsets {
     vec4 barycentric_offsets[];
 };
 
-struct CharacterTriangleGeometry {
-    vec4 a;
-    vec4 b;
-    vec4 c;
-    vec4 normal;
-};
+#include "../../mesh/primitive_geometry.glsl"
 
-layout(std430, binding = 3) readonly buffer CharacterTriangleGeometryBuffer {
-    CharacterTriangleGeometry triangle_geometry[];
+layout(std430, binding = 3) readonly buffer BodyTriangleGeometryBuffer {
+    TriangleGeometry triangle_geometry[];
 };
 
 uniform uint uConstraintOffset;
 uniform uint uConstraintCount;
 uniform float uStiffness;
 
-vec3 load_current_position(uint vertex_index)
-{
-    uint base = vertex_index * 3u;
-    return vec3(current_positions[base], current_positions[base + 1u], current_positions[base + 2u]);
-}
+#define POSITION_IO_CLOTH_CURRENT
+#include "../../mesh/position_io.glsl"
 
 void store_current_position(uint vertex_index, vec3 position)
 {
     uint base = vertex_index * 3u;
-    current_positions[base] = position.x;
-    current_positions[base + 1u] = position.y;
-    current_positions[base + 2u] = position.z;
+    cloth_current_positions[base] = position.x;
+    cloth_current_positions[base + 1u] = position.y;
+    cloth_current_positions[base + 2u] = position.z;
 }
 
 void main()
@@ -53,10 +45,10 @@ void main()
     uint constraint_index = uConstraintOffset + local_index;
     uvec2 attachment_index = attachment_indices[constraint_index];
     uint cloth_vertex = attachment_index.x;
-    uint character_triangle = attachment_index.y;
+    uint body_triangle = attachment_index.y;
     vec4 barycentric_offset = barycentric_offsets[constraint_index];
 
-    CharacterTriangleGeometry triangle = triangle_geometry[character_triangle];
+    TriangleGeometry triangle = triangle_geometry[body_triangle];
     vec3 target = triangle.a.xyz * barycentric_offset.x +
                   triangle.b.xyz * barycentric_offset.y +
                   triangle.c.xyz * barycentric_offset.z;
@@ -64,7 +56,7 @@ void main()
         target += triangle.normal.xyz * barycentric_offset.w;
     }
 
-    vec3 current = load_current_position(cloth_vertex);
+    vec3 current = read_cloth_current_position(cloth_vertex);
     vec3 correction = (target - current) * uStiffness;
 
     store_current_position(cloth_vertex, current + correction);

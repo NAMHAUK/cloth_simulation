@@ -31,8 +31,10 @@ public:
     bool save_base_positions(QOpenGLFunctions_4_5_Core& gl);
     bool restore_base_positions(QOpenGLFunctions_4_5_Core& gl) const;
     void clear_base_positions(QOpenGLFunctions_4_5_Core& gl);
+    const std::vector<GarmentBufferRanges>& garment_buffer_ranges() const;
     ClothMotionBufferView motion_buffer_view() const;
     ClothCollisionPushoutBufferView collision_pushout_buffer_view() const;
+    ClothBodyTriangleIdBufferView body_triangle_id_buffer_view() const;
     void copy_current_positions_to_previous(QOpenGLFunctions_4_5_Core& gl) const;
     DistanceConstraintBufferView stretch_constraint_buffer_view() const;
     DistanceConstraintBufferView bending_constraint_buffer_view() const;
@@ -44,7 +46,7 @@ public:
     void release(QOpenGLFunctions_4_5_Core& gl);
 
 private:
-    void rebuild_garment_buffers(const std::vector<GarmentObject>& garments, QOpenGLFunctions_4_5_Core& gl);
+    void rebuild_buffers(const std::vector<GarmentObject>& garments, QOpenGLFunctions_4_5_Core& gl);
     void replace_with_rebuild_buffers(ClothBufferSet rebuild_buffer_set,
                                       std::vector<GarmentBufferRanges> rebuild_ranges,
                                       std::vector<ElementRange> rebuild_stretch_color_ranges,

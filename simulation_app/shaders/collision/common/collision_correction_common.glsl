@@ -21,6 +21,7 @@ void accumulate_vertex_normal_correction(uint vertex_index, vec3 correction)
     atomicAdd(normal_correction_sums[vertex_index].z, encoded_correction.z);
 }
 
+#ifdef COLLISION_CORRECTION_FRICTION_ACCUMULATE
 vec3 compute_friction_correction(vec3 normal, vec3 cloth_delta, vec3 body_delta)
 {
     vec3 relative_movement = cloth_delta - body_delta;
@@ -36,10 +37,9 @@ void accumulate_vertex_friction_correction(uint vertex_index, vec3 friction_corr
     atomicAdd(friction_correction_sums[vertex_index].z, encoded_correction.z);
 }
 #endif
+#endif
 
 #ifdef COLLISION_CORRECTION_APPLY
-const float friction_epsilon = 1.0e-8;
-
 vec3 clamp_correction(vec3 correction)
 {
     float correction_length_sq = dot(correction, correction);
@@ -50,6 +50,9 @@ vec3 clamp_correction(vec3 correction)
 
     return correction;
 }
+
+#ifdef COLLISION_CORRECTION_FRICTION_APPLY
+const float friction_epsilon = 1.0e-8;
 
 vec3 clamp_friction_correction(vec3 normal_correction, vec3 friction_correction)
 {
@@ -70,6 +73,7 @@ vec3 clamp_friction_correction(vec3 normal_correction, vec3 friction_correction)
     float dynamic_limit = uDynamicFriction * normal_length;
     return friction_correction * (dynamic_limit / friction_length);
 }
+#endif
 
 void apply_position_correction(uint vertex_index, vec3 normal_correction, vec3 friction_correction)
 {
