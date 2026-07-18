@@ -183,6 +183,7 @@ bool SceneGpuState::update_garment_placement(const GarmentObject& garment,
 
 void SceneGpuState::build_garment_attachment_targets(SceneState& scene,
                                                      std::uint32_t garment_id,
+                                                     float surface_offset,
                                                      QOpenGLFunctions_4_5_Core& gl)
 {
     GarmentObject* garment = scene.find_garment(garment_id);
@@ -205,7 +206,13 @@ void SceneGpuState::build_garment_attachment_targets(SceneState& scene,
     const TriangleGeometryResources body_triangle_geometry = character_gpu_state_.character_triangle_geometry_resources();
     const TriangleBvhResources body_triangle_bvh = character_gpu_state_.body_triangle_bvh_resources();
     
-    if (!attachment_target_builder_.build(motion_view, attachment_view, target_range, body_triangle_geometry, body_triangle_bvh, gl)) {
+    if (!attachment_target_builder_.build(motion_view,
+                                          attachment_view,
+                                          target_range,
+                                          body_triangle_geometry,
+                                          body_triangle_bvh,
+                                          surface_offset,
+                                          gl)) {
         std::cerr << "Cannot build garment attachment targets because required GPU buffers are missing.\n";
         return;
     }

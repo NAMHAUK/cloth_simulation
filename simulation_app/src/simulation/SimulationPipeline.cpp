@@ -94,7 +94,6 @@ bool SimulationPipeline::initialize(const ShaderPaths& shader_paths, QOpenGLFunc
                                                  shader_paths.cloth_cloth_collision_apply_compute,
                                                  simulation_settings::cloth_collision_thickness,
                                                  simulation_settings::cloth_collision_stiffness,
-                                                 simulation_settings::cloth_collision_penetration_tolerance,
                                                  simulation_settings::cloth_collision_max_correction_length,
                                                  simulation_settings::cloth_collision_body_search_radius,
                                                  gl) &&

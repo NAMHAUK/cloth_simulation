@@ -37,7 +37,6 @@ layout(std430, binding = 6) readonly buffer BodyTriangleBvhNodeBuffer {
 uniform uint uMaxCandidateCount;
 uniform float uCollisionThickness;
 uniform float uCollisionStiffness;
-uniform float uPenetrationTolerance;
 uniform float uSearchRadiusSquared;
 
 const uint upper_vertex_lower_face_role = 0u;
@@ -111,7 +110,7 @@ bool compute_candidate_contact(uvec4 candidate, uvec3 target_vertices, out Verte
     float upper_from_lower_distance = candidate.w == upper_vertex_lower_face_role
         ? query_from_face_distance
         : -query_from_face_distance;
-    contact.depth = uCollisionThickness - upper_from_lower_distance - uPenetrationTolerance;
+    contact.depth = uCollisionThickness - upper_from_lower_distance;
     if (contact.depth <= 0.0) {
         return false;
     }

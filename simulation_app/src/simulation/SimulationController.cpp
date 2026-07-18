@@ -300,7 +300,10 @@ void SimulationController::confirm_garment_placement()
             std::cerr << "Cannot confirm garment placement because garment pre-fit failed.\n";
             return;
         }
-        gpu_state_.build_garment_attachment_targets(scene_, garment_placement_.garment_id, gl);
+        gpu_state_.build_garment_attachment_targets(scene_,
+                                                    garment_placement_.garment_id,
+                                                    simulation_settings::attachment_surface_offset,
+                                                    gl);
         garment_placement_.clear();
         gpu_state_.clear_base_positions(gl);
         has_base_positions_ = false;

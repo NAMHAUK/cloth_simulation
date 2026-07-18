@@ -18,7 +18,6 @@ public:
                     const std::filesystem::path& apply_shader_path,
                     float collision_thickness,
                     float collision_stiffness,
-                    float penetration_tolerance,
                     float max_correction_length,
                     float surface_search_radius,
                     QOpenGLFunctions_4_5_Core& gl);
@@ -37,7 +36,6 @@ private:
         GLint max_candidates = -1;
         GLint collision_thickness = -1;
         GLint collision_stiffness = -1;
-        GLint penetration_tolerance = -1;
         GLint body_triangle_count = -1;
     };
 
@@ -59,14 +57,12 @@ private:
         GLint max_candidates = -1;
         GLint collision_thickness = -1;
         GLint collision_stiffness = -1;
-        GLint penetration_tolerance = -1;
         GLint search_radius_squared = -1;
     } initial_accumulate_;
     BodyTriangleIdBuildStage body_triangle_id_build_;
     ApplyStage apply_;
     float collision_thickness_ = 0.0f;
     float collision_stiffness_ = 0.0f;
-    float penetration_tolerance_ = 0.0f;
     float max_correction_length_ = 0.0f;
     float surface_search_radius_ = 0.0f;
 

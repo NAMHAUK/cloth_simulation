@@ -41,7 +41,6 @@ layout(std430, binding = 7) readonly buffer ClothBodyTriangleIds {
 uniform uint uMaxCandidateCount;
 uniform float uCollisionThickness;
 uniform float uCollisionStiffness;
-uniform float uPenetrationTolerance;
 uniform uint uBodyTriangleCount;
 
 // Shared dependencies
@@ -189,7 +188,7 @@ bool compute_candidate_contact(uvec4 candidate, uvec3 face_vertices, out VertexF
     }
 
     float layer_distance = dot(upper_surface_point - lower_reference_point, body_outward);
-    contact.depth = uCollisionThickness - layer_distance - uPenetrationTolerance;
+    contact.depth = uCollisionThickness - layer_distance;
     if (contact.depth <= 0.0) {
         return false;
     }
