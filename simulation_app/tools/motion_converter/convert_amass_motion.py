@@ -18,9 +18,12 @@ from motion_rotation_math import (
     quaternions_to_axis_angle,
 )
 
-INTRO_FRAME_COUNT = 30
-TARGET_GENDER = "neutral"
+SHAPE_TRANSITION_FRAME_COUNT = 60
+POSE_INTRO_FRAME_COUNT = 30
 SMPL_JOINT_COUNT = 24
+SMPL_BETA_COUNT = 10
+NEUTRAL_GENDER = "neutral"
+SUPPORTED_GENDERS = {NEUTRAL_GENDER, "male", "female"}
 AMASS_TO_PROJECT_ROTATION = np.array(
     [
         [1.0, 0.0, 0.0],
@@ -45,16 +48,15 @@ START_FACING_CORRECTION_QUATERNION = np.array(
     [np.sqrt(0.5), 0.0, -np.sqrt(0.5), 0.0],
     dtype=np.float32,
 )
-DEFAULT_BETAS = np.zeros((1, 10), dtype=np.float32)
+NEUTRAL_BETAS = np.zeros(SMPL_BETA_COUNT, dtype=np.float32)
 
-"""
-AMASS 모션 데이터를, SMPL-neutral 캐릭터 애니메이션으로 변환
-"""
+"""AMASS 모션 데이터를 원본 성별과 체형의 SMPL 애니메이션으로 변환한다."""
 
 @dataclass
 class AmassMotion:
     poses: np.ndarray
     translations: np.ndarray
+    betas: np.ndarray
     gender: str
     fps: float
 
@@ -68,28 +70,51 @@ class ConvertedMotion:
     start_translation: np.ndarray
 
 
-def load_smpl_model(model_path, device):
+def load_smpl_model(model_path, gender, device):
     from smplx.body_models import SMPL
 
-    model = SMPL(str(model_path), gender=TARGET_GENDER, num_betas=10, batch_size=1).to(device)
+    model = SMPL(str(model_path), gender=gender, num_betas=SMPL_BETA_COUNT, batch_size=1).to(device)
     model.eval()
     return model
 
 
 # convert motion
 def load_amass_motion(input_path):
-    data = np.load(input_path)
-    poses = data["poses"].astype(np.float32)
-    translations = data["trans"].astype(np.float32)
+    with np.load(input_path) as data:
+        required_fields = {"poses", "trans", "betas", "gender", "mocap_framerate"}
+        missing_fields = required_fields.difference(data.files)
+        if missing_fields:
+            raise ValueError(f"AMASS motion is missing required fields: {sorted(missing_fields)}")
 
+        poses = data["poses"].astype(np.float32)
+        translations = data["trans"].astype(np.float32)
+        betas = np.asarray(data["betas"], dtype=np.float32).reshape(-1)
+        gender_value = data["gender"].item()
+        fps = float(data["mocap_framerate"])
+
+    if isinstance(gender_value, bytes):
+        gender_value = gender_value.decode("utf-8")
+    gender = str(gender_value).strip().lower()
+
+    if poses.ndim != 2:
+        raise ValueError(f"Expected poses shaped as [frames, components], got {poses.shape}")
     if poses.shape[1] < SMPL_POSE_COMPONENT_COUNT:
         raise ValueError(f"Expected at least 72 pose values per frame, got {poses.shape[1]}")
+    if translations.shape != (poses.shape[0], 3):
+        raise ValueError(f"Expected translations shaped as ({poses.shape[0]}, 3), got {translations.shape}")
+    if betas.size < SMPL_BETA_COUNT:
+        raise ValueError(f"Expected at least {SMPL_BETA_COUNT} beta values, got {betas.size}")
+    if gender not in SUPPORTED_GENDERS:
+        raise ValueError(f"Unsupported AMASS gender: {gender}")
+    if not np.isfinite(fps) or not np.isfinite(poses).all() or not np.isfinite(translations).all() or not np.isfinite(betas).all():
+        raise ValueError(f"AMASS motion contains non-finite values: {input_path}")
 
     return AmassMotion(
         poses=poses,
         translations=translations,
-        gender=str(data["gender"].item()).lower(),
-        fps=float(data["mocap_framerate"]),
+        betas=betas[:SMPL_BETA_COUNT].copy(),
+        gender=gender,
+        fps=fps,
     )
 
 def choose_frame_indices(frame_count, source_fps, target_fps):
@@ -127,18 +152,22 @@ def interpolate_pose_rotations(start_pose, end_pose, weights):
     interpolated_quaternions = quaternion_slerp(start_quaternions, end_quaternions, slerp_weights)
     return quaternions_to_axis_angle(interpolated_quaternions).reshape(len(weights), SMPL_POSE_COMPONENT_COUNT)
 
-def build_interpolated_intro_motion(start_pose, start_translation):
-    if INTRO_FRAME_COUNT <= 0:
+def make_smoothstep_weights(frame_count):
+    if frame_count <= 0:
         weights = np.empty(0, dtype=np.float32)
     else:
-        values = np.linspace(0.0, 1.0, INTRO_FRAME_COUNT, endpoint=False, dtype=np.float32)
+        values = np.linspace(0.0, 1.0, frame_count, endpoint=False, dtype=np.float32)
         weights = values * values * (3.0 - 2.0 * values)
+    return weights
+
+def build_interpolated_intro_motion(start_pose, start_translation):
+    weights = make_smoothstep_weights(POSE_INTRO_FRAME_COUNT)
 
     init_pose = make_default_pose()
     intro_poses = interpolate_pose_rotations(init_pose, start_pose, weights)
     intro_translations = np.repeat(
         start_translation.reshape(1, 3),
-        INTRO_FRAME_COUNT,
+        POSE_INTRO_FRAME_COUNT,
         axis=0,
     ).astype(np.float32, copy=False)
     return intro_poses, intro_translations
@@ -172,23 +201,36 @@ def build_converted_motion(motion, target_fps, input_path):
         start_translation=start_translation,
     )
 
-def default_pose_ground_offset(model, device):
+def compute_grounded_default_pose(model, betas, device):
     with torch.no_grad():
         pose = make_default_pose().reshape(1, SMPL_POSE_COMPONENT_COUNT)
         global_orient = torch.from_numpy(pose[:, :3]).to(device)
         body_pose = torch.from_numpy(pose[:, 3:72]).to(device)
-        betas = torch.from_numpy(DEFAULT_BETAS).to(device)
+        model_betas = torch.from_numpy(betas.reshape(1, SMPL_BETA_COUNT)).to(device)
         transl = torch.zeros((1, 3), dtype=torch.float32, device=device)
 
         output = model(
-            betas=betas,
+            betas=model_betas,
             global_orient=global_orient,
             body_pose=body_pose,
             transl=transl,
             return_verts=True,
         )
-        min_y = float(output.vertices[0, :, 1].detach().cpu().min().item())
-    return -min_y
+        vertices = output.vertices[0].detach().cpu().numpy().astype(np.float32, copy=True)
+        root_position = output.joints[0, 0].detach().cpu().numpy().astype(np.float32, copy=True)
+
+    ground_offset = -float(vertices[:, 1].min())
+    vertices[:, 1] += ground_offset
+    root_position[1] += ground_offset
+    return vertices, root_position, ground_offset
+
+def build_shape_transition(neutral_vertices, neutral_root_position, target_vertices, target_root_position):
+    weights = make_smoothstep_weights(SHAPE_TRANSITION_FRAME_COUNT)
+    vertex_weights = weights.reshape(-1, 1, 1)
+    root_weights = weights.reshape(-1, 1)
+    vertices = neutral_vertices[None, :, :] + (target_vertices - neutral_vertices)[None, :, :] * vertex_weights
+    root_positions = neutral_root_position[None, :] + (target_root_position - neutral_root_position)[None, :] * root_weights
+    return vertices.astype(np.float32, copy=False), root_positions.astype(np.float32, copy=False)
 
 # write motion file
 def initialize_motion_file(out_file, motion, faces, frame_count, vertex_count):
@@ -199,13 +241,13 @@ def initialize_motion_file(out_file, motion, faces, frame_count, vertex_count):
     np.zeros((frame_count, 3), dtype=np.float32).tofile(out_file)
     return root_positions_file_position
 
-def compute_batch_vertices(model, motion, batch_slice, device):
+def compute_batch_vertices(model, motion, betas, batch_slice, device):
     batch_poses = motion.poses[batch_slice]
 
     global_orient = torch.from_numpy(batch_poses[:, :3]).to(device)
     body_pose = torch.from_numpy(batch_poses[:, 3:72]).to(device)
     transl = torch.from_numpy(motion.translations[batch_slice]).to(device)
-    batch_betas = torch.from_numpy(np.repeat(DEFAULT_BETAS, len(batch_poses), axis=0)).to(device)
+    batch_betas = torch.from_numpy(np.repeat(betas.reshape(1, SMPL_BETA_COUNT), len(batch_poses), axis=0)).to(device)
 
     output = model(
         betas=batch_betas,
@@ -219,25 +261,35 @@ def compute_batch_vertices(model, motion, batch_slice, device):
     root_positions = output.joints[:, 0, :].detach().cpu().numpy().astype(np.float32, copy=False)
     return vertices, root_positions
 
-def write_motion_file(output_path, model, motion, batch_size, device):
+def write_motion_file(output_path,
+                      faces,
+                      model,
+                      motion,
+                      betas,
+                      shape_transition_vertices,
+                      shape_transition_root_positions,
+                      batch_size,
+                      device):
     # batch 단위로 캐릭터 motion 계산 및 저장
     output_path.parent.mkdir(parents=True, exist_ok=True)
     temp_output_path = output_path.with_name(output_path.name + ".tmp")
 
-    frame_count = len(motion.poses)
+    motion_frame_count = len(motion.poses)
+    frame_count = len(shape_transition_vertices) + motion_frame_count
     vertex_count = int(model.v_template.shape[0])
-    converted_root_positions = []
+    converted_root_positions = [shape_transition_root_positions]
 
     try:
         with temp_output_path.open("wb") as out_file:
-            root_positions_file_position = initialize_motion_file(out_file, motion, model.faces, frame_count, vertex_count)
+            root_positions_file_position = initialize_motion_file(out_file, motion, faces, frame_count, vertex_count)
+            shape_transition_vertices.tofile(out_file)
             
             with torch.no_grad():
-                for start in range(0, frame_count, batch_size):
-                    batch_slice = slice(start, min(start + batch_size, frame_count))
+                for start in range(0, motion_frame_count, batch_size):
+                    batch_slice = slice(start, min(start + batch_size, motion_frame_count))
 
                     # 각 batch의 캐릭터 몸 vertex 계산
-                    batch_vertices, batch_root_positions = compute_batch_vertices(model, motion, batch_slice, device)
+                    batch_vertices, batch_root_positions = compute_batch_vertices(model, motion, betas, batch_slice, device)
 
                     converted_root_positions.append(np.asarray(batch_root_positions, dtype=np.float32))
                     np.asarray(batch_vertices, dtype=np.float32).tofile(out_file)
@@ -253,22 +305,65 @@ def write_motion_file(output_path, model, motion, batch_size, device):
         raise
 
 
-def convert(input_path, model_path, output_path, target_fps, batch_size):
+def convert(input_path, model_paths, output_path, target_fps, batch_size):
     set_smpl_compatibility()
 
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
     source_motion = load_amass_motion(input_path)
     converted_motion = build_converted_motion(source_motion, target_fps, input_path)
-    model = load_smpl_model(model_path, device)
-    converted_motion.translations[:, 1] += default_pose_ground_offset(model, device)
-    
-    write_motion_file(output_path, model, converted_motion, batch_size, device)
+
+    required_model_paths = {NEUTRAL_GENDER: model_paths[NEUTRAL_GENDER]}
+    required_model_paths[source_motion.gender] = model_paths[source_motion.gender]
+    for gender, model_path in required_model_paths.items():
+        if not model_path.is_file():
+            raise FileNotFoundError(f"Missing {gender} SMPL model: {model_path}")
+
+    neutral_model = load_smpl_model(model_paths[NEUTRAL_GENDER], NEUTRAL_GENDER, device)
+    neutral_vertices, neutral_root_position, _ = compute_grounded_default_pose(neutral_model, NEUTRAL_BETAS, device)
+    canonical_faces = np.asarray(neutral_model.faces, dtype=np.uint32).copy()
+
+    if source_motion.gender == NEUTRAL_GENDER:
+        target_model = neutral_model
+    else:
+        del neutral_model
+        if device.type == "cuda":
+            torch.cuda.empty_cache()
+        target_model = load_smpl_model(model_paths[source_motion.gender], source_motion.gender, device)
+
+    target_faces = np.asarray(target_model.faces, dtype=np.uint32)
+    if int(target_model.v_template.shape[0]) != len(neutral_vertices) or not np.array_equal(target_faces, canonical_faces):
+        raise ValueError(f"SMPL topology does not match the canonical neutral model: {source_motion.gender}")
+
+    target_vertices, target_root_position, target_ground_offset = compute_grounded_default_pose(
+        target_model,
+        source_motion.betas,
+        device,
+    )
+    shape_transition_vertices, shape_transition_root_positions = build_shape_transition(
+        neutral_vertices,
+        neutral_root_position,
+        target_vertices,
+        target_root_position,
+    )
+    converted_motion.translations[:, 1] += target_ground_offset
+
+    write_motion_file(
+        output_path,
+        canonical_faces,
+        target_model,
+        converted_motion,
+        source_motion.betas,
+        shape_transition_vertices,
+        shape_transition_root_positions,
+        batch_size,
+        device,
+    )
 
     print()
     print(f"Converted: {input_path}")
     print(f"Source gender: {source_motion.gender}")
-    print(f"Target gender: {TARGET_GENDER}")
+    print(f"Target gender: {source_motion.gender}")
     print(
         "Start translation offset: "
         f"x={converted_motion.start_translation[0]}, "
@@ -281,7 +376,8 @@ def convert(input_path, model_path, output_path, target_fps, batch_size):
     print(
         "Frames: "
         f"{source_motion.poses.shape[0]} -> {len(converted_motion.frame_indices)} "
-        f"+ {INTRO_FRAME_COUNT} intro = {len(converted_motion.poses)}"
+        f"+ {SHAPE_TRANSITION_FRAME_COUNT} shape "
+        f"+ {POSE_INTRO_FRAME_COUNT} pose = {SHAPE_TRANSITION_FRAME_COUNT + len(converted_motion.poses)}"
     )
     print(f"Output: {output_path}")
     print()
@@ -290,7 +386,9 @@ def convert(input_path, model_path, output_path, target_fps, batch_size):
 def main():
     parser = argparse.ArgumentParser(description="Convert AMASS SMPL motion to a binary OpenGL mesh motion asset.")
     parser.add_argument("--input", required=True, type=Path)
-    parser.add_argument("--model", required=True, type=Path)
+    parser.add_argument("--neutral-model", required=True, type=Path)
+    parser.add_argument("--male-model", required=True, type=Path)
+    parser.add_argument("--female-model", required=True, type=Path)
     parser.add_argument("--output", required=True, type=Path)
     parser.add_argument("--target-fps", default=30.0, type=float)
     parser.add_argument("--batch-size", default=128, type=int)
@@ -298,7 +396,11 @@ def main():
 
     convert(
         input_path=args.input,
-        model_path=args.model,
+        model_paths={
+            "neutral": args.neutral_model,
+            "male": args.male_model,
+            "female": args.female_model,
+        },
         output_path=args.output,
         target_fps=args.target_fps,
         batch_size=max(1, args.batch_size),
