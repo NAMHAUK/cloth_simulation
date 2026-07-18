@@ -2,16 +2,11 @@
 
 #include "gpu/scene/CollisionCandidateBuffers.h"
 #include "simulation/SimulationGpuViews.h"
-#include "utils/GpuElapsedTimer.h"
 
 #include <cstdint>
 #include <filesystem>
 
 #include <QOpenGLFunctions_4_5_Core>
-
-#ifndef CLOTH_SIM_COLLISION_GPU_TIMING
-#define CLOTH_SIM_COLLISION_GPU_TIMING 0
-#endif
 
 class ClothBodyCollisionDetector final {
 public:
@@ -64,10 +59,5 @@ private:
     CandidateDetectionProgram cloth_edge_body_edge_;
     CandidateDetectionProgram cloth_face_body_vertex_;
     DispatchSizeProgram dispatch_size_;
-#if CLOTH_SIM_COLLISION_GPU_TIMING
-    mutable GpuElapsedTimer cloth_vertex_body_face_timer_;
-    mutable GpuElapsedTimer cloth_edge_body_edge_timer_;
-    mutable GpuElapsedTimer cloth_face_body_vertex_timer_;
-#endif
     float collision_thickness_ = 0.0f;
 };

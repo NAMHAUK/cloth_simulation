@@ -1,14 +1,9 @@
 #pragma once
 
 #include "simulation/SimulationGpuViews.h"
-#include "utils/GpuElapsedTimer.h"
 #include <filesystem>
 
 #include <QOpenGLFunctions_4_5_Core>
-
-#ifndef CLOTH_SIM_COLLISION_SOLVER_GPU_TIMING
-#define CLOTH_SIM_COLLISION_SOLVER_GPU_TIMING 0
-#endif
 
 class ClothClothCollisionSolver final {
 public:
@@ -69,9 +64,6 @@ private:
     } initial_accumulate_;
     BodyTriangleIdBuildStage body_triangle_id_build_;
     ApplyStage apply_;
-#if CLOTH_SIM_COLLISION_SOLVER_GPU_TIMING
-    mutable GpuElapsedTimer accumulate_timer_;
-#endif
     float collision_thickness_ = 0.0f;
     float collision_stiffness_ = 0.0f;
     float penetration_tolerance_ = 0.0f;

@@ -11,7 +11,6 @@
 namespace {
 constexpr std::uint32_t candidate_detect_local_size = 128u;
 constexpr std::uint32_t candidate_accumulate_local_size = 128u;
-constexpr std::uint32_t gpu_timing_log_interval = 100u;
 
 namespace candidate_detect_binding {
 constexpr GLuint cloth_current = 0;
@@ -129,9 +128,6 @@ bool ClothClothCollisionDetector::initialize(const std::filesystem::path& candid
         return false;
     }
 
-#if CLOTH_SIM_COLLISION_GPU_TIMING
-    candidate_detect_timer_.initialize("cloth-cloth vertex-face candidate detection", gpu_timing_log_interval, gl);
-#endif
     return true;
 }
 
@@ -171,9 +167,6 @@ void ClothClothCollisionDetector::detect(const SimulationGpuViews& views,
 
     views.collision_candidates.clear_cloth_cloth_candidate_counts(gl);
 
-#if CLOTH_SIM_COLLISION_GPU_TIMING
-    const bool gpu_timing_started = candidate_detect_timer_.begin(gl);
-#endif
     gl.glUseProgram(candidate_detect_.program);
     gl.glBindBufferBase(GL_SHADER_STORAGE_BUFFER, candidate_detect_binding::cloth_current, views.cloth_motion.current_position_buffer);
     gl.glBindBufferBase(GL_SHADER_STORAGE_BUFFER, candidate_detect_binding::cloth_previous, views.cloth_motion.previous_position_buffer);
@@ -208,19 +201,11 @@ void ClothClothCollisionDetector::detect(const SimulationGpuViews& views,
         }
     }
 
-#if CLOTH_SIM_COLLISION_GPU_TIMING
-    if (gpu_timing_started) {
-        candidate_detect_timer_.end(gl);
-    }
-#endif
     build_dispatch_size(collision_candidates, gl);
 }
 
 void ClothClothCollisionDetector::release(QOpenGLFunctions_4_5_Core& gl)
 {
-#if CLOTH_SIM_COLLISION_GPU_TIMING
-    candidate_detect_timer_.release(gl);
-#endif
     gl.glDeleteProgram(dispatch_size_.program);
     gl.glDeleteProgram(candidate_detect_.program);
     candidate_detect_ = {};

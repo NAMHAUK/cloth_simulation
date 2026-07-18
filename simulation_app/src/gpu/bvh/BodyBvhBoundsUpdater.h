@@ -2,7 +2,6 @@
 
 #include "gpu/character/CharacterGpuDataTypes.h"
 #include "gpu/bvh/BvhDataTypes.h"
-#include "utils/GpuElapsedTimer.h"
 
 #include <filesystem>
 #include <vector>
@@ -50,5 +49,4 @@ private:
     GLint edge_first_node_location_ = -1;
     GLint edge_node_count_location_ = -1;
     GLint collision_thickness_location_ = -1;
-    GpuElapsedTimer update_timer_;
 };

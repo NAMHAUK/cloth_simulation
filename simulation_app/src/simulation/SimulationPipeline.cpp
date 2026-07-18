@@ -12,9 +12,6 @@
 
 namespace {
 
-constexpr std::uint32_t gpu_timing_log_interval = 100u;
-constexpr std::uint64_t timing_warmup_step_count = 100u;
-
 const GarmentBufferRanges* find_garment_range(
     const std::vector<GarmentBufferRanges>& garment_ranges,
     std::uint32_t garment_id)
@@ -60,9 +57,6 @@ bool SimulationPipeline::is_initialized() const
 
 bool SimulationPipeline::initialize(const ShaderPaths& shader_paths, QOpenGLFunctions_4_5_Core& gl)
 {
-    timing_step_count_ = 0u;
-    GpuElapsedTimer::set_sample_recording_enabled(false);
-
     substep_dt_ = simulation_settings::fixed_dt / static_cast<float>(simulation_settings::substep_count);
 
     const bool solvers_initialized =
@@ -115,9 +109,6 @@ bool SimulationPipeline::initialize(const ShaderPaths& shader_paths, QOpenGLFunc
     }
 
     initialized_ = true;
-#if CLOTH_SIM_SUBSTEP_GPU_TIMING
-    substep_gpu_timer_.initialize("substep", gpu_timing_log_interval, gl);
-#endif
     return true;
 }
 
@@ -199,14 +190,9 @@ bool SimulationPipeline::step(SceneState& scene, SceneGpuState& gpu_state, std::
     }
 
     const bool has_multiple_garments = scene.has_multiple_garments();
-    GpuElapsedTimer::set_sample_recording_enabled(timing_step_count_ >= timing_warmup_step_count);
 
     const glm::vec3 external_acceleration = force_field_.external_acceleration();
     for (std::uint32_t substep = 0; substep < simulation_settings::substep_count; ++substep) {
-#if CLOTH_SIM_SUBSTEP_GPU_TIMING
-        const bool gpu_timing_started = substep_gpu_timer_.begin(gl);
-#endif
-
         update_character_substep_frame(scene, gpu_state, motion_step_index, substep, gl);
 
         external_force_solver_.solve(views.cloth_motion,
@@ -224,11 +210,6 @@ bool SimulationPipeline::step(SceneState& scene, SceneGpuState& gpu_state, std::
                                         simulation_settings::cloth_collision_detection_distance,
                                         gl);
             if (!bounds_updated) {
-#if CLOTH_SIM_SUBSTEP_GPU_TIMING
-                if (gpu_timing_started) {
-                    substep_gpu_timer_.end(gl);
-                }
-#endif
                 return false;
             }
             cloth_cloth_collision_detector_.detect(views, gl);
@@ -244,24 +225,14 @@ bool SimulationPipeline::step(SceneState& scene, SceneGpuState& gpu_state, std::
             }
             ground_collision_solver_.solve(views.cloth_motion, views.cloth_collision_pushout, gl);
         }
-
-#if CLOTH_SIM_SUBSTEP_GPU_TIMING
-        if (gpu_timing_started) {
-            substep_gpu_timer_.end(gl);
-        }
-#endif
     }
 
     gpu_state.update_mesh_normals(gl);
-    ++timing_step_count_;
     return true;
 }
 
 void SimulationPipeline::release(QOpenGLFunctions_4_5_Core& gl)
 {
-#if CLOTH_SIM_SUBSTEP_GPU_TIMING
-    substep_gpu_timer_.release(gl);
-#endif
     garment_prefit_solver_.release(gl);
     cloth_cloth_collision_solver_.release(gl);
     cloth_cloth_collision_detector_.release(gl);
@@ -274,8 +245,6 @@ void SimulationPipeline::release(QOpenGLFunctions_4_5_Core& gl)
     external_force_solver_.release(gl);
     cloth_bvh_bounds_updater_.release(gl);
     substep_dt_ = 0.0f;
-    timing_step_count_ = 0u;
-    GpuElapsedTimer::set_sample_recording_enabled(false);
     initialized_ = false;
 }
 

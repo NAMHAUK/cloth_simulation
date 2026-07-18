@@ -14,16 +14,10 @@
 #include "simulation/collision/ClothClothCollisionDetector.h"
 #include "simulation/collision/ClothClothCollisionSolver.h"
 #include "simulation/collision/GarmentPrefitSolver.h"
-#include "utils/GpuElapsedTimer.h"
 
 #include <cstdint>
 
 #include <QOpenGLFunctions_4_5_Core>
-
-// GPU timing stays opt-in at compile time because GL_TIME_ELAPSED has runtime cost.
-#ifndef CLOTH_SIM_SUBSTEP_GPU_TIMING
-#define CLOTH_SIM_SUBSTEP_GPU_TIMING 1
-#endif
 
 class SceneGpuState;
 class SceneState;
@@ -63,10 +57,6 @@ private:
     ClothClothCollisionDetector cloth_cloth_collision_detector_;
     ClothClothCollisionSolver cloth_cloth_collision_solver_;
     GarmentPrefitSolver garment_prefit_solver_;
-#if CLOTH_SIM_SUBSTEP_GPU_TIMING
-    mutable GpuElapsedTimer substep_gpu_timer_;
-#endif
     float substep_dt_ = 0.0f;
-    std::uint64_t timing_step_count_ = 0u;
     bool initialized_ = false;
 };

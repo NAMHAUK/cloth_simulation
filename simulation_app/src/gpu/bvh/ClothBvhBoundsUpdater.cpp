@@ -15,7 +15,6 @@ constexpr GLuint collision_triangle_indices_binding = 2;
 constexpr GLuint cloth_bvh_nodes_binding = 3;
 constexpr GLuint cloth_triangle_bounds_binding = 4;
 constexpr std::uint32_t bvh_bounds_update_local_size = 128;
-constexpr std::uint32_t gpu_timing_log_interval = 100u;
 
 bool is_valid_range(std::uint32_t offset, std::uint32_t count, std::uint32_t total_count)
 {
@@ -76,9 +75,6 @@ bool ClothBvhBoundsUpdater::initialize(const std::filesystem::path& shader_path,
         return false;
     }
 
-#if CLOTH_SIM_CLOTH_BVH_GPU_TIMING
-    update_timer_.initialize("cloth BVH bounds update", gpu_timing_log_interval, gl);
-#endif
     return true;
 }
 
@@ -133,10 +129,6 @@ bool ClothBvhBoundsUpdater::update(
         return false;
     }
 
-#if CLOTH_SIM_CLOTH_BVH_GPU_TIMING
-    const bool gpu_timing_started = update_timer_.begin(gl);
-#endif
-
     gl.glUseProgram(program_);
     gl.glBindBufferBase(GL_SHADER_STORAGE_BUFFER, cloth_current_positions_binding, motion_view.current_position_buffer);
     gl.glBindBufferBase(GL_SHADER_STORAGE_BUFFER, cloth_previous_positions_binding, motion_view.previous_position_buffer);
@@ -174,19 +166,11 @@ bool ClothBvhBoundsUpdater::update(
         gl.glMemoryBarrier(GL_SHADER_STORAGE_BARRIER_BIT);
     }
 
-#if CLOTH_SIM_CLOTH_BVH_GPU_TIMING
-    if (gpu_timing_started) {
-        update_timer_.end(gl);
-    }
-#endif
     return true;
 }
 
 void ClothBvhBoundsUpdater::release(QOpenGLFunctions_4_5_Core& gl)
 {
-#if CLOTH_SIM_CLOTH_BVH_GPU_TIMING
-    update_timer_.release(gl);
-#endif
     gl.glDeleteProgram(program_);
 
     program_ = 0;
