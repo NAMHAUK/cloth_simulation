@@ -118,6 +118,8 @@ bool ClothBodyCollisionSolver::initialize(const std::filesystem::path& cloth_ver
     dynamic_friction_ = dynamic_friction;
 #if CLOTH_SIM_COLLISION_SOLVER_GPU_TIMING
     vf_accumulate_timer_.initialize("cloth vertex - body face candidate accumulation", gpu_timing_log_interval, gl);
+    ee_accumulate_timer_.initialize("cloth edge - body edge candidate accumulation", gpu_timing_log_interval, gl);
+    bf_accumulate_timer_.initialize("cloth face - body vertex candidate accumulation", gpu_timing_log_interval, gl);
     vf_apply_timer_.initialize("cloth vertex - body face collision apply", gpu_timing_log_interval, gl);
 #endif
     return true;
@@ -181,6 +183,8 @@ void ClothBodyCollisionSolver::release(QOpenGLFunctions_4_5_Core& gl)
     gl.glDeleteProgram(vf_accumulate_.program);
 #if CLOTH_SIM_COLLISION_SOLVER_GPU_TIMING
     vf_apply_timer_.release(gl);
+    bf_accumulate_timer_.release(gl);
+    ee_accumulate_timer_.release(gl);
     vf_accumulate_timer_.release(gl);
 #endif
 
@@ -231,6 +235,9 @@ void ClothBodyCollisionSolver::vf_accumulate(const SimulationGpuViews& views, QO
 
 void ClothBodyCollisionSolver::ee_accumulate(const SimulationGpuViews& views, QOpenGLFunctions_4_5_Core& gl) const
 {
+#if CLOTH_SIM_COLLISION_SOLVER_GPU_TIMING
+    const bool gpu_timing_started = ee_accumulate_timer_.begin(gl);
+#endif
     const CollisionCandidateBuffer& collision_candidates = views.collision_candidates.cloth_edge_body_edge;
     gl.glUseProgram(ee_accumulate_.program);
     gl.glBindBufferBase(GL_SHADER_STORAGE_BUFFER, ee_binding::cloth_current, views.cloth_motion.current_position_buffer);
@@ -250,10 +257,18 @@ void ClothBodyCollisionSolver::ee_accumulate(const SimulationGpuViews& views, QO
     gl.glDispatchComputeIndirect(0);
     gl.glBindBuffer(GL_DISPATCH_INDIRECT_BUFFER, 0);
     gl.glMemoryBarrier(GL_SHADER_STORAGE_BARRIER_BIT);
+#if CLOTH_SIM_COLLISION_SOLVER_GPU_TIMING
+    if (gpu_timing_started) {
+        ee_accumulate_timer_.end(gl);
+    }
+#endif
 }
 
 void ClothBodyCollisionSolver::bf_accumulate(const SimulationGpuViews& views, QOpenGLFunctions_4_5_Core& gl) const
 {
+#if CLOTH_SIM_COLLISION_SOLVER_GPU_TIMING
+    const bool gpu_timing_started = bf_accumulate_timer_.begin(gl);
+#endif
     const CollisionCandidateBuffer& collision_candidates = views.collision_candidates.cloth_face_body_vertex;
     gl.glUseProgram(bf_accumulate_.program);
     gl.glBindBufferBase(GL_SHADER_STORAGE_BUFFER, bf_binding::cloth_current, views.cloth_motion.current_position_buffer);
@@ -273,6 +288,11 @@ void ClothBodyCollisionSolver::bf_accumulate(const SimulationGpuViews& views, QO
     gl.glDispatchComputeIndirect(0);
     gl.glBindBuffer(GL_DISPATCH_INDIRECT_BUFFER, 0);
     gl.glMemoryBarrier(GL_SHADER_STORAGE_BARRIER_BIT);
+#if CLOTH_SIM_COLLISION_SOLVER_GPU_TIMING
+    if (gpu_timing_started) {
+        bf_accumulate_timer_.end(gl);
+    }
+#endif
 }
 
 void ClothBodyCollisionSolver::apply_combined_corrections(const SimulationGpuViews& views, QOpenGLFunctions_4_5_Core& gl) const

@@ -2,11 +2,16 @@
 
 #include "gpu/cloth/ClothBvhResources.h"
 #include "gpu/cloth/ClothGpuDataTypes.h"
+#include "utils/GpuElapsedTimer.h"
 
 #include <filesystem>
 #include <vector>
 
 #include <QOpenGLFunctions_4_5_Core>
+
+#ifndef CLOTH_SIM_CLOTH_BVH_GPU_TIMING
+#define CLOTH_SIM_CLOTH_BVH_GPU_TIMING 0
+#endif
 
 class ClothBvhBoundsUpdater final {
 public:
@@ -35,4 +40,7 @@ private:
     GLint level_first_node_location_ = -1;
     GLint level_node_count_location_ = -1;
     GLint bounds_margin_location_ = -1;
+#if CLOTH_SIM_CLOTH_BVH_GPU_TIMING
+    mutable GpuElapsedTimer update_timer_;
+#endif
 };

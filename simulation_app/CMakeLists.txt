@@ -165,11 +165,18 @@ target_include_directories(garment_converter PRIVATE
     src
 )
 
+if(MSVC)
+    target_compile_options(simulation_app PRIVATE /utf-8)
+    target_compile_options(garment_converter PRIVATE /utf-8)
+endif()
+
 target_compile_definitions(simulation_app PRIVATE
     PROJECT_ROOT_DIR="${REPO_ROOT}"
     CLOTH_SIM_SUBSTEP_GPU_TIMING=1
-    CLOTH_SIM_COLLISION_GPU_TIMING=0
-    CLOTH_SIM_COLLISION_SOLVER_GPU_TIMING=0
+    CLOTH_SIM_BODY_BVH_GPU_TIMING=1
+    CLOTH_SIM_CLOTH_BVH_GPU_TIMING=1
+    CLOTH_SIM_COLLISION_GPU_TIMING=1
+    CLOTH_SIM_COLLISION_SOLVER_GPU_TIMING=1
 )
 
 target_link_libraries(simulation_app PRIVATE

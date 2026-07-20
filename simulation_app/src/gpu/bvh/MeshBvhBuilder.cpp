@@ -16,7 +16,7 @@ namespace {
 constexpr std::uint32_t edge_vertex_count = 2;
 constexpr std::uint32_t triangle_vertex_count = 3;
 constexpr std::uint32_t vertex_position_component_count = 3;
-constexpr std::uint32_t bvh_leaf_size = 8;
+constexpr std::uint32_t bvh_leaf_size = 3;
 constexpr std::uint8_t invalid_part_label = 0xFFu;
 
 MeshEdge make_ordered_edge(std::uint32_t vertex_a, std::uint32_t vertex_b)

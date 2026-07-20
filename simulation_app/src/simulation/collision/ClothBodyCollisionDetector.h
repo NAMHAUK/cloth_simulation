@@ -66,6 +66,8 @@ private:
     DispatchSizeProgram dispatch_size_;
 #if CLOTH_SIM_COLLISION_GPU_TIMING
     mutable GpuElapsedTimer cloth_vertex_body_face_timer_;
+    mutable GpuElapsedTimer cloth_edge_body_edge_timer_;
+    mutable GpuElapsedTimer cloth_face_body_vertex_timer_;
 #endif
     float collision_thickness_ = 0.0f;
 };

@@ -10,6 +10,7 @@
 namespace {
 constexpr std::uint32_t apply_local_size = 128u;
 constexpr std::uint32_t body_triangle_id_build_local_size = 128u;
+constexpr std::uint32_t gpu_timing_log_interval = 100u;
 
 namespace accumulate_binding {
 constexpr GLuint cloth_current = 0;
@@ -143,6 +144,9 @@ bool ClothClothCollisionSolver::initialize(const std::filesystem::path& accumula
     penetration_tolerance_ = penetration_tolerance;
     max_correction_length_ = max_correction_length;
     surface_search_radius_ = surface_search_radius;
+#if CLOTH_SIM_COLLISION_SOLVER_GPU_TIMING
+    accumulate_timer_.initialize("cloth-cloth vertex-face candidate accumulation", gpu_timing_log_interval, gl);
+#endif
     return true;
 }
 
@@ -218,6 +222,9 @@ void ClothClothCollisionSolver::solve(const SimulationGpuViews& views,
     const CollisionCandidateBuffer& collision_candidates = views.collision_candidates.cloth_cloth_vertex_face;
     views.collision_candidates.clear_normal_correction_sums(gl);
 
+#if CLOTH_SIM_COLLISION_SOLVER_GPU_TIMING
+    const bool gpu_timing_started = accumulate_timer_.begin(gl);
+#endif
     gl.glUseProgram(accumulate_.program);
     gl.glBindBufferBase(GL_SHADER_STORAGE_BUFFER, accumulate_binding::cloth_current, views.cloth_motion.current_position_buffer);
     gl.glBindBufferBase(GL_SHADER_STORAGE_BUFFER, accumulate_binding::cloth_previous, views.cloth_motion.previous_position_buffer);
@@ -238,6 +245,11 @@ void ClothClothCollisionSolver::solve(const SimulationGpuViews& views,
     gl.glDispatchComputeIndirect(0);
     gl.glBindBuffer(GL_DISPATCH_INDIRECT_BUFFER, 0);
     gl.glMemoryBarrier(GL_SHADER_STORAGE_BARRIER_BIT);
+#if CLOTH_SIM_COLLISION_SOLVER_GPU_TIMING
+    if (gpu_timing_started) {
+        accumulate_timer_.end(gl);
+    }
+#endif
     apply_corrections(views, gl);
 }
 
@@ -290,6 +302,9 @@ void ClothClothCollisionSolver::apply_corrections(const SimulationGpuViews& view
 
 void ClothClothCollisionSolver::release(QOpenGLFunctions_4_5_Core& gl)
 {
+#if CLOTH_SIM_COLLISION_SOLVER_GPU_TIMING
+    accumulate_timer_.release(gl);
+#endif
     gl.glDeleteProgram(apply_.program);
     gl.glDeleteProgram(body_triangle_id_build_.program);
     gl.glDeleteProgram(initial_accumulate_.program);
