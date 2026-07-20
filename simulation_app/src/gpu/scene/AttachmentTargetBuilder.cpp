@@ -13,7 +13,6 @@ constexpr GLuint attachment_barycentric_offsets_binding = 2;
 constexpr GLuint body_triangle_geometry_binding = 3;
 constexpr GLuint body_triangle_bvh_node_binding = 4;
 constexpr std::uint32_t attachment_target_local_size = 128;
-constexpr float attachment_surface_offset = 0.005f;
 
 bool is_valid_attachment_target_range(const AttachmentConstraintBufferView& attachment_view,
                                       const ElementRange& target_range)
@@ -71,6 +70,7 @@ bool AttachmentTargetBuilder::build(const ClothMotionBufferView& motion_view,
                                     const ElementRange& target_range,
                                     const TriangleGeometryResources& body_triangle_geometry,
                                     const TriangleBvhResources& body_triangle_bvh,
+                                    float surface_offset,
                                     QOpenGLFunctions_4_5_Core& gl) const
 {
     if (!can_build(motion_view, attachment_view, target_range, body_triangle_geometry, body_triangle_bvh)) {
@@ -86,7 +86,7 @@ bool AttachmentTargetBuilder::build(const ClothMotionBufferView& motion_view,
 
     gl.glProgramUniform1ui(program_, constraint_offset_location_, target_range.offset);
     gl.glProgramUniform1ui(program_, constraint_count_location_, target_range.count);
-    gl.glProgramUniform1f(program_, surface_offset_location_, attachment_surface_offset);
+    gl.glProgramUniform1f(program_, surface_offset_location_, surface_offset);
 
     gl.glDispatchCompute(compute_group_count(target_range.count, attachment_target_local_size), 1, 1);
     gl.glMemoryBarrier(GL_SHADER_STORAGE_BARRIER_BIT);

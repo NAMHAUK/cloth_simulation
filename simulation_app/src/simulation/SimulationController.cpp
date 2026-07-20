@@ -87,7 +87,8 @@ void SimulationController::load_default_character_mesh(CharacterMesh mesh,
         mesh.vertex_count,
         mesh.triangle_vertex_indices,
         mesh.vertices,
-        triangle_part_labels
+        triangle_part_labels,
+        body_bvh_excluded_part_mask
     );
     TriangleBvhData default_body_triangle_bvh_data = bvh_builder.build_triangle_bvh();
     if (!default_body_triangle_bvh_data.is_valid(mesh.triangle_count)) {
@@ -299,7 +300,10 @@ void SimulationController::confirm_garment_placement()
             std::cerr << "Cannot confirm garment placement because garment pre-fit failed.\n";
             return;
         }
-        gpu_state_.build_garment_attachment_targets(scene_, garment_placement_.garment_id, gl);
+        gpu_state_.build_garment_attachment_targets(scene_,
+                                                    garment_placement_.garment_id,
+                                                    simulation_settings::attachment_surface_offset,
+                                                    gl);
         garment_placement_.clear();
         gpu_state_.clear_base_positions(gl);
         has_base_positions_ = false;

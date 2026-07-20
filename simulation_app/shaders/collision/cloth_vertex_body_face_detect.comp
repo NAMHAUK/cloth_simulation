@@ -5,11 +5,11 @@
 layout(local_size_x = 128) in;
 
 layout(std430, binding = 0) readonly buffer ClothCurrentPositions {
-    float cloth_current_positions[];
+    vec4 cloth_current_positions[];
 };
 
 layout(std430, binding = 1) readonly buffer ClothPreviousPositions {
-    float cloth_previous_positions[];
+    vec4 cloth_previous_positions[];
 };
 
 layout(std430, binding = 2) readonly buffer BodyTriangleBounds {
@@ -34,7 +34,6 @@ layout(std430, binding = 6) buffer OverflowCount {
 
 uniform uint uClothVertexCount;
 uniform uint uMaxCandidateCount;
-uniform uint uIgnoredBodyPartMask;
 
 const uint max_bvh_stack_depth = 32u;
 const uint bvh_root_node = 0u;
@@ -75,10 +74,6 @@ void main()
         while (stack_count > 0u) {
             --stack_count;
             BvhNode current_node = bvh_nodes[node_index_stack[stack_count]];
-            if (is_ignored_body_part_node(current_node, uIgnoredBodyPartMask)) {
-                continue;
-            }
-
             if (!overlaps_aabb(query_bounds, current_node.bounds)) {
                 continue;
             }
@@ -86,10 +81,6 @@ void main()
             if (is_leaf_node(current_node)) {
                 for (uint triangle_offset = 0u; triangle_offset < current_node.element_count; ++triangle_offset) {
                     uint triangle_index = current_node.first_element_index + triangle_offset;
-                    if (body_triangle_bounds[triangle_index].max_bounds.w == 0.0) {
-                        continue;
-                    }
-
                     Aabb triangle_bounds = build_body_triangle_aabb(triangle_index);
                     if (overlaps_aabb(query_bounds, triangle_bounds)) {
                         append_candidate(uvec2(cloth_vertex_id, triangle_index));

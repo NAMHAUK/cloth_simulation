@@ -96,8 +96,6 @@ add_executable(simulation_app
     src/utils/QtUtils.h
     src/utils/BufferUtils.h
     src/utils/FileUtils.h
-    src/utils/GpuElapsedTimer.cpp
-    src/utils/GpuElapsedTimer.h
     src/utils/NumericUtils.h
     src/utils/ShaderUtils.h
     src/ui/MainWindow.cpp
@@ -165,10 +163,13 @@ target_include_directories(garment_converter PRIVATE
     src
 )
 
+if(MSVC)
+    target_compile_options(simulation_app PRIVATE /utf-8)
+    target_compile_options(garment_converter PRIVATE /utf-8)
+endif()
+
 target_compile_definitions(simulation_app PRIVATE
     PROJECT_ROOT_DIR="${REPO_ROOT}"
-    CLOTH_SIM_COLLISION_SOLVER_GPU_TIMING=1
-    $<$<CONFIG:Debug>:CLOTH_SIM_CLOTH_CLOTH_COLLISION_GPU_TIMING=1>
 )
 
 target_link_libraries(simulation_app PRIVATE

@@ -4,7 +4,6 @@
 #include "utils/BufferUtils.h"
 #include "utils/ShaderUtils.h"
 
-#include <algorithm>
 #include <cassert>
 #include <iostream>
 #include <unordered_set>
@@ -12,8 +11,6 @@
 namespace {
 constexpr std::uint32_t candidate_detect_local_size = 128u;
 constexpr std::uint32_t candidate_accumulate_local_size = 128u;
-constexpr std::uint32_t diagnostic_log_interval = 100u;
-constexpr std::uint32_t gpu_timing_log_interval = 100u;
 
 namespace candidate_detect_binding {
 constexpr GLuint cloth_current = 0;
@@ -131,9 +128,6 @@ bool ClothClothCollisionDetector::initialize(const std::filesystem::path& candid
         return false;
     }
 
-#if CLOTH_SIM_CLOTH_CLOTH_COLLISION_GPU_TIMING
-    detection_timer_.initialize("cloth-cloth vertex-face pair detection", gpu_timing_log_interval, gl);
-#endif
     return true;
 }
 
@@ -171,9 +165,6 @@ void ClothClothCollisionDetector::detect(const SimulationGpuViews& views,
         return;
     }
 
-#if CLOTH_SIM_CLOTH_CLOTH_COLLISION_GPU_TIMING
-    const bool gpu_timing_started = detection_timer_.begin(gl);
-#endif
     views.collision_candidates.clear_cloth_cloth_candidate_counts(gl);
 
     gl.glUseProgram(candidate_detect_.program);
@@ -211,47 +202,12 @@ void ClothClothCollisionDetector::detect(const SimulationGpuViews& views,
     }
 
     build_dispatch_size(collision_candidates, gl);
-#if CLOTH_SIM_CLOTH_CLOTH_COLLISION_GPU_TIMING
-    if (gpu_timing_started) {
-        detection_timer_.end(gl);
-    }
-#endif
-}
-
-void ClothClothCollisionDetector::log_diagnostics(const SimulationGpuViews& views,
-                                                  std::uint64_t simulation_step,
-                                                  QOpenGLFunctions_4_5_Core& gl) const
-{
-#ifndef NDEBUG
-    if (simulation_step % diagnostic_log_interval != 0u ||
-        !is_valid_collision_candidate_buffer(views.collision_candidates.cloth_cloth_vertex_face)) {
-        return;
-    }
-
-    const CollisionCandidateBuffer& collision_candidates = views.collision_candidates.cloth_cloth_vertex_face;
-    std::uint32_t candidate_count = 0;
-    std::uint32_t overflow_count = 0;
-    gl.glMemoryBarrier(GL_BUFFER_UPDATE_BARRIER_BIT);
-    gl.glGetNamedBufferSubData(collision_candidates.candidate_count, 0, sizeof(candidate_count), &candidate_count);
-    gl.glGetNamedBufferSubData(collision_candidates.overflow_count, 0, sizeof(overflow_count), &overflow_count);
-    std::cerr << "[CLOTH-CLOTH] candidates " << candidate_count
-              << ", stored " << std::min(candidate_count, collision_candidates.capacity)
-              << ", overflow " << overflow_count
-              << ", capacity " << collision_candidates.capacity << ".\n";
-#else
-    (void)views;
-    (void)simulation_step;
-    (void)gl;
-#endif
 }
 
 void ClothClothCollisionDetector::release(QOpenGLFunctions_4_5_Core& gl)
 {
     gl.glDeleteProgram(dispatch_size_.program);
     gl.glDeleteProgram(candidate_detect_.program);
-#if CLOTH_SIM_CLOTH_CLOTH_COLLISION_GPU_TIMING
-    detection_timer_.release(gl);
-#endif
     candidate_detect_ = {};
     dispatch_size_ = {};
 }

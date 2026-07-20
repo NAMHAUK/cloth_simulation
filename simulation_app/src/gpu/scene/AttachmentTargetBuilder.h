@@ -20,6 +20,7 @@ public:
                const ElementRange& target_range,
                const TriangleGeometryResources& body_triangle_geometry,
                const TriangleBvhResources& body_triangle_bvh,
+               float surface_offset,
                QOpenGLFunctions_4_5_Core& gl) const;
     void release(QOpenGLFunctions_4_5_Core& gl);
 

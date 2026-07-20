@@ -3,7 +3,7 @@
 layout (location = 0) in vec3 aPosition;
 
 layout(std430, binding = 0) readonly buffer CharacterCurrentPositions {
-    float positions[];
+    vec4 positions[];
 };
 
 layout(std430, binding = 1) readonly buffer VertexNormals {
@@ -23,8 +23,7 @@ void main()
 {
     vec3 position = aPosition;
     if (uUsePositionBuffer) {
-        uint base = uint(gl_VertexID) * 3u;
-        position = vec3(positions[base], positions[base + 1u], positions[base + 2u]);
+        position = positions[gl_VertexID].xyz;
     }
 
     float heightTint = clamp(position.y * 0.45 + 0.55, 0.0, 1.0);

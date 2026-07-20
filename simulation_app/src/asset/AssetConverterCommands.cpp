@@ -58,7 +58,9 @@ ConverterCommand make_motion_command(
     command.arguments = {
         to_q_string(project_paths.converter_script),
         "--input", to_q_string(amass_motion_path),
-        "--model", to_q_string(project_paths.smpl_model_path),
+        "--neutral-model", to_q_string(project_paths.neutral_smpl_model_path),
+        "--male-model", to_q_string(project_paths.male_smpl_model_path),
+        "--female-model", to_q_string(project_paths.female_smpl_model_path),
         "--output", to_q_string(motion_asset_path),
         "--target-fps", QString::number(simulation_settings::character_motion_fps),
         "--batch-size", "128",

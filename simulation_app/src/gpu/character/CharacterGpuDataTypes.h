@@ -60,6 +60,7 @@ struct TriangleBvhResources final {
     GLuint node_buffer = 0;
     GLuint triangle_bounds_buffer = 0;
     std::uint32_t node_count = 0;
+    std::uint32_t triangle_count = 0;
 };
 
 struct VertexBvhResources final {

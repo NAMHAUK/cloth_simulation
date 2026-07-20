@@ -42,6 +42,7 @@ public:
                                   QOpenGLFunctions_4_5_Core& gl);
     void build_garment_attachment_targets(SceneState& scene,
                                           std::uint32_t garment_id,
+                                          float surface_offset,
                                           QOpenGLFunctions_4_5_Core& gl);
     bool save_base_positions(QOpenGLFunctions_4_5_Core& gl);
     bool restore_base_positions(QOpenGLFunctions_4_5_Core& gl);

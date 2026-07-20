@@ -7,10 +7,6 @@
 #include <iostream>
 
 namespace {
-#ifndef CLOTH_SIM_BODY_BVH_GPU_TIMING
-#define CLOTH_SIM_BODY_BVH_GPU_TIMING 0
-#endif
-
 constexpr GLuint body_triangle_geometry_binding = 0;
 constexpr GLuint body_triangle_indices_binding = 1;
 constexpr GLuint body_current_positions_binding = 2;
@@ -24,7 +20,6 @@ constexpr GLuint body_edge_indices_binding = 9;
 constexpr GLuint body_edge_bvh_nodes_binding = 10;
 constexpr GLuint body_edge_bounds_binding = 11;
 constexpr std::uint32_t bvh_bounds_update_local_size = 128;
-constexpr std::uint32_t gpu_timing_log_interval = 100u;
 
 bool is_valid_node_range(const BvhNodeRange& range, std::uint32_t node_count)
 {
@@ -69,6 +64,7 @@ bool BodyBvhBoundsUpdater::can_update(const CharacterMeshTopologyResources& topo
            vertex_view.vertex_count != 0 &&
            is_valid_triangle_geometry_resource(body_triangle_geometry) &&
            topology.triangle_count == body_triangle_geometry.triangle_count &&
+           body_triangle_bvh.triangle_count <= topology.triangle_count &&
            topology.vertex_count == vertex_view.vertex_count &&
            is_valid_triangle_bvh_resource(body_triangle_bvh) &&
            is_valid_vertex_bvh_resource(body_vertex_bvh) &&
@@ -107,9 +103,6 @@ bool BodyBvhBoundsUpdater::initialize(const std::filesystem::path& shader_path,
         return false;
     }
 
-#if CLOTH_SIM_BODY_BVH_GPU_TIMING
-    update_timer_.initialize("body BVH bounds update", gpu_timing_log_interval, gl);
-#endif
     return true;
 }
 
@@ -137,10 +130,6 @@ void BodyBvhBoundsUpdater::update(const CharacterMeshTopologyResources& topology
                     collision_thickness)) {
         return;
     }
-
-#if CLOTH_SIM_BODY_BVH_GPU_TIMING
-    const bool gpu_timing_started = update_timer_.begin(gl);
-#endif
 
     gl.glUseProgram(program_);
     gl.glBindBufferBase(GL_SHADER_STORAGE_BUFFER, body_triangle_geometry_binding, body_triangle_geometry.triangle_geometry_buffer);
@@ -189,18 +178,10 @@ void BodyBvhBoundsUpdater::update(const CharacterMeshTopologyResources& topology
         gl.glMemoryBarrier(GL_SHADER_STORAGE_BARRIER_BIT);
     }
 
-#if CLOTH_SIM_BODY_BVH_GPU_TIMING
-    if (gpu_timing_started) {
-        update_timer_.end(gl);
-    }
-#endif
 }
 
 void BodyBvhBoundsUpdater::release(QOpenGLFunctions_4_5_Core& gl)
 {
-#if CLOTH_SIM_BODY_BVH_GPU_TIMING
-    update_timer_.release(gl);
-#endif
     gl.glDeleteProgram(program_);
 
     program_ = 0;

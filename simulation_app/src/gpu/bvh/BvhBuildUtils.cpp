@@ -16,7 +16,6 @@ struct BvhBuildNode final {
     std::uint32_t right_child_index = invalid_bvh_node;
     std::uint32_t first_element_index = 0;
     std::uint32_t element_count = 0;
-    std::uint32_t part_label_mask = 0;
 };
 
 struct BvhBuildContext final {
@@ -276,7 +275,6 @@ std::uint32_t build_bvh_tree(BvhBuildContext& context, std::size_t begin, std::s
 
     BvhBuildNode& node = context.nodes.back();
     compute_node_bounds(context.primitives, begin, end, node.min_bounds, node.max_bounds);
-    node.part_label_mask = compute_part_label_mask(context.primitives, begin, end);
 
     const std::size_t primitive_count = end - begin;
     if (const auto middle = split_mixed_part_labels(context.primitives, begin, end, context.split_by_part_labels)) {
@@ -326,10 +324,7 @@ void write_level_ordered_bvh_data(std::uint32_t source_root_node,
         for (const std::uint32_t build_node_index : current_level_node_indices) {
             const auto& build_node = build_nodes[build_node_index];
             BvhNode& node = result_nodes.emplace_back();
-            node.bounds = {
-                glm::vec4(build_node.min_bounds, 0.0f),
-                glm::vec4(build_node.max_bounds, static_cast<float>(build_node.part_label_mask))
-            };
+            node.bounds = {glm::vec4(build_node.min_bounds, 0.0f), glm::vec4(build_node.max_bounds, 0.0f)};
 
             if (build_node.element_count > 0u) {
                 node.first_element_index = build_node.first_element_index;

@@ -3,7 +3,7 @@
 layout(local_size_x = 128) in;
 
 layout(std430, binding = 0) buffer CurrentPositions {
-    float current_positions[];
+    vec4 current_positions[];
 };
 
 layout(std430, binding = 1) readonly buffer StretchEdgeIndices {
@@ -30,15 +30,8 @@ void main()
     uint vertex_a = edge_indices[edge_base];
     uint vertex_b = edge_indices[edge_base + 1u];
 
-    uint position_a_base = vertex_a * 3u;
-    uint position_b_base = vertex_b * 3u;
-
-    vec3 position_a = vec3(current_positions[position_a_base],
-                           current_positions[position_a_base + 1u],
-                           current_positions[position_a_base + 2u]);
-    vec3 position_b = vec3(current_positions[position_b_base],
-                           current_positions[position_b_base + 1u],
-                           current_positions[position_b_base + 2u]);
+    vec3 position_a = current_positions[vertex_a].xyz;
+    vec3 position_b = current_positions[vertex_b].xyz;
 
     vec3 delta = position_b - position_a;
     float current_length = length(delta);
@@ -53,11 +46,6 @@ void main()
     position_a += correction;
     position_b -= correction;
 
-    current_positions[position_a_base] = position_a.x;
-    current_positions[position_a_base + 1u] = position_a.y;
-    current_positions[position_a_base + 2u] = position_a.z;
-
-    current_positions[position_b_base] = position_b.x;
-    current_positions[position_b_base + 1u] = position_b.y;
-    current_positions[position_b_base + 2u] = position_b.z;
+    current_positions[vertex_a] = vec4(position_a, 0.0);
+    current_positions[vertex_b] = vec4(position_b, 0.0);
 }

@@ -21,7 +21,7 @@ constexpr GLuint triangle_geometry_binding = 2;
 
 constexpr std::uint32_t position_update_local_size = 128;
 constexpr std::uint32_t triangle_geometry_local_size = 128;
-constexpr std::size_t position_components_per_vertex = 3;
+constexpr std::size_t position_components_per_vertex = 4;
 
 bool is_valid_position_update_input(const CharacterAnimationBufferView& animation_view,
                                     const CharacterVertexBufferView& vertex_view)

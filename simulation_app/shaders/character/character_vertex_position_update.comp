@@ -7,7 +7,7 @@ layout(std430, binding = 0) readonly buffer CharacterAnimationPositions {
 };
 
 layout(std430, binding = 1) writeonly buffer CharacterCurrentPositions {
-    float current_positions[];
+    vec4 current_positions[];
 };
 
 uniform uint uCurrentFrameBase;
@@ -32,8 +32,5 @@ void main()
     vec3 next_position = load_animation_position(uNextFrameBase, vertex_index);
     vec3 interpolated_position = mix(current_position, next_position, uFrameAlpha);
 
-    uint output_base = vertex_index * 3u;
-    current_positions[output_base] = interpolated_position.x;
-    current_positions[output_base + 1u] = interpolated_position.y;
-    current_positions[output_base + 2u] = interpolated_position.z;
+    current_positions[vertex_index] = vec4(interpolated_position, 0.0);
 }
