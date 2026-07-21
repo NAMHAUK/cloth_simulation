@@ -14,8 +14,8 @@
 #include <QWidget>
 
 namespace {
-constexpr int position_slider_min = -100;
-constexpr int position_slider_max = 100;
+constexpr int position_slider_min = -30;
+constexpr int position_slider_max = 30;
 constexpr int position_slider_center = 0;
 constexpr float position_slider_factor = 0.01f;
 constexpr int scale_slider_min = 50;
@@ -91,7 +91,7 @@ GarmentPlacementPanel::GarmentPlacementPanel(QWidget* parent): QWidget(parent)
         position_slider->setRange(position_slider_min, position_slider_max);
         position_slider->setValue(position_slider_center);
         position_slider->setSingleStep(1);
-        position_slider->setPageStep(5);
+        position_slider->setPageStep(1);
         position_sliders_[index] = position_slider;
 
         controls_grid->addWidget(axis_label, axis_index, 0);
@@ -112,7 +112,7 @@ GarmentPlacementPanel::GarmentPlacementPanel(QWidget* parent): QWidget(parent)
     scale_slider_->setRange(scale_slider_min, scale_slider_max);
     scale_slider_->setValue(scale_slider_center);
     scale_slider_->setSingleStep(1);
-    scale_slider_->setPageStep(5);
+    scale_slider_->setPageStep(1);
 
     controls_grid->addWidget(scale_label, scale_row, 0);
     controls_grid->addWidget(scale_value_label_, scale_row, 1);
