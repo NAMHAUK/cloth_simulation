@@ -9,6 +9,24 @@ set(CMAKE_AUTOMOC ON)
 find_package(Qt6 CONFIG REQUIRED COMPONENTS Widgets OpenGLWidgets OpenGL Concurrent)
 find_package(glm CONFIG REQUIRED)
 
+include(FetchContent)
+FetchContent_Declare(
+    QtColorWidgets
+    GIT_REPOSITORY https://gitlab.com/mattbas/Qt-Color-Widgets.git
+    GIT_TAG 5d52e907e50dc88cf969b41cea44665ff6c475b1
+    # Only Color2DSlider is needed, so skip the upstream full-library target.
+    SOURCE_SUBDIR unused
+)
+FetchContent_MakeAvailable(QtColorWidgets)
+
+add_library(QtColorWidgets STATIC
+    ${qtcolorwidgets_SOURCE_DIR}/include/QtColorWidgets/color_2d_slider.hpp
+    ${qtcolorwidgets_SOURCE_DIR}/src/QtColorWidgets/color_2d_slider.cpp
+)
+target_compile_definitions(QtColorWidgets PUBLIC QTCOLORWIDGETS_STATICALLY_LINKED)
+target_include_directories(QtColorWidgets PUBLIC ${qtcolorwidgets_SOURCE_DIR}/include)
+target_link_libraries(QtColorWidgets PRIVATE Qt6::Widgets)
+
 get_filename_component(REPO_ROOT "${CMAKE_CURRENT_SOURCE_DIR}/.." ABSOLUTE)
 
 add_executable(simulation_app
@@ -164,6 +182,7 @@ target_include_directories(garment_converter PRIVATE
 )
 
 if(MSVC)
+    target_compile_options(QtColorWidgets PRIVATE /Zc:lambda)
     target_compile_options(simulation_app PRIVATE /utf-8)
     target_compile_options(garment_converter PRIVATE /utf-8)
 endif()
@@ -177,6 +196,7 @@ target_link_libraries(simulation_app PRIVATE
     Qt6::OpenGLWidgets
     Qt6::OpenGL
     Qt6::Concurrent
+    QtColorWidgets
     glm::glm
     opengl32
 )

@@ -45,6 +45,7 @@ public:
                                      QOpenGLFunctions_4_5_Core& gl);
     bool add_garment_mesh(GarmentMesh mesh);
     void set_garment_placement(const glm::vec3& position_offset, float scale);
+    void set_garment_color(const glm::vec3& color);
     void confirm_garment_placement();
     void cancel_garment_placement();
     void reset_scene_to_default();
@@ -60,6 +61,7 @@ public:
     bool has_base_positions() const;
     bool has_garments() const;
     bool can_start_garment_placement() const;
+    glm::vec3 garment_placement_color() const;
     void draw(const glm::mat4& mvp, QOpenGLFunctions_4_5_Core& gl);
     void release_gpu();
 

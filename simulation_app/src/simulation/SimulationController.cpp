@@ -287,6 +287,16 @@ void SimulationController::set_garment_placement(const glm::vec3& position_offse
     }
 }
 
+void SimulationController::set_garment_color(const glm::vec3& color)
+{
+    if (garment_placement_.garment_id == 0u ||
+        !scene_.update_garment_color(garment_placement_.garment_id, color)) {
+        return;
+    }
+
+    viewport_callbacks_.request_update();
+}
+
 void SimulationController::confirm_garment_placement()
 {
     if (!is_viewport_ready()) {
@@ -373,6 +383,17 @@ bool SimulationController::has_garments() const
 bool SimulationController::can_start_garment_placement() const
 {
     return garment_placement_.garment_id != 0u || !scene_.has_multiple_garments();
+}
+
+glm::vec3 SimulationController::garment_placement_color() const
+{
+    for (const GarmentObject& garment : scene_.garments()) {
+        if (garment.id == garment_placement_.garment_id) {
+            return garment.mesh.color;
+        }
+    }
+
+    return glm::vec3{1.0f};
 }
 
 bool SimulationController::has_garment_placement_update() const

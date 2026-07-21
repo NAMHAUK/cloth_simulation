@@ -55,12 +55,6 @@ const EdgeBvhData& SceneState::default_body_edge_bvh_data() const
 
 std::uint32_t SceneState::add_garment_mesh(GarmentMesh mesh)
 {
-    static const glm::vec3 garment_colors[] = {
-        {1.0f, 1.0f, 1.0f},
-        {0.15f, 0.35f, 1.0f},
-        {1.0f, 0.15f, 0.15f},
-    };
-
     const std::uint32_t vertex_count = static_cast<std::uint32_t>(mesh.vertices.size() / 3u);
     std::uint32_t flipped_triangle_count = 0u;
     if (!orient_triangle_winding_outward(vertex_count,
@@ -81,7 +75,7 @@ std::uint32_t SceneState::add_garment_mesh(GarmentMesh mesh)
         std::cerr << "Cannot add garment mesh with invalid topology.\n";
     }
 
-    mesh.color = garment_colors[garments_.size() % 3u];
+    mesh.color = glm::vec3{1.0f};
 
     const std::uint32_t garment_id = next_garment_id_++;
     const std::uint32_t garment_layer = next_garment_layer_++;
@@ -140,6 +134,18 @@ GarmentObject* SceneState::update_garment_placement(std::uint32_t garment_id, co
     }
 
     return nullptr;
+}
+
+bool SceneState::update_garment_color(std::uint32_t garment_id, const glm::vec3& color)
+{
+    GarmentObject* garment = find_garment(garment_id);
+    if (garment == nullptr) {
+        return false;
+    }
+
+    garment->source_mesh.color = color;
+    garment->mesh.color = color;
+    return true;
 }
 
 bool SceneState::remove_garment(std::uint32_t garment_id)

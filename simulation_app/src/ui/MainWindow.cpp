@@ -324,6 +324,9 @@ void MainWindow::setup_browser_callbacks()
             simulation_controller_->set_garment_placement(position_offset, scale);
         }
     );
+    garment_placement_panel_->set_color_changed_callback([this](const glm::vec3& color) {
+        simulation_controller_->set_garment_color(color);
+    });
 
     connect(run_button_, &QPushButton::clicked, this, [this]() {
         if (simulation_controller_->is_simulation_running()) {
@@ -382,6 +385,7 @@ void MainWindow::setup_asset_loader_callbacks()
         }
         has_editable_garment_ = true;
         garment_placement_panel_->reset_placement();
+        garment_placement_panel_->set_color(simulation_controller_->garment_placement_color());
         update_simulation_controls();
         update_viewer_layout();
     });
