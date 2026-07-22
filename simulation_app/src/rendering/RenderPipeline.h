@@ -24,6 +24,7 @@ public:
     void draw(const SceneState& scene,
               const SceneGpuState& gpu_state,
               const glm::mat4& mvp,
+              float character_opacity,
               QOpenGLFunctions_4_5_Core& gl);
     void release(QOpenGLFunctions_4_5_Core& gl);
 

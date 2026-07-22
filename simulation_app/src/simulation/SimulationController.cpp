@@ -45,9 +45,11 @@ bool SimulationController::initialize_gpu(const ShaderPaths& shader_paths, QOpen
 
 // Rendering //
 
-void SimulationController::draw(const glm::mat4& mvp, QOpenGLFunctions_4_5_Core& gl)
+void SimulationController::draw(const glm::mat4& mvp,
+                                float character_opacity,
+                                QOpenGLFunctions_4_5_Core& gl)
 {
-    render_pipeline_.draw(scene_, gpu_state_, mvp, gl);
+    render_pipeline_.draw(scene_, gpu_state_, mvp, character_opacity, gl);
 }
 
 void SimulationController::tick_frame()

@@ -5,6 +5,7 @@ in vec3 vertexNormalWorld;
 out vec4 fragColor;
 
 uniform bool uUseNormalLighting;
+uniform float uOpacity;
 uniform vec3 uLightDirectionWorld;
 uniform float uAmbientStrength;
 uniform float uDiffuseStrength;
@@ -21,5 +22,5 @@ void main()
         color *= uAmbientStrength + uDiffuseStrength * diffuse;
     }
 
-    fragColor = vec4(color, 1.0);
+    fragColor = vec4(color, uOpacity);
 }

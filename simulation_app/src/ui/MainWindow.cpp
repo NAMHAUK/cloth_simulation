@@ -40,6 +40,7 @@ constexpr int simulation_button_gap = 10;
 constexpr int simulation_button_count = 3;
 constexpr int simulation_icon_size = 22;
 constexpr int placement_panel_width = 280;
+constexpr float placement_character_opacity = 0.3f;
 
 enum class SimulationControlIcon {
     Play,
@@ -284,7 +285,8 @@ void MainWindow::setup_viewport_callbacks()
     simulation_viewport_->set_scene_render_callback(
         [this](const glm::mat4& mvp, QOpenGLFunctions_4_5_Core& gl) {
             if (simulation_controller_ != nullptr && simulation_controller_->is_gpu_initialized()) {
-                simulation_controller_->draw(mvp, gl);
+                const float character_opacity = has_placement_session() ? placement_character_opacity : 1.0f;
+                simulation_controller_->draw(mvp, character_opacity, gl);
             }
         }
     );

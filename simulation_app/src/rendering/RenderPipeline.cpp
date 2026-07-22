@@ -38,9 +38,10 @@ bool RenderPipeline::initialize(const ShaderPaths& shader_paths, QOpenGLFunction
 }
 
 void RenderPipeline::draw(const SceneState& scene,
-                              const SceneGpuState& gpu_state,
-                              const glm::mat4& mvp,
-                              QOpenGLFunctions_4_5_Core& gl)
+                          const SceneGpuState& gpu_state,
+                          const glm::mat4& mvp,
+                          float character_opacity,
+                          QOpenGLFunctions_4_5_Core& gl)
 {
     if (!is_initialized() || !gpu_state.is_initialized()) {
         return;
@@ -60,6 +61,7 @@ void RenderPipeline::draw(const SceneState& scene,
     viewer_shader_.set_mvp(mvp, gl);
     viewer_shader_.set_lighting(light_direction_world, ambient_strength, diffuse_strength, gl);
     viewer_shader_.set_attribute_position_mode(gl);
+    viewer_shader_.set_opacity(1.0f, gl);
 
     // ground grid
     if (ground_grid_.is_initialized()) {
@@ -68,17 +70,6 @@ void RenderPipeline::draw(const SceneState& scene,
         gl.glDepthMask(GL_FALSE);
         ground_grid_.draw(gl);
         gl.glDepthMask(GL_TRUE);
-    }
-
-    // character
-    const CharacterGpuResources& character_gpu_state = gpu_state.character_gpu_state();
-    if (character_gpu_state.is_initialized()) {
-        character_gpu_state.bind_current_positions(character_position_binding, gl);
-        character_gpu_state.bind_vertex_normals(vertex_normal_binding, gl);
-        viewer_shader_.set_character_position_buffer_mode(gl);
-        viewer_shader_.set_vertex_color_mode(gl);
-        viewer_shader_.set_normal_lighting_enabled(true, gl);
-        character_gpu_state.draw(gl);
     }
 
     // garments
@@ -96,6 +87,30 @@ void RenderPipeline::draw(const SceneState& scene,
 
         viewer_shader_.set_solid_color(garment.mesh.color, gl);
         cloth_gpu_state.draw_garment(garment.id, gl);
+    }
+
+    // character
+    const CharacterGpuResources& character_gpu_state = gpu_state.character_gpu_state();
+    if (character_gpu_state.is_initialized()) {
+        const bool character_transparent = character_opacity < 1.0f;
+        if (character_transparent) {
+            gl.glEnable(GL_BLEND);
+            gl.glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+            gl.glDepthMask(GL_FALSE);
+        }
+
+        character_gpu_state.bind_current_positions(character_position_binding, gl);
+        character_gpu_state.bind_vertex_normals(vertex_normal_binding, gl);
+        viewer_shader_.set_character_position_buffer_mode(gl);
+        viewer_shader_.set_vertex_color_mode(gl);
+        viewer_shader_.set_normal_lighting_enabled(true, gl);
+        viewer_shader_.set_opacity(character_opacity, gl);
+        character_gpu_state.draw(gl);
+
+        if (character_transparent) {
+            gl.glDepthMask(GL_TRUE);
+            gl.glDisable(GL_BLEND);
+        }
     }
 }
 

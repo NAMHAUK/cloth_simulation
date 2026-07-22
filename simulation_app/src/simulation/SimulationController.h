@@ -66,7 +66,7 @@ public:
     std::size_t garment_count() const;
     bool can_start_garment_placement() const;
     glm::vec3 garment_placement_color(std::size_t placement_index) const;
-    void draw(const glm::mat4& mvp, QOpenGLFunctions_4_5_Core& gl);
+    void draw(const glm::mat4& mvp, float character_opacity, QOpenGLFunctions_4_5_Core& gl);
     void release_gpu();
 
 private:
