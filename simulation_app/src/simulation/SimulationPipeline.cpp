@@ -111,13 +111,13 @@ bool SimulationPipeline::initialize(const ShaderPaths& shader_paths, QOpenGLFunc
     return true;
 }
 
-bool SimulationPipeline::prefit_garment(SceneState& scene,
+bool SimulationPipeline::prefit_garments(const SceneState& scene,
                                          SceneGpuState& gpu_state,
-                                         std::uint32_t garment_id,
+                                         const std::vector<std::uint32_t>& garment_ids,
                                          QOpenGLFunctions_4_5_Core& gl)
 {
-    if (!initialized_) {
-        std::cerr << "Cannot pre-fit garment before simulation pipeline initialization.\n";
+    if (!initialized_ || garment_ids.empty()) {
+        std::cerr << "Cannot pre-fit garments before simulation pipeline initialization or without garment ids.\n";
         return false;
     }
 
@@ -127,35 +127,43 @@ bool SimulationPipeline::prefit_garment(SceneState& scene,
         return false;
     }
 
-    const GarmentBufferRanges* garment_range =
-        find_garment_range(*views.garment_buffer_ranges, garment_id);
-    if (garment_range == nullptr ||
-        !garment_prefit_solver_.can_solve(views.cloth_motion,
-                                         *garment_range,
-                                         views.body_triangle_geometry,
-                                         views.body_triangle_bvh)) {
-        std::cerr << "Cannot pre-fit garment because required GPU buffers are missing.\n";
+    std::vector<const GarmentBufferRanges*> garment_ranges;
+    garment_ranges.reserve(garment_ids.size());
+    for (std::uint32_t garment_id : garment_ids) {
+        const GarmentBufferRanges* garment_range = find_garment_range(*views.garment_buffer_ranges, garment_id);
+        if (garment_range == nullptr ||
+            !garment_prefit_solver_.can_solve(views.cloth_motion,
+                                             *garment_range,
+                                             views.body_triangle_geometry,
+                                             views.body_triangle_bvh)) {
+            std::cerr << "Cannot pre-fit garment because required GPU buffers are missing.\n";
+            return false;
+        }
+        garment_ranges.push_back(garment_range);
+    }
+
+    const bool has_multiple_garments = scene.has_multiple_garments();
+    if (has_multiple_garments &&
+        (!cloth_cloth_collision_detector_.can_detect(views) ||
+         !cloth_cloth_collision_solver_.can_solve_initial(views) ||
+         !cloth_cloth_collision_solver_.can_build_body_triangle_ids(views))) {
+        std::cerr << "Cannot initialize cloth-cloth contacts because required GPU resources are invalid.\n";
         return false;
     }
 
-    for (std::uint32_t iteration = 0; iteration < simulation_settings::prefit_iteration_count; ++iteration) {
-        garment_prefit_solver_.solve(views.cloth_motion,
-                                     *garment_range,
-                                     views.body_triangle_geometry,
-                                     views.body_triangle_bvh,
-                                     gl);
+    for (const GarmentBufferRanges* garment_range : garment_ranges) {
+        for (std::uint32_t iteration = 0; iteration < simulation_settings::prefit_iteration_count; ++iteration) {
+            garment_prefit_solver_.solve(views.cloth_motion,
+                                         *garment_range,
+                                         views.body_triangle_geometry,
+                                         views.body_triangle_bvh,
+                                         gl);
+        }
     }
 
     gpu_state.cloth_gpu_state().copy_current_positions_to_previous(gl);
 
-    const bool has_multiple_garments = scene.has_multiple_garments();
     if (has_multiple_garments) {
-        if (!cloth_cloth_collision_detector_.can_detect(views) ||
-            !cloth_cloth_collision_solver_.can_solve_initial(views)) {
-            std::cerr << "Cannot resolve initial cloth-cloth contacts because required GPU resources are invalid.\n";
-            return false;
-        }
-
         for (std::uint32_t iteration = 0; iteration < simulation_settings::solver_iteration_count; ++iteration) {
             if (!update_cloth_bvh_bounds(views, simulation_settings::cloth_collision_initial_detection_distance, gl)) {
                 return false;
@@ -166,8 +174,7 @@ bool SimulationPipeline::prefit_garment(SceneState& scene,
         }
     }
 
-    if (has_multiple_garments &&
-        !cloth_cloth_collision_solver_.build_body_triangle_ids(views, gl)) {
+    if (has_multiple_garments && !cloth_cloth_collision_solver_.build_body_triangle_ids(views, gl)) {
         std::cerr << "Cannot cache cloth body triangle ids after garment pre-fit.\n";
         return false;
     }

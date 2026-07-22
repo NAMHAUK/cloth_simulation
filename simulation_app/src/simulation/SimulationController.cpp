@@ -4,6 +4,7 @@
 #include "gpu/bvh/MeshBvhBuilder.h"
 #include "simulation/SimulationSettings.h"
 
+#include <algorithm>
 #include <cassert>
 #include <iostream>
 #include <utility>
@@ -149,60 +150,99 @@ void SimulationController::set_character_mesh_state(CharacterMesh mesh, QOpenGLF
     viewport_callbacks_.reset_camera_to_character_root(scene_.character_root_position(0));
 }
 
-bool SimulationController::add_garment_mesh(GarmentMesh mesh)
+bool SimulationController::set_garment_mesh(std::size_t placement_index, GarmentMesh mesh)
 {
     if (!is_viewport_ready()) {
-        std::cerr << "Cannot add garment mesh before OpenGL initialization.\n";
+        std::cerr << "Cannot set garment mesh before OpenGL initialization.\n";
         return false;
     }
-    if (!can_start_garment_placement()) {
+    if (placement_index >= garment_placements_.size()) {
+        std::cerr << "Cannot set garment mesh for an invalid placement index.\n";
+        return false;
+    }
+
+    GarmentPlacementState& placement = garment_placements_[placement_index];
+    if (placement.garment_id == 0u && scene_.has_multiple_garments()) {
         std::cerr << "Cannot add more than two garment meshes.\n";
         return false;
     }
 
-    bool garment_added = false;
-    viewport_callbacks_.run_with_gl_context([this, &mesh, &garment_added](QOpenGLFunctions_4_5_Core& gl) {
-        // 배치중이던 garment 있으면 제거
-        if (garment_placement_.garment_id != 0 && scene_.remove_garment(garment_placement_.garment_id)) {
-            gpu_state_.update_garment_meshes(scene_, gl);
+    bool garment_set = false;
+    viewport_callbacks_.run_with_gl_context([this, &placement, &mesh, &garment_set](QOpenGLFunctions_4_5_Core& gl) {
+        if (placement.garment_id != 0u) {
+            GarmentObject* existing_garment = scene_.find_garment(placement.garment_id);
+            if (existing_garment == nullptr) {
+                return;
+            }
+
+            GarmentObject previous_garment = *existing_garment;
+            if (!scene_.replace_garment_mesh(placement.garment_id, std::move(mesh)) ||
+                !build_garment_triangle_bvh(placement.garment_id)) {
+                *existing_garment = std::move(previous_garment);
+                std::cerr << "Failed to replace garment mesh for garment id " << placement.garment_id << ".\n";
+                return;
+            }
+
+            if (!gpu_state_.update_garment_meshes(scene_, gl, placement.garment_id)) {
+                *existing_garment = std::move(previous_garment);
+                if (!gpu_state_.update_garment_meshes(scene_, gl, placement.garment_id)) {
+                    std::cerr << "Failed to restore garment GPU resources after replacement failure.\n";
+                }
+                return;
+            }
+            placement.position_offset = glm::vec3{0.0f};
+            placement.scale = 1.0f;
+            placement.clear_update();
+        } else {
+            // 새 garment 추가
+            placement.clear();
+            placement.garment_id = scene_.add_garment_mesh(std::move(mesh));
+            if (placement.garment_id == 0u) {
+                std::cerr << "Failed to add garment mesh.\n";
+                return;
+            }
+            if (!build_garment_triangle_bvh(placement.garment_id)) {
+                scene_.remove_garment(placement.garment_id);
+                std::cerr << "Failed to build garment triangle BVH for garment id "
+                          << placement.garment_id << ".\n";
+                placement.clear();
+                return;
+            }
+            if (!gpu_state_.update_garment_meshes(scene_, gl)) {
+                scene_.remove_garment(placement.garment_id);
+                placement.clear();
+                if (!gpu_state_.update_garment_meshes(scene_, gl)) {
+                    std::cerr << "Failed to restore garment GPU resources after addition failure.\n";
+                }
+                return;
+            }
         }
 
-        // 새 garment 추가
-        garment_placement_.clear();
-        garment_placement_.garment_id = scene_.add_garment_mesh(std::move(mesh));
-        if (garment_placement_.garment_id == 0u) {
-            std::cerr << "Failed to add garment mesh.\n";
-            return;
-        }
-        if (!build_garment_triangle_bvh(garment_placement_.garment_id)) {
-            std::cerr << "Failed to build garment triangle BVH for garment id "
-                      << garment_placement_.garment_id << ".\n";
-        }
-        gpu_state_.update_garment_meshes(scene_, gl);
         gpu_state_.clear_base_positions(gl);
         has_base_positions_ = false;
-        garment_added = true;
+        garment_set = true;
     });
 
     viewport_callbacks_.request_update();
-    return garment_added;
+    return garment_set;
 }
 
 void SimulationController::set_current_garment_placement(QOpenGLFunctions_4_5_Core& gl)
 {
-    if (!has_garment_placement_update()) {
-        return;
-    }
+    for (GarmentPlacementState& placement : garment_placements_) {
+        if (!placement.has_update()) {
+            continue;
+        }
 
-    const bool update_rest_lengths = garment_placement_.scale_changed;
-    const GarmentObject* garment = scene_.update_garment_placement(garment_placement_.garment_id,
-                                                                   garment_placement_.position_offset,
-                                                                   garment_placement_.scale);
-    if (garment != nullptr) {
-        gpu_state_.update_garment_placement(*garment, update_rest_lengths, gl);
+        const bool update_rest_lengths = placement.scale_changed;
+        const GarmentObject* garment = scene_.update_garment_placement(placement.garment_id,
+                                                                       placement.position_offset,
+                                                                       placement.scale);
+        if (garment != nullptr) {
+            gpu_state_.update_garment_placement(*garment, update_rest_lengths, gl);
+        }
+        placement.clear_update();
     }
-
-    garment_placement_.clear_update();
 }
 
 bool SimulationController::build_garment_triangle_bvh(std::uint32_t garment_id)
@@ -225,6 +265,37 @@ bool SimulationController::build_garment_triangle_bvh(std::uint32_t garment_id)
     return true;
 }
 
+std::vector<std::uint32_t> SimulationController::garment_placement_ids() const
+{
+    std::vector<std::uint32_t> garment_ids;
+    garment_ids.reserve(garment_placements_.size());
+    for (const GarmentPlacementState& placement : garment_placements_) {
+        if (placement.garment_id != 0u) {
+            garment_ids.push_back(placement.garment_id);
+        }
+    }
+    return garment_ids;
+}
+
+void SimulationController::restore_garment_placements(const std::vector<std::uint32_t>& garment_ids,
+                                                       QOpenGLFunctions_4_5_Core& gl)
+{
+    for (std::uint32_t garment_id : garment_ids) {
+        gpu_state_.deactivate_garment_attachment_targets(garment_id);
+        const GarmentObject* garment = scene_.find_garment(garment_id);
+        if (garment != nullptr) {
+            gpu_state_.update_garment_placement(*garment, false, gl);
+        }
+    }
+}
+
+void SimulationController::clear_garment_placements()
+{
+    for (GarmentPlacementState& placement : garment_placements_) {
+        placement.clear();
+    }
+}
+
 void SimulationController::reset_scene_to_default()
 {
     if (!is_viewport_ready()) {
@@ -235,7 +306,7 @@ void SimulationController::reset_scene_to_default()
     viewport_callbacks_.run_with_gl_context([this](QOpenGLFunctions_4_5_Core& gl) {
         simulation_running_ = false;
         motion_step_index_ = 0;
-        garment_placement_.clear();
+        clear_garment_placements();
 
         scene_.clear_garments();
         gpu_state_.update_garment_meshes(scene_, gl);
@@ -262,7 +333,7 @@ void SimulationController::return_to_default_pose()
 
         simulation_running_ = false;
         motion_step_index_ = 0;
-        garment_placement_.clear();
+        clear_garment_placements();
         set_character_mesh_state(default_character_mesh_, gl);
         is_default_pose_ = true;
     });
@@ -271,55 +342,105 @@ void SimulationController::return_to_default_pose()
 }
 
 // garment placement panel //
-void SimulationController::set_garment_placement(const glm::vec3& position_offset, float scale)
+bool SimulationController::remove_garment_placement(std::size_t placement_index)
 {
-    if (garment_placement_.garment_id == 0 || scale <= 0.0f) {
-        return;
+    if (!is_viewport_ready() || placement_index >= garment_placements_.size()) {
+        return false;
     }
 
-    if (garment_placement_.position_offset != position_offset) {
-        garment_placement_.position_offset = position_offset;
-        garment_placement_.position_changed = true;
-    }
-    if (garment_placement_.scale != scale) {
-        garment_placement_.scale = scale;
-        garment_placement_.scale_changed = true;
-    }
-}
-
-void SimulationController::set_garment_color(const glm::vec3& color)
-{
-    if (garment_placement_.garment_id == 0u ||
-        !scene_.update_garment_color(garment_placement_.garment_id, color)) {
-        return;
+    GarmentPlacementState& placement = garment_placements_[placement_index];
+    if (placement.garment_id == 0u) {
+        return true;
     }
 
-    viewport_callbacks_.request_update();
-}
-
-void SimulationController::confirm_garment_placement()
-{
-    if (!is_viewport_ready()) {
-        std::cerr << "Cannot confirm garment placement before OpenGL initialization.\n";
-        return;
-    }
-
-    viewport_callbacks_.run_with_gl_context([this](QOpenGLFunctions_4_5_Core& gl) {
-        set_current_garment_placement(gl);
-        if (!simulation_pipeline_.prefit_garment(scene_, gpu_state_, garment_placement_.garment_id, gl)) {
-            std::cerr << "Cannot confirm garment placement because garment pre-fit failed.\n";
-            return;
+    bool garment_removed = false;
+    viewport_callbacks_.run_with_gl_context([this, &placement, &garment_removed](QOpenGLFunctions_4_5_Core& gl) {
+        garment_removed = scene_.remove_garment(placement.garment_id);
+        if (garment_removed) {
+            gpu_state_.update_garment_meshes(scene_, gl);
         }
-        gpu_state_.build_garment_attachment_targets(scene_,
-                                                    garment_placement_.garment_id,
-                                                    simulation_settings::attachment_surface_offset,
-                                                    gl);
-        garment_placement_.clear();
+        placement.clear();
         gpu_state_.clear_base_positions(gl);
         has_base_positions_ = false;
     });
 
     viewport_callbacks_.request_update();
+    return garment_removed;
+}
+
+void SimulationController::set_garment_placement(std::size_t placement_index,
+                                                 const glm::vec3& position_offset,
+                                                 float scale)
+{
+    if (placement_index >= garment_placements_.size() || scale <= 0.0f) {
+        return;
+    }
+
+    GarmentPlacementState& placement = garment_placements_[placement_index];
+    if (placement.garment_id == 0u) {
+        return;
+    }
+
+    if (placement.position_offset != position_offset) {
+        placement.position_offset = position_offset;
+        placement.position_changed = true;
+    }
+    if (placement.scale != scale) {
+        placement.scale = scale;
+        placement.scale_changed = true;
+    }
+}
+
+void SimulationController::set_garment_color(std::size_t placement_index, const glm::vec3& color)
+{
+    if (placement_index >= garment_placements_.size()) {
+        return;
+    }
+
+    const GarmentPlacementState& placement = garment_placements_[placement_index];
+    if (placement.garment_id == 0u || !scene_.update_garment_color(placement.garment_id, color)) {
+        return;
+    }
+
+    viewport_callbacks_.request_update();
+}
+
+bool SimulationController::confirm_garment_placement()
+{
+    if (!is_viewport_ready()) {
+        std::cerr << "Cannot confirm garment placement before OpenGL initialization.\n";
+        return false;
+    }
+
+    bool placement_confirmed = false;
+    viewport_callbacks_.run_with_gl_context([this, &placement_confirmed](QOpenGLFunctions_4_5_Core& gl) {
+        set_current_garment_placement(gl);
+        const std::vector<std::uint32_t> garment_ids = garment_placement_ids();
+        if (!simulation_pipeline_.prefit_garments(scene_, gpu_state_, garment_ids, gl)) {
+            std::cerr << "Cannot confirm garment placement because garment pre-fit failed.\n";
+            restore_garment_placements(garment_ids, gl);
+            return;
+        }
+
+        for (std::uint32_t garment_id : garment_ids) {
+            if (!gpu_state_.build_garment_attachment_targets(scene_,
+                                                             garment_id,
+                                                             simulation_settings::attachment_surface_offset,
+                                                             gl)) {
+                std::cerr << "Cannot confirm garment placement because attachment target creation failed.\n";
+                restore_garment_placements(garment_ids, gl);
+                return;
+            }
+        }
+
+        clear_garment_placements();
+        gpu_state_.clear_base_positions(gl);
+        has_base_positions_ = false;
+        placement_confirmed = true;
+    });
+
+    viewport_callbacks_.request_update();
+    return placement_confirmed;
 }
 
 void SimulationController::cancel_garment_placement()
@@ -330,11 +451,17 @@ void SimulationController::cancel_garment_placement()
     }
 
     viewport_callbacks_.run_with_gl_context([this](QOpenGLFunctions_4_5_Core& gl) {
-        if (garment_placement_.garment_id != 0 && scene_.remove_garment(garment_placement_.garment_id)) {
+        bool garment_removed = false;
+        for (GarmentPlacementState& placement : garment_placements_) {
+            if (placement.garment_id != 0u && scene_.remove_garment(placement.garment_id)) {
+                garment_removed = true;
+            }
+            placement.clear();
+        }
+        if (garment_removed) {
             gpu_state_.update_garment_meshes(scene_, gl);
         }
 
-        garment_placement_.clear();
         gpu_state_.clear_base_positions(gl);
         has_base_positions_ = false;
     });
@@ -380,15 +507,29 @@ bool SimulationController::has_garments() const
     return !scene_.garments().empty();
 }
 
-bool SimulationController::can_start_garment_placement() const
+std::size_t SimulationController::garment_count() const
 {
-    return garment_placement_.garment_id != 0u || !scene_.has_multiple_garments();
+    return scene_.garments().size();
 }
 
-glm::vec3 SimulationController::garment_placement_color() const
+bool SimulationController::can_start_garment_placement() const
 {
+    const bool has_active_placement = std::any_of(garment_placements_.begin(), garment_placements_.end(),
+        [](const GarmentPlacementState& placement) {
+            return placement.garment_id != 0u;
+        });
+    return has_active_placement || !scene_.has_multiple_garments();
+}
+
+glm::vec3 SimulationController::garment_placement_color(std::size_t placement_index) const
+{
+    if (placement_index >= garment_placements_.size()) {
+        return glm::vec3{1.0f};
+    }
+
+    const std::uint32_t garment_id = garment_placements_[placement_index].garment_id;
     for (const GarmentObject& garment : scene_.garments()) {
-        if (garment.id == garment_placement_.garment_id) {
+        if (garment.id == garment_id) {
             return garment.mesh.color;
         }
     }
@@ -398,7 +539,10 @@ glm::vec3 SimulationController::garment_placement_color() const
 
 bool SimulationController::has_garment_placement_update() const
 {
-    return garment_placement_.has_update();
+    return std::any_of(garment_placements_.begin(), garment_placements_.end(),
+        [](const GarmentPlacementState& placement) {
+            return placement.has_update();
+        });
 }
 
 // setter //

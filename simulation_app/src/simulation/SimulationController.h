@@ -6,8 +6,10 @@
 #include "scene/SceneState.h"
 #include "simulation/SimulationPipeline.h"
 
-#include <functional>
+#include <array>
+#include <cstddef>
 #include <cstdint>
+#include <functional>
 #include <vector>
 
 #include <glm/mat4x4.hpp>
@@ -43,10 +45,11 @@ public:
     void load_default_character_mesh(CharacterMesh mesh,
                                      const std::vector<std::uint8_t>& triangle_part_labels,
                                      QOpenGLFunctions_4_5_Core& gl);
-    bool add_garment_mesh(GarmentMesh mesh);
-    void set_garment_placement(const glm::vec3& position_offset, float scale);
-    void set_garment_color(const glm::vec3& color);
-    void confirm_garment_placement();
+    bool set_garment_mesh(std::size_t placement_index, GarmentMesh mesh);
+    bool remove_garment_placement(std::size_t placement_index);
+    void set_garment_placement(std::size_t placement_index, const glm::vec3& position_offset, float scale);
+    void set_garment_color(std::size_t placement_index, const glm::vec3& color);
+    bool confirm_garment_placement();
     void cancel_garment_placement();
     void reset_scene_to_default();
     void return_to_default_pose();
@@ -60,8 +63,9 @@ public:
     bool is_default_pose() const;
     bool has_base_positions() const;
     bool has_garments() const;
+    std::size_t garment_count() const;
     bool can_start_garment_placement() const;
-    glm::vec3 garment_placement_color() const;
+    glm::vec3 garment_placement_color(std::size_t placement_index) const;
     void draw(const glm::mat4& mvp, QOpenGLFunctions_4_5_Core& gl);
     void release_gpu();
 
@@ -99,6 +103,10 @@ private:
     bool has_garment_placement_update() const;
     void set_current_garment_placement(QOpenGLFunctions_4_5_Core& gl);
     bool build_garment_triangle_bvh(std::uint32_t garment_id);
+    std::vector<std::uint32_t> garment_placement_ids() const;
+    void restore_garment_placements(const std::vector<std::uint32_t>& garment_ids,
+                                    QOpenGLFunctions_4_5_Core& gl);
+    void clear_garment_placements();
 
     // CPU-side scene state //
     SceneState scene_;
@@ -114,7 +122,7 @@ private:
     RenderPipeline render_pipeline_;
 
     std::uint64_t motion_step_index_ = 0;
-    GarmentPlacementState garment_placement_;
+    std::array<GarmentPlacementState, 2> garment_placements_{};
     bool simulation_running_ = false;
     bool is_default_pose_ = false;
     bool has_base_positions_ = false;

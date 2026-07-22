@@ -1,5 +1,8 @@
 #pragma once
 
+#include <array>
+#include <cstddef>
+#include <cstdint>
 #include <filesystem>
 #include <memory>
 #include <optional>
@@ -30,6 +33,12 @@ protected:
     bool eventFilter(QObject* watched, QEvent* event) override;
 
 private:
+    enum class PlacementGroupState {
+        Hidden,
+        Empty,
+        Loaded,
+    };
+
     bool initialize_scene(QOpenGLFunctions_4_5_Core& gl);
 
     void setup_callbacks();
@@ -40,6 +49,13 @@ private:
 
     void update_viewer_layout();
     void update_simulation_controls();
+    void request_garment_load(const std::filesystem::path& asset_path);
+    std::optional<std::size_t> take_garment_request_group(std::uint64_t request_id);
+    bool has_pending_garment_load() const;
+    bool has_visible_placement_group() const;
+    bool has_placement_session() const;
+    void update_placement_actions();
+    void end_placement_session();
     void refresh_motion_list();
     void refresh_garment_list();
     
@@ -59,5 +75,6 @@ private:
     QPushButton* reset_button_ = nullptr;
     SceneViewport* simulation_viewport_ = nullptr;
     std::unique_ptr<SimulationController> simulation_controller_;
-    bool has_editable_garment_ = false;
+    std::array<PlacementGroupState, 2> placement_group_states_{};
+    std::array<std::optional<std::uint64_t>, 2> garment_request_ids_{};
 };

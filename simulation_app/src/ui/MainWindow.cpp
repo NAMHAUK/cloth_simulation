@@ -40,7 +40,6 @@ constexpr int simulation_button_gap = 10;
 constexpr int simulation_button_count = 3;
 constexpr int simulation_icon_size = 22;
 constexpr int placement_panel_width = 280;
-constexpr int placement_panel_height = 210;
 
 enum class SimulationControlIcon {
     Play,
@@ -296,7 +295,7 @@ void MainWindow::setup_browser_callbacks()
     browser_panel_->set_selected_callback(
         [this](AssetPanelMode mode, const std::filesystem::path& asset_path) {
             if (mode == AssetPanelMode::Motions) {
-                if (has_editable_garment_ || !simulation_controller_->has_garments()) {
+                if (has_placement_session() || !simulation_controller_->has_garments()) {
                     QMessageBox::information(this, "Motion Load Blocked", "Load motions after confirming garment placement.");
                     return;
                 }
@@ -308,7 +307,7 @@ void MainWindow::setup_browser_callbacks()
                     QMessageBox::information(this, "Garment Load Blocked", "Load garments only while the simulation is stopped and the character is in the default pose.");
                     return;
                 }
-                asset_loader_->load_garment_mesh(asset_path);
+                request_garment_load(asset_path);
             }
 
         }
@@ -320,12 +319,36 @@ void MainWindow::setup_browser_callbacks()
         update_viewer_layout();
     });
     garment_placement_panel_->set_placement_changed_callback(
-        [this](const glm::vec3& position_offset, float scale) {
-            simulation_controller_->set_garment_placement(position_offset, scale);
+        [this](std::size_t group_index, const glm::vec3& position_offset, float scale) {
+            simulation_controller_->set_garment_placement(group_index, position_offset, scale);
         }
     );
-    garment_placement_panel_->set_color_changed_callback([this](const glm::vec3& color) {
-        simulation_controller_->set_garment_color(color);
+    garment_placement_panel_->set_color_changed_callback([this](std::size_t group_index, const glm::vec3& color) {
+        simulation_controller_->set_garment_color(group_index, color);
+    });
+    garment_placement_panel_->set_add_upper_callback([this]() {
+        placement_group_states_[GarmentPlacementPanel::upper_group_index] = PlacementGroupState::Empty;
+        garment_request_ids_[GarmentPlacementPanel::upper_group_index].reset();
+        garment_placement_panel_->show_upper_placeholder();
+        update_placement_actions();
+        update_viewer_layout();
+    });
+    garment_placement_panel_->set_remove_upper_callback([this]() {
+        const std::size_t upper_index = GarmentPlacementPanel::upper_group_index;
+        garment_request_ids_[upper_index].reset();
+        simulation_controller_->remove_garment_placement(upper_index);
+        placement_group_states_[upper_index] = PlacementGroupState::Hidden;
+
+        if (placement_group_states_[GarmentPlacementPanel::lower_group_index] != PlacementGroupState::Hidden) {
+            garment_placement_panel_->remove_upper_group();
+            update_simulation_controls();
+            update_viewer_layout();
+            return;
+        }
+
+        end_placement_session();
+        update_simulation_controls();
+        update_viewer_layout();
     });
 
     connect(run_button_, &QPushButton::clicked, this, [this]() {
@@ -344,23 +367,25 @@ void MainWindow::setup_browser_callbacks()
 
     connect(reset_button_, &QPushButton::clicked, this, [this]() {
         simulation_controller_->reset_scene_to_default();
-        has_editable_garment_ = false;
-        garment_placement_panel_->reset_placement();
+        end_placement_session();
         update_simulation_controls();
         update_viewer_layout();
     });
 
     garment_placement_panel_->set_confirm_run_callback([this]() {
-        simulation_controller_->confirm_garment_placement();
+        if (!simulation_controller_->confirm_garment_placement()) {
+            QMessageBox::warning(this, "Placement Failed", "Failed to initialize garment placement.");
+            update_placement_actions();
+            return;
+        }
         simulation_controller_->start_simulation();
-        has_editable_garment_ = false;
+        end_placement_session();
         update_simulation_controls();
         update_viewer_layout();
     });
     garment_placement_panel_->set_cancel_callback([this]() {
         simulation_controller_->cancel_garment_placement();
-        has_editable_garment_ = false;
-        garment_placement_panel_->reset_placement();
+        end_placement_session();
         update_simulation_controls();
         update_viewer_layout();
     });
@@ -370,7 +395,7 @@ void MainWindow::setup_asset_loader_callbacks()
 {
     asset_loader_->set_character_loaded_callback(
         [this](const std::filesystem::path&, CharacterMesh mesh) {
-            has_editable_garment_ = false;
+            end_placement_session();
             simulation_controller_->set_character_mesh(std::move(mesh));
             simulation_controller_->start_simulation();
             update_simulation_controls();
@@ -379,19 +404,120 @@ void MainWindow::setup_asset_loader_callbacks()
     asset_loader_->set_character_load_failed_callback([this](const std::filesystem::path& motion_asset_path) {
         QMessageBox::warning(this, "Load Failed", "Failed to load motion:\n" + to_q_string(motion_asset_path));
     });
-    asset_loader_->set_garment_loaded_callback([this](GarmentMesh mesh) {
-        if (!simulation_controller_->add_garment_mesh(std::move(mesh))) {
+    asset_loader_->set_garment_loaded_callback(
+        [this](GarmentRequestId request_id, const std::filesystem::path& asset_path, GarmentMesh mesh) {
+            const std::optional<std::size_t> group_index = take_garment_request_group(request_id);
+            if (!group_index) {
+                return;
+            }
+
+            if (!simulation_controller_->set_garment_mesh(*group_index, std::move(mesh))) {
+                QMessageBox::warning(this, "Load Failed", "Failed to apply garment:\n" + to_q_string(asset_path));
+                if (!has_visible_placement_group()) {
+                    end_placement_session();
+                }
+                update_simulation_controls();
+                return;
+            }
+
+            const bool starts_placement = !has_visible_placement_group();
+            placement_group_states_[*group_index] = PlacementGroupState::Loaded;
+            const QString garment_name = to_q_string(asset_path.stem());
+            const glm::vec3 color = simulation_controller_->garment_placement_color(*group_index);
+            if (starts_placement) {
+                garment_placement_panel_->begin_session(*group_index, garment_name, color);
+            } else {
+                garment_placement_panel_->set_group_garment(*group_index, garment_name, color);
+            }
+
+            update_simulation_controls();
+            update_viewer_layout();
+        });
+    asset_loader_->set_garment_load_failed_callback(
+        [this](GarmentRequestId request_id, const std::filesystem::path& garment_asset_path) {
+        if (!take_garment_request_group(request_id)) {
             return;
         }
-        has_editable_garment_ = true;
-        garment_placement_panel_->reset_placement();
-        garment_placement_panel_->set_color(simulation_controller_->garment_placement_color());
-        update_simulation_controls();
-        update_viewer_layout();
-    });
-    asset_loader_->set_garment_load_failed_callback([this](const std::filesystem::path& garment_asset_path) {
         QMessageBox::warning(this, "Load Failed", "Failed to load garment:\n" + to_q_string(garment_asset_path));
+        if (!has_visible_placement_group()) {
+            end_placement_session();
+        }
+        update_simulation_controls();
     });
+}
+
+void MainWindow::request_garment_load(const std::filesystem::path& asset_path)
+{
+    const std::size_t group_index = has_visible_placement_group()
+        ? garment_placement_panel_->active_group_index()
+        : simulation_controller_->garment_count() == 0u
+            ? GarmentPlacementPanel::lower_group_index
+            : GarmentPlacementPanel::upper_group_index;
+    garment_request_ids_[group_index] = asset_loader_->load_garment_mesh(asset_path);
+    update_placement_actions();
+}
+
+std::optional<std::size_t> MainWindow::take_garment_request_group(std::uint64_t request_id)
+{
+    for (std::size_t index = 0; index < garment_request_ids_.size(); ++index) {
+        if (garment_request_ids_[index] == request_id) {
+            garment_request_ids_[index].reset();
+            return index;
+        }
+    }
+    return std::nullopt;
+}
+
+bool MainWindow::has_pending_garment_load() const
+{
+    return std::any_of(garment_request_ids_.begin(), garment_request_ids_.end(),
+        [](const std::optional<std::uint64_t>& request_id) {
+            return request_id.has_value();
+        });
+}
+
+bool MainWindow::has_visible_placement_group() const
+{
+    return std::any_of(placement_group_states_.begin(), placement_group_states_.end(),
+        [](PlacementGroupState state) {
+            return state != PlacementGroupState::Hidden;
+        });
+}
+
+bool MainWindow::has_placement_session() const
+{
+    return has_visible_placement_group() || has_pending_garment_load();
+}
+
+void MainWindow::update_placement_actions()
+{
+    if (!garment_placement_panel_) {
+        return;
+    }
+
+    const bool has_visible_group = has_visible_placement_group();
+    bool all_visible_groups_loaded = true;
+    for (PlacementGroupState state : placement_group_states_) {
+        if (state == PlacementGroupState::Hidden) {
+            continue;
+        }
+        all_visible_groups_loaded = all_visible_groups_loaded && state == PlacementGroupState::Loaded;
+    }
+
+    garment_placement_panel_->set_confirm_enabled(
+        has_visible_group && all_visible_groups_loaded && !has_pending_garment_load());
+    garment_placement_panel_->set_add_enabled(
+        placement_group_states_[GarmentPlacementPanel::lower_group_index] == PlacementGroupState::Loaded &&
+        placement_group_states_[GarmentPlacementPanel::upper_group_index] == PlacementGroupState::Hidden &&
+        simulation_controller_->garment_count() < 2u
+    );
+}
+
+void MainWindow::end_placement_session()
+{
+    garment_request_ids_.fill(std::nullopt);
+    placement_group_states_.fill(PlacementGroupState::Hidden);
+    garment_placement_panel_->reset_placement();
 }
 
 void MainWindow::setup_asset_converter_callbacks()
@@ -479,11 +605,13 @@ void MainWindow::update_viewer_layout()
     stop_button_->raise();
     reset_button_->raise();
 
-    if (has_editable_garment_) {
+    if (has_visible_placement_group()) {
         const int placement_width = std::min(placement_panel_width, available_width);
-        const int placement_height = std::min(placement_panel_height, available_height);
         const int placement_x = std::max(panel_margin, container_size.width() - panel_margin - placement_width);
         const int placement_y = controls_y + simulation_button_size + simulation_button_gap;
+        const int placement_available_height = std::max(0, container_size.height() - panel_margin - placement_y);
+        const int placement_height = std::min(garment_placement_panel_->sizeHint().height(),
+                                              placement_available_height);
         garment_placement_panel_->setGeometry(placement_x, placement_y, placement_width, placement_height);
         garment_placement_panel_->raise();
     }
@@ -502,24 +630,23 @@ void MainWindow::update_simulation_controls()
     }
 
     const bool simulation_running = simulation_controller_->is_simulation_running();
+    const bool placement_panel_visible = has_visible_placement_group();
+    const bool placement_session_active = has_placement_session();
     const bool placement_available =
-        has_editable_garment_ &&
-        !simulation_running &&
-        simulation_controller_->is_default_pose();
-
-    const bool placement_panel_visible = has_editable_garment_;
+        placement_panel_visible && !simulation_running && simulation_controller_->is_default_pose();
 
     run_button_->setIcon(make_simulation_control_icon(
         simulation_running ? SimulationControlIcon::Pause : SimulationControlIcon::Play,
         simulation_running ? QColor{"#f4b400"} : QColor{"#43a047"}
     ));
     run_button_->setToolTip(simulation_running ? "Pause" : "Run");
-    run_button_->setEnabled(simulation_running || !placement_panel_visible);
-    stop_button_->setEnabled(simulation_controller_->has_base_positions() && !placement_panel_visible);
+    run_button_->setEnabled(simulation_running || !placement_session_active);
+    stop_button_->setEnabled(simulation_controller_->has_base_positions() && !placement_session_active);
     reset_button_->setEnabled(true);
     browser_panel_->set_garment_selection_enabled(simulation_controller_->can_start_garment_placement());
     garment_placement_panel_->setVisible(placement_panel_visible);
     garment_placement_panel_->setEnabled(placement_available);
+    update_placement_actions();
 }
 
 // panel update //
