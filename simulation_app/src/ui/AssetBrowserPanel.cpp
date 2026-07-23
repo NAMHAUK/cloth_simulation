@@ -1,10 +1,15 @@
 #include "ui/AssetBrowserPanel.h"
 
+#include <QBitmap>
 #include <QHBoxLayout>
+#include <QIcon>
 #include <QLabel>
 #include <QListWidget>
+#include <QPainter>
+#include <QPixmap>
 #include <QPushButton>
-#include <QSizePolicy>
+#include <QRegion>
+#include <QSize>
 #include <QVBoxLayout>
 #include <QWidget>
 
@@ -15,6 +20,18 @@ QString make_asset_display_name(const std::filesystem::path& asset_path)
     const std::filesystem::path stem = asset_path.stem();
     const std::filesystem::path display_path = stem.empty() ? asset_path.filename() : stem;
     return QString::fromStdWString(display_path.wstring());
+}
+
+QIcon make_white_icon(const std::filesystem::path& icon_path)
+{
+    QPixmap icon(QString::fromStdWString(icon_path.wstring()));
+    icon = icon.copy(QRegion(icon.mask()).boundingRect());
+
+    QPainter painter(&icon);
+    painter.setCompositionMode(QPainter::CompositionMode_SourceIn);
+    painter.fillRect(icon.rect(), Qt::white);
+    painter.end();
+    return QIcon(icon);
 }
 }
 
@@ -28,18 +45,21 @@ AssetBrowserPanel::AssetBrowserPanel(QWidget* parent): QWidget(parent)
     button_layout->setContentsMargins(0, 0, 0, 0);
     button_layout->setSpacing(6);
 
-    toggle_button_ = new QPushButton("Motions", this);
+    const std::filesystem::path icon_dir = std::filesystem::path(PROJECT_ROOT_DIR) / "data" / "sources" / "icon";
+
+    toggle_button_ = new QPushButton(this);
+    toggle_button_->setIcon(make_white_icon(icon_dir / "motion.png"));
+    toggle_button_->setIconSize(QSize(76, 76));
+    toggle_button_->setToolTip("Motion");
     toggle_button_->setCheckable(true);
-    toggle_button_->setMinimumHeight(32);
-    toggle_button_->setMinimumWidth(86);
-    toggle_button_->setSizePolicy(QSizePolicy::Fixed, QSizePolicy::Fixed);
+    toggle_button_->setFixedSize(86, 86);
     toggle_button_->setStyleSheet(
         "QPushButton {"
         "  background-color: #3a3a3a;"
         "  color: white;"
         "  border: 1px solid #242424;"
-        "  border-radius: 4px;"
-        "  padding: 6px 12px;"
+        "  border-radius: 14px;"
+        "  padding: 4px;"
         "  font-weight: 600;"
         "}"
         "QPushButton:checked {"
@@ -55,11 +75,12 @@ AssetBrowserPanel::AssetBrowserPanel(QWidget* parent): QWidget(parent)
         "}"
     );
 
-    garment_button_ = new QPushButton("Garment", this);
+    garment_button_ = new QPushButton(this);
+    garment_button_->setIcon(make_white_icon(icon_dir / "garment.png"));
+    garment_button_->setIconSize(QSize(76, 76));
+    garment_button_->setToolTip("Garment");
     garment_button_->setCheckable(true);
-    garment_button_->setMinimumHeight(32);
-    garment_button_->setMinimumWidth(86);
-    garment_button_->setSizePolicy(QSizePolicy::Fixed, QSizePolicy::Fixed);
+    garment_button_->setFixedSize(86, 86);
     garment_button_->setStyleSheet(toggle_button_->styleSheet());
 
     expanded_panel_ = new QWidget(this);
@@ -187,7 +208,7 @@ void AssetBrowserPanel::set_garment_selection_enabled(bool enabled)
         set_expanded(false);
     }
     garment_button_->setEnabled(enabled);
-    garment_button_->setToolTip(enabled ? "" : "Up to two garments can be added.");
+    garment_button_->setToolTip(enabled ? "Garment" : "Up to two garments can be added.");
 }
 
 // list 표시 //

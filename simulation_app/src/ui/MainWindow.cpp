@@ -34,7 +34,7 @@ constexpr int initial_window_height = 900;
 constexpr int panel_margin = 12;
 constexpr int panel_width = 340;
 constexpr int panel_min_height = 180;
-constexpr int panel_max_height = 280;
+constexpr int panel_max_height = 360;
 constexpr int simulation_button_size = 40;
 constexpr int simulation_button_gap = 10;
 constexpr int simulation_button_count = 3;
@@ -574,7 +574,7 @@ void MainWindow::update_viewer_layout()
     if (browser_panel_->is_expanded()) {
         overlay_width = std::min(panel_width, available_width);
 
-        const int target_height = container_size.height() / 4;
+        const int target_height = container_size.height() / 3;
         const int expanded_max_height = std::min(panel_max_height, available_height);
         const int expanded_height = std::clamp(
             target_height,
