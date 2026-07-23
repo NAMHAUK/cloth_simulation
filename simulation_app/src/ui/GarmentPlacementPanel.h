@@ -6,7 +6,6 @@
 
 #include <glm/vec3.hpp>
 
-#include <QSize>
 #include <QWidget>
 
 class QEvent;
@@ -46,7 +45,6 @@ public:
     void set_confirm_enabled(bool enabled);
     std::size_t active_group_index() const;
     void reset_placement();
-    QSize sizeHint() const override;
 
 protected:
     bool eventFilter(QObject* watched, QEvent* event) override;
@@ -55,6 +53,7 @@ private:
     struct PlacementGroup final {
         QFrame* frame = nullptr;
         QLabel* group_label = nullptr;
+        QLabel* garment_name_label = nullptr;
         QWidget* controls = nullptr;
         glm::vec3 position_offset{0.0f};
         glm::vec3 color{1.0f};

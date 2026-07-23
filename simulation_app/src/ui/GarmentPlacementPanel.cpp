@@ -11,10 +11,15 @@
 #include <QFrame>
 #include <QGridLayout>
 #include <QHBoxLayout>
+#include <QIcon>
 #include <QLabel>
+#include <QPainter>
+#include <QPen>
+#include <QPixmap>
 #include <QProxyStyle>
 #include <QPushButton>
-#include <QScrollArea>
+#include <QSize>
+#include <QSizePolicy>
 #include <QSignalBlocker>
 #include <QSlider>
 #include <QStyle>
@@ -33,6 +38,11 @@ constexpr int scale_slider_max = 150;
 constexpr int scale_slider_center = 100;
 constexpr float scale_slider_factor = 0.01f;
 constexpr int hue_slider_max = 359;
+constexpr int placement_button_size = 26;
+constexpr int close_icon_size = 12;
+constexpr int action_icon_size = 20;
+constexpr int add_button_height = 30;
+constexpr int confirm_icon_size = 28;
 
 class AbsoluteSliderStyle final : public QProxyStyle
 {
@@ -54,6 +64,45 @@ public:
 QString format_float(float value)
 {
     return QString::number(value, 'f', 2);
+}
+
+QIcon make_close_icon()
+{
+    QPixmap pixmap(close_icon_size, close_icon_size);
+    pixmap.fill(Qt::transparent);
+
+    QPainter painter(&pixmap);
+    painter.setRenderHint(QPainter::Antialiasing, true);
+    painter.setPen(QPen{Qt::white, 2.0, Qt::SolidLine, Qt::RoundCap});
+    painter.drawLine(2, 2, close_icon_size - 2, close_icon_size - 2);
+    painter.drawLine(close_icon_size - 2, 2, 2, close_icon_size - 2);
+    return QIcon{pixmap};
+}
+
+QIcon make_plus_icon()
+{
+    QPixmap pixmap(action_icon_size, action_icon_size);
+    pixmap.fill(Qt::transparent);
+
+    QPainter painter(&pixmap);
+    painter.setRenderHint(QPainter::Antialiasing, true);
+    painter.setPen(QPen{Qt::white, 3.0, Qt::SolidLine, Qt::RoundCap});
+    painter.drawLine(4, action_icon_size / 2, action_icon_size - 4, action_icon_size / 2);
+    painter.drawLine(action_icon_size / 2, 4, action_icon_size / 2, action_icon_size - 4);
+    return QIcon{pixmap};
+}
+
+QIcon make_confirm_icon()
+{
+    QPixmap pixmap(confirm_icon_size, confirm_icon_size);
+    pixmap.fill(Qt::transparent);
+
+    QPainter painter(&pixmap);
+    painter.setRenderHint(QPainter::Antialiasing, true);
+    painter.setPen(QPen{QColor{"#2e7d32"}, 3.5, Qt::SolidLine, Qt::RoundCap, Qt::RoundJoin});
+    painter.drawLine(QPointF{4.0, 15.0}, QPointF{10.0, 21.0});
+    painter.drawLine(QPointF{10.0, 21.0}, QPointF{24.0, 7.0});
+    return QIcon{pixmap};
 }
 }
 
@@ -96,11 +145,36 @@ GarmentPlacementPanel::GarmentPlacementPanel(QWidget* parent): QWidget(parent)
         "#placementGroup[active=\"true\"] {"
         "  border: 2px solid #1f6feb;"
         "}"
-        "#upperRemoveButton {"
-        "  min-width: 18px; max-width: 18px;"
-        "  min-height: 18px; max-height: 18px;"
+        "#garmentPlacementPanel #placementCancelButton {"
+        "  padding: 0px;"
+        "  background-color: #5a5a5a;"
+        "  border: 1px solid #242424;"
+        "  border-radius: 4px;"
+        "}"
+        "#garmentPlacementPanel #placementCancelButton:hover {"
+        "  background-color: #7a7a7a;"
+        "}"
+        "#garmentPlacementPanel #upperRemoveButton {"
+        "  padding: 0px;"
+        "  background-color: #1f6feb;"
+        "  border: 1px solid #1158c7;"
+        "  border-radius: 4px;"
+        "}"
+        "#garmentPlacementPanel #upperRemoveButton:hover {"
+        "  background-color: #2f81f7;"
+        "}"
+        "#garmentPlacementPanel #addUpperButton {"
         "  padding: 0;"
-        "  background-color: #d9d9d9; color: #333333; border-color: #aaaaaa;"
+        "}"
+        "#garmentPlacementPanel #placementConfirmButton {"
+        "  background: transparent;"
+        "  border: none;"
+        "  padding: 0;"
+        "}"
+        "#garmentPlacementPanel #placementConfirmButton:hover {"
+        "  background-color: #e8f5e9;"
+        "  border: 1px solid #81c784;"
+        "  border-radius: 4px;"
         "}"
     );
 
@@ -109,16 +183,20 @@ GarmentPlacementPanel::GarmentPlacementPanel(QWidget* parent): QWidget(parent)
     root_layout->setSpacing(8);
 
     auto* title_label = new QLabel("Garment Placement", this);
-    title_label->setStyleSheet("font-weight: 600;");
-    add_button_ = new QPushButton("+", this);
-    add_button_->setFixedSize(24, 22);
-    add_button_->setToolTip("Add upper garment");
+    title_label->setStyleSheet("font-size: 16px; font-weight: 600;");
+    title_label->setContentsMargins(4, 0, 0, 0);
+    auto* cancel_button = new QPushButton(this);
+    cancel_button->setObjectName("placementCancelButton");
+    cancel_button->setFixedSize(placement_button_size, placement_button_size);
+    cancel_button->setIcon(make_close_icon());
+    cancel_button->setIconSize(QSize{close_icon_size, close_icon_size});
+    cancel_button->setToolTip("Cancel garment placement");
 
     auto* title_layout = new QHBoxLayout();
     title_layout->setContentsMargins(0, 0, 0, 0);
     title_layout->addWidget(title_label);
     title_layout->addStretch(1);
-    title_layout->addWidget(add_button_);
+    title_layout->addWidget(cancel_button);
     root_layout->addLayout(title_layout);
 
     auto* groups_widget = new QWidget(this);
@@ -127,30 +205,24 @@ GarmentPlacementPanel::GarmentPlacementPanel(QWidget* parent): QWidget(parent)
     groups_layout->setSpacing(8);
     create_group(lower_group_index, groups_widget);
     create_group(upper_group_index, groups_widget);
+    add_button_ = new QPushButton(groups_widget);
+    add_button_->setObjectName("addUpperButton");
+    add_button_->setFixedHeight(add_button_height);
+    add_button_->setIcon(make_plus_icon());
+    add_button_->setIconSize(QSize{action_icon_size, action_icon_size});
+    add_button_->setToolTip("Add upper garment");
     groups_layout->addWidget(groups_[lower_group_index].frame);
     groups_layout->addWidget(groups_[upper_group_index].frame);
-    groups_layout->addStretch(1);
+    groups_layout->addWidget(add_button_);
+    root_layout->addWidget(groups_widget);
 
-    auto* scroll_area = new QScrollArea(this);
-    scroll_area->setWidgetResizable(true);
-    scroll_area->setFrameShape(QFrame::NoFrame);
-    scroll_area->setHorizontalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
-    scroll_area->setWidget(groups_widget);
-    root_layout->addWidget(scroll_area, 1);
-
-    confirm_run_button_ = new QPushButton("Confirm&Run", this);
-    confirm_run_button_->setMinimumWidth(120);
-    auto* cancel_button = new QPushButton("Cancel", this);
-    cancel_button->setMinimumWidth(80);
-
-    auto* button_layout = new QHBoxLayout();
-    button_layout->setContentsMargins(0, 0, 0, 0);
-    button_layout->setSpacing(6);
-    button_layout->addStretch(1);
-    button_layout->addWidget(confirm_run_button_);
-    button_layout->addWidget(cancel_button);
-    button_layout->addStretch(1);
-    root_layout->addLayout(button_layout);
+    confirm_run_button_ = new QPushButton(this);
+    confirm_run_button_->setObjectName("placementConfirmButton");
+    confirm_run_button_->setFixedSize(40, 32);
+    confirm_run_button_->setIcon(make_confirm_icon());
+    confirm_run_button_->setIconSize(QSize{confirm_icon_size, confirm_icon_size});
+    confirm_run_button_->setToolTip("Confirm placement & run");
+    root_layout->addWidget(confirm_run_button_, 0, Qt::AlignHCenter);
 
     connect(add_button_, &QPushButton::clicked, this, [this]() {
         if (add_upper_callback_) {
@@ -183,15 +255,26 @@ void GarmentPlacementPanel::create_group(std::size_t group_index, QWidget* paren
     group_layout->setSpacing(6);
 
     group.group_label = new QLabel(group_index == lower_group_index ? "Lower" : "Upper", group.frame);
-    group.group_label->setStyleSheet("font-weight: 600;");
+    group.group_label->setStyleSheet("font-size: 16px; font-weight: 600;");
+    group.group_label->setContentsMargins(5, 0, 0, 0);
+    group.garment_name_label = new QLabel("garment", group.frame);
+    group.garment_name_label->setStyleSheet("font-size: 14px; font-weight: 560; color: #3f5f7f;");
+    group.garment_name_label->setContentsMargins(5, 0, 0, 10);
+    QSizePolicy garment_name_policy = group.garment_name_label->sizePolicy();
+    garment_name_policy.setRetainSizeWhenHidden(true);
+    group.garment_name_label->setSizePolicy(garment_name_policy);
+    group.garment_name_label->setVisible(false);
 
     auto* header_layout = new QHBoxLayout();
     header_layout->setContentsMargins(0, 0, 0, 0);
     header_layout->setSpacing(4);
     header_layout->addWidget(group.group_label, 1);
     if (group_index == upper_group_index) {
-        auto* remove_button = new QPushButton("x", group.frame);
+        auto* remove_button = new QPushButton(group.frame);
         remove_button->setObjectName("upperRemoveButton");
+        remove_button->setFixedSize(placement_button_size, placement_button_size);
+        remove_button->setIcon(make_close_icon());
+        remove_button->setIconSize(QSize{close_icon_size, close_icon_size});
         remove_button->setToolTip("Remove upper garment");
         header_layout->addWidget(remove_button);
         connect(remove_button, &QPushButton::clicked, this, [this]() {
@@ -201,21 +284,24 @@ void GarmentPlacementPanel::create_group(std::size_t group_index, QWidget* paren
         });
     }
     group_layout->addLayout(header_layout);
+    group_layout->addWidget(group.garment_name_label);
 
     group.controls = new QWidget(group.frame);
     auto* controls_grid = new QGridLayout(group.controls);
-    controls_grid->setContentsMargins(0, 0, 0, 0);
+    controls_grid->setContentsMargins(0, 0, 0, 10);
     controls_grid->setHorizontalSpacing(6);
     controls_grid->setVerticalSpacing(6);
-    controls_grid->setColumnMinimumWidth(0, 42);
-    controls_grid->setColumnMinimumWidth(1, 48);
+    controls_grid->setColumnMinimumWidth(0, 36);
+    controls_grid->setColumnMinimumWidth(1, 40);
     controls_grid->setColumnStretch(2, 1);
 
     constexpr std::array<const char*, 3> axis_names{"X", "Y", "Z"};
     for (std::size_t axis = 0; axis < axis_names.size(); ++axis) {
         const int axis_index = static_cast<int>(axis);
         auto* axis_label = new QLabel(axis_names[axis], group.controls);
+        axis_label->setAlignment(Qt::AlignCenter);
         group.position_value_labels[axis] = new QLabel(format_float(0.0f), group.controls);
+        group.position_value_labels[axis]->setAlignment(Qt::AlignCenter);
         group.position_sliders[axis] = new QSlider(Qt::Horizontal, group.controls);
         group.position_sliders[axis]->setRange(position_slider_min, position_slider_max);
         group.position_sliders[axis]->setValue(position_slider_center);
@@ -232,8 +318,11 @@ void GarmentPlacementPanel::create_group(std::size_t group_index, QWidget* paren
     }
 
     const int scale_row = static_cast<int>(axis_names.size());
-    controls_grid->addWidget(new QLabel("Scale", group.controls), scale_row, 0);
+    auto* scale_label = new QLabel("Scale", group.controls);
+    scale_label->setAlignment(Qt::AlignCenter);
+    controls_grid->addWidget(scale_label, scale_row, 0);
     group.scale_value_label = new QLabel(format_float(group.scale), group.controls);
+    group.scale_value_label->setAlignment(Qt::AlignCenter);
     group.scale_slider = new QSlider(Qt::Horizontal, group.controls);
     group.scale_slider->setRange(scale_slider_min, scale_slider_max);
     group.scale_slider->setValue(scale_slider_center);
@@ -339,7 +428,7 @@ void GarmentPlacementPanel::choose_color(std::size_t group_index)
     root_layout->addLayout(picker_layout);
 
     auto* button_box = new QDialogButtonBox(
-        QDialogButtonBox::Ok | QDialogButtonBox::Cancel,
+        QDialogButtonBox::Ok,
         &color_dialog
     );
     root_layout->addWidget(button_box);
@@ -389,7 +478,6 @@ void GarmentPlacementPanel::choose_color(std::size_t group_index)
         apply_color
     );
     connect(button_box, &QDialogButtonBox::accepted, &color_dialog, &QDialog::accept);
-    connect(button_box, &QDialogButtonBox::rejected, &color_dialog, &QDialog::reject);
 
     if (color_dialog.exec() != QDialog::Accepted) {
         apply_color(original_color);
@@ -413,6 +501,7 @@ void GarmentPlacementPanel::reset_group(std::size_t group_index, const glm::vec3
     group.color = color;
     group.scale = 1.0f;
     group.group_label->setText(group_index == lower_group_index ? "Lower" : "Upper");
+    group.garment_name_label->setVisible(false);
     group.controls->setEnabled(false);
     group.color_button->setEnabled(false);
 
@@ -485,8 +574,8 @@ void GarmentPlacementPanel::set_group_garment(std::size_t group_index,
 
     reset_group(group_index, color);
     PlacementGroup& group = groups_[group_index];
-    const QString group_name = group_index == lower_group_index ? "Lower" : "Upper";
-    group.group_label->setText(group_name + "(" + garment_name + ")");
+    group.garment_name_label->setText(garment_name);
+    group.garment_name_label->setVisible(true);
     group.controls->setEnabled(true);
     group.color_button->setEnabled(true);
 }
@@ -512,6 +601,10 @@ void GarmentPlacementPanel::remove_upper_group()
 void GarmentPlacementPanel::set_add_enabled(bool enabled)
 {
     add_button_->setEnabled(enabled);
+    add_button_->setVisible(enabled);
+    QWidget* groups_widget = add_button_->parentWidget();
+    groups_widget->layout()->invalidate();
+    groups_widget->updateGeometry();
 }
 
 void GarmentPlacementPanel::set_confirm_enabled(bool enabled)
@@ -533,22 +626,6 @@ void GarmentPlacementPanel::reset_placement()
     active_group_index_ = lower_group_index;
     set_add_enabled(false);
     set_confirm_enabled(false);
-}
-
-QSize GarmentPlacementPanel::sizeHint() const
-{
-    int visible_group_height = 0;
-    int visible_group_count = 0;
-    for (const PlacementGroup& group : groups_) {
-        if (!group.frame->isHidden()) {
-            visible_group_height += group.frame->sizeHint().height();
-            ++visible_group_count;
-        }
-    }
-    if (visible_group_count > 1) {
-        visible_group_height += 8 * (visible_group_count - 1);
-    }
-    return QSize{280, visible_group_height + 92};
 }
 
 // setter //
