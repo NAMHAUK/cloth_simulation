@@ -33,6 +33,8 @@
 namespace {
 constexpr int initial_window_width = 1440;
 constexpr int initial_window_height = 900;
+constexpr int minimum_window_width = 1000;
+constexpr int minimum_window_height = 600;
 constexpr int panel_margin = 12;
 constexpr int panel_width = 390;
 constexpr int panel_min_height = 270;
@@ -182,6 +184,7 @@ MainWindow::MainWindow(const std::filesystem::path& project_root, QWidget* paren
     : QMainWindow(parent), project_paths_(make_project_paths(project_root))
 {
     setWindowTitle("SIMULATION APP");
+    setMinimumSize(minimum_window_width, minimum_window_height);
     resize(initial_window_width, initial_window_height);
 
     viewer_container_ = new QWidget(this);
