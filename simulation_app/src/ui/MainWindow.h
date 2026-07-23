@@ -59,8 +59,8 @@ private:
     void refresh_motion_list();
     void refresh_garment_list();
     
-    void request_conversion(AssetPanelMode mode);
-    std::optional<ConverterCommand> prepare_amass_conversion();
+    void request_garment_conversion();
+    void request_motion_conversion(const std::filesystem::path& source_path);
     std::optional<ConverterCommand> prepare_garment_conversion();
 
     ProjectPaths project_paths_;

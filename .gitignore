@@ -21,7 +21,11 @@ vcpkg/
 envs/
 
 # Local datasets/cache
-data/
+data/*
+!data/sources/
+data/sources/*
+!data/sources/icon/
+!data/sources/icon/**
 image/
 
 # Python cache

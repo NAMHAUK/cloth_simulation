@@ -13,7 +13,9 @@
 #include <algorithm>
 #include <cstdint>
 #include <iostream>
+#include <limits>
 #include <memory>
+#include <string>
 #include <utility>
 #include <vector>
 
@@ -32,15 +34,28 @@ namespace {
 constexpr int initial_window_width = 1440;
 constexpr int initial_window_height = 900;
 constexpr int panel_margin = 12;
-constexpr int panel_width = 340;
-constexpr int panel_min_height = 180;
-constexpr int panel_max_height = 360;
+constexpr int panel_width = 390;
+constexpr int panel_min_height = 270;
+constexpr int panel_max_height = 540;
 constexpr int simulation_button_size = 40;
 constexpr int simulation_button_gap = 10;
 constexpr int simulation_button_count = 3;
 constexpr int simulation_icon_size = 22;
 constexpr int placement_panel_width = 280;
 constexpr float placement_character_opacity = 0.3f;
+
+int motion_subject_number(const std::filesystem::path& motion_path)
+{
+    bool is_number = false;
+    const int subject_number = to_q_string(motion_path.stem()).section('_', 0, 0).toInt(&is_number);
+    return is_number ? subject_number : std::numeric_limits<int>::max();
+}
+
+bool is_amass_motion_path(const std::filesystem::path& motion_path)
+{
+    const QString motion_name = to_q_string(motion_path.stem());
+    return motion_name.size() > 6 && motion_name.endsWith("_poses");
+}
 
 enum class SimulationControlIcon {
     Play,
@@ -172,7 +187,11 @@ MainWindow::MainWindow(const std::filesystem::path& project_root, QWidget* paren
     viewer_container_ = new QWidget(this);
     simulation_viewport_ = new SceneViewport(viewer_container_);
     simulation_controller_ = std::make_unique<SimulationController>();
-    browser_panel_ = new AssetBrowserPanel(viewer_container_);
+    browser_panel_ = new AssetBrowserPanel(
+        project_paths_.motion_asset_dir / "motion_catalog.json",
+        project_paths_.motion_asset_dir / "subject_catalog.json",
+        viewer_container_
+    );
     garment_placement_panel_ = new GarmentPlacementPanel(viewer_container_);
     run_button_ = new QPushButton(viewer_container_);
     stop_button_ = new QPushButton(viewer_container_);
@@ -314,9 +333,12 @@ void MainWindow::setup_browser_callbacks()
 
         }
     );
-    browser_panel_->set_import_button_callback([this](AssetPanelMode mode) {
-        request_conversion(mode);
-    });
+    browser_panel_->set_motion_conversion_callback(
+        [this](const std::filesystem::path& source_path) {
+            request_motion_conversion(source_path);
+        }
+    );
+    browser_panel_->set_import_button_callback([this]() { request_garment_conversion(); });
     browser_panel_->set_expansion_changed_callback([this]() {
         update_viewer_layout();
     });
@@ -574,7 +596,7 @@ void MainWindow::update_viewer_layout()
     if (browser_panel_->is_expanded()) {
         overlay_width = std::min(panel_width, available_width);
 
-        const int target_height = container_size.height() / 3;
+        const int target_height = container_size.height() / 2;
         const int expanded_max_height = std::min(panel_max_height, available_height);
         const int expanded_height = std::clamp(
             target_height,
@@ -654,28 +676,48 @@ void MainWindow::update_simulation_controls()
 // panel update //
 void MainWindow::refresh_motion_list()
 {
-    browser_panel_->set_asset_paths(
-        AssetPanelMode::Motions,
-        asset_io::scan_asset_paths(project_paths_.motion_asset_dir, ".motion")
+    auto motion_source_paths = asset_io::scan_asset_paths(project_paths_.amass_dir, ".npz");
+    motion_source_paths.erase(
+        std::remove_if(
+            motion_source_paths.begin(),
+            motion_source_paths.end(),
+            [](const auto& path) { return !is_amass_motion_path(path); }
+        ),
+        motion_source_paths.end()
+    );
+
+    auto motion_asset_paths = asset_io::scan_asset_paths(project_paths_.motion_asset_dir, ".motion");
+    motion_asset_paths.erase(
+        std::remove(
+            motion_asset_paths.begin(),
+            motion_asset_paths.end(),
+            project_paths_.default_character_motion_path
+        ),
+        motion_asset_paths.end()
+    );
+    const auto compare_motion_subject = [](const auto& lhs, const auto& rhs) {
+        return motion_subject_number(lhs) < motion_subject_number(rhs);
+    };
+    std::stable_sort(motion_source_paths.begin(), motion_source_paths.end(), compare_motion_subject);
+    std::stable_sort(motion_asset_paths.begin(), motion_asset_paths.end(), compare_motion_subject);
+
+    browser_panel_->set_motion_paths(
+        std::move(motion_source_paths),
+        std::move(motion_asset_paths)
     );
 }
 
 void MainWindow::refresh_garment_list()
 {
-    browser_panel_->set_asset_paths(
-        AssetPanelMode::Garments,
+    browser_panel_->set_garment_paths(
         asset_io::scan_asset_paths(project_paths_.garment_asset_dir, ".garment")
     );
 }
 
 // converter request //
-void MainWindow::request_conversion(AssetPanelMode mode)
+void MainWindow::request_garment_conversion()
 {
-    AssetConverter* converter = mode == AssetPanelMode::Motions
-        ? motion_converter_
-        : garment_converter_;
-
-    if (converter->is_running()) {
+    if (garment_converter_->is_running()) {
         QMessageBox::information(
             this,
             "Conversion In Progress",
@@ -684,46 +726,43 @@ void MainWindow::request_conversion(AssetPanelMode mode)
         return;
     }
 
-    const std::optional<ConverterCommand> command = (mode == AssetPanelMode::Motions)
-        ? prepare_amass_conversion()
-        : prepare_garment_conversion();
+    const std::optional<ConverterCommand> command = prepare_garment_conversion();
 
     if (!command) {
         return;
     }
 
-    browser_panel_->set_conversion_active(mode, true);
-    converter->start_conversion(*command);
+    browser_panel_->set_conversion_active(AssetPanelMode::Garments, true);
+    garment_converter_->start_conversion(*command);
 }
 
-std::optional<ConverterCommand> MainWindow::prepare_amass_conversion()
+void MainWindow::request_motion_conversion(const std::filesystem::path& source_path)
 {
-    const std::filesystem::path default_dir = project_paths_.amass_dir;
-    const QString selected_file = QFileDialog::getOpenFileName(
-        this,
-        "Select AMASS Motion",
-        to_q_string(default_dir),
-        "AMASS Motion (*.npz)"
-    );
-
-    if (selected_file.isEmpty()) {
-        return std::nullopt;
+    if (motion_converter_->is_running()) {
+        return;
     }
 
-    const std::filesystem::path amass_motion_path = selected_file.toStdWString();
     const std::filesystem::path motion_asset_path =
-        project_paths_.motion_asset_dir / (amass_motion_path.stem().string() + ".motion");
+        project_paths_.motion_asset_dir / (source_path.stem().string() + ".motion");
 
     if (std::filesystem::exists(motion_asset_path)) {
-        return std::nullopt;
+        refresh_motion_list();
+        return;
     }
 
-    const auto command = asset_converter_commands::make_motion_command(project_paths_, amass_motion_path,motion_asset_path);
-    return validate_conversion_command(
+    const ConverterCommand command =
+        asset_converter_commands::make_motion_command(project_paths_, source_path, motion_asset_path);
+    const std::optional<ConverterCommand> valid_command = validate_conversion_command(
         this,
         AssetPanelMode::Motions,
         command
     );
+    if (!valid_command) {
+        return;
+    }
+
+    browser_panel_->set_conversion_active(AssetPanelMode::Motions, true);
+    motion_converter_->start_conversion(*valid_command);
 }
 
 std::optional<ConverterCommand> MainWindow::prepare_garment_conversion()
