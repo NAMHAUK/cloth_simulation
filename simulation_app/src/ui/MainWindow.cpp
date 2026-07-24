@@ -13,7 +13,9 @@
 #include <algorithm>
 #include <cstdint>
 #include <iostream>
+#include <limits>
 #include <memory>
+#include <string>
 #include <utility>
 #include <vector>
 
@@ -31,16 +33,31 @@
 namespace {
 constexpr int initial_window_width = 1440;
 constexpr int initial_window_height = 900;
+constexpr int minimum_window_width = 1000;
+constexpr int minimum_window_height = 600;
 constexpr int panel_margin = 12;
-constexpr int panel_width = 340;
-constexpr int panel_min_height = 180;
-constexpr int panel_max_height = 280;
+constexpr int panel_width = 390;
+constexpr int panel_min_height = 270;
+constexpr int panel_max_height = 540;
 constexpr int simulation_button_size = 40;
 constexpr int simulation_button_gap = 10;
 constexpr int simulation_button_count = 3;
 constexpr int simulation_icon_size = 22;
 constexpr int placement_panel_width = 280;
-constexpr int placement_panel_height = 210;
+constexpr float placement_character_opacity = 0.3f;
+
+int motion_subject_number(const std::filesystem::path& motion_path)
+{
+    bool is_number = false;
+    const int subject_number = to_q_string(motion_path.stem()).section('_', 0, 0).toInt(&is_number);
+    return is_number ? subject_number : std::numeric_limits<int>::max();
+}
+
+bool is_amass_motion_path(const std::filesystem::path& motion_path)
+{
+    const QString motion_name = to_q_string(motion_path.stem());
+    return motion_name.size() > 6 && motion_name.endsWith("_poses");
+}
 
 enum class SimulationControlIcon {
     Play,
@@ -167,12 +184,17 @@ MainWindow::MainWindow(const std::filesystem::path& project_root, QWidget* paren
     : QMainWindow(parent), project_paths_(make_project_paths(project_root))
 {
     setWindowTitle("SIMULATION APP");
+    setMinimumSize(minimum_window_width, minimum_window_height);
     resize(initial_window_width, initial_window_height);
 
     viewer_container_ = new QWidget(this);
     simulation_viewport_ = new SceneViewport(viewer_container_);
     simulation_controller_ = std::make_unique<SimulationController>();
-    browser_panel_ = new AssetBrowserPanel(viewer_container_);
+    browser_panel_ = new AssetBrowserPanel(
+        project_paths_.motion_asset_dir / "motion_catalog.json",
+        project_paths_.motion_asset_dir / "subject_catalog.json",
+        viewer_container_
+    );
     garment_placement_panel_ = new GarmentPlacementPanel(viewer_container_);
     run_button_ = new QPushButton(viewer_container_);
     stop_button_ = new QPushButton(viewer_container_);
@@ -285,7 +307,8 @@ void MainWindow::setup_viewport_callbacks()
     simulation_viewport_->set_scene_render_callback(
         [this](const glm::mat4& mvp, QOpenGLFunctions_4_5_Core& gl) {
             if (simulation_controller_ != nullptr && simulation_controller_->is_gpu_initialized()) {
-                simulation_controller_->draw(mvp, gl);
+                const float character_opacity = has_placement_session() ? placement_character_opacity : 1.0f;
+                simulation_controller_->draw(mvp, character_opacity, gl);
             }
         }
     );
@@ -296,7 +319,7 @@ void MainWindow::setup_browser_callbacks()
     browser_panel_->set_selected_callback(
         [this](AssetPanelMode mode, const std::filesystem::path& asset_path) {
             if (mode == AssetPanelMode::Motions) {
-                if (has_editable_garment_ || !simulation_controller_->has_garments()) {
+                if (has_placement_session() || !simulation_controller_->has_garments()) {
                     QMessageBox::information(this, "Motion Load Blocked", "Load motions after confirming garment placement.");
                     return;
                 }
@@ -308,22 +331,52 @@ void MainWindow::setup_browser_callbacks()
                     QMessageBox::information(this, "Garment Load Blocked", "Load garments only while the simulation is stopped and the character is in the default pose.");
                     return;
                 }
-                asset_loader_->load_garment_mesh(asset_path);
+                request_garment_load(asset_path);
             }
 
         }
     );
-    browser_panel_->set_import_button_callback([this](AssetPanelMode mode) {
-        request_conversion(mode);
-    });
+    browser_panel_->set_motion_conversion_callback(
+        [this](const std::filesystem::path& source_path) {
+            request_motion_conversion(source_path);
+        }
+    );
+    browser_panel_->set_import_button_callback([this]() { request_garment_conversion(); });
     browser_panel_->set_expansion_changed_callback([this]() {
         update_viewer_layout();
     });
     garment_placement_panel_->set_placement_changed_callback(
-        [this](const glm::vec3& position_offset, float scale) {
-            simulation_controller_->set_garment_placement(position_offset, scale);
+        [this](std::size_t group_index, const glm::vec3& position_offset, float scale) {
+            simulation_controller_->set_garment_placement(group_index, position_offset, scale);
         }
     );
+    garment_placement_panel_->set_color_changed_callback([this](std::size_t group_index, const glm::vec3& color) {
+        simulation_controller_->set_garment_color(group_index, color);
+    });
+    garment_placement_panel_->set_add_upper_callback([this]() {
+        placement_group_states_[GarmentPlacementPanel::upper_group_index] = PlacementGroupState::Empty;
+        garment_request_ids_[GarmentPlacementPanel::upper_group_index].reset();
+        garment_placement_panel_->show_upper_placeholder();
+        update_placement_actions();
+        update_viewer_layout();
+    });
+    garment_placement_panel_->set_remove_upper_callback([this]() {
+        const std::size_t upper_index = GarmentPlacementPanel::upper_group_index;
+        garment_request_ids_[upper_index].reset();
+        simulation_controller_->remove_garment_placement(upper_index);
+        placement_group_states_[upper_index] = PlacementGroupState::Hidden;
+
+        if (placement_group_states_[GarmentPlacementPanel::lower_group_index] != PlacementGroupState::Hidden) {
+            garment_placement_panel_->remove_upper_group();
+            update_simulation_controls();
+            update_viewer_layout();
+            return;
+        }
+
+        end_placement_session();
+        update_simulation_controls();
+        update_viewer_layout();
+    });
 
     connect(run_button_, &QPushButton::clicked, this, [this]() {
         if (simulation_controller_->is_simulation_running()) {
@@ -341,23 +394,25 @@ void MainWindow::setup_browser_callbacks()
 
     connect(reset_button_, &QPushButton::clicked, this, [this]() {
         simulation_controller_->reset_scene_to_default();
-        has_editable_garment_ = false;
-        garment_placement_panel_->reset_placement();
+        end_placement_session();
         update_simulation_controls();
         update_viewer_layout();
     });
 
     garment_placement_panel_->set_confirm_run_callback([this]() {
-        simulation_controller_->confirm_garment_placement();
+        if (!simulation_controller_->confirm_garment_placement()) {
+            QMessageBox::warning(this, "Placement Failed", "Failed to initialize garment placement.");
+            update_placement_actions();
+            return;
+        }
         simulation_controller_->start_simulation();
-        has_editable_garment_ = false;
+        end_placement_session();
         update_simulation_controls();
         update_viewer_layout();
     });
     garment_placement_panel_->set_cancel_callback([this]() {
         simulation_controller_->cancel_garment_placement();
-        has_editable_garment_ = false;
-        garment_placement_panel_->reset_placement();
+        end_placement_session();
         update_simulation_controls();
         update_viewer_layout();
     });
@@ -367,7 +422,7 @@ void MainWindow::setup_asset_loader_callbacks()
 {
     asset_loader_->set_character_loaded_callback(
         [this](const std::filesystem::path&, CharacterMesh mesh) {
-            has_editable_garment_ = false;
+            end_placement_session();
             simulation_controller_->set_character_mesh(std::move(mesh));
             simulation_controller_->start_simulation();
             update_simulation_controls();
@@ -376,18 +431,120 @@ void MainWindow::setup_asset_loader_callbacks()
     asset_loader_->set_character_load_failed_callback([this](const std::filesystem::path& motion_asset_path) {
         QMessageBox::warning(this, "Load Failed", "Failed to load motion:\n" + to_q_string(motion_asset_path));
     });
-    asset_loader_->set_garment_loaded_callback([this](GarmentMesh mesh) {
-        if (!simulation_controller_->add_garment_mesh(std::move(mesh))) {
+    asset_loader_->set_garment_loaded_callback(
+        [this](GarmentRequestId request_id, const std::filesystem::path& asset_path, GarmentMesh mesh) {
+            const std::optional<std::size_t> group_index = take_garment_request_group(request_id);
+            if (!group_index) {
+                return;
+            }
+
+            if (!simulation_controller_->set_garment_mesh(*group_index, std::move(mesh))) {
+                QMessageBox::warning(this, "Load Failed", "Failed to apply garment:\n" + to_q_string(asset_path));
+                if (!has_visible_placement_group()) {
+                    end_placement_session();
+                }
+                update_simulation_controls();
+                return;
+            }
+
+            const bool starts_placement = !has_visible_placement_group();
+            placement_group_states_[*group_index] = PlacementGroupState::Loaded;
+            const QString garment_name = to_q_string(asset_path.stem());
+            const glm::vec3 color = simulation_controller_->garment_placement_color(*group_index);
+            if (starts_placement) {
+                garment_placement_panel_->begin_session(*group_index, garment_name, color);
+            } else {
+                garment_placement_panel_->set_group_garment(*group_index, garment_name, color);
+            }
+
+            update_simulation_controls();
+            update_viewer_layout();
+        });
+    asset_loader_->set_garment_load_failed_callback(
+        [this](GarmentRequestId request_id, const std::filesystem::path& garment_asset_path) {
+        if (!take_garment_request_group(request_id)) {
             return;
         }
-        has_editable_garment_ = true;
-        garment_placement_panel_->reset_placement();
-        update_simulation_controls();
-        update_viewer_layout();
-    });
-    asset_loader_->set_garment_load_failed_callback([this](const std::filesystem::path& garment_asset_path) {
         QMessageBox::warning(this, "Load Failed", "Failed to load garment:\n" + to_q_string(garment_asset_path));
+        if (!has_visible_placement_group()) {
+            end_placement_session();
+        }
+        update_simulation_controls();
     });
+}
+
+void MainWindow::request_garment_load(const std::filesystem::path& asset_path)
+{
+    const std::size_t group_index = has_visible_placement_group()
+        ? garment_placement_panel_->active_group_index()
+        : simulation_controller_->garment_count() == 0u
+            ? GarmentPlacementPanel::lower_group_index
+            : GarmentPlacementPanel::upper_group_index;
+    garment_request_ids_[group_index] = asset_loader_->load_garment_mesh(asset_path);
+    update_placement_actions();
+}
+
+std::optional<std::size_t> MainWindow::take_garment_request_group(std::uint64_t request_id)
+{
+    for (std::size_t index = 0; index < garment_request_ids_.size(); ++index) {
+        if (garment_request_ids_[index] == request_id) {
+            garment_request_ids_[index].reset();
+            return index;
+        }
+    }
+    return std::nullopt;
+}
+
+bool MainWindow::has_pending_garment_load() const
+{
+    return std::any_of(garment_request_ids_.begin(), garment_request_ids_.end(),
+        [](const std::optional<std::uint64_t>& request_id) {
+            return request_id.has_value();
+        });
+}
+
+bool MainWindow::has_visible_placement_group() const
+{
+    return std::any_of(placement_group_states_.begin(), placement_group_states_.end(),
+        [](PlacementGroupState state) {
+            return state != PlacementGroupState::Hidden;
+        });
+}
+
+bool MainWindow::has_placement_session() const
+{
+    return has_visible_placement_group() || has_pending_garment_load();
+}
+
+void MainWindow::update_placement_actions()
+{
+    if (!garment_placement_panel_) {
+        return;
+    }
+
+    const bool has_visible_group = has_visible_placement_group();
+    bool all_visible_groups_loaded = true;
+    for (PlacementGroupState state : placement_group_states_) {
+        if (state == PlacementGroupState::Hidden) {
+            continue;
+        }
+        all_visible_groups_loaded = all_visible_groups_loaded && state == PlacementGroupState::Loaded;
+    }
+
+    garment_placement_panel_->set_confirm_enabled(
+        has_visible_group && all_visible_groups_loaded && !has_pending_garment_load());
+    garment_placement_panel_->set_add_enabled(
+        placement_group_states_[GarmentPlacementPanel::lower_group_index] == PlacementGroupState::Loaded &&
+        placement_group_states_[GarmentPlacementPanel::upper_group_index] == PlacementGroupState::Hidden &&
+        simulation_controller_->garment_count() < 2u
+    );
+}
+
+void MainWindow::end_placement_session()
+{
+    garment_request_ids_.fill(std::nullopt);
+    placement_group_states_.fill(PlacementGroupState::Hidden);
+    garment_placement_panel_->reset_placement();
 }
 
 void MainWindow::setup_asset_converter_callbacks()
@@ -442,7 +599,7 @@ void MainWindow::update_viewer_layout()
     if (browser_panel_->is_expanded()) {
         overlay_width = std::min(panel_width, available_width);
 
-        const int target_height = container_size.height() / 4;
+        const int target_height = container_size.height() / 2;
         const int expanded_max_height = std::min(panel_max_height, available_height);
         const int expanded_height = std::clamp(
             target_height,
@@ -475,11 +632,13 @@ void MainWindow::update_viewer_layout()
     stop_button_->raise();
     reset_button_->raise();
 
-    if (has_editable_garment_) {
+    if (has_visible_placement_group()) {
         const int placement_width = std::min(placement_panel_width, available_width);
-        const int placement_height = std::min(placement_panel_height, available_height);
         const int placement_x = std::max(panel_margin, container_size.width() - panel_margin - placement_width);
         const int placement_y = controls_y + simulation_button_size + simulation_button_gap;
+        const int placement_available_height = std::max(0, container_size.height() - panel_margin - placement_y);
+        const int placement_height = std::min(garment_placement_panel_->sizeHint().height(),
+                                              placement_available_height);
         garment_placement_panel_->setGeometry(placement_x, placement_y, placement_width, placement_height);
         garment_placement_panel_->raise();
     }
@@ -498,51 +657,70 @@ void MainWindow::update_simulation_controls()
     }
 
     const bool simulation_running = simulation_controller_->is_simulation_running();
+    const bool placement_panel_visible = has_visible_placement_group();
+    const bool placement_session_active = has_placement_session();
     const bool placement_available =
-        has_editable_garment_ &&
-        !simulation_running &&
-        simulation_controller_->is_default_pose();
-
-    const bool placement_panel_visible = has_editable_garment_;
+        placement_panel_visible && !simulation_running && simulation_controller_->is_default_pose();
 
     run_button_->setIcon(make_simulation_control_icon(
         simulation_running ? SimulationControlIcon::Pause : SimulationControlIcon::Play,
         simulation_running ? QColor{"#f4b400"} : QColor{"#43a047"}
     ));
     run_button_->setToolTip(simulation_running ? "Pause" : "Run");
-    run_button_->setEnabled(simulation_running || !placement_panel_visible);
-    stop_button_->setEnabled(simulation_controller_->has_base_positions() && !placement_panel_visible);
+    run_button_->setEnabled(simulation_running || !placement_session_active);
+    stop_button_->setEnabled(simulation_controller_->has_base_positions() && !placement_session_active);
     reset_button_->setEnabled(true);
     browser_panel_->set_garment_selection_enabled(simulation_controller_->can_start_garment_placement());
     garment_placement_panel_->setVisible(placement_panel_visible);
     garment_placement_panel_->setEnabled(placement_available);
+    update_placement_actions();
 }
 
 // panel update //
 void MainWindow::refresh_motion_list()
 {
-    browser_panel_->set_asset_paths(
-        AssetPanelMode::Motions,
-        asset_io::scan_asset_paths(project_paths_.motion_asset_dir, ".motion")
+    auto motion_source_paths = asset_io::scan_asset_paths(project_paths_.amass_dir, ".npz");
+    motion_source_paths.erase(
+        std::remove_if(
+            motion_source_paths.begin(),
+            motion_source_paths.end(),
+            [](const auto& path) { return !is_amass_motion_path(path); }
+        ),
+        motion_source_paths.end()
+    );
+
+    auto motion_asset_paths = asset_io::scan_asset_paths(project_paths_.motion_asset_dir, ".motion");
+    motion_asset_paths.erase(
+        std::remove(
+            motion_asset_paths.begin(),
+            motion_asset_paths.end(),
+            project_paths_.default_character_motion_path
+        ),
+        motion_asset_paths.end()
+    );
+    const auto compare_motion_subject = [](const auto& lhs, const auto& rhs) {
+        return motion_subject_number(lhs) < motion_subject_number(rhs);
+    };
+    std::stable_sort(motion_source_paths.begin(), motion_source_paths.end(), compare_motion_subject);
+    std::stable_sort(motion_asset_paths.begin(), motion_asset_paths.end(), compare_motion_subject);
+
+    browser_panel_->set_motion_paths(
+        std::move(motion_source_paths),
+        std::move(motion_asset_paths)
     );
 }
 
 void MainWindow::refresh_garment_list()
 {
-    browser_panel_->set_asset_paths(
-        AssetPanelMode::Garments,
+    browser_panel_->set_garment_paths(
         asset_io::scan_asset_paths(project_paths_.garment_asset_dir, ".garment")
     );
 }
 
 // converter request //
-void MainWindow::request_conversion(AssetPanelMode mode)
+void MainWindow::request_garment_conversion()
 {
-    AssetConverter* converter = mode == AssetPanelMode::Motions
-        ? motion_converter_
-        : garment_converter_;
-
-    if (converter->is_running()) {
+    if (garment_converter_->is_running()) {
         QMessageBox::information(
             this,
             "Conversion In Progress",
@@ -551,46 +729,43 @@ void MainWindow::request_conversion(AssetPanelMode mode)
         return;
     }
 
-    const std::optional<ConverterCommand> command = (mode == AssetPanelMode::Motions)
-        ? prepare_amass_conversion()
-        : prepare_garment_conversion();
+    const std::optional<ConverterCommand> command = prepare_garment_conversion();
 
     if (!command) {
         return;
     }
 
-    browser_panel_->set_conversion_active(mode, true);
-    converter->start_conversion(*command);
+    browser_panel_->set_conversion_active(AssetPanelMode::Garments, true);
+    garment_converter_->start_conversion(*command);
 }
 
-std::optional<ConverterCommand> MainWindow::prepare_amass_conversion()
+void MainWindow::request_motion_conversion(const std::filesystem::path& source_path)
 {
-    const std::filesystem::path default_dir = project_paths_.amass_dir;
-    const QString selected_file = QFileDialog::getOpenFileName(
-        this,
-        "Select AMASS Motion",
-        to_q_string(default_dir),
-        "AMASS Motion (*.npz)"
-    );
-
-    if (selected_file.isEmpty()) {
-        return std::nullopt;
+    if (motion_converter_->is_running()) {
+        return;
     }
 
-    const std::filesystem::path amass_motion_path = selected_file.toStdWString();
     const std::filesystem::path motion_asset_path =
-        project_paths_.motion_asset_dir / (amass_motion_path.stem().string() + ".motion");
+        project_paths_.motion_asset_dir / (source_path.stem().string() + ".motion");
 
     if (std::filesystem::exists(motion_asset_path)) {
-        return std::nullopt;
+        refresh_motion_list();
+        return;
     }
 
-    const auto command = asset_converter_commands::make_motion_command(project_paths_, amass_motion_path,motion_asset_path);
-    return validate_conversion_command(
+    const ConverterCommand command =
+        asset_converter_commands::make_motion_command(project_paths_, source_path, motion_asset_path);
+    const std::optional<ConverterCommand> valid_command = validate_conversion_command(
         this,
         AssetPanelMode::Motions,
         command
     );
+    if (!valid_command) {
+        return;
+    }
+
+    browser_panel_->set_conversion_active(AssetPanelMode::Motions, true);
+    motion_converter_->start_conversion(*valid_command);
 }
 
 std::optional<ConverterCommand> MainWindow::prepare_garment_conversion()

@@ -67,7 +67,7 @@ struct GarmentMesh {
     GarmentDistanceConstraints stretch_constraints;
     GarmentDistanceConstraints bending_constraints;
     std::vector<std::uint32_t> attachment_vertex_indices;
-    glm::vec3 color{0.95f, 0.42f, 0.18f};
+    glm::vec3 color{1.0f};
     glm::vec3 bounds_center{};
     float bounds_radius = 1.0f;
 };

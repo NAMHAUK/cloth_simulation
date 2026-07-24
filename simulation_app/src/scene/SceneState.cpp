@@ -8,6 +8,35 @@
 #include <iostream>
 #include <utility>
 
+namespace {
+bool prepare_garment_mesh(GarmentMesh& mesh)
+{
+    const std::uint32_t vertex_count = static_cast<std::uint32_t>(mesh.vertices.size() / 3u);
+    std::uint32_t flipped_triangle_count = 0u;
+    if (!orient_triangle_winding_outward(vertex_count,
+                                         mesh.vertices,
+                                         mesh.bounds_center,
+                                         mesh.triangle_vertex_indices,
+                                         flipped_triangle_count)) {
+        std::cerr << "Cannot prepare garment mesh with inconsistent triangle winding.\n";
+        return false;
+    }
+    if (flipped_triangle_count > 0u) {
+        std::cerr << "Oriented garment triangle winding: flipped "
+                  << flipped_triangle_count << " triangles.\n";
+    }
+
+    if (!mesh.adjacency.is_valid(vertex_count) &&
+        !build_vertex_face_adjacency(vertex_count, mesh.triangle_vertex_indices, mesh.adjacency)) {
+        std::cerr << "Cannot prepare garment mesh with invalid topology.\n";
+        return false;
+    }
+
+    mesh.color = glm::vec3{1.0f};
+    return true;
+}
+}
+
 // Character // 
 
 void SceneState::set_character_mesh(CharacterMesh mesh)
@@ -55,33 +84,9 @@ const EdgeBvhData& SceneState::default_body_edge_bvh_data() const
 
 std::uint32_t SceneState::add_garment_mesh(GarmentMesh mesh)
 {
-    static const glm::vec3 garment_colors[] = {
-        {1.0f, 1.0f, 1.0f},
-        {0.15f, 0.35f, 1.0f},
-        {1.0f, 0.15f, 0.15f},
-    };
-
-    const std::uint32_t vertex_count = static_cast<std::uint32_t>(mesh.vertices.size() / 3u);
-    std::uint32_t flipped_triangle_count = 0u;
-    if (!orient_triangle_winding_outward(vertex_count,
-                                         mesh.vertices,
-                                         mesh.bounds_center,
-                                         mesh.triangle_vertex_indices,
-                                         flipped_triangle_count)) {
-        std::cerr << "Cannot add garment mesh with inconsistent triangle winding.\n";
+    if (!prepare_garment_mesh(mesh)) {
         return 0u;
     }
-    if (flipped_triangle_count > 0u) {
-        std::cerr << "Oriented garment triangle winding: flipped "
-                  << flipped_triangle_count << " triangles.\n";
-    }
-
-    if (!mesh.adjacency.is_valid(vertex_count) &&
-        !build_vertex_face_adjacency(vertex_count, mesh.triangle_vertex_indices, mesh.adjacency)) {
-        std::cerr << "Cannot add garment mesh with invalid topology.\n";
-    }
-
-    mesh.color = garment_colors[garments_.size() % 3u];
 
     const std::uint32_t garment_id = next_garment_id_++;
     const std::uint32_t garment_layer = next_garment_layer_++;
@@ -94,6 +99,23 @@ std::uint32_t SceneState::add_garment_mesh(GarmentMesh mesh)
         true,
     });
     return garment_id;
+}
+
+bool SceneState::replace_garment_mesh(std::uint32_t garment_id, GarmentMesh mesh)
+{
+    GarmentObject* garment = find_garment(garment_id);
+    if (garment == nullptr) {
+        return false;
+    }
+
+    if (!prepare_garment_mesh(mesh)) {
+        return false;
+    }
+    GarmentMesh source_mesh = mesh;
+    garment->source_mesh = std::move(source_mesh);
+    garment->mesh = std::move(mesh);
+    garment->garment_triangle_bvh.reset();
+    return true;
 }
 
 GarmentObject* SceneState::update_garment_placement(std::uint32_t garment_id, const glm::vec3& position_offset, float scale)
@@ -140,6 +162,18 @@ GarmentObject* SceneState::update_garment_placement(std::uint32_t garment_id, co
     }
 
     return nullptr;
+}
+
+bool SceneState::update_garment_color(std::uint32_t garment_id, const glm::vec3& color)
+{
+    GarmentObject* garment = find_garment(garment_id);
+    if (garment == nullptr) {
+        return false;
+    }
+
+    garment->source_mesh.color = color;
+    garment->mesh.color = color;
+    return true;
 }
 
 bool SceneState::remove_garment(std::uint32_t garment_id)

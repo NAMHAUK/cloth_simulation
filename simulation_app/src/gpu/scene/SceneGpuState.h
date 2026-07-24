@@ -36,14 +36,17 @@ public:
     const ClothGpuResources& cloth_gpu_state() const;
     ClothBvhBufferView cloth_bvh_buffer_view() const;
     CollisionCandidateBufferView collision_candidate_buffer_view() const;
-    void update_garment_meshes(const SceneState& scene, QOpenGLFunctions_4_5_Core& gl);
+    bool update_garment_meshes(const SceneState& scene,
+                               QOpenGLFunctions_4_5_Core& gl,
+                               std::uint32_t reset_garment_id = 0u);
     bool update_garment_placement(const GarmentObject& garment,
                                   bool update_rest_lengths,
                                   QOpenGLFunctions_4_5_Core& gl);
-    void build_garment_attachment_targets(SceneState& scene,
+    bool build_garment_attachment_targets(SceneState& scene,
                                           std::uint32_t garment_id,
                                           float surface_offset,
                                           QOpenGLFunctions_4_5_Core& gl);
+    void deactivate_garment_attachment_targets(std::uint32_t garment_id);
     bool save_base_positions(QOpenGLFunctions_4_5_Core& gl);
     bool restore_base_positions(QOpenGLFunctions_4_5_Core& gl);
     void clear_base_positions(QOpenGLFunctions_4_5_Core& gl);

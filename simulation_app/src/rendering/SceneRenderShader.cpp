@@ -56,6 +56,7 @@ bool SceneRenderShader::load(const std::filesystem::path& vertex_shader_path,
     mvp_location_ = gl.glGetUniformLocation(program_, "uMVP");
     solid_mode_location_ = gl.glGetUniformLocation(program_, "uUseSolidColor");
     solid_color_location_ = gl.glGetUniformLocation(program_, "uSolidColor");
+    opacity_location_ = gl.glGetUniformLocation(program_, "uOpacity");
     position_buffer_mode_location_ = gl.glGetUniformLocation(program_, "uUsePositionBuffer");
     normal_lighting_mode_location_ = gl.glGetUniformLocation(program_, "uUseNormalLighting");
     light_direction_location_ = gl.glGetUniformLocation(program_, "uLightDirectionWorld");
@@ -118,6 +119,15 @@ void SceneRenderShader::set_vertex_color_mode(QOpenGLFunctions_4_5_Core& gl) con
     gl.glProgramUniform1i(program_, solid_mode_location_, 0);
 }
 
+void SceneRenderShader::set_opacity(float opacity, QOpenGLFunctions_4_5_Core& gl) const
+{
+    if (!is_initialized() || opacity_location_ < 0) {
+        return;
+    }
+
+    gl.glProgramUniform1f(program_, opacity_location_, opacity);
+}
+
 void SceneRenderShader::set_lighting(const glm::vec3& light_direction_world,
                                      float ambient_strength,
                                      float diffuse_strength,
@@ -160,6 +170,7 @@ void SceneRenderShader::release(QOpenGLFunctions_4_5_Core& gl)
     mvp_location_ = -1;
     solid_mode_location_ = -1;
     solid_color_location_ = -1;
+    opacity_location_ = -1;
     position_buffer_mode_location_ = -1;
     normal_lighting_mode_location_ = -1;
     light_direction_location_ = -1;
