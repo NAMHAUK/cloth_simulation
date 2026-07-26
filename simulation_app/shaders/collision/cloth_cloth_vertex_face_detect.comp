@@ -25,7 +25,7 @@ layout(std430, binding = 4) readonly buffer ClothBvhNodes {
 };
 
 layout(std430, binding = 5) buffer Candidates {
-    uvec4 candidates[];
+    uvec2 candidates[];
 };
 
 layout(std430, binding = 6) buffer CandidateCount {
@@ -48,8 +48,6 @@ uniform uint uMaxCandidateCount;
 
 const uint max_bvh_stack_depth = 32u;
 const uint group_candidate_capacity = 512u;
-const uint upper_vertex_lower_face_role = 0u;
-const uint lower_vertex_upper_face_role = 1u;
 
 shared uint garment_roots_overlap;
 
@@ -66,10 +64,8 @@ bool roots_overlap()
 }
 
 void detect_vertex_face_candidates(uint cloth_vertex_index,
-                              uint target_vertex_offset,
                               uint target_triangle_offset,
-                              uint target_bvh_node_offset,
-                              uint query_role)
+                              uint target_bvh_node_offset)
 {
     vec3 previous_position = read_cloth_previous_position(cloth_vertex_index);
     vec3 current_position = read_cloth_current_position(cloth_vertex_index);
@@ -91,10 +87,7 @@ void detect_vertex_face_candidates(uint cloth_vertex_index,
                 uint global_triangle_index = target_triangle_offset + node.first_element_index + triangle_offset;
                 Aabb bounds = triangle_bounds[global_triangle_index];
                 if (overlaps_aabb(vertex_bounds, bounds)) {
-                    append_candidate(uvec4(cloth_vertex_index,
-                                     global_triangle_index,
-                                     target_vertex_offset,
-                                     query_role));
+                    append_candidate(uvec2(cloth_vertex_index, global_triangle_index));
                 }
             }
         } else {
@@ -119,17 +112,13 @@ void main()
         bool is_upper_vertex = dispatch_vertex_index < uUpperVertexCount;
         if (is_upper_vertex) {
             detect_vertex_face_candidates(uUpperVertexOffset + dispatch_vertex_index,
-                                          uLowerVertexOffset,
                                           uLowerTriangleOffset,
-                                          uLowerBvhNodeOffset,
-                                          upper_vertex_lower_face_role);
+                                          uLowerBvhNodeOffset);
         } else {
             uint lower_vertex_index = dispatch_vertex_index - uUpperVertexCount;
             detect_vertex_face_candidates(uLowerVertexOffset + lower_vertex_index,
-                                          uUpperVertexOffset,
                                           uUpperTriangleOffset,
-                                          uUpperBvhNodeOffset,
-                                          lower_vertex_upper_face_role);
+                                          uUpperBvhNodeOffset);
         }
     }
 
