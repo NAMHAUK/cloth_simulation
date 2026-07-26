@@ -57,6 +57,7 @@ uniform uint uUpperVertexOffset;
 // Shader constants
 const float distance_delta_epsilon = 1.0e-8;
 const float normal_length_epsilon = 1.0e-12;
+const float upward_layer_normal_scale = 0.2;
 
 struct VertexFaceContact {
     vec3 correction_normal;
@@ -166,24 +167,40 @@ bool compute_candidate_contact(uint vertex_index,
         }
     }
 
-    float layer_distance = current_distance;
+    vec3 current_surface_point = interpolate_triangle_position(current_face, contact.barycentric);
+    vec3 lower_reference_point = is_upper_vertex
+        ? current_surface_point
+        : current_vertex_position;
+    vec3 upper_surface_point = is_upper_vertex
+        ? current_vertex_position
+        : current_surface_point;
+
     vec3 body_outward;
-    if (read_lower_body_normal(vertex_index,
-                               is_upper_vertex,
-                               face_vertex_indices,
-                               contact.barycentric,
-                               body_outward) &&
-        dot(current_normal, body_outward) < 0.0) {
-        current_normal = -current_normal;
-        layer_distance = -layer_distance;
+    if (!read_lower_body_normal(vertex_index,
+                                is_upper_vertex,
+                                face_vertex_indices,
+                                contact.barycentric,
+                                body_outward)) {
+        return false;
     }
 
+    vec2 horizontal = body_outward.xz;
+    float horizontal_length_sq = dot(horizontal, horizontal);
+    if (horizontal_length_sq <= normal_length_epsilon) {
+        return false;
+    }
+
+    float layer_y = clamp(body_outward.y * upward_layer_normal_scale, 0.0, 0.2);
+    float horizontal_scale = sqrt(1.0 - layer_y * layer_y) * inversesqrt(horizontal_length_sq);
+    vec3 layer_normal = vec3(horizontal.x * horizontal_scale, layer_y, horizontal.y * horizontal_scale);
+
+    float layer_distance = dot(upper_surface_point - lower_reference_point, layer_normal);
     contact.depth = uCollisionThickness - layer_distance;
     if (contact.depth <= 0.0) {
         return false;
     }
 
-    contact.correction_normal = current_normal;
+    contact.correction_normal = layer_normal;
     return true;
 }
 

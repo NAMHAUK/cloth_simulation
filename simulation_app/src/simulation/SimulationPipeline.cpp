@@ -211,10 +211,6 @@ bool SimulationPipeline::step(SceneState& scene, SceneGpuState& gpu_state, std::
         cloth_body_collision_detector_.detect(views, gl);
 
         if (has_multiple_garments) {
-            if (substep == 0u && !cloth_cloth_collision_solver_.build_body_triangle_ids(views, gl)) {
-                std::cerr << "Cannot refresh cloth body triangle ids during simulation.\n";
-                return false;
-            }
             const bool bounds_updated =
                 update_cloth_bvh_bounds(views,
                                         simulation_settings::cloth_collision_detection_distance,

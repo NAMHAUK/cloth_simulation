@@ -479,6 +479,7 @@ void GarmentPlacementPanel::choose_color(std::size_t group_index)
     );
     connect(button_box, &QDialogButtonBox::accepted, &color_dialog, &QDialog::accept);
 
+    color_dialog.adjustSize();
     if (color_dialog.exec() != QDialog::Accepted) {
         apply_color(original_color);
     }
