@@ -41,7 +41,7 @@ constexpr GLuint body_triangle_bvh_nodes = 3;
 
 namespace apply_binding {
 constexpr GLuint cloth_current = 0;
-constexpr GLuint collision_pushouts = 1;
+constexpr GLuint cloth_cloth_pushouts = 1;
 constexpr GLuint normal_correction_sums = 2;
 }
 
@@ -284,7 +284,9 @@ void ClothClothCollisionSolver::apply_corrections(const SimulationGpuViews& view
 {
     gl.glUseProgram(apply_.program);
     gl.glBindBufferBase(GL_SHADER_STORAGE_BUFFER, apply_binding::cloth_current, views.cloth_motion.current_position_buffer);
-    gl.glBindBufferBase(GL_SHADER_STORAGE_BUFFER, apply_binding::collision_pushouts, views.cloth_collision_pushout.collision_pushout_buffer);
+    gl.glBindBufferBase(GL_SHADER_STORAGE_BUFFER,
+                        apply_binding::cloth_cloth_pushouts,
+                        views.cloth_collision_pushout.cloth_cloth_pushout_buffer);
     gl.glBindBufferBase(GL_SHADER_STORAGE_BUFFER, apply_binding::normal_correction_sums, views.collision_candidates.normal_correction_sum_buffer);
     gl.glProgramUniform1ui(apply_.program, apply_.vertex_count, views.cloth_motion.vertex_count);
     gl.glProgramUniform1f(apply_.program, apply_.max_correction, max_correction_length_);

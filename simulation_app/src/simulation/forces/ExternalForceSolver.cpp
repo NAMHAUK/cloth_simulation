@@ -11,6 +11,7 @@ constexpr GLuint current_positions_binding = 0;
 constexpr GLuint previous_positions_binding = 1;
 constexpr GLuint velocities_binding = 2;
 constexpr GLuint collision_pushouts_binding = 3;
+constexpr GLuint cloth_cloth_pushouts_binding = 4;
 constexpr std::uint32_t external_force_local_size = 128;
 }
 
@@ -66,6 +67,9 @@ void ExternalForceSolver::solve(const ClothMotionBufferView& motion_view,
     gl.glBindBufferBase(GL_SHADER_STORAGE_BUFFER, previous_positions_binding, motion_view.previous_position_buffer);
     gl.glBindBufferBase(GL_SHADER_STORAGE_BUFFER, velocities_binding, motion_view.velocity_buffer);
     gl.glBindBufferBase(GL_SHADER_STORAGE_BUFFER, collision_pushouts_binding, collision_pushout_view.collision_pushout_buffer);
+    gl.glBindBufferBase(GL_SHADER_STORAGE_BUFFER,
+                        cloth_cloth_pushouts_binding,
+                        collision_pushout_view.cloth_cloth_pushout_buffer);
 
     // shader에 값 전달
     gl.glProgramUniform1ui(program_, vertex_count_location_, motion_view.vertex_count);

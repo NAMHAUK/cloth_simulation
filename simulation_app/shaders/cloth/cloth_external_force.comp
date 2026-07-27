@@ -18,6 +18,10 @@ layout(std430, binding = 3) buffer CollisionPushouts {
     vec4 collision_pushouts[];
 };
 
+layout(std430, binding = 4) buffer ClothClothPushouts {
+    vec4 cloth_cloth_pushouts[];
+};
+
 uniform uint uVertexCount;
 uniform float uDeltaTime;
 uniform vec3 uExternalAcceleration;
@@ -45,7 +49,8 @@ void main()
 
     // collsion solver pushout 제외
     vec3 collision_pushout = collision_pushouts[vertex_index].xyz;
-    vec3 solved_velocity = (current - previous - collision_pushout) / uDeltaTime;
+    vec3 cloth_cloth_pushout = cloth_cloth_pushouts[vertex_index].xyz;
+    vec3 solved_velocity = (current - previous - collision_pushout - cloth_cloth_pushout) / uDeltaTime;
 
     // remove inward velocity along the pushout direction
     float pushout_length_sq = dot(collision_pushout, collision_pushout);
@@ -53,7 +58,15 @@ void main()
         remove_inward_collision_velocity(solved_velocity, collision_pushout * inversesqrt(pushout_length_sq));
     }
 
+    float cloth_cloth_pushout_length_sq = dot(cloth_cloth_pushout, cloth_cloth_pushout);
+    if (cloth_cloth_pushout_length_sq > pushout_normal_epsilon) {
+        remove_inward_collision_velocity(
+            solved_velocity,
+            cloth_cloth_pushout * inversesqrt(cloth_cloth_pushout_length_sq));
+    }
+
     collision_pushouts[vertex_index] = vec4(0.0);
+    cloth_cloth_pushouts[vertex_index] = vec4(0.0);
      
     // update pos, vel
     vec3 velocity = solved_velocity * uVelocityDamping + uExternalAcceleration * uDeltaTime;
