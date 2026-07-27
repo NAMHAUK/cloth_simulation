@@ -23,7 +23,7 @@ inline constexpr float cloth_collision_body_search_radius = 0.15f;
 inline constexpr float cloth_collision_thickness = 0.007f;
 inline constexpr float cloth_collision_detection_margin = 0.002f;
 inline constexpr float cloth_collision_detection_distance = cloth_collision_thickness + cloth_collision_detection_margin;
-inline constexpr float cloth_collision_stiffness = 0.8f;
+inline constexpr float cloth_collision_stiffness = 1.0f;
 inline constexpr float cloth_collision_max_correction_length = 0.003f;
 
 // Defaults target dry cotton fabric against a skin-like body surface:
