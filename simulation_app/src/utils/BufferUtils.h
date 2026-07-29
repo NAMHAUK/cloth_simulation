@@ -16,6 +16,7 @@ inline bool is_valid_motion_view(const ClothMotionBufferView& motion_view)
 inline bool is_valid_collision_pushout_view(const ClothCollisionPushoutBufferView& collision_pushout_view)
 {
     return collision_pushout_view.collision_pushout_buffer != 0 &&
+           collision_pushout_view.cloth_cloth_pushout_buffer != 0 &&
            collision_pushout_view.vertex_count != 0;
 }
 

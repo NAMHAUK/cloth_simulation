@@ -37,6 +37,7 @@ private:
         GLint collision_thickness = -1;
         GLint collision_stiffness = -1;
         GLint body_triangle_count = -1;
+        GLint upper_vertex_offset = -1;
     };
 
     struct BodyTriangleIdBuildStage final {
@@ -58,6 +59,7 @@ private:
         GLint collision_thickness = -1;
         GLint collision_stiffness = -1;
         GLint search_radius_squared = -1;
+        GLint upper_vertex_offset = -1;
     } initial_accumulate_;
     BodyTriangleIdBuildStage body_triangle_id_build_;
     ApplyStage apply_;

@@ -1,11 +1,11 @@
 #ifndef CLOTH_CLOTH_CANDIDATE_OUTPUT_GLSL
 #define CLOTH_CLOTH_CANDIDATE_OUTPUT_GLSL
 
-shared uvec4 group_candidates[group_candidate_capacity];
+shared uvec2 group_candidates[group_candidate_capacity];
 shared uint group_candidate_count;
 shared uint group_base_index;
 
-void append_group_overflow_candidate(uvec4 candidate)
+void append_group_overflow_candidate(uvec2 candidate)
 {
     uint candidate_index = atomicAdd(candidate_count, 1u);
     if (candidate_index >= uMaxCandidateCount) {
@@ -16,7 +16,7 @@ void append_group_overflow_candidate(uvec4 candidate)
     candidates[candidate_index] = candidate;
 }
 
-void append_candidate(uvec4 candidate)
+void append_candidate(uvec2 candidate)
 {
     uint group_candidate_index = atomicAdd(group_candidate_count, 1u);
     if (group_candidate_index < group_candidate_capacity) {

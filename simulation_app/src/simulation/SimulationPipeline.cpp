@@ -197,6 +197,12 @@ bool SimulationPipeline::step(SceneState& scene, SceneGpuState& gpu_state, std::
 
     const bool has_multiple_garments = scene.has_multiple_garments();
 
+    if (has_multiple_garments &&
+        !cloth_cloth_collision_solver_.build_body_triangle_ids(views, gl)) {
+        std::cerr << "Cannot update cloth body triangle ids for simulation step.\n";
+        return false;
+    }
+
     const glm::vec3 external_acceleration = force_field_.external_acceleration();
     for (std::uint32_t substep = 0; substep < simulation_settings::substep_count; ++substep) {
         update_character_substep_frame(scene, gpu_state, motion_step_index, substep, gl);

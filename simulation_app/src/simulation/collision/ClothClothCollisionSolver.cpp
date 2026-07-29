@@ -41,7 +41,7 @@ constexpr GLuint body_triangle_bvh_nodes = 3;
 
 namespace apply_binding {
 constexpr GLuint cloth_current = 0;
-constexpr GLuint collision_pushouts = 1;
+constexpr GLuint cloth_cloth_pushouts = 1;
 constexpr GLuint normal_correction_sums = 2;
 }
 
@@ -57,6 +57,9 @@ bool has_valid_common_solve_views(const SimulationGpuViews& views)
            is_valid_collision_pushout_view(views.cloth_collision_pushout) &&
            views.cloth_motion.vertex_count == views.cloth_collision_pushout.vertex_count &&
            is_valid_cloth_bvh_buffer_view(views.cloth_bvh) &&
+           views.cloth_bvh.garment_layouts->size() <= 2u &&
+           views.garment_buffer_ranges != nullptr &&
+           views.garment_buffer_ranges->size() == views.cloth_bvh.garment_layouts->size() &&
            (views.cloth_bvh.garment_layouts->size() < 2u ||
             (is_valid_triangle_geometry_resource(views.body_triangle_geometry) &&
              is_valid_cloth_cloth_candidate_buffer_view(views.collision_candidates) &&
@@ -112,10 +115,12 @@ bool ClothClothCollisionSolver::initialize(const std::filesystem::path& accumula
     accumulate_.collision_thickness = gl.glGetUniformLocation(accumulate_.program, "uCollisionThickness");
     accumulate_.collision_stiffness = gl.glGetUniformLocation(accumulate_.program, "uCollisionStiffness");
     accumulate_.body_triangle_count = gl.glGetUniformLocation(accumulate_.program, "uBodyTriangleCount");
+    accumulate_.upper_vertex_offset = gl.glGetUniformLocation(accumulate_.program, "uUpperVertexOffset");
     initial_accumulate_.max_candidates = gl.glGetUniformLocation(initial_accumulate_.program, "uMaxCandidateCount");
     initial_accumulate_.collision_thickness = gl.glGetUniformLocation(initial_accumulate_.program, "uCollisionThickness");
     initial_accumulate_.collision_stiffness = gl.glGetUniformLocation(initial_accumulate_.program, "uCollisionStiffness");
     initial_accumulate_.search_radius_squared = gl.glGetUniformLocation(initial_accumulate_.program, "uSearchRadiusSquared");
+    initial_accumulate_.upper_vertex_offset = gl.glGetUniformLocation(initial_accumulate_.program, "uUpperVertexOffset");
     body_triangle_id_build_.vertex_count = gl.glGetUniformLocation(body_triangle_id_build_.program, "uVertexCount");
     body_triangle_id_build_.search_radius_squared = gl.glGetUniformLocation(body_triangle_id_build_.program, "uSearchRadiusSquared");
     apply_.vertex_count = gl.glGetUniformLocation(apply_.program, "uVertexCount");
@@ -123,9 +128,10 @@ bool ClothClothCollisionSolver::initialize(const std::filesystem::path& accumula
 
     if (!are_uniform_locations_valid(
             accumulate_.max_candidates, accumulate_.collision_thickness, accumulate_.collision_stiffness,
-            accumulate_.body_triangle_count,
+            accumulate_.body_triangle_count, accumulate_.upper_vertex_offset,
             initial_accumulate_.max_candidates, initial_accumulate_.collision_thickness,
             initial_accumulate_.collision_stiffness, initial_accumulate_.search_radius_squared,
+            initial_accumulate_.upper_vertex_offset,
             body_triangle_id_build_.vertex_count, body_triangle_id_build_.search_radius_squared,
             apply_.vertex_count, apply_.max_correction)) {
         std::cerr << "Cloth-cloth collision compute shader missing required uniforms.\n";
@@ -210,6 +216,7 @@ void ClothClothCollisionSolver::solve(const SimulationGpuViews& views,
     }
 
     const CollisionCandidateBuffer& collision_candidates = views.collision_candidates.cloth_cloth_vertex_face;
+    const std::uint32_t upper_vertex_offset = (*views.garment_buffer_ranges)[1].vertex_offset;
     views.collision_candidates.clear_normal_correction_sums(gl);
 
     gl.glUseProgram(accumulate_.program);
@@ -227,6 +234,7 @@ void ClothClothCollisionSolver::solve(const SimulationGpuViews& views,
     gl.glProgramUniform1ui(accumulate_.program,
                            accumulate_.body_triangle_count,
                            views.body_triangle_geometry.triangle_count);
+    gl.glProgramUniform1ui(accumulate_.program, accumulate_.upper_vertex_offset, upper_vertex_offset);
     gl.glBindBuffer(GL_DISPATCH_INDIRECT_BUFFER, collision_candidates.dispatch_size);
     gl.glDispatchComputeIndirect(0);
     gl.glBindBuffer(GL_DISPATCH_INDIRECT_BUFFER, 0);
@@ -243,6 +251,7 @@ void ClothClothCollisionSolver::solve_initial(const SimulationGpuViews& views,
     }
 
     const CollisionCandidateBuffer& collision_candidates = views.collision_candidates.cloth_cloth_vertex_face;
+    const std::uint32_t upper_vertex_offset = (*views.garment_buffer_ranges)[1].vertex_offset;
     views.collision_candidates.clear_normal_correction_sums(gl);
 
     gl.glUseProgram(initial_accumulate_.program);
@@ -259,6 +268,9 @@ void ClothClothCollisionSolver::solve_initial(const SimulationGpuViews& views,
     gl.glProgramUniform1f(initial_accumulate_.program,
                           initial_accumulate_.search_radius_squared,
                           surface_search_radius_ * surface_search_radius_);
+    gl.glProgramUniform1ui(initial_accumulate_.program,
+                           initial_accumulate_.upper_vertex_offset,
+                           upper_vertex_offset);
     gl.glBindBuffer(GL_DISPATCH_INDIRECT_BUFFER, collision_candidates.dispatch_size);
     gl.glDispatchComputeIndirect(0);
     gl.glBindBuffer(GL_DISPATCH_INDIRECT_BUFFER, 0);
@@ -272,7 +284,9 @@ void ClothClothCollisionSolver::apply_corrections(const SimulationGpuViews& view
 {
     gl.glUseProgram(apply_.program);
     gl.glBindBufferBase(GL_SHADER_STORAGE_BUFFER, apply_binding::cloth_current, views.cloth_motion.current_position_buffer);
-    gl.glBindBufferBase(GL_SHADER_STORAGE_BUFFER, apply_binding::collision_pushouts, views.cloth_collision_pushout.collision_pushout_buffer);
+    gl.glBindBufferBase(GL_SHADER_STORAGE_BUFFER,
+                        apply_binding::cloth_cloth_pushouts,
+                        views.cloth_collision_pushout.cloth_cloth_pushout_buffer);
     gl.glBindBufferBase(GL_SHADER_STORAGE_BUFFER, apply_binding::normal_correction_sums, views.collision_candidates.normal_correction_sum_buffer);
     gl.glProgramUniform1ui(apply_.program, apply_.vertex_count, views.cloth_motion.vertex_count);
     gl.glProgramUniform1f(apply_.program, apply_.max_correction, max_correction_length_);

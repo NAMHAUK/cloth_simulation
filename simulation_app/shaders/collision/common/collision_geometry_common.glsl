@@ -28,6 +28,11 @@ bool compute_triangle_normal(TrianglePositions triangle, out vec3 normal)
     return true;
 }
 
+vec3 align_normal(vec3 normal, vec3 reference_normal)
+{
+    return dot(normal, reference_normal) < 0.0 ? -normal : normal;
+}
+
 bool compute_barycentric_if_inside(vec3 point, vec3 a, vec3 b, vec3 c, out vec3 barycentric)
 {
     vec3 ab = b - a;

@@ -7,7 +7,7 @@ namespace {
 
 constexpr std::uint32_t dispatch_component_count = 3;
 constexpr std::uint32_t cloth_body_candidate_component_count = 2;
-constexpr std::uint32_t cloth_cloth_candidate_component_count = 4;
+constexpr std::uint32_t cloth_cloth_candidate_component_count = 2;
 
 bool has_collision_candidate_buffer(const CollisionCandidateBuffer& buffers)
 {

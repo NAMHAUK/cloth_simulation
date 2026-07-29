@@ -89,6 +89,7 @@ std::uint32_t SceneState::add_garment_mesh(GarmentMesh mesh)
     }
 
     const std::uint32_t garment_id = next_garment_id_++;
+    // Garment insertion order defines lower-to-upper GPU buffer placement.
     const std::uint32_t garment_layer = next_garment_layer_++;
     GarmentMesh source_mesh = mesh;
     garments_.push_back({
