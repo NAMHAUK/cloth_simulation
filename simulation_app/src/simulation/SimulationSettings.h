@@ -11,8 +11,9 @@ inline constexpr int simulation_tick_ms = 1000 / static_cast<int>(cloth_simulati
 inline constexpr float fixed_dt = 1.0f / static_cast<float>(cloth_simulation_fps);
 inline constexpr float gravity = -9.8f;
 inline constexpr float velocity_damping = 0.99792f;
-inline constexpr float root_inertia_scale = 0.5f;
-inline constexpr float root_max_acceleration = 30.0f;
+inline constexpr float reference_frame_inertia_scale = 0.5f;
+inline constexpr float reference_frame_max_acceleration = 30.0f;
+inline constexpr float reference_frame_max_angular_acceleration = 60.0f;
 
 inline constexpr float ground_collision_height = 0.001f;
 inline constexpr float body_collision_thickness = 0.005f;
@@ -49,8 +50,9 @@ static_assert(character_motion_fps > 0);
 static_assert(cloth_simulation_fps > 0);
 static_assert(cloth_simulation_fps % character_motion_fps == 0);
 static_assert(velocity_damping >= 0.0f && velocity_damping <= 1.0f);
-static_assert(root_inertia_scale >= 0.0f && root_inertia_scale <= 1.0f);
-static_assert(root_max_acceleration > 0.0f);
+static_assert(reference_frame_inertia_scale >= 0.0f && reference_frame_inertia_scale <= 1.0f);
+static_assert(reference_frame_max_acceleration > 0.0f);
+static_assert(reference_frame_max_angular_acceleration > 0.0f);
 static_assert(body_collision_thickness > 0.0f);
 static_assert(body_collision_max_correction_length > 0.0f);
 static_assert(cloth_collision_thickness > 0.0f);

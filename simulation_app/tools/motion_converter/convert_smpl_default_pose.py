@@ -28,14 +28,18 @@ PART_GROUPS = (
     ("left_hand", (20, 22)),
     ("right_hand", (21, 23)),
 )
+TORSO_JOINT_INDEX = 9
+IDENTITY_QUATERNION_XYZW = np.array([0.0, 0.0, 0.0, 1.0], dtype=np.float32)
 
-def align_pose_to_ground(vertices, root_position, ground_clearance):
+def align_pose_to_ground(vertices, root_position, torso_position, ground_clearance):
     aligned_vertices = np.asarray(vertices, dtype=np.float32).copy()
     aligned_root_position = np.asarray(root_position, dtype=np.float32).copy()
+    aligned_torso_position = np.asarray(torso_position, dtype=np.float32).copy()
     y_offset = ground_clearance - aligned_vertices[:, 1].min()
     aligned_vertices[:, 1] += y_offset
     aligned_root_position[1] += y_offset
-    return aligned_vertices, aligned_root_position
+    aligned_torso_position[1] += y_offset
+    return aligned_vertices, aligned_root_position, aligned_torso_position
 
 
 def make_triangle_part_labels(faces, lbs_weights):
@@ -52,7 +56,13 @@ def make_triangle_part_labels(faces, lbs_weights):
     return triangle_part_labels, low_confidence_count
 
 
-def write_default_pose_motion(output_path, fps, faces, vertices, root_position, triangle_part_labels):
+def write_default_pose_motion(output_path,
+                              fps,
+                              faces,
+                              vertices,
+                              root_position,
+                              torso_position,
+                              triangle_part_labels):
     if fps <= 0.0:
         raise ValueError(f"Invalid FPS: {fps}")
     vertices = np.asarray(vertices, dtype=np.float32)
@@ -62,12 +72,17 @@ def write_default_pose_motion(output_path, fps, faces, vertices, root_position, 
     output_path.parent.mkdir(parents=True, exist_ok=True)
 
     root_position = np.asarray(root_position, dtype=np.float32).reshape(1, 3)
+    torso_position = np.asarray(torso_position, dtype=np.float32).reshape(1, 3)
+    orientation = IDENTITY_QUATERNION_XYZW.reshape(1, 4)
 
     temp_output_path = output_path.with_name(output_path.name + ".tmp")
     try:
         with temp_output_path.open("wb") as out_file:
             write_motion_header(out_file, fps, faces, 1, vertices.shape[0])
             root_position.tofile(out_file)
+            orientation.tofile(out_file)
+            torso_position.tofile(out_file)
+            orientation.tofile(out_file)
             vertices.tofile(out_file)
             write_default_motion_labels(out_file, faces, triangle_part_labels, IS_DEFAULT_MOTION_ASSET)
 
@@ -106,12 +121,26 @@ def main():
 
     vertices = output.vertices[0].detach().cpu().numpy()
     root_position = output.joints[0, 0].detach().cpu().numpy()
-    vertices, root_position = align_pose_to_ground(vertices, root_position, args.ground_clearance)
+    torso_position = output.joints[0, TORSO_JOINT_INDEX].detach().cpu().numpy()
+    vertices, root_position, torso_position = align_pose_to_ground(
+        vertices,
+        root_position,
+        torso_position,
+        args.ground_clearance,
+    )
     triangle_part_labels, low_confidence_count = make_triangle_part_labels(
         model.faces,
         model.lbs_weights.detach().cpu().numpy(),
     )
-    write_default_pose_motion(args.output, args.fps, model.faces, vertices, root_position, triangle_part_labels)
+    write_default_pose_motion(
+        args.output,
+        args.fps,
+        model.faces,
+        vertices,
+        root_position,
+        torso_position,
+        triangle_part_labels,
+    )
 
     print()
     print(f"Converted neutral SMPL A-pose: {args.model}")

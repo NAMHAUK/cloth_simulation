@@ -22,14 +22,19 @@ layout(std430, binding = 4) buffer ClothClothPushouts {
     vec4 cloth_cloth_pushouts[];
 };
 
+uniform uint uVertexOffset;
 uniform uint uVertexCount;
 uniform float uDeltaTime;
 uniform vec3 uExternalAcceleration;
 uniform float uVelocityDamping;
-uniform vec3 uRootTranslation;
-uniform vec3 uPreviousRootVelocity;
-uniform vec3 uRootAcceleration;
-uniform float uRootInertiaScale;
+uniform vec3 uFrameStartPosition;
+uniform vec3 uFrameEndPosition;
+uniform mat3 uFrameRotation;
+uniform vec3 uPreviousFrameVelocity;
+uniform vec3 uFrameAcceleration;
+uniform vec3 uPreviousAngularVelocity;
+uniform vec3 uAngularAcceleration;
+uniform float uFrameInertiaScale;
 
 const float pushout_normal_epsilon = 1.0e-20;
 
@@ -43,10 +48,11 @@ void remove_inward_collision_velocity(inout vec3 velocity, vec3 unit_normal)
 
 void main()
 {
-    uint vertex_index = gl_GlobalInvocationID.x;
-    if (vertex_index >= uVertexCount) {
+    uint garment_vertex_index = gl_GlobalInvocationID.x;
+    if (garment_vertex_index >= uVertexCount) {
         return;
     }
+    uint vertex_index = uVertexOffset + garment_vertex_index;
 
     vec3 current = current_positions[vertex_index].xyz;
     vec3 previous = previous_positions[vertex_index].xyz;
@@ -73,11 +79,20 @@ void main()
     cloth_cloth_pushouts[vertex_index] = vec4(0.0);
      
     // update pos, vel
-    vec3 relative_velocity = solved_velocity - uPreviousRootVelocity;
-    relative_velocity = relative_velocity * uVelocityDamping +
-                        (uExternalAcceleration - uRootAcceleration * uRootInertiaScale) * uDeltaTime;
-    vec3 velocity = uRootTranslation / uDeltaTime + relative_velocity;
-    vec3 predicted_position = current + uRootTranslation + relative_velocity * uDeltaTime;
+    vec3 frame_offset = current - uFrameStartPosition;
+    vec3 frame_velocity = uPreviousFrameVelocity + cross(uPreviousAngularVelocity, frame_offset);
+    vec3 relative_velocity = solved_velocity - frame_velocity;
+    vec3 rotational_acceleration =
+        cross(uAngularAcceleration, frame_offset) +
+        cross(uPreviousAngularVelocity, cross(uPreviousAngularVelocity, frame_offset)) +
+        2.0 * cross(uPreviousAngularVelocity, relative_velocity);
+    vec3 relative_acceleration =
+        uExternalAcceleration -
+        (uFrameAcceleration + rotational_acceleration) * uFrameInertiaScale;
+    relative_velocity = relative_velocity * uVelocityDamping + relative_acceleration * uDeltaTime;
+    vec3 predicted_position =
+        uFrameEndPosition + uFrameRotation * (frame_offset + relative_velocity * uDeltaTime);
+    vec3 velocity = (predicted_position - current) / uDeltaTime;
 
     previous_positions[vertex_index] = vec4(current, 0.0);
     current_positions[vertex_index] = vec4(predicted_position, 0.0);
