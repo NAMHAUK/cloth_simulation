@@ -32,11 +32,19 @@ bool ExternalForceSolver::initialize(const std::filesystem::path& shader_path, Q
     delta_time_location_ = gl.glGetUniformLocation(program_, "uDeltaTime");
     external_acceleration_location_ = gl.glGetUniformLocation(program_, "uExternalAcceleration");
     velocity_damping_location_ = gl.glGetUniformLocation(program_, "uVelocityDamping");
+    root_translation_location_ = gl.glGetUniformLocation(program_, "uRootTranslation");
+    previous_root_velocity_location_ = gl.glGetUniformLocation(program_, "uPreviousRootVelocity");
+    root_acceleration_location_ = gl.glGetUniformLocation(program_, "uRootAcceleration");
+    root_inertia_scale_location_ = gl.glGetUniformLocation(program_, "uRootInertiaScale");
 
     if (vertex_count_location_ < 0 ||
         delta_time_location_ < 0 ||
         external_acceleration_location_ < 0 ||
-        velocity_damping_location_ < 0) {
+        velocity_damping_location_ < 0 ||
+        root_translation_location_ < 0 ||
+        previous_root_velocity_location_ < 0 ||
+        root_acceleration_location_ < 0 ||
+        root_inertia_scale_location_ < 0) {
         std::cerr << "Cloth external force compute shader missing required uniforms.\n";
         release(gl);
         return false;
@@ -51,6 +59,10 @@ void ExternalForceSolver::solve(const ClothMotionBufferView& motion_view,
                                 float dt,
                                 const glm::vec3& external_acceleration,
                                 float velocity_damping,
+                                const glm::vec3& root_translation,
+                                const glm::vec3& previous_root_velocity,
+                                const glm::vec3& root_acceleration,
+                                float root_inertia_scale,
                                 QOpenGLFunctions_4_5_Core& gl) const
 {
     if (!is_initialized() ||
@@ -80,6 +92,22 @@ void ExternalForceSolver::solve(const ClothMotionBufferView& motion_view,
                           external_acceleration.y,
                           external_acceleration.z);
     gl.glProgramUniform1f(program_, velocity_damping_location_, velocity_damping);
+    gl.glProgramUniform3f(program_,
+                         root_translation_location_,
+                         root_translation.x,
+                         root_translation.y,
+                         root_translation.z);
+    gl.glProgramUniform3f(program_,
+                         previous_root_velocity_location_,
+                         previous_root_velocity.x,
+                         previous_root_velocity.y,
+                         previous_root_velocity.z);
+    gl.glProgramUniform3f(program_,
+                         root_acceleration_location_,
+                         root_acceleration.x,
+                         root_acceleration.y,
+                         root_acceleration.z);
+    gl.glProgramUniform1f(program_, root_inertia_scale_location_, root_inertia_scale);
 
     // shader가 외부 가속도에 따른 위치 변화량 계산 (GPU에서 바로 업데이트)
     gl.glDispatchCompute(compute_group_count(motion_view.vertex_count, external_force_local_size), 1, 1);
@@ -95,4 +123,8 @@ void ExternalForceSolver::release(QOpenGLFunctions_4_5_Core& gl)
     delta_time_location_ = -1;
     external_acceleration_location_ = -1;
     velocity_damping_location_ = -1;
+    root_translation_location_ = -1;
+    previous_root_velocity_location_ = -1;
+    root_acceleration_location_ = -1;
+    root_inertia_scale_location_ = -1;
 }

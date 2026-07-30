@@ -259,6 +259,14 @@ CharacterFrameInterpolation SceneState::character_frame_interpolation(float char
     return {current_frame_index, next_frame_index, frame_alpha};
 }
 
+glm::vec3 SceneState::interpolated_character_root_position(float character_frame_time) const
+{
+    const CharacterFrameInterpolation interpolation = character_frame_interpolation(character_frame_time);
+    const glm::vec3 current_position = character_root_position(interpolation.current_frame_index);
+    const glm::vec3 next_position = character_root_position(interpolation.next_frame_index);
+    return current_position + (next_position - current_position) * interpolation.frame_alpha;
+}
+
 std::uint32_t SceneState::current_character_frame() const
 {
     return current_character_frame_;

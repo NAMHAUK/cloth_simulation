@@ -8,6 +8,7 @@
 #include <algorithm>
 #include <iostream>
 
+#include <glm/geometric.hpp>
 #include <glm/vec3.hpp>
 
 namespace {
@@ -23,27 +24,25 @@ const GarmentBufferRanges* find_garment_range(
     return iter == garment_ranges.end() ? nullptr : &(*iter);
 }
 
-float character_frame_time(std::uint64_t motion_step_index, std::uint32_t substep)
+float character_frame_time(std::uint64_t motion_step_index, std::int32_t substep_boundary)
 {
     if (simulation_settings::character_frame_stride == 0 || simulation_settings::substep_count == 0) {
         return 0.0f;
     }
 
-    const float substep_fraction =
-        static_cast<float>(std::min(substep + 1u, simulation_settings::substep_count)) /
-        simulation_settings::substep_count;
+    const float substep_fraction = static_cast<float>(substep_boundary) /
+                                   simulation_settings::substep_count;
+    const float frame_time = (static_cast<float>(motion_step_index) + substep_fraction) /
+                             simulation_settings::character_frame_stride;
 
-    return (static_cast<float>(motion_step_index) + substep_fraction) /
-           simulation_settings::character_frame_stride;
+    return std::max(frame_time, 0.0f);
 }
 
 void update_character_substep_frame(const SceneState& scene,
                                     SceneGpuState& gpu_state,
-                                    std::uint64_t motion_step_index,
-                                    std::uint32_t substep,
+                                    float frame_time,
                                     QOpenGLFunctions_4_5_Core& gl)
 {
-    const float frame_time = character_frame_time(motion_step_index, substep);
     const CharacterFrameInterpolation interpolation = scene.character_frame_interpolation(frame_time);
 
     gpu_state.update_character_frame_interpolation(scene, interpolation, gl);
@@ -205,13 +204,33 @@ bool SimulationPipeline::step(SceneState& scene, SceneGpuState& gpu_state, std::
 
     const glm::vec3 external_acceleration = force_field_.external_acceleration();
     for (std::uint32_t substep = 0; substep < simulation_settings::substep_count; ++substep) {
-        update_character_substep_frame(scene, gpu_state, motion_step_index, substep, gl);
+        const std::int32_t start_boundary = static_cast<std::int32_t>(substep);
+        const float previous_frame_time = character_frame_time(motion_step_index, start_boundary - 1);
+        const float start_frame_time = character_frame_time(motion_step_index, start_boundary);
+        const float end_frame_time = character_frame_time(motion_step_index, start_boundary + 1);
+        const glm::vec3 previous_root_position = scene.interpolated_character_root_position(previous_frame_time);
+        const glm::vec3 start_root_position = scene.interpolated_character_root_position(start_frame_time);
+        const glm::vec3 end_root_position = scene.interpolated_character_root_position(end_frame_time);
+        const glm::vec3 root_translation = end_root_position - start_root_position;
+        const glm::vec3 previous_root_velocity = (start_root_position - previous_root_position) / substep_dt_;
+        const glm::vec3 root_velocity = root_translation / substep_dt_;
+        glm::vec3 root_acceleration = (root_velocity - previous_root_velocity) / substep_dt_;
+        const float root_acceleration_length = glm::length(root_acceleration);
+        if (root_acceleration_length > simulation_settings::root_max_acceleration) {
+            root_acceleration *= simulation_settings::root_max_acceleration / root_acceleration_length;
+        }
+
+        update_character_substep_frame(scene, gpu_state, end_frame_time, gl);
 
         external_force_solver_.solve(views.cloth_motion,
                                      views.cloth_collision_pushout,
                                      substep_dt_,
                                      external_acceleration,
                                      simulation_settings::velocity_damping,
+                                     root_translation,
+                                     previous_root_velocity,
+                                     root_acceleration,
+                                     simulation_settings::root_inertia_scale,
                                      gl);
 
         cloth_body_collision_detector_.detect(views, gl);

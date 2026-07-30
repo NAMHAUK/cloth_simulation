@@ -51,6 +51,7 @@ public:
     // Playback
     void update_character_frame(std::uint64_t simulation_step_count, std::uint32_t character_frame_stride);
     CharacterFrameInterpolation character_frame_interpolation(float character_frame_time) const;
+    glm::vec3 interpolated_character_root_position(float character_frame_time) const;
     std::uint32_t current_character_frame() const;
     glm::vec3 character_root_position(std::uint32_t frame_index) const;
 
