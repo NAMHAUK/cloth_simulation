@@ -24,6 +24,7 @@ public:
                                                         const glm::vec3& position_offset,
                                                         float scale)>;
     using ColorChangedCallback = std::function<void(std::size_t group_index, const glm::vec3& color)>;
+    using ColorSelectedCallback = std::function<void(const glm::vec3& color)>;
     using AddUpperCallback = std::function<void()>;
     using RemoveUpperCallback = std::function<void()>;
     using ConfirmRunCallback = std::function<void()>;
@@ -45,6 +46,7 @@ public:
     void set_confirm_enabled(bool enabled);
     std::size_t active_group_index() const;
     void reset_placement();
+    void choose_color(const glm::vec3& initial_color, ColorSelectedCallback color_selected_callback);
 
 protected:
     bool eventFilter(QObject* watched, QEvent* event) override;
@@ -69,7 +71,7 @@ private:
     void set_active_group(std::size_t group_index);
     void set_position_from_slider(std::size_t group_index, int axis_index, int slider_value);
     void set_scale_from_slider(std::size_t group_index, int slider_value);
-    void choose_color(std::size_t group_index);
+    void choose_group_color(std::size_t group_index);
     void notify_placement_changed(std::size_t group_index);
     void update_color_button(std::size_t group_index);
     void update_value_labels(std::size_t group_index);

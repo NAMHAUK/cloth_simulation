@@ -49,6 +49,7 @@ public:
     bool remove_garment_placement(std::size_t placement_index);
     void set_garment_placement(std::size_t placement_index, const glm::vec3& position_offset, float scale);
     void set_garment_color(std::size_t placement_index, const glm::vec3& color);
+    void set_garment_color_by_id(std::uint32_t garment_id, const glm::vec3& color);
     bool confirm_garment_placement();
     void cancel_garment_placement();
     void reset_scene_to_default();
@@ -65,6 +66,7 @@ public:
     bool has_garments() const;
     std::size_t garment_count() const;
     bool can_start_garment_placement() const;
+    std::uint32_t garment_placement_id(std::size_t placement_index) const;
     glm::vec3 garment_placement_color(std::size_t placement_index) const;
     void draw(const glm::mat4& mvp, float character_opacity, QOpenGLFunctions_4_5_Core& gl);
     void release_gpu();

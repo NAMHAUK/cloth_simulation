@@ -339,7 +339,7 @@ void GarmentPlacementPanel::create_group(std::size_t group_index, QWidget* paren
     group.color_button->setFixedSize(26, 26);
     group.color_button->setToolTip("Choose garment color");
     connect(group.color_button, &QPushButton::clicked, this, [this, group_index]() {
-        choose_color(group_index);
+        choose_group_color(group_index);
     });
     group_layout->addWidget(group.color_button, 0, Qt::AlignHCenter);
 
@@ -383,11 +383,24 @@ void GarmentPlacementPanel::set_scale_from_slider(std::size_t group_index, int s
     notify_placement_changed(group_index);
 }
 
-void GarmentPlacementPanel::choose_color(std::size_t group_index)
+void GarmentPlacementPanel::choose_group_color(std::size_t group_index)
 {
     set_active_group(group_index);
     PlacementGroup& group = groups_[group_index];
-    const QColor original_color = QColor::fromRgbF(group.color.r, group.color.g, group.color.b);
+    choose_color(group.color, [this, group_index](const glm::vec3& color) {
+        PlacementGroup& active_group = groups_[group_index];
+        active_group.color = color;
+        update_color_button(group_index);
+        if (color_changed_callback_) {
+            color_changed_callback_(group_index, active_group.color);
+        }
+    });
+}
+
+void GarmentPlacementPanel::choose_color(const glm::vec3& initial_color,
+                                         ColorSelectedCallback color_selected_callback)
+{
+    const QColor original_color = QColor::fromRgbF(initial_color.r, initial_color.g, initial_color.b);
     QDialog color_dialog(this);
     color_dialog.setWindowTitle("Garment Color");
 
@@ -448,17 +461,15 @@ void GarmentPlacementPanel::choose_color(std::size_t group_index)
             "background-color: %1; color: %2; border: 1px solid #666666;"
         ).arg(color.name(QColor::HexRgb), text_color));
     };
-    const auto apply_color = [this, group_index, update_display](const QColor& color) {
+    const auto apply_color = [update_display, color_selected_callback](const QColor& color) {
         update_display(color);
-        PlacementGroup& active_group = groups_[group_index];
-        active_group.color = {
+        const glm::vec3 selected_color{
             static_cast<float>(color.redF()),
             static_cast<float>(color.greenF()),
             static_cast<float>(color.blueF()),
         };
-        update_color_button(group_index);
-        if (color_changed_callback_) {
-            color_changed_callback_(group_index, active_group.color);
+        if (color_selected_callback) {
+            color_selected_callback(selected_color);
         }
     };
 
