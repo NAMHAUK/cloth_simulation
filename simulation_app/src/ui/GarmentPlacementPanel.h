@@ -25,6 +25,8 @@ public:
                                                         float scale)>;
     using ColorChangedCallback = std::function<void(std::size_t group_index, const glm::vec3& color)>;
     using ColorSelectedCallback = std::function<void(const glm::vec3& color)>;
+    using ColorEditCallback = std::function<void(const glm::vec3& color,
+                                                 ColorSelectedCallback color_selected_callback)>;
     using AddUpperCallback = std::function<void()>;
     using RemoveUpperCallback = std::function<void()>;
     using ConfirmRunCallback = std::function<void()>;
@@ -34,6 +36,7 @@ public:
 
     void set_placement_changed_callback(PlacementChangedCallback callback);
     void set_color_changed_callback(ColorChangedCallback callback);
+    void set_color_edit_callback(ColorEditCallback callback);
     void set_add_upper_callback(AddUpperCallback callback);
     void set_remove_upper_callback(RemoveUpperCallback callback);
     void set_confirm_run_callback(ConfirmRunCallback callback);
@@ -46,7 +49,6 @@ public:
     void set_confirm_enabled(bool enabled);
     std::size_t active_group_index() const;
     void reset_placement();
-    void choose_color(const glm::vec3& initial_color, ColorSelectedCallback color_selected_callback);
 
 protected:
     bool eventFilter(QObject* watched, QEvent* event) override;
@@ -83,6 +85,7 @@ private:
     QPushButton* confirm_run_button_ = nullptr;
     PlacementChangedCallback placement_changed_callback_;
     ColorChangedCallback color_changed_callback_;
+    ColorEditCallback color_edit_callback_;
     AddUpperCallback add_upper_callback_;
     RemoveUpperCallback remove_upper_callback_;
     ConfirmRunCallback confirm_run_callback_;

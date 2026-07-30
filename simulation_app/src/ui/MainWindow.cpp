@@ -6,6 +6,7 @@
 #include "asset/AssetLoader.h"
 #include "simulation/SimulationController.h"
 #include "ui/AssetBrowserPanel.h"
+#include "ui/GarmentColorPanel.h"
 #include "ui/GarmentPlacementPanel.h"
 #include "ui/SceneViewport.h"
 #include "utils/QtUtils.h"
@@ -221,6 +222,7 @@ MainWindow::MainWindow(const std::filesystem::path& project_root, QWidget* paren
         viewer_container_
     );
     garment_placement_panel_ = new GarmentPlacementPanel(viewer_container_);
+    garment_color_panel_ = new GarmentColorPanel(viewer_container_);
     create_garment_cards();
     run_button_ = new QPushButton(viewer_container_);
     stop_button_ = new QPushButton(viewer_container_);
@@ -380,6 +382,14 @@ void MainWindow::setup_browser_callbacks()
         simulation_controller_->set_garment_color(group_index, color);
         update_garment_card_color(group_index, color);
     });
+    garment_placement_panel_->set_color_edit_callback(
+        [this](const glm::vec3& color, GarmentPlacementPanel::ColorSelectedCallback callback) {
+            garment_color_panel_->edit_color(color, std::move(callback));
+        }
+    );
+    garment_color_panel_->set_visibility_changed_callback([this]() {
+        update_viewer_layout();
+    });
     garment_placement_panel_->set_add_upper_callback([this]() {
         placement_group_states_[GarmentPlacementPanel::upper_group_index] = PlacementGroupState::Empty;
         garment_request_ids_[GarmentPlacementPanel::upper_group_index].reset();
@@ -389,6 +399,7 @@ void MainWindow::setup_browser_callbacks()
     });
     garment_placement_panel_->set_remove_upper_callback([this]() {
         const std::size_t upper_index = GarmentPlacementPanel::upper_group_index;
+        garment_color_panel_->close_panel();
         garment_request_ids_[upper_index].reset();
         simulation_controller_->remove_garment_placement(upper_index);
         clear_garment_card(upper_index);
@@ -421,6 +432,7 @@ void MainWindow::setup_browser_callbacks()
     });
 
     connect(reset_button_, &QPushButton::clicked, this, [this]() {
+        garment_color_panel_->close_panel();
         simulation_controller_->reset_scene_to_default();
         for (std::size_t index = 0; index < garment_cards_.size(); ++index) {
             clear_garment_card(index);
@@ -431,6 +443,7 @@ void MainWindow::setup_browser_callbacks()
     });
 
     garment_placement_panel_->set_confirm_run_callback([this]() {
+        garment_color_panel_->close_panel();
         if (!simulation_controller_->confirm_garment_placement()) {
             QMessageBox::warning(this, "Placement Failed", "Failed to initialize garment placement.");
             update_placement_actions();
@@ -447,6 +460,7 @@ void MainWindow::setup_browser_callbacks()
         update_viewer_layout();
     });
     garment_placement_panel_->set_cancel_callback([this]() {
+        garment_color_panel_->close_panel();
         simulation_controller_->cancel_garment_placement();
         clear_placement_garment_cards();
         end_placement_session();
@@ -516,6 +530,7 @@ void MainWindow::setup_asset_loader_callbacks()
 
 void MainWindow::request_garment_load(const std::filesystem::path& asset_path)
 {
+    garment_color_panel_->close_panel();
     const std::size_t group_index = has_visible_placement_group()
         ? garment_placement_panel_->active_group_index()
         : simulation_controller_->garment_count() == 0u
@@ -737,7 +752,7 @@ void MainWindow::choose_garment_color(std::size_t index)
     }
 
     const std::uint32_t garment_id = card.garment_id;
-    garment_placement_panel_->choose_color(card.color, [this, index, garment_id](const glm::vec3& color) {
+    garment_color_panel_->edit_color(card.color, [this, index, garment_id](const glm::vec3& color) {
         simulation_controller_->set_garment_color_by_id(garment_id, color);
         update_garment_card_color(index, color);
     });
@@ -841,12 +856,22 @@ void MainWindow::update_viewer_layout()
         garment_cards_y += placement_height + simulation_button_gap;
     }
 
+    int color_panel_y = garment_cards_y;
     if (garment_cards_panel_->isVisible()) {
         const int cards_available_height =
             std::max(0, container_size.height() - panel_margin - garment_cards_y);
         const int cards_height = std::min(garment_cards_panel_->sizeHint().height(), cards_available_height);
         garment_cards_panel_->setGeometry(placement_x, garment_cards_y, placement_width, cards_height);
         garment_cards_panel_->raise();
+        color_panel_y += cards_height + simulation_button_gap;
+    }
+
+    if (garment_color_panel_->isVisible()) {
+        const int color_available_height =
+            std::max(0, container_size.height() - panel_margin - color_panel_y);
+        const int color_height = std::min(garment_color_panel_->sizeHint().height(), color_available_height);
+        garment_color_panel_->setGeometry(placement_x, color_panel_y, placement_width, color_height);
+        garment_color_panel_->raise();
     }
 }
 
@@ -859,6 +884,7 @@ void MainWindow::update_simulation_controls()
         !stop_button_ ||
         !reset_button_ ||
         !garment_placement_panel_ ||
+        !garment_color_panel_ ||
         !garment_cards_panel_) {
         return;
     }

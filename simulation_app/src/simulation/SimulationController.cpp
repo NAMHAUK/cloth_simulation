@@ -408,7 +408,9 @@ void SimulationController::set_garment_color_by_id(std::uint32_t garment_id, con
         return;
     }
 
-    viewport_callbacks_.request_update();
+    if (!simulation_running_) {
+        viewport_callbacks_.request_update();
+    }
 }
 
 bool SimulationController::confirm_garment_placement()

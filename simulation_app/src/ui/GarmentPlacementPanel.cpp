@@ -5,8 +5,6 @@
 #include <utility>
 
 #include <QColor>
-#include <QDialog>
-#include <QDialogButtonBox>
 #include <QEvent>
 #include <QFrame>
 #include <QGridLayout>
@@ -16,7 +14,6 @@
 #include <QPainter>
 #include <QPen>
 #include <QPixmap>
-#include <QProxyStyle>
 #include <QPushButton>
 #include <QSize>
 #include <QSizePolicy>
@@ -25,8 +22,6 @@
 #include <QStyle>
 #include <QVBoxLayout>
 #include <QWidget>
-
-#include <QtColorWidgets/color_2d_slider.hpp>
 
 namespace {
 constexpr int position_slider_min = -30;
@@ -37,29 +32,11 @@ constexpr int scale_slider_min = 50;
 constexpr int scale_slider_max = 150;
 constexpr int scale_slider_center = 100;
 constexpr float scale_slider_factor = 0.01f;
-constexpr int hue_slider_max = 359;
 constexpr int placement_button_size = 26;
 constexpr int close_icon_size = 12;
 constexpr int action_icon_size = 20;
 constexpr int add_button_height = 30;
 constexpr int confirm_icon_size = 28;
-
-class AbsoluteSliderStyle final : public QProxyStyle
-{
-public:
-    int styleHint(
-        StyleHint hint,
-        const QStyleOption* option,
-        const QWidget* widget,
-        QStyleHintReturn* return_data
-    ) const override
-    {
-        if (hint == SH_Slider_AbsoluteSetButtons) {
-            return Qt::LeftButton;
-        }
-        return QProxyStyle::styleHint(hint, option, widget, return_data);
-    }
-};
 
 QString format_float(float value)
 {
@@ -387,7 +364,11 @@ void GarmentPlacementPanel::choose_group_color(std::size_t group_index)
 {
     set_active_group(group_index);
     PlacementGroup& group = groups_[group_index];
-    choose_color(group.color, [this, group_index](const glm::vec3& color) {
+    if (!color_edit_callback_) {
+        return;
+    }
+
+    color_edit_callback_(group.color, [this, group_index](const glm::vec3& color) {
         PlacementGroup& active_group = groups_[group_index];
         active_group.color = color;
         update_color_button(group_index);
@@ -395,105 +376,6 @@ void GarmentPlacementPanel::choose_group_color(std::size_t group_index)
             color_changed_callback_(group_index, active_group.color);
         }
     });
-}
-
-void GarmentPlacementPanel::choose_color(const glm::vec3& initial_color,
-                                         ColorSelectedCallback color_selected_callback)
-{
-    const QColor original_color = QColor::fromRgbF(initial_color.r, initial_color.g, initial_color.b);
-    QDialog color_dialog(this);
-    color_dialog.setWindowTitle("Garment Color");
-
-    auto* root_layout = new QVBoxLayout(&color_dialog);
-    root_layout->setContentsMargins(8, 8, 8, 8);
-    root_layout->setSpacing(8);
-
-    auto* color_display = new QLabel(&color_dialog);
-    color_display->setAlignment(Qt::AlignCenter);
-    color_display->setFixedHeight(24);
-    root_layout->addWidget(color_display);
-
-    auto* picker_layout = new QHBoxLayout();
-    picker_layout->setContentsMargins(0, 0, 0, 0);
-    picker_layout->setSpacing(8);
-
-    auto* color_slider = new color_widgets::Color2DSlider(&color_dialog);
-    color_slider->setFixedSize(320, 180);
-    auto* hue_slider = new QSlider(Qt::Vertical, &color_dialog);
-    hue_slider->setRange(0, hue_slider_max);
-    hue_slider->setFixedSize(24, 180);
-    hue_slider->setStyleSheet(
-        "QSlider::groove:vertical {"
-        "  background: qlineargradient(x1:0, y1:1, x2:0, y2:0,"
-        "    stop:0 #ff0000, stop:0.166 #ffff00, stop:0.333 #00ff00,"
-        "    stop:0.5 #00ffff, stop:0.666 #0000ff, stop:0.833 #ff00ff, stop:1 #ff0000);"
-        "  width: 16px; border: 1px solid #666666;"
-        "}"
-        "QSlider::handle:vertical {"
-        "  background: transparent; border: 2px solid white; height: 6px; margin: 0 -4px;"
-        "}"
-    );
-    auto* hue_slider_style = new AbsoluteSliderStyle();
-    hue_slider_style->setParent(hue_slider);
-    hue_slider->setStyle(hue_slider_style);
-    picker_layout->addWidget(color_slider);
-    picker_layout->addWidget(hue_slider);
-    root_layout->addLayout(picker_layout);
-
-    auto* button_box = new QDialogButtonBox(
-        QDialogButtonBox::Ok,
-        &color_dialog
-    );
-    root_layout->addWidget(button_box);
-
-    const qreal original_hue = original_color.hsvHueF() < 0.0 ? 0.0 : original_color.hsvHueF();
-    color_slider->setColor(QColor::fromHsvF(
-        original_hue,
-        original_color.saturationF(),
-        original_color.valueF()
-    ));
-    hue_slider->setValue(static_cast<int>(original_hue * hue_slider_max));
-
-    const auto update_display = [color_display](const QColor& color) {
-        const QString text_color = color.lightnessF() > 0.5 ? "#111111" : "#ffffff";
-        color_display->setText(color.name(QColor::HexRgb).toUpper());
-        color_display->setStyleSheet(QString(
-            "background-color: %1; color: %2; border: 1px solid #666666;"
-        ).arg(color.name(QColor::HexRgb), text_color));
-    };
-    const auto apply_color = [update_display, color_selected_callback](const QColor& color) {
-        update_display(color);
-        const glm::vec3 selected_color{
-            static_cast<float>(color.redF()),
-            static_cast<float>(color.greenF()),
-            static_cast<float>(color.blueF()),
-        };
-        if (color_selected_callback) {
-            color_selected_callback(selected_color);
-        }
-    };
-
-    update_display(original_color);
-    connect(
-        hue_slider,
-        &QSlider::valueChanged,
-        &color_dialog,
-        [color_slider](int value) {
-            color_slider->setHue(static_cast<qreal>(value) / hue_slider_max);
-        }
-    );
-    connect(
-        color_slider,
-        &color_widgets::Color2DSlider::colorChanged,
-        &color_dialog,
-        apply_color
-    );
-    connect(button_box, &QDialogButtonBox::accepted, &color_dialog, &QDialog::accept);
-
-    color_dialog.adjustSize();
-    if (color_dialog.exec() != QDialog::Accepted) {
-        apply_color(original_color);
-    }
 }
 
 void GarmentPlacementPanel::update_color_button(std::size_t group_index)
@@ -649,6 +531,11 @@ void GarmentPlacementPanel::set_placement_changed_callback(PlacementChangedCallb
 void GarmentPlacementPanel::set_color_changed_callback(ColorChangedCallback callback)
 {
     color_changed_callback_ = std::move(callback);
+}
+
+void GarmentPlacementPanel::set_color_edit_callback(ColorEditCallback callback)
+{
+    color_edit_callback_ = std::move(callback);
 }
 
 void GarmentPlacementPanel::set_add_upper_callback(AddUpperCallback callback)

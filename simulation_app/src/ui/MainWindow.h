@@ -16,6 +16,7 @@
 
 class AssetBrowserPanel;
 class AssetLoader;
+class GarmentColorPanel;
 class GarmentPlacementPanel;
 class QFrame;
 class QLabel;
@@ -94,6 +95,7 @@ private:
     QWidget* viewer_container_ = nullptr;
     AssetBrowserPanel* browser_panel_ = nullptr;
     GarmentPlacementPanel* garment_placement_panel_ = nullptr;
+    GarmentColorPanel* garment_color_panel_ = nullptr;
     QWidget* garment_cards_panel_ = nullptr;
     QPushButton* run_button_ = nullptr;
     QPushButton* stop_button_ = nullptr;
