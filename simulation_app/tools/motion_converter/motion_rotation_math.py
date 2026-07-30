@@ -17,16 +17,16 @@ def axis_angle_to_quaternions(axis_angles):
     np.divide(np.sin(half_angles), angles, out=scales, where=angles > EPSILON)
 
     quaternions = np.empty(axis_angles.shape[:-1] + (4,), dtype=np.float32)
-    quaternions[..., 0:1] = np.cos(half_angles)
-    quaternions[..., 1:4] = axis_angles * scales
+    quaternions[..., 0:3] = axis_angles * scales
+    quaternions[..., 3:4] = np.cos(half_angles)
     return normalize_quaternions(quaternions)
 
 
 def quaternions_to_axis_angle(quaternions):
     quaternions = normalize_quaternions(np.asarray(quaternions, dtype=np.float32))
-    vector = quaternions[..., 1:4]
+    vector = quaternions[..., 0:3]
     vector_lengths = np.linalg.norm(vector, axis=-1, keepdims=True)
-    angles = 2.0 * np.arctan2(vector_lengths, quaternions[..., 0:1])
+    angles = 2.0 * np.arctan2(vector_lengths, quaternions[..., 3:4])
     scales = np.full_like(vector_lengths, 2.0)
     np.divide(angles, vector_lengths, out=scales, where=vector_lengths > EPSILON)
     return (vector * scales).astype(np.float32, copy=False)
@@ -35,15 +35,15 @@ def quaternions_to_axis_angle(quaternions):
 def multiply_quaternions(lhs, rhs):
     lhs = np.asarray(lhs, dtype=np.float32)
     rhs = np.asarray(rhs, dtype=np.float32)
-    w1, x1, y1, z1 = np.moveaxis(lhs, -1, 0)
-    w2, x2, y2, z2 = np.moveaxis(rhs, -1, 0)
+    x1, y1, z1, w1 = np.moveaxis(lhs, -1, 0)
+    x2, y2, z2, w2 = np.moveaxis(rhs, -1, 0)
 
     return np.stack(
         [
-            w1 * w2 - x1 * x2 - y1 * y2 - z1 * z2,
             w1 * x2 + x1 * w2 + y1 * z2 - z1 * y2,
             w1 * y2 - x1 * z2 + y1 * w2 + z1 * x2,
             w1 * z2 + x1 * y2 - y1 * x2 + z1 * w2,
+            w1 * w2 - x1 * x2 - y1 * y2 - z1 * z2,
         ],
         axis=-1,
     ).astype(np.float32, copy=False)

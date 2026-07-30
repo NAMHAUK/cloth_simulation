@@ -20,9 +20,12 @@
 #include <vector>
 
 #include <QEvent>
+#include <QComboBox>
+#include <QDialog>
+#include <QDialogButtonBox>
 #include <QFileDialog>
+#include <QFormLayout>
 #include <QIcon>
-#include <QInputDialog>
 #include <QMessageBox>
 #include <QPainter>
 #include <QPushButton>
@@ -156,27 +159,42 @@ std::optional<ConverterCommand> validate_conversion_command(QWidget* parent, Ass
     return std::nullopt;
 }
 
-std::optional<QString> select_garment_attachment_type(QWidget* parent)
-{
-    const QStringList attachment_types{"None", "Waistband"};
-    bool accepted = false;
-    const QString selected_type = QInputDialog::getItem(
-        parent,
-        "Garment Attachment",
-        "Attachment Type",
-        attachment_types,
-        0,
-        false,
-        &accepted
-    );
+struct GarmentConversionSettings final {
+    QString attachment_type;
+    QString garment_category;
+};
 
-    if (!accepted) {
+std::optional<GarmentConversionSettings> select_garment_conversion_settings(QWidget* parent)
+{
+    QDialog dialog(parent);
+    dialog.setWindowTitle("Garment Conversion Settings");
+
+    QComboBox attachment_type;
+    attachment_type.addItem("None", "none");
+    attachment_type.addItem("Waistband", "waistband");
+
+    QComboBox garment_category;
+    garment_category.addItem("Top", "top");
+    garment_category.addItem("Bottom", "bottom");
+    garment_category.addItem("Full-Body", "full-body");
+
+    QDialogButtonBox buttons(QDialogButtonBox::Ok | QDialogButtonBox::Cancel);
+    QObject::connect(&buttons, &QDialogButtonBox::accepted, &dialog, &QDialog::accept);
+    QObject::connect(&buttons, &QDialogButtonBox::rejected, &dialog, &QDialog::reject);
+
+    QFormLayout layout(&dialog);
+    layout.addRow("Attachment Type", &attachment_type);
+    layout.addRow("Garment Category", &garment_category);
+    layout.addRow(&buttons);
+
+    if (dialog.exec() != QDialog::Accepted) {
         return std::nullopt;
     }
-    if (selected_type == "Waistband") {
-        return QString{"waistband"};
-    }
-    return QString{"none"};
+
+    return GarmentConversionSettings{
+        attachment_type.currentData().toString(),
+        garment_category.currentData().toString()
+    };
 }
 }
 
@@ -789,8 +807,8 @@ std::optional<ConverterCommand> MainWindow::prepare_garment_conversion()
         return std::nullopt;
     }
 
-    const std::optional<QString> attachment_type = select_garment_attachment_type(this);
-    if (!attachment_type) {
+    const std::optional<GarmentConversionSettings> settings = select_garment_conversion_settings(this);
+    if (!settings) {
         return std::nullopt;
     }
 
@@ -798,7 +816,8 @@ std::optional<ConverterCommand> MainWindow::prepare_garment_conversion()
         project_paths_,
         garment_obj_path,
         garment_asset_path,
-        *attachment_type
+        settings->attachment_type,
+        settings->garment_category
     );
     return validate_conversion_command(
         this,

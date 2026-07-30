@@ -19,9 +19,11 @@ public:
                     float dynamic_friction,
                     QOpenGLFunctions_4_5_Core& gl);
     bool can_solve(const ClothMotionBufferView& motion_view,
-                   const ClothCollisionPushoutBufferView& collision_pushout_view) const;
+                   const ClothCollisionPushoutBufferView& collision_pushout_view,
+                   const ClothContactMotionBufferView& contact_motion_view) const;
     void solve(const ClothMotionBufferView& motion_view,
                const ClothCollisionPushoutBufferView& collision_pushout_view,
+               const ClothContactMotionBufferView& contact_motion_view,
                QOpenGLFunctions_4_5_Core& gl) const;
     void release(QOpenGLFunctions_4_5_Core& gl);
 

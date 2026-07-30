@@ -22,6 +22,8 @@ SHAPE_TRANSITION_FRAME_COUNT = 60
 POSE_INTRO_FRAME_COUNT = 30
 SMPL_JOINT_COUNT = 24
 SMPL_BETA_COUNT = 10
+TORSO_JOINT_INDEX = 9
+TORSO_JOINT_CHAIN = (0, 3, 6, 9)
 NEUTRAL_GENDER = "neutral"
 SUPPORTED_GENDERS = {NEUTRAL_GENDER, "male", "female"}
 AMASS_TO_PROJECT_ROTATION = np.array(
@@ -33,7 +35,7 @@ AMASS_TO_PROJECT_ROTATION = np.array(
     dtype=np.float32,
 )
 AMASS_TO_PROJECT_QUATERNION = np.array(
-    [np.sqrt(0.5), -np.sqrt(0.5), 0.0, 0.0],
+    [-np.sqrt(0.5), 0.0, 0.0, np.sqrt(0.5)],
     dtype=np.float32,
 )
 START_FACING_CORRECTION_ROTATION = np.array(
@@ -45,10 +47,11 @@ START_FACING_CORRECTION_ROTATION = np.array(
     dtype=np.float32,
 )
 START_FACING_CORRECTION_QUATERNION = np.array(
-    [np.sqrt(0.5), 0.0, -np.sqrt(0.5), 0.0],
+    [0.0, -np.sqrt(0.5), 0.0, np.sqrt(0.5)],
     dtype=np.float32,
 )
 NEUTRAL_BETAS = np.zeros(SMPL_BETA_COUNT, dtype=np.float32)
+IDENTITY_QUATERNION_XYZW = np.array([0.0, 0.0, 0.0, 1.0], dtype=np.float32)
 
 """AMASS 모션 데이터를 원본 성별과 체형의 SMPL 애니메이션으로 변환한다."""
 
@@ -152,6 +155,15 @@ def interpolate_pose_rotations(start_pose, end_pose, weights):
     interpolated_quaternions = quaternion_slerp(start_quaternions, end_quaternions, slerp_weights)
     return quaternions_to_axis_angle(interpolated_quaternions).reshape(len(weights), SMPL_POSE_COMPONENT_COUNT)
 
+def compute_reference_orientations(poses):
+    joint_axis_angles = np.asarray(poses, dtype=np.float32).reshape(-1, SMPL_JOINT_COUNT, 3)
+    joint_orientations = axis_angle_to_quaternions(joint_axis_angles)
+    pelvis_orientations = joint_orientations[:, 0]
+    torso_orientations = pelvis_orientations
+    for joint_index in TORSO_JOINT_CHAIN[1:]:
+        torso_orientations = multiply_quaternions(torso_orientations, joint_orientations[:, joint_index])
+    return pelvis_orientations.astype(np.float32, copy=False), torso_orientations.astype(np.float32, copy=False)
+
 def make_smoothstep_weights(frame_count):
     if frame_count <= 0:
         weights = np.empty(0, dtype=np.float32)
@@ -218,19 +230,31 @@ def compute_grounded_default_pose(model, betas, device):
         )
         vertices = output.vertices[0].detach().cpu().numpy().astype(np.float32, copy=True)
         root_position = output.joints[0, 0].detach().cpu().numpy().astype(np.float32, copy=True)
+        torso_position = output.joints[0, TORSO_JOINT_INDEX].detach().cpu().numpy().astype(np.float32, copy=True)
 
     ground_offset = -float(vertices[:, 1].min())
     vertices[:, 1] += ground_offset
     root_position[1] += ground_offset
-    return vertices, root_position, ground_offset
+    torso_position[1] += ground_offset
+    return vertices, root_position, torso_position, ground_offset
 
-def build_shape_transition(neutral_vertices, neutral_root_position, target_vertices, target_root_position):
+def build_shape_transition(neutral_vertices,
+                           neutral_root_position,
+                           neutral_torso_position,
+                           target_vertices,
+                           target_root_position,
+                           target_torso_position):
     weights = make_smoothstep_weights(SHAPE_TRANSITION_FRAME_COUNT)
     vertex_weights = weights.reshape(-1, 1, 1)
     root_weights = weights.reshape(-1, 1)
     vertices = neutral_vertices[None, :, :] + (target_vertices - neutral_vertices)[None, :, :] * vertex_weights
     root_positions = neutral_root_position[None, :] + (target_root_position - neutral_root_position)[None, :] * root_weights
-    return vertices.astype(np.float32, copy=False), root_positions.astype(np.float32, copy=False)
+    torso_positions = neutral_torso_position[None, :] + (target_torso_position - neutral_torso_position)[None, :] * root_weights
+    return (
+        vertices.astype(np.float32, copy=False),
+        root_positions.astype(np.float32, copy=False),
+        torso_positions.astype(np.float32, copy=False),
+    )
 
 # write motion file
 def initialize_motion_file(out_file, motion, faces, frame_count, vertex_count):
@@ -239,7 +263,18 @@ def initialize_motion_file(out_file, motion, faces, frame_count, vertex_count):
     # 빈 값으로 write하고, 나중에 실행중 저장된 값을 rewrite
     root_positions_file_position = out_file.tell()
     np.zeros((frame_count, 3), dtype=np.float32).tofile(out_file)
-    return root_positions_file_position
+    pelvis_orientations_file_position = out_file.tell()
+    np.zeros((frame_count, 4), dtype=np.float32).tofile(out_file)
+    torso_positions_file_position = out_file.tell()
+    np.zeros((frame_count, 3), dtype=np.float32).tofile(out_file)
+    torso_orientations_file_position = out_file.tell()
+    np.zeros((frame_count, 4), dtype=np.float32).tofile(out_file)
+    return (
+        root_positions_file_position,
+        pelvis_orientations_file_position,
+        torso_positions_file_position,
+        torso_orientations_file_position,
+    )
 
 def compute_batch_vertices(model, motion, betas, batch_slice, device):
     batch_poses = motion.poses[batch_slice]
@@ -259,7 +294,8 @@ def compute_batch_vertices(model, motion, betas, batch_slice, device):
 
     vertices = output.vertices.detach().cpu().numpy().astype(np.float32, copy=False)
     root_positions = output.joints[:, 0, :].detach().cpu().numpy().astype(np.float32, copy=False)
-    return vertices, root_positions
+    torso_positions = output.joints[:, TORSO_JOINT_INDEX, :].detach().cpu().numpy().astype(np.float32, copy=False)
+    return vertices, root_positions, torso_positions
 
 def write_motion_file(output_path,
                       faces,
@@ -268,6 +304,7 @@ def write_motion_file(output_path,
                       betas,
                       shape_transition_vertices,
                       shape_transition_root_positions,
+                      shape_transition_torso_positions,
                       batch_size,
                       device):
     # batch 단위로 캐릭터 motion 계산 및 저장
@@ -278,10 +315,19 @@ def write_motion_file(output_path,
     frame_count = len(shape_transition_vertices) + motion_frame_count
     vertex_count = int(model.v_template.shape[0])
     converted_root_positions = [shape_transition_root_positions]
+    converted_torso_positions = [shape_transition_torso_positions]
+    shape_orientations = np.repeat(
+        IDENTITY_QUATERNION_XYZW.reshape(1, 4),
+        len(shape_transition_vertices),
+        axis=0,
+    )
+    pelvis_orientations, torso_orientations = compute_reference_orientations(motion.poses)
+    converted_pelvis_orientations = np.concatenate([shape_orientations, pelvis_orientations], axis=0)
+    converted_torso_orientations = np.concatenate([shape_orientations, torso_orientations], axis=0)
 
     try:
         with temp_output_path.open("wb") as out_file:
-            root_positions_file_position = initialize_motion_file(out_file, motion, faces, frame_count, vertex_count)
+            transform_file_positions = initialize_motion_file(out_file, motion, faces, frame_count, vertex_count)
             shape_transition_vertices.tofile(out_file)
             
             with torch.no_grad():
@@ -289,14 +335,34 @@ def write_motion_file(output_path,
                     batch_slice = slice(start, min(start + batch_size, motion_frame_count))
 
                     # 각 batch의 캐릭터 몸 vertex 계산
-                    batch_vertices, batch_root_positions = compute_batch_vertices(model, motion, betas, batch_slice, device)
+                    batch_vertices, batch_root_positions, batch_torso_positions = compute_batch_vertices(
+                        model,
+                        motion,
+                        betas,
+                        batch_slice,
+                        device,
+                    )
 
                     converted_root_positions.append(np.asarray(batch_root_positions, dtype=np.float32))
+                    converted_torso_positions.append(np.asarray(batch_torso_positions, dtype=np.float32))
                     np.asarray(batch_vertices, dtype=np.float32).tofile(out_file)
 
             root_positions = np.concatenate(converted_root_positions, axis=0).astype(np.float32, copy=False)
+            torso_positions = np.concatenate(converted_torso_positions, axis=0).astype(np.float32, copy=False)
+            (
+                root_positions_file_position,
+                pelvis_orientations_file_position,
+                torso_positions_file_position,
+                torso_orientations_file_position,
+            ) = transform_file_positions
             out_file.seek(root_positions_file_position)
             root_positions.tofile(out_file)
+            out_file.seek(pelvis_orientations_file_position)
+            converted_pelvis_orientations.tofile(out_file)
+            out_file.seek(torso_positions_file_position)
+            torso_positions.tofile(out_file)
+            out_file.seek(torso_orientations_file_position)
+            converted_torso_orientations.tofile(out_file)
 
         # 모든 batch가 성공하면 최종 motion 파일로 교체
         temp_output_path.replace(output_path)
@@ -320,7 +386,11 @@ def convert(input_path, model_paths, output_path, target_fps, batch_size):
             raise FileNotFoundError(f"Missing {gender} SMPL model: {model_path}")
 
     neutral_model = load_smpl_model(model_paths[NEUTRAL_GENDER], NEUTRAL_GENDER, device)
-    neutral_vertices, neutral_root_position, _ = compute_grounded_default_pose(neutral_model, NEUTRAL_BETAS, device)
+    neutral_vertices, neutral_root_position, neutral_torso_position, _ = compute_grounded_default_pose(
+        neutral_model,
+        NEUTRAL_BETAS,
+        device,
+    )
     canonical_faces = np.asarray(neutral_model.faces, dtype=np.uint32).copy()
 
     if source_motion.gender == NEUTRAL_GENDER:
@@ -335,16 +405,18 @@ def convert(input_path, model_paths, output_path, target_fps, batch_size):
     if int(target_model.v_template.shape[0]) != len(neutral_vertices) or not np.array_equal(target_faces, canonical_faces):
         raise ValueError(f"SMPL topology does not match the canonical neutral model: {source_motion.gender}")
 
-    target_vertices, target_root_position, target_ground_offset = compute_grounded_default_pose(
+    target_vertices, target_root_position, target_torso_position, target_ground_offset = compute_grounded_default_pose(
         target_model,
         source_motion.betas,
         device,
     )
-    shape_transition_vertices, shape_transition_root_positions = build_shape_transition(
+    shape_transition_vertices, shape_transition_root_positions, shape_transition_torso_positions = build_shape_transition(
         neutral_vertices,
         neutral_root_position,
+        neutral_torso_position,
         target_vertices,
         target_root_position,
+        target_torso_position,
     )
     converted_motion.translations[:, 1] += target_ground_offset
 
@@ -356,6 +428,7 @@ def convert(input_path, model_paths, output_path, target_fps, batch_size):
         source_motion.betas,
         shape_transition_vertices,
         shape_transition_root_positions,
+        shape_transition_torso_positions,
         batch_size,
         device,
     )

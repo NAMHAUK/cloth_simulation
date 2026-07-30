@@ -39,6 +39,9 @@ struct CharacterMesh {
     std::uint32_t triangle_count = 0;
     std::vector<std::uint32_t> triangle_vertex_indices;
     std::vector<float> root_positions;
+    std::vector<float> pelvis_orientations;
+    std::vector<float> torso_positions;
+    std::vector<float> torso_orientations;
     std::vector<float> vertices;
 };
 
@@ -60,7 +63,14 @@ struct GarmentDistanceConstraints final {
     }
 };
 
+enum class GarmentCategory : std::uint32_t {
+    Top,
+    Bottom,
+    FullBody,
+};
+
 struct GarmentMesh {
+    GarmentCategory garment_category = GarmentCategory::Top;
     std::vector<float> vertices;
     std::vector<std::uint32_t> triangle_vertex_indices;
     VertexFaceAdjacency adjacency;

@@ -6,11 +6,15 @@
 #include "simulation/SimulationSettings.h"
 
 #include <algorithm>
+#include <cmath>
 #include <iostream>
 
+#include <glm/geometric.hpp>
+#include <glm/gtc/quaternion.hpp>
 #include <glm/vec3.hpp>
 
 namespace {
+constexpr float angular_velocity_epsilon = 1.0e-8f;
 
 const GarmentBufferRanges* find_garment_range(
     const std::vector<GarmentBufferRanges>& garment_ranges,
@@ -23,30 +27,99 @@ const GarmentBufferRanges* find_garment_range(
     return iter == garment_ranges.end() ? nullptr : &(*iter);
 }
 
-float character_frame_time(std::uint64_t motion_step_index, std::uint32_t substep)
+float character_frame_time(std::uint64_t motion_step_index, std::int32_t substep_boundary)
 {
     if (simulation_settings::character_frame_stride == 0 || simulation_settings::substep_count == 0) {
         return 0.0f;
     }
 
-    const float substep_fraction =
-        static_cast<float>(std::min(substep + 1u, simulation_settings::substep_count)) /
-        simulation_settings::substep_count;
+    const float substep_fraction = static_cast<float>(substep_boundary) /
+                                   simulation_settings::substep_count;
+    const float frame_time = (static_cast<float>(motion_step_index) + substep_fraction) /
+                             simulation_settings::character_frame_stride;
 
-    return (static_cast<float>(motion_step_index) + substep_fraction) /
-           simulation_settings::character_frame_stride;
+    return std::max(frame_time, 0.0f);
 }
 
 void update_character_substep_frame(const SceneState& scene,
                                     SceneGpuState& gpu_state,
-                                    std::uint64_t motion_step_index,
-                                    std::uint32_t substep,
+                                    float frame_time,
                                     QOpenGLFunctions_4_5_Core& gl)
 {
-    const float frame_time = character_frame_time(motion_step_index, substep);
     const CharacterFrameInterpolation interpolation = scene.character_frame_interpolation(frame_time);
 
     gpu_state.update_character_frame_interpolation(scene, interpolation, gl);
+}
+
+glm::vec3 clamp_vector_length(const glm::vec3& value, float maximum_length)
+{
+    const float length = glm::length(value);
+    return length > maximum_length ? value * (maximum_length / length) : value;
+}
+
+glm::vec3 angular_velocity(const glm::quat& start_orientation,
+                           const glm::quat& end_orientation,
+                           float dt)
+{
+    glm::quat delta = glm::normalize(end_orientation * glm::conjugate(start_orientation));
+    if (delta.w < 0.0f) {
+        delta = -delta;
+    }
+
+    const glm::vec3 vector{delta.x, delta.y, delta.z};
+    const float vector_length = glm::length(vector);
+    if (vector_length <= angular_velocity_epsilon || dt <= 0.0f) {
+        return glm::vec3{0.0f};
+    }
+
+    const float angle = 2.0f * std::atan2(vector_length, std::clamp(delta.w, -1.0f, 1.0f));
+    return vector * (angle / (vector_length * dt));
+}
+
+ReferenceFrameMotion make_reference_frame_motion(const CharacterReferenceFrame& previous_frame,
+                                                 const CharacterReferenceFrame& start_frame,
+                                                 const CharacterReferenceFrame& end_frame,
+                                                 float dt)
+{
+    const glm::vec3 previous_velocity = (start_frame.position - previous_frame.position) / dt;
+    const glm::vec3 velocity = (end_frame.position - start_frame.position) / dt;
+    const glm::vec3 acceleration = clamp_vector_length(
+        (velocity - previous_velocity) / dt,
+        simulation_settings::reference_frame_max_acceleration
+    );
+    const glm::vec3 previous_angular_velocity =
+        angular_velocity(previous_frame.orientation, start_frame.orientation, dt);
+    const glm::vec3 current_angular_velocity =
+        angular_velocity(start_frame.orientation, end_frame.orientation, dt);
+    const glm::vec3 angular_acceleration = clamp_vector_length(
+        (current_angular_velocity - previous_angular_velocity) / dt,
+        simulation_settings::reference_frame_max_angular_acceleration
+    );
+
+    return {
+        start_frame.position,
+        end_frame.position,
+        glm::mat3_cast(glm::normalize(end_frame.orientation * glm::conjugate(start_frame.orientation))),
+        previous_velocity,
+        acceleration,
+        previous_angular_velocity,
+        angular_acceleration
+    };
+}
+
+ReferenceFrameMotion sample_reference_motion(const SceneState& scene,
+                                             GarmentCategory garment_category,
+                                             float previous_frame_time,
+                                             float start_frame_time,
+                                             float end_frame_time,
+                                             float dt)
+{
+    return make_reference_frame_motion(
+        scene.interpolated_character_reference_frame(previous_frame_time, garment_category),
+        scene.interpolated_character_reference_frame(start_frame_time, garment_category),
+        scene.interpolated_character_reference_frame(end_frame_time, garment_category),
+        dt
+    );
 }
 }
 
@@ -58,6 +131,7 @@ bool SimulationPipeline::is_initialized() const
 bool SimulationPipeline::initialize(const ShaderPaths& shader_paths, QOpenGLFunctions_4_5_Core& gl)
 {
     substep_dt_ = simulation_settings::fixed_dt / static_cast<float>(simulation_settings::substep_count);
+    inverse_substep_dt_ = 1.0f / substep_dt_;
 
     const bool solvers_initialized =
         cloth_bvh_bounds_updater_.initialize(shader_paths.cloth_bvh_bounds_update_compute, gl) &&
@@ -190,7 +264,7 @@ bool SimulationPipeline::step(SceneState& scene, SceneGpuState& gpu_state, std::
     }
 
     const auto views = collect_gpu_views(gpu_state);
-    if (!can_solve_constraint_iteration(views)) {
+    if (!can_solve_constraint_iteration(views) || views.garment_buffer_ranges == nullptr) {
         std::cerr << "Cannot run simulation because required constraint or collision GPU resources are invalid.\n";
         return false;
     }
@@ -205,14 +279,49 @@ bool SimulationPipeline::step(SceneState& scene, SceneGpuState& gpu_state, std::
 
     const glm::vec3 external_acceleration = force_field_.external_acceleration();
     for (std::uint32_t substep = 0; substep < simulation_settings::substep_count; ++substep) {
-        update_character_substep_frame(scene, gpu_state, motion_step_index, substep, gl);
+        const std::int32_t start_boundary = static_cast<std::int32_t>(substep);
+        const float previous_frame_time = character_frame_time(motion_step_index, start_boundary - 1);
+        const float start_frame_time = character_frame_time(motion_step_index, start_boundary);
+        const float end_frame_time = character_frame_time(motion_step_index, start_boundary + 1);
+        const ReferenceFrameMotion pelvis_motion =
+            sample_reference_motion(scene,
+                                    GarmentCategory::Bottom,
+                                    previous_frame_time,
+                                    start_frame_time,
+                                    end_frame_time,
+                                    substep_dt_);
+        const ReferenceFrameMotion torso_motion =
+            sample_reference_motion(scene,
+                                    GarmentCategory::Top,
+                                    previous_frame_time,
+                                    start_frame_time,
+                                    end_frame_time,
+                                    substep_dt_);
 
-        external_force_solver_.solve(views.cloth_motion,
-                                     views.cloth_collision_pushout,
-                                     substep_dt_,
-                                     external_acceleration,
-                                     simulation_settings::velocity_damping,
-                                     gl);
+        update_character_substep_frame(scene, gpu_state, end_frame_time, gl);
+
+        for (const GarmentObject& garment : scene.garments()) {
+            const GarmentBufferRanges* garment_range =
+                find_garment_range(*views.garment_buffer_ranges, garment.id);
+            if (garment_range == nullptr) {
+                std::cerr << "Cannot apply external forces because garment GPU ranges are missing.\n";
+                return false;
+            }
+
+            const ReferenceFrameMotion& frame_motion =
+                garment.mesh.garment_category == GarmentCategory::Top ? torso_motion : pelvis_motion;
+            external_force_solver_.solve(views.cloth_motion,
+                                         views.cloth_collision_pushout,
+                                         views.cloth_contact_motion,
+                                         *garment_range,
+                                         substep_dt_,
+                                         inverse_substep_dt_,
+                                         external_acceleration,
+                                         simulation_settings::velocity_damping,
+                                         frame_motion,
+                                         simulation_settings::reference_frame_inertia_scale,
+                                         gl);
+        }
 
         cloth_body_collision_detector_.detect(views, gl);
 
@@ -235,7 +344,10 @@ bool SimulationPipeline::step(SceneState& scene, SceneGpuState& gpu_state, std::
             if (has_multiple_garments) {
                 cloth_cloth_collision_solver_.solve(views, gl);
             }
-            ground_collision_solver_.solve(views.cloth_motion, views.cloth_collision_pushout, gl);
+            ground_collision_solver_.solve(views.cloth_motion,
+                                           views.cloth_collision_pushout,
+                                           views.cloth_contact_motion,
+                                           gl);
         }
     }
 
@@ -257,6 +369,7 @@ void SimulationPipeline::release(QOpenGLFunctions_4_5_Core& gl)
     external_force_solver_.release(gl);
     cloth_bvh_bounds_updater_.release(gl);
     substep_dt_ = 0.0f;
+    inverse_substep_dt_ = 0.0f;
     initialized_ = false;
 }
 
@@ -265,6 +378,7 @@ SimulationGpuViews SimulationPipeline::collect_gpu_views(const SceneGpuState& gp
     SimulationGpuViews views;
     views.cloth_motion = gpu_state.cloth_gpu_state().motion_buffer_view();
     views.cloth_collision_pushout = gpu_state.cloth_gpu_state().collision_pushout_buffer_view();
+    views.cloth_contact_motion = gpu_state.cloth_gpu_state().contact_motion_buffer_view();
     views.cloth_body_triangle_ids = gpu_state.cloth_gpu_state().body_triangle_id_buffer_view();
     views.cloth_topology = gpu_state.cloth_gpu_state().mesh_topology_resources();
     views.cloth_bvh = gpu_state.cloth_bvh_buffer_view();
@@ -308,5 +422,7 @@ bool SimulationPipeline::can_solve_constraint_iteration(const SimulationGpuViews
             cloth_body_collision_solver_.can_solve(views) &&
             cloth_cloth_collision_detector_.can_detect(views) &&
             cloth_cloth_collision_solver_.can_solve(views) &&
-            ground_collision_solver_.can_solve(views.cloth_motion, views.cloth_collision_pushout);
+            ground_collision_solver_.can_solve(views.cloth_motion,
+                                               views.cloth_collision_pushout,
+                                               views.cloth_contact_motion);
 }

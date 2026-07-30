@@ -2,6 +2,7 @@
 
 #include "asset/MeshGeometryUtils.h"
 
+#include <glm/gtc/quaternion.hpp>
 #include <glm/vec3.hpp>
 
 #include <algorithm>
@@ -9,6 +10,30 @@
 #include <utility>
 
 namespace {
+constexpr std::size_t position_components = 3u;
+constexpr std::size_t quaternion_components = 4u;
+
+glm::vec3 frame_position(const std::vector<float>& positions, std::uint32_t frame_index)
+{
+    const std::size_t base = static_cast<std::size_t>(frame_index) * position_components;
+    if (positions.size() < base + position_components) {
+        return glm::vec3{0.0f};
+    }
+    return {positions[base], positions[base + 1u], positions[base + 2u]};
+}
+
+glm::quat frame_orientation(const std::vector<float>& orientations, std::uint32_t frame_index)
+{
+    const std::size_t base = static_cast<std::size_t>(frame_index) * quaternion_components;
+    if (orientations.size() < base + quaternion_components) {
+        return glm::quat::wxyz(1.0f, 0.0f, 0.0f, 0.0f);
+    }
+    return glm::normalize(glm::quat::wxyz(orientations[base + 3u],
+                                         orientations[base],
+                                         orientations[base + 1u],
+                                         orientations[base + 2u]));
+}
+
 bool prepare_garment_mesh(GarmentMesh& mesh)
 {
     const std::uint32_t vertex_count = static_cast<std::uint32_t>(mesh.vertices.size() / 3u);
@@ -257,6 +282,30 @@ CharacterFrameInterpolation SceneState::character_frame_interpolation(float char
     const std::uint32_t next_frame_index = current_frame_index + 1u;
     const float frame_alpha = character_frame_time - current_frame_index;
     return {current_frame_index, next_frame_index, frame_alpha};
+}
+
+CharacterReferenceFrame SceneState::interpolated_character_reference_frame(
+    float character_frame_time,
+    GarmentCategory garment_category) const
+{
+    const CharacterFrameInterpolation interpolation = character_frame_interpolation(character_frame_time);
+    const bool uses_torso = garment_category == GarmentCategory::Top;
+    const std::vector<float>& positions = uses_torso ? character_mesh_.torso_positions
+                                                     : character_mesh_.root_positions;
+    const std::vector<float>& orientations = uses_torso ? character_mesh_.torso_orientations
+                                                        : character_mesh_.pelvis_orientations;
+    const glm::vec3 current_position = frame_position(positions, interpolation.current_frame_index);
+    const glm::vec3 next_position = frame_position(positions, interpolation.next_frame_index);
+    const glm::quat current_orientation = frame_orientation(orientations, interpolation.current_frame_index);
+    glm::quat next_orientation = frame_orientation(orientations, interpolation.next_frame_index);
+    if (glm::dot(current_orientation, next_orientation) < 0.0f) {
+        next_orientation = -next_orientation;
+    }
+
+    return {
+        current_position + (next_position - current_position) * interpolation.frame_alpha,
+        glm::normalize(glm::slerp(current_orientation, next_orientation, interpolation.frame_alpha))
+    };
 }
 
 std::uint32_t SceneState::current_character_frame() const

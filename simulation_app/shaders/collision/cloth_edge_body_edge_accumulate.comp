@@ -46,6 +46,18 @@ layout(std430, binding = 10) readonly buffer CollisionPushouts {
     vec4 collision_pushouts[];
 };
 
+layout(std430, binding = 11) readonly buffer ClothClothPushouts {
+    vec4 cloth_cloth_pushouts[];
+};
+
+layout(std430, binding = 12) readonly buffer ContactMotionDeltas {
+    vec4 contact_motion_deltas[];
+};
+
+layout(std430, binding = 13) buffer ContactMotionDeltaSums {
+    ivec4 contact_motion_delta_sums[];
+};
+
 uniform uint uMaxCandidateCount;
 uniform float uCollisionThickness;
 
@@ -60,6 +72,7 @@ const float ccd_parallel_epsilon = 1.0e-8;
 #include "common/collision_geometry_common.glsl"
 
 #define COLLISION_CORRECTION_ACCUMULATE
+#define COLLISION_CONTACT_MOTION_ACCUMULATE
 #define COLLISION_CORRECTION_FRICTION_ACCUMULATE
 #include "common/collision_correction_common.glsl"
 
@@ -67,6 +80,7 @@ struct EdgeContact {
     vec3 normal;
     float cloth_t;
     vec3 friction_correction;
+    vec3 contact_motion_delta;
     float depth;
 };
 
@@ -131,11 +145,17 @@ bool compute_candidate_contact(uint candidate_index, out uvec2 cloth_vertices, o
     vec3 cloth_collision_pushout = mix(collision_pushouts[cloth_vertices.x].xyz,
                                        collision_pushouts[cloth_vertices.y].xyz,
                                        current_cloth_segment.t);
-    vec3 cloth_delta = current_cloth_segment.point
-                     - interpolate_edge_position(previous_cloth, current_cloth_segment.t)
-                     - cloth_collision_pushout;
+    vec3 cloth_cloth_pushout = mix(cloth_cloth_pushouts[cloth_vertices.x].xyz,
+                                   cloth_cloth_pushouts[cloth_vertices.y].xyz,
+                                   current_cloth_segment.t);
+    vec3 friction_cloth_delta = current_cloth_segment.point - interpolate_edge_position(previous_cloth, current_cloth_segment.t) - cloth_collision_pushout;
+    vec3 cloth_delta = friction_cloth_delta - cloth_cloth_pushout;
     vec3 body_delta = current_body_segment.point - interpolate_edge_position(previous_body, current_body_segment.t);
-    contact.friction_correction = compute_friction_correction(normal, cloth_delta, body_delta);
+    vec3 retained_delta = mix(contact_motion_deltas[cloth_vertices.x].xyz,
+                              contact_motion_deltas[cloth_vertices.y].xyz,
+                              current_cloth_segment.t);
+    contact.friction_correction = compute_friction_correction(normal, friction_cloth_delta, body_delta);
+    contact.contact_motion_delta = compute_required_contact_motion_delta(normal, cloth_delta, body_delta, retained_delta);
     contact.depth = uCollisionThickness - current_signed_distance - penetration_tolerance;
     return true;
 }
@@ -153,6 +173,9 @@ void accumulate_contact_for_vertex(uint vertex_index,
     accumulate_vertex_normal_correction(vertex_index, correction);
     atomicAdd(normal_correction_sums[vertex_index].w, 1);
     accumulate_vertex_friction_correction(vertex_index, contact.friction_correction * vertex_weight * inverse_denominator);
+    accumulate_vertex_contact_motion_delta(
+        vertex_index,
+        contact.contact_motion_delta * vertex_weight * inverse_denominator);
 }
 
 void main()

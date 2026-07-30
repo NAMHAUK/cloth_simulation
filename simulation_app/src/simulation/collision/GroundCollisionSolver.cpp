@@ -10,6 +10,8 @@ namespace {
 constexpr GLuint current_positions_binding = 0;
 constexpr GLuint previous_positions_binding = 1;
 constexpr GLuint collision_pushouts_binding = 2;
+constexpr GLuint cloth_cloth_pushouts_binding = 3;
+constexpr GLuint contact_motion_deltas_binding = 4;
 constexpr std::uint32_t ground_collision_local_size = 128;
 }
 
@@ -50,27 +52,37 @@ bool GroundCollisionSolver::initialize(const std::filesystem::path& shader_path,
 }
 
 bool GroundCollisionSolver::can_solve(const ClothMotionBufferView& motion_view,
-                                      const ClothCollisionPushoutBufferView& collision_pushout_view) const
+                                      const ClothCollisionPushoutBufferView& collision_pushout_view,
+                                      const ClothContactMotionBufferView& contact_motion_view) const
 {
     return is_initialized() &&
            is_valid_motion_view(motion_view) &&
            is_valid_collision_pushout_view(collision_pushout_view) &&
+           is_valid_contact_motion_view(contact_motion_view) &&
            motion_view.vertex_count == collision_pushout_view.vertex_count &&
+           motion_view.vertex_count == contact_motion_view.vertex_count &&
            dynamic_friction_ >= 0.0f &&
            static_friction_ >= dynamic_friction_;
 }
 
 void GroundCollisionSolver::solve(const ClothMotionBufferView& motion_view,
                                   const ClothCollisionPushoutBufferView& collision_pushout_view,
+                                  const ClothContactMotionBufferView& contact_motion_view,
                                   QOpenGLFunctions_4_5_Core& gl) const
 {
-    assert(can_solve(motion_view, collision_pushout_view));
+    assert(can_solve(motion_view, collision_pushout_view, contact_motion_view));
 
     // shader & GPU 연결
     gl.glUseProgram(program_);
     gl.glBindBufferBase(GL_SHADER_STORAGE_BUFFER, current_positions_binding, motion_view.current_position_buffer);
     gl.glBindBufferBase(GL_SHADER_STORAGE_BUFFER, previous_positions_binding, motion_view.previous_position_buffer);
     gl.glBindBufferBase(GL_SHADER_STORAGE_BUFFER, collision_pushouts_binding, collision_pushout_view.collision_pushout_buffer);
+    gl.glBindBufferBase(GL_SHADER_STORAGE_BUFFER,
+                        cloth_cloth_pushouts_binding,
+                        collision_pushout_view.cloth_cloth_pushout_buffer);
+    gl.glBindBufferBase(GL_SHADER_STORAGE_BUFFER,
+                        contact_motion_deltas_binding,
+                        contact_motion_view.contact_motion_delta_buffer);
 
     // shader에 값 전달
     gl.glProgramUniform1ui(program_, vertex_count_location_, motion_view.vertex_count);

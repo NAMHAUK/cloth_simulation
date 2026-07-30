@@ -20,6 +20,12 @@ inline bool is_valid_collision_pushout_view(const ClothCollisionPushoutBufferVie
            collision_pushout_view.vertex_count != 0;
 }
 
+inline bool is_valid_contact_motion_view(const ClothContactMotionBufferView& contact_motion_view)
+{
+    return contact_motion_view.contact_motion_delta_buffer != 0 &&
+           contact_motion_view.vertex_count != 0;
+}
+
 inline bool is_valid_character_vertex_buffer_view(const CharacterVertexBufferView& vertex_view)
 {
     return vertex_view.previous_position_buffer != 0 &&
@@ -115,6 +121,7 @@ inline bool is_valid_collision_candidate_buffer_view(const CollisionCandidateBuf
            is_valid_collision_candidate_buffer(collision_candidate_view.cloth_face_body_vertex) &&
            collision_candidate_view.normal_correction_sum_buffer != 0 &&
            collision_candidate_view.friction_correction_sum_buffer != 0 &&
+           collision_candidate_view.contact_motion_delta_sum_buffer != 0 &&
            collision_candidate_view.vertex_capacity != 0;
 }
 

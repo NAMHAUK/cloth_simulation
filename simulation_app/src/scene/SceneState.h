@@ -8,6 +8,7 @@
 #include <optional>
 #include <vector>
 
+#include <glm/gtc/quaternion.hpp>
 #include <glm/vec3.hpp>
 
 struct GarmentObject {
@@ -23,6 +24,11 @@ struct CharacterFrameInterpolation final {
     std::uint32_t current_frame_index = 0;
     std::uint32_t next_frame_index = 0;
     float frame_alpha = 0.0f;
+};
+
+struct CharacterReferenceFrame final {
+    glm::vec3 position{};
+    glm::quat orientation = glm::quat::wxyz(1.0f, 0.0f, 0.0f, 0.0f);
 };
 
 class SceneState final {
@@ -51,6 +57,8 @@ public:
     // Playback
     void update_character_frame(std::uint64_t simulation_step_count, std::uint32_t character_frame_stride);
     CharacterFrameInterpolation character_frame_interpolation(float character_frame_time) const;
+    CharacterReferenceFrame interpolated_character_reference_frame(float character_frame_time,
+                                                                   GarmentCategory garment_category) const;
     std::uint32_t current_character_frame() const;
     glm::vec3 character_root_position(std::uint32_t frame_index) const;
 
