@@ -15,7 +15,8 @@
 #include <vector>
 
 namespace {
-constexpr std::array<char, 7> garment_asset_signature = {'N', 'A', 'M', 'H', 'A', 'U', 'K'};
+constexpr std::array<char, 7> garment_asset_signature_v1 = {'N', 'A', 'M', 'H', 'A', 'U', 'K'};
+constexpr std::array<char, 7> garment_asset_signature_v2 = {'N', 'A', 'M', 'H', 'A', 'U', '2'};
 constexpr std::array<char, 8> motion_asset_signature = {'S', 'M', 'P', 'L', 'M', 'O', 'T', 'N'};
 constexpr std::uint8_t max_body_part_label = 7u;
 
@@ -69,18 +70,27 @@ bool read_signature(std::ifstream& input, const std::array<char, N>& expected_si
            signature == expected_signature;
 }
 
-bool read_garment_asset_header_values(std::ifstream& input, GarmentAssetCounts& counts, GarmentMesh& garment_mesh)
+bool read_garment_asset_header_values(std::ifstream& input,
+                                      GarmentAssetCounts& counts,
+                                      GarmentMesh& garment_mesh,
+                                      bool has_garment_category)
 {
-    return read_binary_value(input, counts.vertex_count) &&
-           read_binary_value(input, counts.triangle_count) &&
-           read_binary_value(input, counts.adjacency_offset_count) &&
-           read_binary_value(input, counts.adjacency_face_index_count) &&
-           read_binary_value(input, counts.stretch_edge_count) &&
-           read_binary_value(input, counts.stretch_range_count) &&
-           read_binary_value(input, counts.bending_edge_count) &&
-           read_binary_value(input, counts.bending_range_count) &&
-           read_binary_value(input, counts.attachment_vertex_count) &&
-           read_binary_value(input, garment_mesh.bounds_center.x) &&
+    const bool counts_read =
+        read_binary_value(input, counts.vertex_count) &&
+        read_binary_value(input, counts.triangle_count) &&
+        read_binary_value(input, counts.adjacency_offset_count) &&
+        read_binary_value(input, counts.adjacency_face_index_count) &&
+        read_binary_value(input, counts.stretch_edge_count) &&
+        read_binary_value(input, counts.stretch_range_count) &&
+        read_binary_value(input, counts.bending_edge_count) &&
+        read_binary_value(input, counts.bending_range_count) &&
+        read_binary_value(input, counts.attachment_vertex_count);
+    if (!counts_read ||
+        (has_garment_category && !read_binary_value(input, garment_mesh.garment_category))) {
+        return false;
+    }
+
+    return read_binary_value(input, garment_mesh.bounds_center.x) &&
            read_binary_value(input, garment_mesh.bounds_center.y) &&
            read_binary_value(input, garment_mesh.bounds_center.z) &&
            read_binary_value(input, garment_mesh.bounds_radius) &&
@@ -91,9 +101,16 @@ bool read_garment_asset_header_values(std::ifstream& input, GarmentAssetCounts& 
 
 bool read_garment_asset_header(std::ifstream& input, const std::filesystem::path& path, GarmentAssetCounts& counts, GarmentMesh& mesh)
 {
-    if (!input ||
-        !read_signature(input, garment_asset_signature) ||
-        !read_garment_asset_header_values(input, counts, mesh) ||
+    std::array<char, garment_asset_signature_v2.size()> signature{};
+    if (!input.read(signature.data(), static_cast<std::streamsize>(signature.size()))) {
+        std::cerr << "Failed to read garment asset signature: " << path << '\n';
+        return false;
+    }
+
+    const bool is_v1 = signature == garment_asset_signature_v1;
+    const bool is_v2 = signature == garment_asset_signature_v2;
+    if ((!is_v1 && !is_v2) ||
+        !read_garment_asset_header_values(input, counts, mesh, is_v2) ||
         counts.adjacency_offset_count != counts.vertex_count + 1u) {
         std::cerr << "Failed to read garment asset header: " << path << '\n';
         return false;
@@ -264,6 +281,7 @@ bool write_header_values(std::ofstream& output,
            write_binary_value(output, counts.bending_edge_count) &&
            write_binary_value(output, counts.bending_range_count) &&
            write_binary_value(output, counts.attachment_vertex_count) &&
+           write_binary_value(output, garment_mesh.garment_category) &&
            write_binary_value(output, garment_mesh.bounds_center.x) &&
            write_binary_value(output, garment_mesh.bounds_center.y) &&
            write_binary_value(output, garment_mesh.bounds_center.z) &&
@@ -275,7 +293,8 @@ bool write_header_values(std::ofstream& output,
 
 bool write_signature(std::ofstream& output)
 {
-    output.write(garment_asset_signature.data(), static_cast<std::streamsize>(garment_asset_signature.size()));
+    output.write(garment_asset_signature_v2.data(),
+                 static_cast<std::streamsize>(garment_asset_signature_v2.size()));
     return static_cast<bool>(output);
 }
 
@@ -338,7 +357,12 @@ bool is_valid_distance_constraints(const GarmentDistanceConstraints& constraints
 
 bool is_valid_garment_mesh(const GarmentMesh& garment_mesh)
 {
-    if (garment_mesh.vertices.empty() ||
+    const bool has_valid_garment_category =
+        garment_mesh.garment_category == GarmentCategory::Top ||
+        garment_mesh.garment_category == GarmentCategory::Bottom ||
+        garment_mesh.garment_category == GarmentCategory::FullBody;
+    if (!has_valid_garment_category ||
+        garment_mesh.vertices.empty() ||
         garment_mesh.vertices.size() % vertex_position_components != 0u ||
         !is_finite_values(garment_mesh.vertices)) {
         return false;

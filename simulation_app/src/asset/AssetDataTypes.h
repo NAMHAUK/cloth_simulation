@@ -60,7 +60,14 @@ struct GarmentDistanceConstraints final {
     }
 };
 
+enum class GarmentCategory : std::uint32_t {
+    Top,
+    Bottom,
+    FullBody,
+};
+
 struct GarmentMesh {
+    GarmentCategory garment_category = GarmentCategory::Top;
     std::vector<float> vertices;
     std::vector<std::uint32_t> triangle_vertex_indices;
     VertexFaceAdjacency adjacency;

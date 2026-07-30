@@ -9,7 +9,8 @@
 namespace {
 void print_usage()
 {
-    std::cerr << "Usage: garment_converter --input <source.obj> --output <asset.garment> [--attachment-type none|waistband]\n";
+    std::cerr << "Usage: garment_converter --input <source.obj> --output <asset.garment> "
+                 "[--attachment-type none|waistband] --garment-category top|bottom|full-body\n";
 }
 
 std::optional<std::filesystem::path> find_argument_path(int argc, char** argv, std::string_view name)
@@ -45,6 +46,25 @@ std::optional<AttachmentType> parse_attachment_type(int argc, char** argv)
     return std::nullopt;
 }
 
+std::optional<GarmentCategory> parse_garment_category(int argc, char** argv)
+{
+    const std::optional<std::string_view> garment_category = find_argument_value(argc, argv, "--garment-category");
+    if (!garment_category) {
+        return std::nullopt;
+    }
+    if (*garment_category == "top") {
+        return GarmentCategory::Top;
+    }
+    if (*garment_category == "bottom") {
+        return GarmentCategory::Bottom;
+    }
+    if (*garment_category == "full-body") {
+        return GarmentCategory::FullBody;
+    }
+
+    return std::nullopt;
+}
+
 bool has_help_argument(int argc, char** argv)
 {
     for (int index = 1; index < argc; ++index) {
@@ -67,7 +87,8 @@ int main(int argc, char** argv)
     const std::optional<std::filesystem::path> input_path = find_argument_path(argc, argv, "--input");
     const std::optional<std::filesystem::path> output_path = find_argument_path(argc, argv, "--output");
     const std::optional<AttachmentType> attachment_type = parse_attachment_type(argc, argv);
-    if (!input_path || !output_path || !attachment_type) {
+    const std::optional<GarmentCategory> garment_category = parse_garment_category(argc, argv);
+    if (!input_path || !output_path || !attachment_type || !garment_category) {
         print_usage();
         return 1;
     }
@@ -77,6 +98,7 @@ int main(int argc, char** argv)
         std::cerr << "Garment OBJ conversion failed.\n";
         return 1;
     }
+    garment_mesh.garment_category = *garment_category;
 
     if (!write_garment_asset(*output_path, garment_mesh)) {
         std::cerr << "Garment asset write failed.\n";
