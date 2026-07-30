@@ -12,6 +12,7 @@ struct ClothBufferSet final {
     GLuint velocity = 0;
     GLuint collision_pushout = 0;
     GLuint cloth_cloth_pushout = 0;
+    GLuint contact_motion_delta = 0;
     GLuint body_triangle_id = 0;
     GLuint index = 0;
     GLuint adjacent_triangle_offsets = 0;
@@ -51,6 +52,11 @@ struct ClothMotionBufferView final {
 struct ClothCollisionPushoutBufferView final {
     GLuint collision_pushout_buffer = 0;
     GLuint cloth_cloth_pushout_buffer = 0;
+    std::uint32_t vertex_count = 0;
+};
+
+struct ClothContactMotionBufferView final {
+    GLuint contact_motion_delta_buffer = 0;
     std::uint32_t vertex_count = 0;
 };
 

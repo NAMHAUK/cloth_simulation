@@ -19,6 +19,7 @@ struct CollisionCandidateBufferView final {
     CollisionCandidateBuffer cloth_cloth_vertex_face;
     GLuint normal_correction_sum_buffer = 0;
     GLuint friction_correction_sum_buffer = 0;
+    GLuint contact_motion_delta_sum_buffer = 0;
     std::uint32_t vertex_capacity = 0;
 
     void clear_cloth_body_candidate_counts(QOpenGLFunctions_4_5_Core& gl) const;

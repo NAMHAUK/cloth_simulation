@@ -59,5 +59,6 @@ private:
     ClothClothCollisionSolver cloth_cloth_collision_solver_;
     GarmentPrefitSolver garment_prefit_solver_;
     float substep_dt_ = 0.0f;
+    float inverse_substep_dt_ = 0.0f;
     bool initialized_ = false;
 };

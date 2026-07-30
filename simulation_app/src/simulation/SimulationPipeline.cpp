@@ -131,6 +131,7 @@ bool SimulationPipeline::is_initialized() const
 bool SimulationPipeline::initialize(const ShaderPaths& shader_paths, QOpenGLFunctions_4_5_Core& gl)
 {
     substep_dt_ = simulation_settings::fixed_dt / static_cast<float>(simulation_settings::substep_count);
+    inverse_substep_dt_ = 1.0f / substep_dt_;
 
     const bool solvers_initialized =
         cloth_bvh_bounds_updater_.initialize(shader_paths.cloth_bvh_bounds_update_compute, gl) &&
@@ -311,8 +312,10 @@ bool SimulationPipeline::step(SceneState& scene, SceneGpuState& gpu_state, std::
                 garment.mesh.garment_category == GarmentCategory::Top ? torso_motion : pelvis_motion;
             external_force_solver_.solve(views.cloth_motion,
                                          views.cloth_collision_pushout,
+                                         views.cloth_contact_motion,
                                          *garment_range,
                                          substep_dt_,
+                                         inverse_substep_dt_,
                                          external_acceleration,
                                          simulation_settings::velocity_damping,
                                          frame_motion,
@@ -341,7 +344,10 @@ bool SimulationPipeline::step(SceneState& scene, SceneGpuState& gpu_state, std::
             if (has_multiple_garments) {
                 cloth_cloth_collision_solver_.solve(views, gl);
             }
-            ground_collision_solver_.solve(views.cloth_motion, views.cloth_collision_pushout, gl);
+            ground_collision_solver_.solve(views.cloth_motion,
+                                           views.cloth_collision_pushout,
+                                           views.cloth_contact_motion,
+                                           gl);
         }
     }
 
@@ -363,6 +369,7 @@ void SimulationPipeline::release(QOpenGLFunctions_4_5_Core& gl)
     external_force_solver_.release(gl);
     cloth_bvh_bounds_updater_.release(gl);
     substep_dt_ = 0.0f;
+    inverse_substep_dt_ = 0.0f;
     initialized_ = false;
 }
 
@@ -371,6 +378,7 @@ SimulationGpuViews SimulationPipeline::collect_gpu_views(const SceneGpuState& gp
     SimulationGpuViews views;
     views.cloth_motion = gpu_state.cloth_gpu_state().motion_buffer_view();
     views.cloth_collision_pushout = gpu_state.cloth_gpu_state().collision_pushout_buffer_view();
+    views.cloth_contact_motion = gpu_state.cloth_gpu_state().contact_motion_buffer_view();
     views.cloth_body_triangle_ids = gpu_state.cloth_gpu_state().body_triangle_id_buffer_view();
     views.cloth_topology = gpu_state.cloth_gpu_state().mesh_topology_resources();
     views.cloth_bvh = gpu_state.cloth_bvh_buffer_view();
@@ -414,5 +422,7 @@ bool SimulationPipeline::can_solve_constraint_iteration(const SimulationGpuViews
             cloth_body_collision_solver_.can_solve(views) &&
             cloth_cloth_collision_detector_.can_detect(views) &&
             cloth_cloth_collision_solver_.can_solve(views) &&
-            ground_collision_solver_.can_solve(views.cloth_motion, views.cloth_collision_pushout);
+            ground_collision_solver_.can_solve(views.cloth_motion,
+                                               views.cloth_collision_pushout,
+                                               views.cloth_contact_motion);
 }

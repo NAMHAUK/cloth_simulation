@@ -9,6 +9,7 @@
 
 struct ClothMotionBufferView;
 struct ClothCollisionPushoutBufferView;
+struct ClothContactMotionBufferView;
 struct GarmentBufferRanges;
 
 struct ReferenceFrameMotion final {
@@ -31,8 +32,10 @@ public:
     bool initialize(const std::filesystem::path& shader_path, QOpenGLFunctions_4_5_Core& gl);
     void solve(const ClothMotionBufferView& motion_view,
                const ClothCollisionPushoutBufferView& collision_pushout_view,
+               const ClothContactMotionBufferView& contact_motion_view,
                const GarmentBufferRanges& garment_range,
                float dt,
+               float inverse_dt,
                const glm::vec3& external_acceleration,
                float velocity_damping,
                const ReferenceFrameMotion& frame_motion,
@@ -45,6 +48,7 @@ private:
     GLint vertex_offset_location_ = -1;
     GLint vertex_count_location_ = -1;
     GLint delta_time_location_ = -1;
+    GLint inverse_delta_time_location_ = -1;
     GLint external_acceleration_location_ = -1;
     GLint velocity_damping_location_ = -1;
     GLint frame_start_position_location_ = -1;

@@ -113,6 +113,7 @@ bool CollisionCandidateBuffers::ensure_capacity(std::uint32_t vertex_count,
         has_sufficient_cloth_cloth_buffer &&
         buffers_.normal_correction_sum_buffer != 0 &&
         buffers_.friction_correction_sum_buffer != 0 &&
+        buffers_.contact_motion_delta_sum_buffer != 0 &&
         buffers_.vertex_capacity >= vertex_count &&
         buffers_.cloth_vertex_body_face.capacity >= cloth_vertex_body_face_capacity &&
         buffers_.cloth_edge_body_edge.capacity >= cloth_edge_body_edge_capacity &&
@@ -143,6 +144,7 @@ bool CollisionCandidateBuffers::ensure_capacity(std::uint32_t vertex_count,
     }
     create_buffer(buffers_.normal_correction_sum_buffer, static_cast<GLsizeiptr>(vertex_count * sizeof(std::int32_t) * 4u), gl);
     create_buffer(buffers_.friction_correction_sum_buffer, static_cast<GLsizeiptr>(vertex_count * sizeof(std::int32_t) * 4u), gl);
+    create_buffer(buffers_.contact_motion_delta_sum_buffer, static_cast<GLsizeiptr>(vertex_count * sizeof(std::int32_t) * 4u), gl);
 
     const bool initialized =
         has_collision_candidate_buffer(buffers_.cloth_vertex_body_face) &&
@@ -151,7 +153,8 @@ bool CollisionCandidateBuffers::ensure_capacity(std::uint32_t vertex_count,
         (cloth_cloth_vertex_face_capacity == 0 ||
          has_collision_candidate_buffer(buffers_.cloth_cloth_vertex_face)) &&
         buffers_.normal_correction_sum_buffer != 0 &&
-        buffers_.friction_correction_sum_buffer != 0;
+        buffers_.friction_correction_sum_buffer != 0 &&
+        buffers_.contact_motion_delta_sum_buffer != 0;
     if (!initialized) {
         release(gl);
     }
@@ -197,6 +200,7 @@ void CollisionCandidateBufferView::clear_correction_sums(QOpenGLFunctions_4_5_Co
 {
     clear_normal_corrections(normal_correction_sum_buffer, gl);
     clear_normal_corrections(friction_correction_sum_buffer, gl);
+    clear_normal_corrections(contact_motion_delta_sum_buffer, gl);
     gl.glMemoryBarrier(GL_SHADER_STORAGE_BARRIER_BIT | GL_BUFFER_UPDATE_BARRIER_BIT);
 }
 
@@ -219,5 +223,6 @@ void CollisionCandidateBuffers::release(QOpenGLFunctions_4_5_Core& gl)
     delete_collision_candidate_buffer(buffers_.cloth_cloth_vertex_face, gl);
     gl.glDeleteBuffers(1, &buffers_.normal_correction_sum_buffer);
     gl.glDeleteBuffers(1, &buffers_.friction_correction_sum_buffer);
+    gl.glDeleteBuffers(1, &buffers_.contact_motion_delta_sum_buffer);
     buffers_ = {};
 }

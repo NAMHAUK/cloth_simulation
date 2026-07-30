@@ -22,9 +22,14 @@ layout(std430, binding = 4) buffer ClothClothPushouts {
     vec4 cloth_cloth_pushouts[];
 };
 
+layout(std430, binding = 5) buffer ContactMotionDeltas {
+    vec4 contact_motion_deltas[];
+};
+
 uniform uint uVertexOffset;
 uniform uint uVertexCount;
 uniform float uDeltaTime;
+uniform float uInverseDeltaTime;
 uniform vec3 uExternalAcceleration;
 uniform float uVelocityDamping;
 uniform vec3 uFrameStartPosition;
@@ -60,13 +65,7 @@ void main()
     // collsion solver pushout 제외
     vec3 collision_pushout = collision_pushouts[vertex_index].xyz;
     vec3 cloth_cloth_pushout = cloth_cloth_pushouts[vertex_index].xyz;
-    vec3 solved_velocity = (current - previous - collision_pushout - cloth_cloth_pushout) / uDeltaTime;
-
-    // remove inward velocity along the pushout direction
-    float pushout_length_sq = dot(collision_pushout, collision_pushout);
-    if (pushout_length_sq > pushout_normal_epsilon) {
-        remove_inward_collision_velocity(solved_velocity, collision_pushout * inversesqrt(pushout_length_sq));
-    }
+    vec3 solved_velocity = (current - previous - collision_pushout - cloth_cloth_pushout) * uInverseDeltaTime;
 
     float cloth_cloth_pushout_length_sq = dot(cloth_cloth_pushout, cloth_cloth_pushout);
     if (cloth_cloth_pushout_length_sq > pushout_normal_epsilon) {
@@ -75,8 +74,11 @@ void main()
             cloth_cloth_pushout * inversesqrt(cloth_cloth_pushout_length_sq));
     }
 
+    solved_velocity += contact_motion_deltas[vertex_index].xyz * uInverseDeltaTime;
+
     collision_pushouts[vertex_index] = vec4(0.0);
     cloth_cloth_pushouts[vertex_index] = vec4(0.0);
+    contact_motion_deltas[vertex_index] = vec4(0.0);
      
     // update pos, vel
     vec3 frame_offset = current - uFrameStartPosition;

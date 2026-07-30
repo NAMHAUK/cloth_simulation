@@ -18,6 +18,14 @@ layout(std430, binding = 3) readonly buffer FrictionCorrectionSums {
     ivec4 friction_correction_sums[];
 };
 
+layout(std430, binding = 4) readonly buffer ContactMotionDeltaSums {
+    ivec4 contact_motion_delta_sums[];
+};
+
+layout(std430, binding = 5) buffer ContactMotionDeltas {
+    vec4 contact_motion_deltas[];
+};
+
 uniform uint uVertexCount;
 uniform float uMaxCorrectionLength;
 uniform float uStaticFriction;
@@ -38,15 +46,20 @@ void main()
         return;
     }
 
-    ivec4 accumulated = normal_correction_sums[vertex_index];
-    if (accumulated.w <= 0) {
-        return;
+    ivec4 normal_accumulated = normal_correction_sums[vertex_index];
+    if (normal_accumulated.w > 0) {
+        float inverse_accumulation_scale = 1.0 / (correction_fixed_point_scale * float(normal_accumulated.w));
+        vec3 final_normal_correction = clamp_correction(vec3(normal_accumulated.xyz) * inverse_accumulation_scale);
+        vec3 final_friction_correction = clamp_friction_correction(
+            final_normal_correction,
+            vec3(friction_correction_sums[vertex_index].xyz) * inverse_accumulation_scale);
+
+        apply_position_correction(vertex_index, final_normal_correction, final_friction_correction);
     }
 
-    float inverse_accumulation_scale = 1.0 / (correction_fixed_point_scale * float(accumulated.w));
-    vec3 final_normal_correction = clamp_correction(vec3(accumulated.xyz) * inverse_accumulation_scale);
-    vec3 final_friction_correction = clamp_friction_correction(final_normal_correction,
-                                                               vec3(friction_correction_sums[vertex_index].xyz) * inverse_accumulation_scale);
-
-    apply_position_correction(vertex_index, final_normal_correction, final_friction_correction);
+    ivec4 contact_motion_accumulated = contact_motion_delta_sums[vertex_index];
+    if (contact_motion_accumulated.w > 0) {
+        float inverse_contact_count = 1.0 / (correction_fixed_point_scale * float(contact_motion_accumulated.w));
+        contact_motion_deltas[vertex_index].xyz += vec3(contact_motion_accumulated.xyz) * inverse_contact_count;
+    }
 }
