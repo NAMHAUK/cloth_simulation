@@ -24,6 +24,9 @@ public:
                                                         const glm::vec3& position_offset,
                                                         float scale)>;
     using ColorChangedCallback = std::function<void(std::size_t group_index, const glm::vec3& color)>;
+    using ColorSelectedCallback = std::function<void(const glm::vec3& color)>;
+    using ColorEditCallback = std::function<void(const glm::vec3& color,
+                                                 ColorSelectedCallback color_selected_callback)>;
     using AddUpperCallback = std::function<void()>;
     using RemoveUpperCallback = std::function<void()>;
     using ConfirmRunCallback = std::function<void()>;
@@ -33,6 +36,7 @@ public:
 
     void set_placement_changed_callback(PlacementChangedCallback callback);
     void set_color_changed_callback(ColorChangedCallback callback);
+    void set_color_edit_callback(ColorEditCallback callback);
     void set_add_upper_callback(AddUpperCallback callback);
     void set_remove_upper_callback(RemoveUpperCallback callback);
     void set_confirm_run_callback(ConfirmRunCallback callback);
@@ -69,7 +73,7 @@ private:
     void set_active_group(std::size_t group_index);
     void set_position_from_slider(std::size_t group_index, int axis_index, int slider_value);
     void set_scale_from_slider(std::size_t group_index, int slider_value);
-    void choose_color(std::size_t group_index);
+    void choose_group_color(std::size_t group_index);
     void notify_placement_changed(std::size_t group_index);
     void update_color_button(std::size_t group_index);
     void update_value_labels(std::size_t group_index);
@@ -81,6 +85,7 @@ private:
     QPushButton* confirm_run_button_ = nullptr;
     PlacementChangedCallback placement_changed_callback_;
     ColorChangedCallback color_changed_callback_;
+    ColorEditCallback color_edit_callback_;
     AddUpperCallback add_upper_callback_;
     RemoveUpperCallback remove_upper_callback_;
     ConfirmRunCallback confirm_run_callback_;

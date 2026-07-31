@@ -399,12 +399,18 @@ void SimulationController::set_garment_color(std::size_t placement_index, const 
         return;
     }
 
-    const GarmentPlacementState& placement = garment_placements_[placement_index];
-    if (placement.garment_id == 0u || !scene_.update_garment_color(placement.garment_id, color)) {
+    set_garment_color_by_id(garment_placements_[placement_index].garment_id, color);
+}
+
+void SimulationController::set_garment_color_by_id(std::uint32_t garment_id, const glm::vec3& color)
+{
+    if (garment_id == 0u || !scene_.update_garment_color(garment_id, color)) {
         return;
     }
 
-    viewport_callbacks_.request_update();
+    if (!simulation_running_) {
+        viewport_callbacks_.request_update();
+    }
 }
 
 bool SimulationController::confirm_garment_placement()
@@ -521,6 +527,13 @@ bool SimulationController::can_start_garment_placement() const
             return placement.garment_id != 0u;
         });
     return has_active_placement || !scene_.has_multiple_garments();
+}
+
+std::uint32_t SimulationController::garment_placement_id(std::size_t placement_index) const
+{
+    return placement_index < garment_placements_.size()
+        ? garment_placements_[placement_index].garment_id
+        : 0u;
 }
 
 glm::vec3 SimulationController::garment_placement_color(std::size_t placement_index) const
