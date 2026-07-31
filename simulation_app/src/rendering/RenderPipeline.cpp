@@ -13,8 +13,10 @@ constexpr GLuint character_position_binding = 0;
 constexpr GLuint vertex_normal_binding = 1;
 
 const glm::vec3 light_direction_world = glm::normalize(glm::vec3{-0.4f, 0.8f, 0.3f});
+const glm::vec3 fill_light_direction_world = glm::normalize(glm::vec3{0.3f, 0.6f, -0.8f});
 constexpr float ambient_strength = 0.35f;
 constexpr float diffuse_strength = 0.65f;
+constexpr float fill_diffuse_strength = 0.35f;
 }
 
 bool RenderPipeline::is_initialized() const
@@ -59,7 +61,14 @@ void RenderPipeline::draw(const SceneState& scene,
     // shader setting
     viewer_shader_.bind(gl);
     viewer_shader_.set_mvp(mvp, gl);
-    viewer_shader_.set_lighting(light_direction_world, ambient_strength, diffuse_strength, gl);
+    viewer_shader_.set_lighting(
+        light_direction_world,
+        fill_light_direction_world,
+        ambient_strength,
+        diffuse_strength,
+        fill_diffuse_strength,
+        gl
+    );
     viewer_shader_.set_attribute_position_mode(gl);
     viewer_shader_.set_opacity(1.0f, gl);
 

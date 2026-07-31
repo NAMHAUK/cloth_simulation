@@ -27,8 +27,10 @@ public:
     void set_vertex_color_mode(QOpenGLFunctions_4_5_Core& gl) const;
     void set_opacity(float opacity, QOpenGLFunctions_4_5_Core& gl) const;
     void set_lighting(const glm::vec3& light_direction_world,
+                      const glm::vec3& fill_light_direction_world,
                       float ambient_strength,
                       float diffuse_strength,
+                      float fill_diffuse_strength,
                       QOpenGLFunctions_4_5_Core& gl) const;
     void set_normal_lighting_enabled(bool enabled, QOpenGLFunctions_4_5_Core& gl) const;
     void release(QOpenGLFunctions_4_5_Core& gl);
@@ -44,6 +46,8 @@ private:
     GLint position_buffer_mode_location_ = -1;
     GLint normal_lighting_mode_location_ = -1;
     GLint light_direction_location_ = -1;
+    GLint fill_light_direction_location_ = -1;
     GLint ambient_strength_location_ = -1;
     GLint diffuse_strength_location_ = -1;
+    GLint fill_diffuse_strength_location_ = -1;
 };
