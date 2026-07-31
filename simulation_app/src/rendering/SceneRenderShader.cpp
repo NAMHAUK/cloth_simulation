@@ -60,8 +60,10 @@ bool SceneRenderShader::load(const std::filesystem::path& vertex_shader_path,
     position_buffer_mode_location_ = gl.glGetUniformLocation(program_, "uUsePositionBuffer");
     normal_lighting_mode_location_ = gl.glGetUniformLocation(program_, "uUseNormalLighting");
     light_direction_location_ = gl.glGetUniformLocation(program_, "uLightDirectionWorld");
+    fill_light_direction_location_ = gl.glGetUniformLocation(program_, "uFillLightDirectionWorld");
     ambient_strength_location_ = gl.glGetUniformLocation(program_, "uAmbientStrength");
     diffuse_strength_location_ = gl.glGetUniformLocation(program_, "uDiffuseStrength");
+    fill_diffuse_strength_location_ = gl.glGetUniformLocation(program_, "uFillDiffuseStrength");
     return true;
 }
 
@@ -129,8 +131,10 @@ void SceneRenderShader::set_opacity(float opacity, QOpenGLFunctions_4_5_Core& gl
 }
 
 void SceneRenderShader::set_lighting(const glm::vec3& light_direction_world,
+                                     const glm::vec3& fill_light_direction_world,
                                      float ambient_strength,
                                      float diffuse_strength,
+                                     float fill_diffuse_strength,
                                      QOpenGLFunctions_4_5_Core& gl) const
 {
     if (!is_initialized()) {
@@ -145,11 +149,23 @@ void SceneRenderShader::set_lighting(const glm::vec3& light_direction_world,
             light_direction_world.z
         );
     }
+    if (fill_light_direction_location_ >= 0) {
+        gl.glProgramUniform3f(
+            program_,
+            fill_light_direction_location_,
+            fill_light_direction_world.x,
+            fill_light_direction_world.y,
+            fill_light_direction_world.z
+        );
+    }
     if (ambient_strength_location_ >= 0) {
         gl.glProgramUniform1f(program_, ambient_strength_location_, ambient_strength);
     }
     if (diffuse_strength_location_ >= 0) {
         gl.glProgramUniform1f(program_, diffuse_strength_location_, diffuse_strength);
+    }
+    if (fill_diffuse_strength_location_ >= 0) {
+        gl.glProgramUniform1f(program_, fill_diffuse_strength_location_, fill_diffuse_strength);
     }
 }
 
@@ -174,8 +190,10 @@ void SceneRenderShader::release(QOpenGLFunctions_4_5_Core& gl)
     position_buffer_mode_location_ = -1;
     normal_lighting_mode_location_ = -1;
     light_direction_location_ = -1;
+    fill_light_direction_location_ = -1;
     ambient_strength_location_ = -1;
     diffuse_strength_location_ = -1;
+    fill_diffuse_strength_location_ = -1;
 }
 
 GLuint SceneRenderShader::compile_shader(GLenum type, const char* source, QOpenGLFunctions_4_5_Core& gl)
