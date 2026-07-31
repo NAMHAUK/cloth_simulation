@@ -347,7 +347,7 @@ void MainWindow::setup_browser_callbacks()
     browser_panel_->set_selected_callback(
         [this](AssetPanelMode mode, const std::filesystem::path& asset_path) {
             if (mode == AssetPanelMode::Motions) {
-                if (has_placement_session() || !simulation_controller_->has_garments()) {
+                if (has_placement_session()) {
                     QMessageBox::information(this, "Motion Load Blocked", "Load motions after confirming garment placement.");
                     return;
                 }
