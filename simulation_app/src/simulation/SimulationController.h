@@ -63,7 +63,6 @@ public:
     bool is_simulation_running() const;
     bool is_default_pose() const;
     bool has_base_positions() const;
-    bool has_garments() const;
     std::size_t garment_count() const;
     bool can_start_garment_placement() const;
     std::uint32_t garment_placement_id(std::size_t placement_index) const;

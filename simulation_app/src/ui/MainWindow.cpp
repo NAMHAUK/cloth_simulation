@@ -347,17 +347,11 @@ void MainWindow::setup_browser_callbacks()
     browser_panel_->set_selected_callback(
         [this](AssetPanelMode mode, const std::filesystem::path& asset_path) {
             if (mode == AssetPanelMode::Motions) {
-                if (has_placement_session()) {
-                    QMessageBox::information(this, "Motion Load Blocked", "Load motions after confirming garment placement.");
-                    return;
-                }
-
                 asset_loader_->load_character_mesh(asset_path);
                 return;
             } else {
                 if (simulation_controller_->is_simulation_running() || !simulation_controller_->is_default_pose()) {
-                    QMessageBox::information(this, "Garment Load Blocked", "Load garments only while the simulation is stopped and the character is in the default pose.");
-                    return;
+                    simulation_controller_->return_to_default_pose();
                 }
                 request_garment_load(asset_path);
             }
@@ -541,7 +535,7 @@ void MainWindow::request_garment_load(const std::filesystem::path& asset_path)
             ? GarmentPlacementPanel::lower_group_index
             : GarmentPlacementPanel::upper_group_index;
     garment_request_ids_[group_index] = asset_loader_->load_garment_mesh(asset_path);
-    update_placement_actions();
+    update_simulation_controls();
 }
 
 std::optional<std::size_t> MainWindow::take_garment_request_group(std::uint64_t request_id)
@@ -920,6 +914,7 @@ void MainWindow::update_simulation_controls()
     run_button_->setEnabled(simulation_running || !placement_session_active);
     stop_button_->setEnabled(simulation_controller_->has_base_positions() && !placement_session_active);
     reset_button_->setEnabled(true);
+    browser_panel_->set_motion_selection_enabled(!placement_session_active);
     browser_panel_->set_garment_selection_enabled(simulation_controller_->can_start_garment_placement());
     garment_placement_panel_->setVisible(placement_panel_visible);
     garment_placement_panel_->setEnabled(placement_available);

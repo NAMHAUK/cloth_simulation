@@ -31,6 +31,7 @@ public:
     void set_garment_paths(std::vector<std::filesystem::path> asset_paths);
     void set_selected_callback(std::function<void(AssetPanelMode, const std::filesystem::path&)> callback);
     void set_motion_conversion_callback(std::function<void(const std::filesystem::path&)> callback);
+    void set_motion_selection_enabled(bool enabled);
     void set_garment_selection_enabled(bool enabled);
 
     void set_conversion_active(AssetPanelMode mode, bool active);
