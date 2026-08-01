@@ -22,6 +22,16 @@ SimulationController::~SimulationController()
     release_gpu();
 }
 
+// Initialization //
+bool SimulationController::initialize(const ShaderPaths& shader_paths,
+                                      CharacterMesh character_mesh,
+                                      const std::vector<std::uint8_t>& triangle_part_labels,
+                                      QOpenGLFunctions_4_5_Core& gl)
+{
+    return initialize_gpu(shader_paths, gl) &&
+           load_default_character(std::move(character_mesh), triangle_part_labels, gl);
+}
+
 bool SimulationController::initialize_gpu(const ShaderPaths& shader_paths, QOpenGLFunctions_4_5_Core& gl)
 {
     assert(!is_gpu_initialized());
@@ -84,9 +94,9 @@ void SimulationController::tick_frame()
 
 // Object //
 
-void SimulationController::load_default_character_mesh(CharacterMesh mesh,
-                                                       const std::vector<std::uint8_t>& triangle_part_labels,
-                                                       QOpenGLFunctions_4_5_Core& gl)
+bool SimulationController::load_default_character(CharacterMesh mesh,
+                                                  const std::vector<std::uint8_t>& triangle_part_labels,
+                                                  QOpenGLFunctions_4_5_Core& gl)
 {
     MeshBvhBuilder bvh_builder(mesh.vertex_count,
                                mesh.triangle_vertex_indices,
@@ -96,19 +106,19 @@ void SimulationController::load_default_character_mesh(CharacterMesh mesh,
     TriangleBvhData default_body_triangle_bvh_data = bvh_builder.build_triangle_bvh();
     if (!default_body_triangle_bvh_data.is_valid(mesh.triangle_count)) {
         std::cerr << "Failed to build default body triangle BVH.\n";
-        return;
+        return false;
     }
 
     VertexBvhData default_body_vertex_bvh_data = bvh_builder.build_vertex_bvh();
     if (!default_body_vertex_bvh_data.is_valid(mesh.vertex_count)) {
         std::cerr << "Failed to build default body vertex BVH.\n";
-        return;
+        return false;
     }
 
     EdgeBvhData default_body_edge_bvh_data = bvh_builder.build_edge_bvh();
     if (!default_body_edge_bvh_data.is_valid()) {
         std::cerr << "Failed to build default body edge BVH.\n";
-        return;
+        return false;
     }
 
     scene_.set_default_body_triangle_bvh_data(std::move(default_body_triangle_bvh_data));
@@ -117,6 +127,7 @@ void SimulationController::load_default_character_mesh(CharacterMesh mesh,
     default_character_mesh_ = std::move(mesh);
     set_character_mesh_state(default_character_mesh_, gl);
     is_default_pose_ = true;
+    return true;
 }
 
 void SimulationController::set_character_mesh(CharacterMesh mesh)
@@ -318,6 +329,10 @@ void SimulationController::reset_scene_to_default()
 
 void SimulationController::return_to_default_pose()
 {
+    if (!simulation_running_ && is_default_pose_) {
+        return;
+    }
+
     if (!is_viewport_ready()) {
         std::cerr << "Cannot return to default pose before OpenGL initialization.\n";
         return;

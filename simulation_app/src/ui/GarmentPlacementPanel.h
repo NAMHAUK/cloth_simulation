@@ -23,23 +23,22 @@ public:
         std::function<void(GarmentLayer layer, const glm::vec3& position_offset, float scale)>;
     using ColorChangedCallback = std::function<void(GarmentLayer layer, const glm::vec3& color)>;
     using ColorSelectedCallback = std::function<void(const glm::vec3& color)>;
-    using ColorEditCallback =
+    using OpenColorEditorCallback =
         std::function<void(const glm::vec3& color, ColorSelectedCallback color_selected_callback)>;
-    using AddUpperCallback = std::function<void()>;
-    using RemoveUpperCallback = std::function<void()>;
-    using ConfirmRunCallback = std::function<void()>;
+    using AddPlacementCallback = std::function<void()>;
+    using RemovePlacementCallback = std::function<void()>;
+    using ConfirmCallback = std::function<void()>;
     using CancelCallback = std::function<void()>;
 
     explicit GarmentPlacementPanel(QWidget* parent = nullptr);
 
     void set_placement_changed_callback(PlacementChangedCallback callback);
     void set_color_changed_callback(ColorChangedCallback callback);
-    void set_color_edit_callback(ColorEditCallback callback);
-    void set_add_upper_callback(AddUpperCallback callback);
-    void set_remove_upper_callback(RemoveUpperCallback callback);
-    void set_confirm_run_callback(ConfirmRunCallback callback);
+    void set_open_color_editor_callback(OpenColorEditorCallback callback);
+    void set_add_placement_callback(AddPlacementCallback callback);
+    void set_remove_placement_callback(RemovePlacementCallback callback);
+    void set_confirm_callback(ConfirmCallback callback);
     void set_cancel_callback(CancelCallback callback);
-    void begin_session(GarmentLayer layer, const QString& garment_name, const glm::vec3& color);
     void set_group_garment(GarmentLayer layer, const QString& garment_name, const glm::vec3& color);
     void show_upper_placeholder();
     void remove_upper_group();
@@ -52,7 +51,7 @@ protected:
     bool eventFilter(QObject* watched, QEvent* event) override;
 
 private:
-    struct PlacementGroup final
+    struct PlacementState final
     {
         QFrame* frame = nullptr;
         QLabel* group_label = nullptr;
@@ -78,15 +77,15 @@ private:
     void update_value_labels(GarmentLayer layer);
     void reset_group(GarmentLayer layer, const glm::vec3& color = glm::vec3{1.0f});
 
-    std::array<PlacementGroup, 2> groups_{};
+    std::array<PlacementState, 2> placement_states_{};
     GarmentLayer active_layer_ = GarmentLayer::Lower;
     QPushButton* add_button_ = nullptr;
     QPushButton* confirm_run_button_ = nullptr;
     PlacementChangedCallback placement_changed_callback_;
     ColorChangedCallback color_changed_callback_;
-    ColorEditCallback color_edit_callback_;
-    AddUpperCallback add_upper_callback_;
-    RemoveUpperCallback remove_upper_callback_;
-    ConfirmRunCallback confirm_run_callback_;
+    OpenColorEditorCallback open_color_editor_callback_;
+    AddPlacementCallback add_placement_callback_;
+    RemovePlacementCallback remove_placement_callback_;
+    ConfirmCallback confirm_callback_;
     CancelCallback cancel_callback_;
 };

@@ -47,7 +47,7 @@ struct ProjectPaths
     std::filesystem::path male_smpl_model_path;
     std::filesystem::path female_smpl_model_path;
     std::filesystem::path motion_asset_dir;
-    std::filesystem::path default_character_motion_path;
+    std::filesystem::path default_character_path;
     std::filesystem::path amass_dir;
     std::filesystem::path garment_source_dir;
     std::filesystem::path garment_asset_dir;

@@ -23,7 +23,7 @@ struct GarmentMeshLoadResult
 class AssetLoader final : public QObject
 {
 public:
-    using CharacterLoadedCallback = std::function<void(const std::filesystem::path&, CharacterMesh)>;
+    using CharacterLoadedCallback = std::function<void(CharacterMesh)>;
     using CharacterLoadFailedCallback = std::function<void(const std::filesystem::path&)>;
     using GarmentLoadedCallback =
         std::function<void(GarmentRequestId, const std::filesystem::path&, GarmentMesh)>;

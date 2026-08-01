@@ -186,8 +186,8 @@ GarmentPlacementPanel::GarmentPlacementPanel(QWidget* parent) : QWidget(parent)
     add_button_->setIcon(make_plus_icon());
     add_button_->setIconSize(QSize{action_icon_size, action_icon_size});
     add_button_->setToolTip("Add upper garment");
-    groups_layout->addWidget(groups_[GarmentLayer::Lower].frame);
-    groups_layout->addWidget(groups_[GarmentLayer::Upper].frame);
+    groups_layout->addWidget(placement_states_[GarmentLayer::Lower].frame);
+    groups_layout->addWidget(placement_states_[GarmentLayer::Upper].frame);
     groups_layout->addWidget(add_button_);
     root_layout->addWidget(groups_widget);
 
@@ -200,13 +200,13 @@ GarmentPlacementPanel::GarmentPlacementPanel(QWidget* parent) : QWidget(parent)
     root_layout->addWidget(confirm_run_button_, 0, Qt::AlignHCenter);
 
     connect(add_button_, &QPushButton::clicked, this, [this]() {
-        if (add_upper_callback_) {
-            add_upper_callback_();
+        if (add_placement_callback_) {
+            add_placement_callback_();
         }
     });
     connect(confirm_run_button_, &QPushButton::clicked, this, [this]() {
-        if (confirm_run_callback_) {
-            confirm_run_callback_();
+        if (confirm_callback_) {
+            confirm_callback_();
         }
     });
     connect(cancel_button, &QPushButton::clicked, this, [this]() {
@@ -221,7 +221,7 @@ GarmentPlacementPanel::GarmentPlacementPanel(QWidget* parent) : QWidget(parent)
 
 void GarmentPlacementPanel::create_group(GarmentLayer layer, QWidget* parent)
 {
-    PlacementGroup& group = groups_[layer];
+    PlacementState& group = placement_states_[layer];
     group.frame = new QFrame(parent);
     group.frame->setObjectName("placementGroup");
 
@@ -253,8 +253,8 @@ void GarmentPlacementPanel::create_group(GarmentLayer layer, QWidget* parent)
         remove_button->setToolTip("Remove upper garment");
         header_layout->addWidget(remove_button);
         connect(remove_button, &QPushButton::clicked, this, [this]() {
-            if (remove_upper_callback_) {
-                remove_upper_callback_();
+            if (remove_placement_callback_) {
+                remove_placement_callback_();
             }
         });
     }
@@ -325,14 +325,14 @@ void GarmentPlacementPanel::create_group(GarmentLayer layer, QWidget* parent)
 void GarmentPlacementPanel::notify_placement_changed(GarmentLayer layer)
 {
     if (placement_changed_callback_) {
-        const PlacementGroup& group = groups_[layer];
+        const PlacementState& group = placement_states_[layer];
         placement_changed_callback_(layer, group.position_offset, group.scale);
     }
 }
 
 void GarmentPlacementPanel::update_value_labels(GarmentLayer layer)
 {
-    const PlacementGroup& group = groups_[layer];
+    const PlacementState& group = placement_states_[layer];
     for (std::size_t index = 0; index < group.position_value_labels.size(); ++index) {
         group.position_value_labels[index]->setText(
             format_float(group.position_offset[static_cast<int>(index)]));
@@ -344,7 +344,8 @@ void GarmentPlacementPanel::update_value_labels(GarmentLayer layer)
 void GarmentPlacementPanel::set_position_from_slider(GarmentLayer layer, int axis_index, int slider_value)
 {
     set_active_group(layer);
-    groups_[layer].position_offset[axis_index] = static_cast<float>(slider_value) * position_slider_factor;
+    placement_states_[layer].position_offset[axis_index] =
+        static_cast<float>(slider_value) * position_slider_factor;
     update_value_labels(layer);
     notify_placement_changed(layer);
 }
@@ -352,7 +353,7 @@ void GarmentPlacementPanel::set_position_from_slider(GarmentLayer layer, int axi
 void GarmentPlacementPanel::set_scale_from_slider(GarmentLayer layer, int slider_value)
 {
     set_active_group(layer);
-    groups_[layer].scale = static_cast<float>(slider_value) * scale_slider_factor;
+    placement_states_[layer].scale = static_cast<float>(slider_value) * scale_slider_factor;
     update_value_labels(layer);
     notify_placement_changed(layer);
 }
@@ -360,13 +361,13 @@ void GarmentPlacementPanel::set_scale_from_slider(GarmentLayer layer, int slider
 void GarmentPlacementPanel::choose_group_color(GarmentLayer layer)
 {
     set_active_group(layer);
-    PlacementGroup& group = groups_[layer];
-    if (!color_edit_callback_) {
+    PlacementState& group = placement_states_[layer];
+    if (!open_color_editor_callback_) {
         return;
     }
 
-    color_edit_callback_(group.color, [this, layer](const glm::vec3& color) {
-        PlacementGroup& active_group = groups_[layer];
+    open_color_editor_callback_(group.color, [this, layer](const glm::vec3& color) {
+        PlacementState& active_group = placement_states_[layer];
         active_group.color = color;
         update_color_button(layer);
         if (color_changed_callback_) {
@@ -377,7 +378,7 @@ void GarmentPlacementPanel::choose_group_color(GarmentLayer layer)
 
 void GarmentPlacementPanel::update_color_button(GarmentLayer layer)
 {
-    PlacementGroup& group = groups_[layer];
+    PlacementState& group = placement_states_[layer];
     const QColor button_color = QColor::fromRgbF(group.color.r, group.color.g, group.color.b);
     group.color_button->setStyleSheet(QString("QPushButton { background-color: rgb(%1, %2, %3); border: 2px "
                                               "solid #666666; border-radius: 13px; padding: 0; }"
@@ -389,7 +390,7 @@ void GarmentPlacementPanel::update_color_button(GarmentLayer layer)
 
 void GarmentPlacementPanel::reset_group(GarmentLayer layer, const glm::vec3& color)
 {
-    PlacementGroup& group = groups_[layer];
+    PlacementState& group = placement_states_[layer];
     group.position_offset = glm::vec3{0.0f};
     group.color = color;
     group.scale = 1.0f;
@@ -412,13 +413,13 @@ void GarmentPlacementPanel::reset_group(GarmentLayer layer, const glm::vec3& col
 
 void GarmentPlacementPanel::set_active_group(GarmentLayer layer)
 {
-    if (groups_[layer].frame->isHidden()) {
+    if (placement_states_[layer].frame->isHidden()) {
         return;
     }
 
     active_layer_ = layer;
-    for (std::size_t index = 0; index < groups_.size(); ++index) {
-        QFrame* frame = groups_[index].frame;
+    for (std::size_t index = 0; index < placement_states_.size(); ++index) {
+        QFrame* frame = placement_states_[index].frame;
         frame->setProperty("active", index == active_layer_);
         frame->style()->unpolish(frame);
         frame->style()->polish(frame);
@@ -429,10 +430,10 @@ void GarmentPlacementPanel::set_active_group(GarmentLayer layer)
 bool GarmentPlacementPanel::eventFilter(QObject* watched, QEvent* event)
 {
     if (event->type() == QEvent::MouseButtonPress) {
-        for (std::size_t index = 0; index < groups_.size(); ++index) {
+        for (std::size_t index = 0; index < placement_states_.size(); ++index) {
             QObject* current = watched;
             while (current != nullptr && current != this) {
-                if (current == groups_[index].frame) {
+                if (current == placement_states_[index].frame) {
                     set_active_group(static_cast<GarmentLayer>(index));
                     break;
                 }
@@ -443,32 +444,24 @@ bool GarmentPlacementPanel::eventFilter(QObject* watched, QEvent* event)
     return QWidget::eventFilter(watched, event);
 }
 
-void GarmentPlacementPanel::begin_session(GarmentLayer layer,
-                                          const QString& garment_name,
-                                          const glm::vec3& color)
-{
-    reset_placement();
-    groups_[layer].frame->setVisible(true);
-    set_group_garment(layer, garment_name, color);
-    set_active_group(layer);
-}
-
 void GarmentPlacementPanel::set_group_garment(GarmentLayer layer,
                                               const QString& garment_name,
                                               const glm::vec3& color)
 {
     reset_group(layer, color);
-    PlacementGroup& group = groups_[layer];
+    PlacementState& group = placement_states_[layer];
+    group.frame->setVisible(true);
     group.garment_name_label->setText(garment_name);
     group.garment_name_label->setVisible(true);
     group.controls->setEnabled(true);
     group.color_button->setEnabled(true);
+    set_active_group(layer);
 }
 
 void GarmentPlacementPanel::show_upper_placeholder()
 {
     reset_group(GarmentLayer::Upper);
-    groups_[GarmentLayer::Upper].frame->setVisible(true);
+    placement_states_[GarmentLayer::Upper].frame->setVisible(true);
     set_active_group(GarmentLayer::Upper);
     set_add_enabled(false);
     set_confirm_enabled(false);
@@ -477,8 +470,8 @@ void GarmentPlacementPanel::show_upper_placeholder()
 void GarmentPlacementPanel::remove_upper_group()
 {
     reset_group(GarmentLayer::Upper);
-    groups_[GarmentLayer::Upper].frame->setVisible(false);
-    if (!groups_[GarmentLayer::Lower].frame->isHidden()) {
+    placement_states_[GarmentLayer::Upper].frame->setVisible(false);
+    if (!placement_states_[GarmentLayer::Lower].frame->isHidden()) {
         set_active_group(GarmentLayer::Lower);
     }
 }
@@ -504,9 +497,9 @@ GarmentLayer GarmentPlacementPanel::active_layer() const
 
 void GarmentPlacementPanel::reset_placement()
 {
-    for (std::size_t index = 0; index < groups_.size(); ++index) {
+    for (std::size_t index = 0; index < placement_states_.size(); ++index) {
         reset_group(static_cast<GarmentLayer>(index));
-        groups_[index].frame->setVisible(false);
+        placement_states_[index].frame->setVisible(false);
     }
     active_layer_ = GarmentLayer::Lower;
     set_add_enabled(false);
@@ -524,24 +517,24 @@ void GarmentPlacementPanel::set_color_changed_callback(ColorChangedCallback call
     color_changed_callback_ = std::move(callback);
 }
 
-void GarmentPlacementPanel::set_color_edit_callback(ColorEditCallback callback)
+void GarmentPlacementPanel::set_open_color_editor_callback(OpenColorEditorCallback callback)
 {
-    color_edit_callback_ = std::move(callback);
+    open_color_editor_callback_ = std::move(callback);
 }
 
-void GarmentPlacementPanel::set_add_upper_callback(AddUpperCallback callback)
+void GarmentPlacementPanel::set_add_placement_callback(AddPlacementCallback callback)
 {
-    add_upper_callback_ = std::move(callback);
+    add_placement_callback_ = std::move(callback);
 }
 
-void GarmentPlacementPanel::set_remove_upper_callback(RemoveUpperCallback callback)
+void GarmentPlacementPanel::set_remove_placement_callback(RemovePlacementCallback callback)
 {
-    remove_upper_callback_ = std::move(callback);
+    remove_placement_callback_ = std::move(callback);
 }
 
-void GarmentPlacementPanel::set_confirm_run_callback(ConfirmRunCallback callback)
+void GarmentPlacementPanel::set_confirm_callback(ConfirmCallback callback)
 {
-    confirm_run_callback_ = std::move(callback);
+    confirm_callback_ = std::move(callback);
 }
 
 void GarmentPlacementPanel::set_cancel_callback(CancelCallback callback)

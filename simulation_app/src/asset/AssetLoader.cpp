@@ -65,7 +65,7 @@ void AssetLoader::call_character_load_callbacks()
             character_load_failed_callback_(result.source_path);
         }
     } else if (character_loaded_callback_) {
-        character_loaded_callback_(result.source_path, std::move(result.mesh));
+        character_loaded_callback_(std::move(result.mesh));
     }
 }
 
