@@ -263,6 +263,15 @@ bool SimulationPipeline::step(SceneState& scene, SceneGpuState& gpu_state, std::
         return false;
     }
 
+    if (scene.garments().empty()) {
+        const float end_frame_time = character_frame_time(
+            motion_step_index,
+            static_cast<std::int32_t>(simulation_settings::substep_count)
+        );
+        update_character_substep_frame(scene, gpu_state, end_frame_time, gl);
+        return true;
+    }
+
     const auto views = collect_gpu_views(gpu_state);
     if (!can_solve_constraint_iteration(views) || views.garment_buffer_ranges == nullptr) {
         std::cerr << "Cannot run simulation because required constraint or collision GPU resources are invalid.\n";

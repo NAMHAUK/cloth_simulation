@@ -329,8 +329,10 @@ void SimulationController::return_to_default_pose()
     }
 
     viewport_callbacks_.run_with_gl_context([this](QOpenGLFunctions_4_5_Core& gl) {
-        if (!has_base_positions_ || !gpu_state_.restore_base_positions(gl)) {
-            return;
+        if (!scene_.garments().empty()) {
+            if (!has_base_positions_ || !gpu_state_.restore_base_positions(gl)) {
+                return;
+            }
         }
 
         simulation_running_ = false;
@@ -508,11 +510,6 @@ bool SimulationController::is_default_pose() const
 bool SimulationController::has_base_positions() const
 {
     return has_base_positions_;
-}
-
-bool SimulationController::has_garments() const
-{
-    return !scene_.garments().empty();
 }
 
 std::size_t SimulationController::garment_count() const

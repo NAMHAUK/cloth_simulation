@@ -453,6 +453,12 @@ void AssetBrowserPanel::set_expansion_changed_callback(std::function<void()> cal
     expansion_changed_callback_ = std::move(callback);
 }
 
+void AssetBrowserPanel::set_motion_selection_enabled(bool enabled)
+{
+    toggle_button_->setEnabled(enabled);
+    toggle_button_->setToolTip(enabled ? "Motion" : "Confirm or cancel garment placement first.");
+}
+
 void AssetBrowserPanel::set_garment_selection_enabled(bool enabled)
 {
     if (!enabled && expanded_ && panel_mode_ == AssetPanelMode::Garments) {
