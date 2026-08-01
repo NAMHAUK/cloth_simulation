@@ -124,7 +124,6 @@ void configure_simulation_button(QPushButton* button,
                                  const char* tool_tip,
                                  const QColor& icon_color)
 {
-    button->setText("");
     button->setFixedSize(simulation_button_size, simulation_button_size);
     button->setIcon(make_simulation_control_icon(icon_type, icon_color));
     button->setIconSize(QSize{simulation_icon_size, simulation_icon_size});
@@ -214,31 +213,38 @@ MainWindow::MainWindow(const std::filesystem::path& project_root, QWidget* paren
     viewer_container_ = new QWidget(this);
     simulation_viewport_ = new SceneViewport(viewer_container_);
     simulation_controller_ = std::make_unique<SimulationController>();
+
     browser_panel_ = new AssetBrowserPanel(project_paths_.motion_asset_dir / "motion_catalog.json",
                                            project_paths_.motion_asset_dir / "subject_catalog.json",
                                            viewer_container_);
     garment_placement_panel_ = new GarmentPlacementPanel(viewer_container_);
     garment_color_panel_ = new GarmentColorPanel(viewer_container_);
     create_garment_cards();
-    run_button_ = new QPushButton(viewer_container_);
-    stop_button_ = new QPushButton(viewer_container_);
-    reset_button_ = new QPushButton(viewer_container_);
-    asset_loader_ = new AssetLoader(this);
-    motion_converter_ = new AssetConverter(this);
-    garment_converter_ = new AssetConverter(this);
 
-    configure_simulation_button(run_button_, SimulationControlIcon::Play, "Run", QColor{"#43a047"});
-    configure_simulation_button(stop_button_,
+    // simulation controls
+    play_pause_button_ = new QPushButton(viewer_container_);
+    default_pose_button_ = new QPushButton(viewer_container_);
+    reset_button_ = new QPushButton(viewer_container_);
+    configure_simulation_button(play_pause_button_, SimulationControlIcon::Play, "Run", QColor{"#43a047"});
+    configure_simulation_button(default_pose_button_,
                                 SimulationControlIcon::DefaultPose,
                                 "Default Pose",
                                 QColor{"#1e88e5"});
     configure_simulation_button(reset_button_, SimulationControlIcon::Reset, "Reset", QColor{"#e53935"});
 
+    asset_loader_ = new AssetLoader(this);
+    motion_converter_ = new AssetConverter(this);
+    garment_converter_ = new AssetConverter(this);
+
     setCentralWidget(viewer_container_);
     viewer_container_->installEventFilter(this);
 
-    setup_callbacks();
+    setup_viewport_callbacks();
+    setup_browser_callbacks();
+    setup_asset_loader_callbacks();
+    setup_asset_converter_callbacks();
 
+    // initial UI state
     refresh_motion_list();
     refresh_garment_list();
     update_simulation_controls();
@@ -247,14 +253,10 @@ MainWindow::MainWindow(const std::filesystem::path& project_root, QWidget* paren
 
 MainWindow::~MainWindow()
 {
-    if (simulation_controller_) {
-        simulation_controller_->release_gpu();
-        simulation_controller_->set_viewport_callbacks({});
-    }
-    if (simulation_viewport_) {
-        simulation_viewport_->set_initialize_callback({});
-        simulation_viewport_->set_scene_render_callback({});
-    }
+    simulation_controller_->release_gpu();
+    simulation_controller_->set_viewport_callbacks({});
+    simulation_viewport_->set_initialize_callback({});
+    simulation_viewport_->set_scene_render_callback({});
 }
 
 bool MainWindow::initialize_scene(QOpenGLFunctions_4_5_Core& gl)
@@ -278,40 +280,18 @@ bool MainWindow::initialize_scene(QOpenGLFunctions_4_5_Core& gl)
 }
 
 // callback //
-void MainWindow::setup_callbacks()
-{
-    setup_viewport_callbacks();
-    setup_browser_callbacks();
-    setup_asset_loader_callbacks();
-    setup_asset_converter_callbacks();
-}
-
 void MainWindow::setup_viewport_callbacks()
 {
     simulation_controller_->set_viewport_callbacks({
-        [this]() { return simulation_viewport_ != nullptr && simulation_viewport_->is_gl_initialized(); },
+        [this]() { return simulation_viewport_->is_gl_initialized(); },
         [this](SimulationController::GlContextTask task) {
-            if (simulation_viewport_ == nullptr) {
-                return;
-            }
-
             run_with_gl_context(*simulation_viewport_, [&] { task(simulation_viewport_->gl_functions()); });
         },
-        [this]() {
-            if (simulation_viewport_ != nullptr) {
-                simulation_viewport_->update();
-            }
-        },
+        [this]() { simulation_viewport_->update(); },
         [this](const glm::vec3& root_position) {
-            if (simulation_viewport_ != nullptr) {
-                simulation_viewport_->reset_camera_to_character_root(root_position);
-            }
+            simulation_viewport_->reset_camera_to_character_root(root_position);
         },
-        [this](const glm::vec3& root_position) {
-            if (simulation_viewport_ != nullptr) {
-                simulation_viewport_->set_camera_target(root_position);
-            }
-        },
+        [this](const glm::vec3& root_position) { simulation_viewport_->set_camera_target(root_position); },
     });
     simulation_viewport_->set_initialize_callback(
         [this](QOpenGLFunctions_4_5_Core& gl) { return initialize_scene(gl); });
@@ -389,7 +369,7 @@ void MainWindow::setup_browser_callbacks()
         update_viewer_layout();
     });
 
-    connect(run_button_, &QPushButton::clicked, this, [this]() {
+    connect(play_pause_button_, &QPushButton::clicked, this, [this]() {
         if (simulation_controller_->is_simulation_running()) {
             simulation_controller_->stop_simulation();
         } else {
@@ -398,7 +378,7 @@ void MainWindow::setup_browser_callbacks()
         update_simulation_controls();
     });
 
-    connect(stop_button_, &QPushButton::clicked, this, [this]() {
+    connect(default_pose_button_, &QPushButton::clicked, this, [this]() {
         simulation_controller_->return_to_default_pose();
         update_simulation_controls();
     });
@@ -542,18 +522,11 @@ bool MainWindow::has_placement_session() const
 
 void MainWindow::update_placement_actions()
 {
-    if (!garment_placement_panel_) {
-        return;
-    }
-
     const bool has_visible_group = has_visible_placement_group();
-    bool all_visible_groups_loaded = true;
-    for (PlacementGroupState state : placement_group_states_) {
-        if (state == PlacementGroupState::Hidden) {
-            continue;
-        }
-        all_visible_groups_loaded = all_visible_groups_loaded && state == PlacementGroupState::Loaded;
-    }
+    const bool all_visible_groups_loaded =
+        std::none_of(placement_group_states_.begin(),
+                     placement_group_states_.end(),
+                     [](PlacementGroupState state) { return state == PlacementGroupState::Empty; });
 
     garment_placement_panel_->set_confirm_enabled(
         has_visible_group && all_visible_groups_loaded && !has_pending_garment_load());
@@ -663,10 +636,6 @@ void MainWindow::update_garment_card_color(GarmentLayer layer, const glm::vec3& 
 
 void MainWindow::update_garment_cards()
 {
-    if (!garment_cards_panel_) {
-        return;
-    }
-
     bool has_garment = false;
     for (std::size_t index = 0; index < garment_cards_.size(); ++index) {
         GarmentCard& card = garment_cards_[index];
@@ -757,10 +726,6 @@ bool MainWindow::eventFilter(QObject* watched, QEvent* event)
 
 void MainWindow::update_viewer_layout()
 {
-    if (!viewer_container_ || !simulation_viewport_ || !browser_panel_ || !garment_placement_panel_) {
-        return;
-    }
-
     const QSize container_size = viewer_container_->size();
     simulation_viewport_->setGeometry(0, 0, container_size.width(), container_size.height());
 
@@ -776,9 +741,8 @@ void MainWindow::update_viewer_layout()
 
         const int target_height = container_size.height() / 2;
         const int expanded_max_height = std::min(panel_max_height, available_height);
-        const int expanded_height =
+        overlay_height =
             std::clamp(target_height, std::min(panel_min_height, expanded_max_height), expanded_max_height);
-        overlay_height = expanded_height;
     }
 
     browser_panel_->setGeometry(panel_margin, panel_margin, overlay_width, overlay_height);
@@ -788,17 +752,17 @@ void MainWindow::update_viewer_layout()
                                simulation_button_gap * (simulation_button_count - 1);
     const int controls_x = std::max(panel_margin, (container_size.width() - controls_width) / 2);
     const int controls_y = panel_margin;
-    run_button_->setGeometry(controls_x, controls_y, simulation_button_size, simulation_button_size);
-    stop_button_->setGeometry(controls_x + simulation_button_size + simulation_button_gap,
-                              controls_y,
-                              simulation_button_size,
-                              simulation_button_size);
+    play_pause_button_->setGeometry(controls_x, controls_y, simulation_button_size, simulation_button_size);
+    default_pose_button_->setGeometry(controls_x + simulation_button_size + simulation_button_gap,
+                                      controls_y,
+                                      simulation_button_size,
+                                      simulation_button_size);
     reset_button_->setGeometry(controls_x + (simulation_button_size + simulation_button_gap) * 2,
                                controls_y,
                                simulation_button_size,
                                simulation_button_size);
-    run_button_->raise();
-    stop_button_->raise();
+    play_pause_button_->raise();
+    default_pose_button_->raise();
     reset_button_->raise();
 
     const int placement_width = std::min(placement_panel_width, available_width);
@@ -837,30 +801,19 @@ void MainWindow::update_viewer_layout()
 // simulation control //
 void MainWindow::update_simulation_controls()
 {
-    if (!simulation_controller_ ||
-        !browser_panel_ ||
-        !run_button_ ||
-        !stop_button_ ||
-        !reset_button_ ||
-        !garment_placement_panel_ ||
-        !garment_color_panel_ ||
-        !garment_cards_panel_) {
-        return;
-    }
-
     const bool simulation_running = simulation_controller_->is_simulation_running();
     const bool placement_panel_visible = has_visible_placement_group();
     const bool placement_session_active = has_placement_session();
     const bool placement_available =
         placement_panel_visible && !simulation_running && simulation_controller_->is_default_pose();
 
-    run_button_->setIcon(make_simulation_control_icon(
+    play_pause_button_->setIcon(make_simulation_control_icon(
         simulation_running ? SimulationControlIcon::Pause : SimulationControlIcon::Play,
         simulation_running ? QColor{"#f4b400"} : QColor{"#43a047"}));
-    run_button_->setToolTip(simulation_running ? "Pause" : "Run");
-    run_button_->setEnabled(simulation_running || !placement_session_active);
-    stop_button_->setEnabled(simulation_controller_->has_base_positions() && !placement_session_active);
-    reset_button_->setEnabled(true);
+    play_pause_button_->setToolTip(simulation_running ? "Pause" : "Run");
+    play_pause_button_->setEnabled(simulation_running || !placement_session_active);
+    default_pose_button_->setEnabled(simulation_controller_->has_base_positions() &&
+                                     !placement_session_active);
     browser_panel_->set_motion_selection_enabled(!placement_session_active);
     browser_panel_->set_garment_selection_enabled(simulation_controller_->can_start_garment_placement());
     garment_placement_panel_->setVisible(placement_panel_visible);

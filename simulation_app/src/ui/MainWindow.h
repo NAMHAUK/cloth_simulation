@@ -60,7 +60,6 @@ private:
 
     bool initialize_scene(QOpenGLFunctions_4_5_Core& gl);
 
-    void setup_callbacks();
     void setup_viewport_callbacks();
     void setup_browser_callbacks();
     void setup_asset_loader_callbacks();
@@ -99,8 +98,8 @@ private:
     GarmentPlacementPanel* garment_placement_panel_ = nullptr;
     GarmentColorPanel* garment_color_panel_ = nullptr;
     QWidget* garment_cards_panel_ = nullptr;
-    QPushButton* run_button_ = nullptr;
-    QPushButton* stop_button_ = nullptr;
+    QPushButton* play_pause_button_ = nullptr;
+    QPushButton* default_pose_button_ = nullptr;
     QPushButton* reset_button_ = nullptr;
     SceneViewport* simulation_viewport_ = nullptr;
     std::unique_ptr<SimulationController> simulation_controller_;
