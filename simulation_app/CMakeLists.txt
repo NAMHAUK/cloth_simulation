@@ -104,6 +104,8 @@ add_executable(simulation_app
     src/ui/AssetBrowserPanel.h
     src/ui/GarmentColorPanel.cpp
     src/ui/GarmentColorPanel.h
+    src/ui/GarmentCardsPanel.cpp
+    src/ui/GarmentCardsPanel.h
     src/ui/GarmentPlacementPanel.cpp
     src/ui/GarmentPlacementPanel.h
     shaders/rendering/viewer.vert
