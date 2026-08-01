@@ -479,19 +479,6 @@ AssetBrowserPanel::AssetBrowserPanel(const ProjectPaths& project_paths, QWidget*
                              "Load Failed",
                              "Failed to load motion:\n" + QString::fromStdWString(asset_path.wstring()));
     });
-    asset_loader_->set_garment_loaded_callback(
-        [this](GarmentRequestId, const std::filesystem::path& asset_path, GarmentMesh mesh) {
-            if (garment_loaded_callback_) {
-                garment_loaded_callback_(asset_path, std::move(mesh));
-            }
-        });
-    asset_loader_->set_garment_load_failed_callback(
-        [this](GarmentRequestId, const std::filesystem::path& asset_path) {
-            QMessageBox::warning(this,
-                                 "Load Failed",
-                                 "Failed to load garment:\n" + QString::fromStdWString(asset_path.wstring()));
-        });
-
     motion_converter_->set_conversion_succeeded_callback([this]() {
         set_conversion_active(AssetPanelMode::Motions, false);
         refresh_motion_list();
@@ -519,8 +506,6 @@ AssetBrowserPanel::~AssetBrowserPanel()
 {
     asset_loader_->set_character_loaded_callback({});
     asset_loader_->set_character_load_failed_callback({});
-    asset_loader_->set_garment_loaded_callback({});
-    asset_loader_->set_garment_load_failed_callback({});
     motion_converter_->set_conversion_succeeded_callback({});
     motion_converter_->set_conversion_failed_callback({});
     garment_converter_->set_conversion_succeeded_callback({});
@@ -566,7 +551,17 @@ void AssetBrowserPanel::load_garment(const std::filesystem::path& asset_path)
         garment_load_started_callback_();
     }
 
-    asset_loader_->load_garment_mesh(asset_path);
+    GarmentMesh mesh;
+    if (!asset_io::read_garment_mesh(asset_path, mesh)) {
+        QMessageBox::warning(this,
+                             "Load Failed",
+                             "Failed to load garment:\n" + QString::fromStdWString(asset_path.wstring()));
+        return;
+    }
+
+    if (garment_loaded_callback_) {
+        garment_loaded_callback_(asset_path, std::move(mesh));
+    }
 }
 
 void AssetBrowserPanel::request_garment_conversion()
