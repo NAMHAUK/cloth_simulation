@@ -12,8 +12,8 @@ bool SceneRenderShader::is_initialized() const
 }
 
 bool SceneRenderShader::load(const std::filesystem::path& vertex_shader_path,
-                        const std::filesystem::path& fragment_shader_path,
-                        QOpenGLFunctions_4_5_Core& gl)
+                             const std::filesystem::path& fragment_shader_path,
+                             QOpenGLFunctions_4_5_Core& gl)
 {
     const auto vertex_shader_source = read_text_file(vertex_shader_path);
     const auto fragment_shader_source = read_text_file(fragment_shader_path);
@@ -141,22 +141,18 @@ void SceneRenderShader::set_lighting(const glm::vec3& light_direction_world,
         return;
     }
     if (light_direction_location_ >= 0) {
-        gl.glProgramUniform3f(
-            program_,
-            light_direction_location_,
-            light_direction_world.x,
-            light_direction_world.y,
-            light_direction_world.z
-        );
+        gl.glProgramUniform3f(program_,
+                              light_direction_location_,
+                              light_direction_world.x,
+                              light_direction_world.y,
+                              light_direction_world.z);
     }
     if (fill_light_direction_location_ >= 0) {
-        gl.glProgramUniform3f(
-            program_,
-            fill_light_direction_location_,
-            fill_light_direction_world.x,
-            fill_light_direction_world.y,
-            fill_light_direction_world.z
-        );
+        gl.glProgramUniform3f(program_,
+                              fill_light_direction_location_,
+                              fill_light_direction_world.x,
+                              fill_light_direction_world.y,
+                              fill_light_direction_world.z);
     }
     if (ambient_strength_location_ >= 0) {
         gl.glProgramUniform1f(program_, ambient_strength_location_, ambient_strength);

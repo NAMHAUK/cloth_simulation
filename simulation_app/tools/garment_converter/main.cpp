@@ -35,7 +35,8 @@ std::optional<std::string_view> find_argument_value(int argc, char** argv, std::
 
 std::optional<AttachmentType> parse_attachment_type(int argc, char** argv)
 {
-    const std::optional<std::string_view> attachment_type = find_argument_value(argc, argv, "--attachment-type");
+    const std::optional<std::string_view> attachment_type =
+        find_argument_value(argc, argv, "--attachment-type");
     if (!attachment_type || *attachment_type == "none") {
         return AttachmentType::None;
     }
@@ -48,7 +49,8 @@ std::optional<AttachmentType> parse_attachment_type(int argc, char** argv)
 
 std::optional<GarmentCategory> parse_garment_category(int argc, char** argv)
 {
-    const std::optional<std::string_view> garment_category = find_argument_value(argc, argv, "--garment-category");
+    const std::optional<std::string_view> garment_category =
+        find_argument_value(argc, argv, "--garment-category");
     if (!garment_category) {
         return std::nullopt;
     }

@@ -21,7 +21,9 @@ bool BendingConstraintSolver::is_initialized() const
     return program_ != 0;
 }
 
-bool BendingConstraintSolver::initialize(const std::filesystem::path& shader_path, float stiffness, QOpenGLFunctions_4_5_Core& gl)
+bool BendingConstraintSolver::initialize(const std::filesystem::path& shader_path,
+                                         float stiffness,
+                                         QOpenGLFunctions_4_5_Core& gl)
 {
     program_ = load_compute_program(shader_path, "Bending constraint", gl);
     if (program_ == 0) {
@@ -58,7 +60,9 @@ void BendingConstraintSolver::solve(const ClothMotionBufferView& motion_view,
     assert(can_solve(motion_view, constraint_view));
 
     gl.glUseProgram(program_);
-    gl.glBindBufferBase(GL_SHADER_STORAGE_BUFFER, current_positions_binding, motion_view.current_position_buffer);
+    gl.glBindBufferBase(GL_SHADER_STORAGE_BUFFER,
+                        current_positions_binding,
+                        motion_view.current_position_buffer);
     gl.glBindBufferBase(GL_SHADER_STORAGE_BUFFER, edge_indices_binding, constraint_view.edge_index_buffer);
     gl.glBindBufferBase(GL_SHADER_STORAGE_BUFFER, rest_lengths_binding, constraint_view.rest_length_buffer);
     gl.glProgramUniform1f(program_, stiffness_location_, std::clamp(stiffness_, 0.0f, 1.0f));

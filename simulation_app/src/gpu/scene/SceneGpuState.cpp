@@ -16,8 +16,7 @@ CharacterFrameInterpolation make_single_frame_interpolation(std::uint32_t frame_
 
 SceneGpuState::SceneGpuState()
     : character_gpu_state_updater_(character_gpu_state_, bvh_bounds_updater_, normal_updater_)
-{
-}
+{}
 
 bool SceneGpuState::is_initialized() const
 {
@@ -26,7 +25,9 @@ bool SceneGpuState::is_initialized() const
 
 bool SceneGpuState::initialize(const ShaderPaths& shader_paths, QOpenGLFunctions_4_5_Core& gl)
 {
-    if (!normal_updater_.initialize(shader_paths.triangle_normal_compute, shader_paths.vertex_normal_compute, gl)) {
+    if (!normal_updater_.initialize(shader_paths.triangle_normal_compute,
+                                    shader_paths.vertex_normal_compute,
+                                    gl)) {
         return false;
     }
     if (!bvh_bounds_updater_.initialize(shader_paths.body_bvh_bounds_update_compute, gl)) {
@@ -95,12 +96,13 @@ void SceneGpuState::set_character_mesh(const SceneState& scene, QOpenGLFunctions
                                      scene.default_body_edge_bvh_data(),
                                      gl);
     character_gpu_state_.set_current_frame(0);
-    character_gpu_state_updater_.initialize_character_pose_state(make_single_frame_interpolation(0),
-                                                                 scene.default_body_triangle_bvh_data().node_ranges_by_level,
-                                                                 scene.default_body_vertex_bvh_data().node_ranges_by_level,
-                                                                 scene.default_body_edge_bvh_data().node_ranges_by_level,
-                                                                 simulation_settings::body_collision_thickness,
-                                                                 gl);
+    character_gpu_state_updater_.initialize_character_pose_state(
+        make_single_frame_interpolation(0),
+        scene.default_body_triangle_bvh_data().node_ranges_by_level,
+        scene.default_body_vertex_bvh_data().node_ranges_by_level,
+        scene.default_body_edge_bvh_data().node_ranges_by_level,
+        simulation_settings::body_collision_thickness,
+        gl);
 }
 
 void SceneGpuState::update_character_frame_interpolation(const SceneState& scene,
@@ -111,12 +113,13 @@ void SceneGpuState::update_character_frame_interpolation(const SceneState& scene
         return;
     }
 
-    character_gpu_state_updater_.update_character_pose_state(interpolation,
-                                                             scene.default_body_triangle_bvh_data().node_ranges_by_level,
-                                                             scene.default_body_vertex_bvh_data().node_ranges_by_level,
-                                                             scene.default_body_edge_bvh_data().node_ranges_by_level,
-                                                             simulation_settings::body_collision_thickness,
-                                                             gl);
+    character_gpu_state_updater_.update_character_pose_state(
+        interpolation,
+        scene.default_body_triangle_bvh_data().node_ranges_by_level,
+        scene.default_body_vertex_bvh_data().node_ranges_by_level,
+        scene.default_body_edge_bvh_data().node_ranges_by_level,
+        simulation_settings::body_collision_thickness,
+        gl);
 }
 
 // Garments //
@@ -150,19 +153,21 @@ bool SceneGpuState::update_garment_meshes(const SceneState& scene,
     }
     if (cloth_gpu_state_.is_initialized()) {
         if (scene.garments().size() > std::numeric_limits<std::uint32_t>::max()) {
-            std::cerr << "Cannot prepare collision candidate buffers because the garment count exceeds the supported range.\n";
+            std::cerr << "Cannot prepare collision candidate buffers because the garment count exceeds the "
+                         "supported range.\n";
             collision_candidate_buffers_.release(gl);
             return false;
         }
 
         const ClothMotionBufferView motion_view = cloth_gpu_state_.motion_buffer_view();
         const ClothMeshTopologyResources topology = cloth_gpu_state_.mesh_topology_resources();
-        const DistanceConstraintBufferView stretch_constraints = cloth_gpu_state_.stretch_constraint_buffer_view();
+        const DistanceConstraintBufferView stretch_constraints =
+            cloth_gpu_state_.stretch_constraint_buffer_view();
         if (!collision_candidate_buffers_.ensure_capacity(motion_view.vertex_count,
-                                                     topology.triangle_count,
-                                                     stretch_constraints.constraint_count,
-                                                     static_cast<std::uint32_t>(scene.garments().size()),
-                                                     gl)) {
+                                                          topology.triangle_count,
+                                                          stretch_constraints.constraint_count,
+                                                          static_cast<std::uint32_t>(scene.garments().size()),
+                                                          gl)) {
             std::cerr << "Failed to prepare collision candidate buffers.\n";
             return false;
         }
@@ -210,10 +215,12 @@ bool SceneGpuState::build_garment_attachment_targets(SceneState& scene,
     }
 
     const ClothMotionBufferView motion_view = cloth_gpu_state_.motion_buffer_view();
-    const AttachmentConstraintBufferView attachment_view = cloth_gpu_state_.attachment_constraint_buffer_view();
-    const TriangleGeometryResources body_triangle_geometry = character_gpu_state_.character_triangle_geometry_resources();
+    const AttachmentConstraintBufferView attachment_view =
+        cloth_gpu_state_.attachment_constraint_buffer_view();
+    const TriangleGeometryResources body_triangle_geometry =
+        character_gpu_state_.character_triangle_geometry_resources();
     const TriangleBvhResources body_triangle_bvh = character_gpu_state_.body_triangle_bvh_resources();
-    
+
     if (!attachment_target_builder_.build(motion_view,
                                           attachment_view,
                                           target_range,

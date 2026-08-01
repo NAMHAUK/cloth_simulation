@@ -33,7 +33,7 @@ constexpr qreal color_selector_radius = 6.0;
 class HueSlider final : public QSlider
 {
 public:
-    explicit HueSlider(QWidget* parent): QSlider(Qt::Vertical, parent) {}
+    explicit HueSlider(QWidget* parent) : QSlider(Qt::Vertical, parent) {}
 
 protected:
     void mousePressEvent(QMouseEvent* event) override
@@ -46,8 +46,7 @@ protected:
 
     void mouseMoveEvent(QMouseEvent* event) override
     {
-        if (!mouse_update_timer_.isValid() ||
-            mouse_update_timer_.elapsed() >= color_update_interval_ms) {
+        if (!mouse_update_timer_.isValid() || mouse_update_timer_.elapsed() >= color_update_interval_ms) {
             update_value(event->position().y());
             mouse_update_timer_.restart();
         }
@@ -78,7 +77,7 @@ class ColorSlider final : public QWidget
 public:
     using ColorChangedCallback = std::function<void(const QColor& color)>;
 
-    explicit ColorSlider(QWidget* parent): QWidget(parent) {}
+    explicit ColorSlider(QWidget* parent) : QWidget(parent) {}
 
     void set_color(const QColor& color)
     {
@@ -96,7 +95,10 @@ public:
 
     qreal saturation() const { return saturation_; }
     qreal value() const { return value_; }
-    void set_color_changed_callback(ColorChangedCallback callback) { color_changed_callback_ = std::move(callback); }
+    void set_color_changed_callback(ColorChangedCallback callback)
+    {
+        color_changed_callback_ = std::move(callback);
+    }
 
 protected:
     void paintEvent(QPaintEvent*) override
@@ -119,11 +121,9 @@ protected:
         painter.drawRect(rect().adjusted(0, 0, -1, -1));
 
         painter.setPen(QPen(value_ > 0.5 ? Qt::black : Qt::white, 3));
-        painter.drawEllipse(
-            QPointF(width() * saturation_, height() * (1.0 - value_)),
-            color_selector_radius,
-            color_selector_radius
-        );
+        painter.drawEllipse(QPointF(width() * saturation_, height() * (1.0 - value_)),
+                            color_selector_radius,
+                            color_selector_radius);
     }
 
     void mousePressEvent(QMouseEvent* event) override
@@ -135,8 +135,7 @@ protected:
 
     void mouseMoveEvent(QMouseEvent* event) override
     {
-        if (!mouse_update_timer_.isValid() ||
-            mouse_update_timer_.elapsed() >= color_update_interval_ms) {
+        if (!mouse_update_timer_.isValid() || mouse_update_timer_.elapsed() >= color_update_interval_ms) {
             update_color(event->pos());
             mouse_update_timer_.restart();
             return;
@@ -183,29 +182,27 @@ QIcon make_close_icon()
 }
 }
 
-GarmentColorPanel::GarmentColorPanel(QWidget* parent): QWidget(parent)
+GarmentColorPanel::GarmentColorPanel(QWidget* parent) : QWidget(parent)
 {
     setObjectName("garmentColorPanel");
-    setStyleSheet(
-        "#garmentColorPanel {"
-        "  background-color: rgba(245, 245, 245, 235);"
-        "  border: 1px solid #9a9a9a;"
-        "  border-radius: 4px;"
-        "}"
-        "#garmentColorPanel QLineEdit {"
-        "  background: transparent;"
-        "  border: none;"
-        "}"
-        "#garmentColorPanel #colorPanelCloseButton {"
-        "  padding: 0;"
-        "  background-color: #5a5a5a;"
-        "  border: 1px solid #242424;"
-        "  border-radius: 4px;"
-        "}"
-        "#garmentColorPanel #colorPanelCloseButton:hover {"
-        "  background-color: #7a7a7a;"
-        "}"
-    );
+    setStyleSheet("#garmentColorPanel {"
+                  "  background-color: rgba(245, 245, 245, 235);"
+                  "  border: 1px solid #9a9a9a;"
+                  "  border-radius: 4px;"
+                  "}"
+                  "#garmentColorPanel QLineEdit {"
+                  "  background: transparent;"
+                  "  border: none;"
+                  "}"
+                  "#garmentColorPanel #colorPanelCloseButton {"
+                  "  padding: 0;"
+                  "  background-color: #5a5a5a;"
+                  "  border: 1px solid #242424;"
+                  "  border-radius: 4px;"
+                  "}"
+                  "#garmentColorPanel #colorPanelCloseButton:hover {"
+                  "  background-color: #7a7a7a;"
+                  "}");
 
     auto* root_layout = new QVBoxLayout(this);
     root_layout->setContentsMargins(10, 10, 10, 10);
@@ -215,10 +212,8 @@ GarmentColorPanel::GarmentColorPanel(QWidget* parent): QWidget(parent)
     color_display_->setAlignment(Qt::AlignCenter);
     color_display_->setFixedHeight(24);
     color_display_->setMaxLength(7);
-    color_display_->setValidator(new QRegularExpressionValidator(
-        QRegularExpression("^#[0-9A-Fa-f]{6}$"),
-        color_display_
-    ));
+    color_display_->setValidator(
+        new QRegularExpressionValidator(QRegularExpression("^#[0-9A-Fa-f]{6}$"), color_display_));
     color_display_->installEventFilter(this);
     auto* close_button = new QPushButton(this);
     close_button->setObjectName("colorPanelCloseButton");
@@ -252,8 +247,7 @@ GarmentColorPanel::GarmentColorPanel(QWidget* parent): QWidget(parent)
         "}"
         "QSlider::handle:vertical {"
         "  background: transparent; border: 2px solid white; height: 6px; margin: 0 -3px;"
-        "}"
-    );
+        "}");
     picker_layout->addWidget(color_slider_);
     picker_layout->addWidget(hue_slider_);
     root_layout->addLayout(picker_layout);
@@ -262,15 +256,9 @@ GarmentColorPanel::GarmentColorPanel(QWidget* parent): QWidget(parent)
         auto* color_slider = static_cast<ColorSlider*>(color_slider_);
         const qreal hue = static_cast<qreal>(value) / hue_slider_max;
         color_slider->set_hue(hue);
-        apply_color(QColor::fromHsvF(
-            hue,
-            color_slider->saturation(),
-            color_slider->value()
-        ));
+        apply_color(QColor::fromHsvF(hue, color_slider->saturation(), color_slider->value()));
     });
-    color_slider->set_color_changed_callback([this](const QColor& color) {
-        apply_color(color);
-    });
+    color_slider->set_color_changed_callback([this](const QColor& color) { apply_color(color); });
     connect(close_button, &QPushButton::clicked, this, &GarmentColorPanel::close_panel);
 
     setVisible(false);
@@ -372,7 +360,6 @@ void GarmentColorPanel::update_display(const QColor& color)
 {
     const QString text_color = color.lightnessF() > 0.5 ? "#111111" : "#ffffff";
     color_display_->setText(color.name(QColor::HexRgb).toUpper());
-    color_display_->setStyleSheet(QString(
-        "background-color: %1; color: %2; border: 1px solid #666666;"
-    ).arg(color.name(QColor::HexRgb), text_color));
+    color_display_->setStyleSheet(QString("background-color: %1; color: %2; border: 1px solid #666666;")
+                                      .arg(color.name(QColor::HexRgb), text_color));
 }

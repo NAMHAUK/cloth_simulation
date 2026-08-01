@@ -5,7 +5,8 @@
 
 #include <QOpenGLFunctions_4_5_Core>
 
-class ClothClothCollisionSolver final {
+class ClothClothCollisionSolver final
+{
 public:
     ClothClothCollisionSolver() = default;
     ClothClothCollisionSolver(const ClothClothCollisionSolver&) = delete;
@@ -24,14 +25,14 @@ public:
     bool can_solve(const SimulationGpuViews& views) const;
     bool can_solve_initial(const SimulationGpuViews& views) const;
     bool can_build_body_triangle_ids(const SimulationGpuViews& views) const;
-    bool build_body_triangle_ids(const SimulationGpuViews& views,
-                                 QOpenGLFunctions_4_5_Core& gl) const;
+    bool build_body_triangle_ids(const SimulationGpuViews& views, QOpenGLFunctions_4_5_Core& gl) const;
     void solve(const SimulationGpuViews& views, QOpenGLFunctions_4_5_Core& gl) const;
     void solve_initial(const SimulationGpuViews& views, QOpenGLFunctions_4_5_Core& gl) const;
     void release(QOpenGLFunctions_4_5_Core& gl);
 
 private:
-    struct AccumulateStage final {
+    struct AccumulateStage final
+    {
         GLuint program = 0;
         GLint max_candidates = -1;
         GLint collision_thickness = -1;
@@ -40,20 +41,23 @@ private:
         GLint upper_vertex_offset = -1;
     };
 
-    struct BodyTriangleIdBuildStage final {
+    struct BodyTriangleIdBuildStage final
+    {
         GLuint program = 0;
         GLint vertex_count = -1;
         GLint search_radius_squared = -1;
     };
 
-    struct ApplyStage final {
+    struct ApplyStage final
+    {
         GLuint program = 0;
         GLint vertex_count = -1;
         GLint max_correction = -1;
     };
 
     AccumulateStage accumulate_;
-    struct InitialAccumulateStage final {
+    struct InitialAccumulateStage final
+    {
         GLuint program = 0;
         GLint max_candidates = -1;
         GLint collision_thickness = -1;

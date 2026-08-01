@@ -3,8 +3,8 @@
 #include <QBitmap>
 #include <QColor>
 #include <QFile>
-#include <QHeaderView>
 #include <QHBoxLayout>
+#include <QHeaderView>
 #include <QIcon>
 #include <QJsonDocument>
 #include <QJsonObject>
@@ -28,9 +28,10 @@
 #include <iostream>
 #include <utility>
 
-class ElidedLabel final : public QLabel {
+class ElidedLabel final : public QLabel
+{
 public:
-    explicit ElidedLabel(const QString& text, QWidget* parent = nullptr): QLabel(parent)
+    explicit ElidedLabel(const QString& text, QWidget* parent = nullptr) : QLabel(parent)
     {
         set_full_text(text);
     }
@@ -50,10 +51,7 @@ protected:
     }
 
 private:
-    void update_text()
-    {
-        QLabel::setText(fontMetrics().elidedText(full_text_, Qt::ElideRight, width()));
-    }
+    void update_text() { QLabel::setText(fontMetrics().elidedText(full_text_, Qt::ElideRight, width())); }
 
     QString full_text_;
 };
@@ -107,9 +105,10 @@ QHash<QString, QString> read_descriptions(const std::filesystem::path& catalog_p
     return descriptions;
 }
 
-class LoadingSpinner final : public QWidget {
+class LoadingSpinner final : public QWidget
+{
 public:
-    explicit LoadingSpinner(QWidget* parent = nullptr): QWidget(parent)
+    explicit LoadingSpinner(QWidget* parent = nullptr) : QWidget(parent)
     {
         setFixedSize(18, 18);
         setStyleSheet("background: transparent; border: none;");
@@ -209,7 +208,8 @@ AssetBrowserPanel::AssetBrowserPanel(const std::filesystem::path& motion_catalog
     button_layout->setContentsMargins(0, 0, 0, 0);
     button_layout->setSpacing(6);
 
-    const std::filesystem::path icon_dir = std::filesystem::path(PROJECT_ROOT_DIR) / "data" / "sources" / "icon";
+    const std::filesystem::path icon_dir =
+        std::filesystem::path(PROJECT_ROOT_DIR) / "data" / "sources" / "icon";
 
     toggle_button_ = new QPushButton(this);
     toggle_button_->setIcon(make_white_icon(icon_dir / "motion.png"));
@@ -217,27 +217,25 @@ AssetBrowserPanel::AssetBrowserPanel(const std::filesystem::path& motion_catalog
     toggle_button_->setToolTip("Motion");
     toggle_button_->setCheckable(true);
     toggle_button_->setFixedSize(86, 86);
-    toggle_button_->setStyleSheet(
-        "QPushButton {"
-        "  background-color: #3a3a3a;"
-        "  color: white;"
-        "  border: 1px solid #242424;"
-        "  border-radius: 14px;"
-        "  padding: 4px;"
-        "  font-weight: 600;"
-        "}"
-        "QPushButton:checked {"
-        "  background-color: #2f2f2f;"
-        "}"
-        "QPushButton:hover {"
-        "  background-color: #4a4a4a;"
-        "}"
-        "QPushButton:disabled {"
-        "  background-color: #555555;"
-        "  color: #bdbdbd;"
-        "  border-color: #444444;"
-        "}"
-    );
+    toggle_button_->setStyleSheet("QPushButton {"
+                                  "  background-color: #3a3a3a;"
+                                  "  color: white;"
+                                  "  border: 1px solid #242424;"
+                                  "  border-radius: 14px;"
+                                  "  padding: 4px;"
+                                  "  font-weight: 600;"
+                                  "}"
+                                  "QPushButton:checked {"
+                                  "  background-color: #2f2f2f;"
+                                  "}"
+                                  "QPushButton:hover {"
+                                  "  background-color: #4a4a4a;"
+                                  "}"
+                                  "QPushButton:disabled {"
+                                  "  background-color: #555555;"
+                                  "  color: #bdbdbd;"
+                                  "  border-color: #444444;"
+                                  "}");
 
     garment_button_ = new QPushButton(this);
     garment_button_->setIcon(make_white_icon(icon_dir / "garment.png"));
@@ -249,39 +247,37 @@ AssetBrowserPanel::AssetBrowserPanel(const std::filesystem::path& motion_catalog
 
     expanded_panel_ = new QWidget(this);
     expanded_panel_->setObjectName("assetBrowserExpandedPanel");
-    expanded_panel_->setStyleSheet(
-        "#assetBrowserExpandedPanel {"
-        "  background-color: rgba(245, 245, 245, 235);"
-        "  border: 1px solid #9a9a9a;"
-        "  border-radius: 4px;"
-        "}"
-        "QTableWidget {"
-        "  background-color: white;"
-        "  border: 1px solid #b5b5b5;"
-        "  gridline-color: #b5b5b5;"
-        "}"
-        "QHeaderView::section {"
-        "  background-color: #5a5a5a;"
-        "  color: white;"
-        "  border: none;"
-        "  border-right: 1px solid #b5b5b5;"
-        "  border-bottom: 1px solid #b5b5b5;"
-        "  padding: 4px;"
-        "  font-weight: 600;"
-        "}"
-        "QHeaderView::section:last {"
-        "  border-right: none;"
-        "}"
-        "QPushButton {"
-        "  background-color: #5a5a5a;"
-        "  color: white;"
-        "  border: 1px solid #242424;"
-        "  border-radius: 4px;"
-        "}"
-        "QPushButton:hover {"
-        "  background-color: #7a7a7a;"
-        "}"
-    );
+    expanded_panel_->setStyleSheet("#assetBrowserExpandedPanel {"
+                                   "  background-color: rgba(245, 245, 245, 235);"
+                                   "  border: 1px solid #9a9a9a;"
+                                   "  border-radius: 4px;"
+                                   "}"
+                                   "QTableWidget {"
+                                   "  background-color: white;"
+                                   "  border: 1px solid #b5b5b5;"
+                                   "  gridline-color: #b5b5b5;"
+                                   "}"
+                                   "QHeaderView::section {"
+                                   "  background-color: #5a5a5a;"
+                                   "  color: white;"
+                                   "  border: none;"
+                                   "  border-right: 1px solid #b5b5b5;"
+                                   "  border-bottom: 1px solid #b5b5b5;"
+                                   "  padding: 4px;"
+                                   "  font-weight: 600;"
+                                   "}"
+                                   "QHeaderView::section:last {"
+                                   "  border-right: none;"
+                                   "}"
+                                   "QPushButton {"
+                                   "  background-color: #5a5a5a;"
+                                   "  color: white;"
+                                   "  border: 1px solid #242424;"
+                                   "  border-radius: 4px;"
+                                   "}"
+                                   "QPushButton:hover {"
+                                   "  background-color: #7a7a7a;"
+                                   "}");
 
     auto* panel_layout = new QVBoxLayout(expanded_panel_);
     panel_layout->setContentsMargins(10, 10, 10, 10);
@@ -294,18 +290,16 @@ AssetBrowserPanel::AssetBrowserPanel(const std::filesystem::path& motion_catalog
     subject_back_button_ = new QPushButton(QString("%1 Subjects /").arg(QChar(0x2039)), expanded_panel_);
     subject_back_button_->setCursor(Qt::PointingHandCursor);
     subject_back_button_->setMinimumHeight(26);
-    subject_back_button_->setStyleSheet(
-        "QPushButton {"
-        "  background: transparent;"
-        "  border: none;"
-        "  color: #777777;"
-        "  font-size: 12px;"
-        "  padding: 0;"
-        "}"
-        "QPushButton:hover {"
-        "  color: #1f6feb;"
-        "}"
-    );
+    subject_back_button_->setStyleSheet("QPushButton {"
+                                        "  background: transparent;"
+                                        "  border: none;"
+                                        "  color: #777777;"
+                                        "  font-size: 12px;"
+                                        "  padding: 0;"
+                                        "}"
+                                        "QPushButton:hover {"
+                                        "  color: #1f6feb;"
+                                        "}");
     subject_back_button_->setToolTip("Back to subjects list");
 
     auto* close_button = new QPushButton(expanded_panel_);
@@ -331,22 +325,20 @@ AssetBrowserPanel::AssetBrowserPanel(const std::filesystem::path& motion_catalog
     import_button_->setMinimumHeight(32);
     import_button_->setIcon(make_white_icon(icon_dir / "file-import-solid-full.svg"));
     import_button_->setIconSize(QSize{action_icon_size, action_icon_size});
-    import_button_->setStyleSheet(
-        "QPushButton {"
-        "  background-color: #1f6feb;"
-        "  color: white;"
-        "  border: 1px solid #1158c7;"
-        "  border-radius: 4px;"
-        "  padding: 0;"
-        "}"
-        "QPushButton:hover {"
-        "  background-color: #2f81f7;"
-        "}"
-        "QPushButton:disabled {"
-        "  background-color: #8caee6;"
-        "  color: #dddddd;"
-        "}"
-    );
+    import_button_->setStyleSheet("QPushButton {"
+                                  "  background-color: #1f6feb;"
+                                  "  color: white;"
+                                  "  border: 1px solid #1158c7;"
+                                  "  border-radius: 4px;"
+                                  "  padding: 0;"
+                                  "}"
+                                  "QPushButton:hover {"
+                                  "  background-color: #2f81f7;"
+                                  "}"
+                                  "QPushButton:disabled {"
+                                  "  background-color: #8caee6;"
+                                  "  color: #dddddd;"
+                                  "}");
     import_button_->setToolTip("Import garment");
 
     button_layout->addWidget(toggle_button_);
@@ -393,13 +385,9 @@ AssetBrowserPanel::AssetBrowserPanel(const std::filesystem::path& motion_catalog
         }
     });
 
-    connect(close_button, &QPushButton::clicked, this, [this]() {
-        set_expanded(false);
-    });
+    connect(close_button, &QPushButton::clicked, this, [this]() { set_expanded(false); });
 
-    connect(table_widget_, &QTableWidget::cellClicked, this, [this](int row) {
-        select_table_row(row);
-    });
+    connect(table_widget_, &QTableWidget::cellClicked, this, [this](int row) { select_table_row(row); });
 
     connect(import_button_, &QPushButton::clicked, this, [this]() {
         if (import_button_callback_) {
@@ -422,7 +410,7 @@ void AssetBrowserPanel::open_list(AssetPanelMode mode)
 
     if (expanded_) {
         update_expanded_state();
-    }else{
+    } else {
         set_expanded(true);
     }
 }
@@ -476,10 +464,8 @@ void AssetBrowserPanel::set_motion_paths(std::vector<std::filesystem::path> sour
     motion_source_paths_ = std::move(source_paths);
     converted_motion_paths_.clear();
     for (const auto& asset_path : asset_paths) {
-        converted_motion_paths_.insert(
-            make_motion_id(asset_path),
-            QString::fromStdWString(asset_path.wstring())
-        );
+        converted_motion_paths_.insert(make_motion_id(asset_path),
+                                       QString::fromStdWString(asset_path.wstring()));
     }
 
     if (panel_mode_ == AssetPanelMode::Motions) {
@@ -512,7 +498,6 @@ void AssetBrowserPanel::rebuild_list()
         rebuild_motion_list();
     }
     update_import_button_state();
-
 }
 
 void AssetBrowserPanel::rebuild_subject_list()
@@ -594,22 +579,20 @@ void AssetBrowserPanel::rebuild_motion_list()
             convert_button->setFixedSize(24, 24);
             convert_button->setIcon(make_plus_icon());
             convert_button->setIconSize(QSize{action_icon_size, action_icon_size});
-            convert_button->setStyleSheet(
-                "QPushButton {"
-                "  background-color: #1f6feb;"
-                "  color: white;"
-                "  border: 1px solid #1158c7;"
-                "  border-radius: 4px;"
-                "  padding: 0;"
-                "}"
-                "QPushButton:hover {"
-                "  background-color: #2f81f7;"
-                "}"
-                "QPushButton:disabled {"
-                "  background-color: #8caee6;"
-                "  color: #dddddd;"
-                "}"
-            );
+            convert_button->setStyleSheet("QPushButton {"
+                                          "  background-color: #1f6feb;"
+                                          "  color: white;"
+                                          "  border: 1px solid #1158c7;"
+                                          "  border-radius: 4px;"
+                                          "  padding: 0;"
+                                          "}"
+                                          "QPushButton:hover {"
+                                          "  background-color: #2f81f7;"
+                                          "}"
+                                          "QPushButton:disabled {"
+                                          "  background-color: #8caee6;"
+                                          "  color: #dddddd;"
+                                          "}");
             convert_button->setToolTip("Motion convert");
             convert_button->setEnabled(!motion_conversion_active_);
             connect(convert_button, &QPushButton::clicked, this, [this, source_path, source_path_string]() {
@@ -626,7 +609,8 @@ void AssetBrowserPanel::rebuild_motion_list()
 
 void AssetBrowserPanel::rebuild_garment_list()
 {
-    title_label_->set_full_text(QString("Available garments (%1)").arg(static_cast<int>(garment_asset_paths_.size())));
+    title_label_->set_full_text(
+        QString("Available garments (%1)").arg(static_cast<int>(garment_asset_paths_.size())));
     table_widget_->setColumnCount(1);
     table_widget_->setRowCount(static_cast<int>(garment_asset_paths_.size()));
     table_widget_->setHorizontalHeaderLabels({"Garment"});
@@ -642,7 +626,8 @@ void AssetBrowserPanel::rebuild_garment_list()
     }
 }
 
-void AssetBrowserPanel::set_selected_callback(std::function<void(AssetPanelMode, const std::filesystem::path&)> callback)
+void AssetBrowserPanel::set_selected_callback(
+    std::function<void(AssetPanelMode, const std::filesystem::path&)> callback)
 {
     selected_callback_ = std::move(callback);
 }

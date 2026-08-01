@@ -20,9 +20,18 @@ bool BackgroundGradient::initialize(const std::filesystem::path& vertex_shader_p
     }
 
     constexpr std::array<float, 12> vertices{
-        -1.0f, -1.0f, 0.0f, 0.0f,
-         3.0f, -1.0f, 2.0f, 0.0f,
-        -1.0f,  3.0f, 0.0f, 2.0f,
+        -1.0f,
+        -1.0f,
+        0.0f,
+        0.0f,
+        3.0f,
+        -1.0f,
+        2.0f,
+        0.0f,
+        -1.0f,
+        3.0f,
+        0.0f,
+        2.0f,
     };
 
     top_color_location_ = gl.glGetUniformLocation(program_, "uTopColor");
@@ -32,17 +41,19 @@ bool BackgroundGradient::initialize(const std::filesystem::path& vertex_shader_p
         gl.glProgramUniform3f(program_, top_color_location_, top_color_.r, top_color_.g, top_color_.b);
     }
     if (bottom_color_location_ >= 0) {
-        gl.glProgramUniform3f(program_, bottom_color_location_, bottom_color_.r, bottom_color_.g, bottom_color_.b);
+        gl.glProgramUniform3f(program_,
+                              bottom_color_location_,
+                              bottom_color_.r,
+                              bottom_color_.g,
+                              bottom_color_.b);
     }
 
     gl.glCreateVertexArrays(1, &vao_);
     gl.glCreateBuffers(1, &vertex_buffer_);
-    gl.glNamedBufferData(
-        vertex_buffer_,
-        static_cast<GLsizeiptr>(vertices.size() * sizeof(float)),
-        vertices.data(),
-        GL_STATIC_DRAW
-    );
+    gl.glNamedBufferData(vertex_buffer_,
+                         static_cast<GLsizeiptr>(vertices.size() * sizeof(float)),
+                         vertices.data(),
+                         GL_STATIC_DRAW);
 
     constexpr GLsizei stride = 4 * static_cast<GLsizei>(sizeof(float));
     constexpr GLuint vertex_binding_index = 0;
@@ -53,24 +64,15 @@ bool BackgroundGradient::initialize(const std::filesystem::path& vertex_shader_p
 
     gl.glVertexArrayVertexBuffer(vao_, vertex_binding_index, vertex_buffer_, 0, stride);
     gl.glEnableVertexArrayAttrib(vao_, position_attribute_location);
-    gl.glVertexArrayAttribFormat(
-        vao_,
-        position_attribute_location,
-        2,
-        GL_FLOAT,
-        GL_FALSE,
-        position_relative_offset
-    );
+    gl.glVertexArrayAttribFormat(vao_,
+                                 position_attribute_location,
+                                 2,
+                                 GL_FLOAT,
+                                 GL_FALSE,
+                                 position_relative_offset);
     gl.glVertexArrayAttribBinding(vao_, position_attribute_location, vertex_binding_index);
     gl.glEnableVertexArrayAttrib(vao_, uv_attribute_location);
-    gl.glVertexArrayAttribFormat(
-        vao_,
-        uv_attribute_location,
-        2,
-        GL_FLOAT,
-        GL_FALSE,
-        uv_relative_offset
-    );
+    gl.glVertexArrayAttribFormat(vao_, uv_attribute_location, 2, GL_FLOAT, GL_FALSE, uv_relative_offset);
     gl.glVertexArrayAttribBinding(vao_, uv_attribute_location, vertex_binding_index);
     return true;
 }
@@ -142,7 +144,9 @@ GLuint BackgroundGradient::load_program(const std::filesystem::path& vertex_shad
     return next_program;
 }
 
-GLuint BackgroundGradient::compile_shader(GLenum type, const char* source, QOpenGLFunctions_4_5_Core& gl) const
+GLuint BackgroundGradient::compile_shader(GLenum type,
+                                          const char* source,
+                                          QOpenGLFunctions_4_5_Core& gl) const
 {
     const GLuint shader = gl.glCreateShader(type);
     gl.glShaderSource(shader, 1, &source, nullptr);

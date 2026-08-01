@@ -72,9 +72,15 @@ void GarmentPrefitSolver::solve(const ClothMotionBufferView& motion_view,
     assert(can_solve(motion_view, garment_range, body_triangle_geometry, body_triangle_bvh));
 
     gl.glUseProgram(program_);
-    gl.glBindBufferBase(GL_SHADER_STORAGE_BUFFER, current_positions_binding, motion_view.current_position_buffer);
-    gl.glBindBufferBase(GL_SHADER_STORAGE_BUFFER, body_triangle_geometry_binding, body_triangle_geometry.triangle_geometry_buffer);
-    gl.glBindBufferBase(GL_SHADER_STORAGE_BUFFER, body_triangle_bvh_node_binding, body_triangle_bvh.node_buffer);
+    gl.glBindBufferBase(GL_SHADER_STORAGE_BUFFER,
+                        current_positions_binding,
+                        motion_view.current_position_buffer);
+    gl.glBindBufferBase(GL_SHADER_STORAGE_BUFFER,
+                        body_triangle_geometry_binding,
+                        body_triangle_geometry.triangle_geometry_buffer);
+    gl.glBindBufferBase(GL_SHADER_STORAGE_BUFFER,
+                        body_triangle_bvh_node_binding,
+                        body_triangle_bvh.node_buffer);
 
     gl.glProgramUniform1ui(program_, vertex_offset_location_, garment_range.vertex_offset);
     gl.glProgramUniform1ui(program_, vertex_count_location_, garment_range.vertex_count);

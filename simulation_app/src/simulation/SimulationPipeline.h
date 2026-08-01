@@ -3,17 +3,17 @@
 #include "gpu/bvh/ClothBvhBoundsUpdater.h"
 #include "simulation/SimulationGpuViews.h"
 #include "simulation/SimulationSettings.h"
-#include "simulation/forces/SimulationForceField.h"
-#include "simulation/forces/ExternalForceSolver.h"
-#include "simulation/constraints/StretchConstraintSolver.h"
-#include "simulation/constraints/BendingConstraintSolver.h"
-#include "simulation/constraints/AttachmentConstraintSolver.h"
-#include "simulation/collision/GroundCollisionSolver.h"
 #include "simulation/collision/ClothBodyCollisionDetector.h"
 #include "simulation/collision/ClothBodyCollisionSolver.h"
 #include "simulation/collision/ClothClothCollisionDetector.h"
 #include "simulation/collision/ClothClothCollisionSolver.h"
 #include "simulation/collision/GarmentPrefitSolver.h"
+#include "simulation/collision/GroundCollisionSolver.h"
+#include "simulation/constraints/AttachmentConstraintSolver.h"
+#include "simulation/constraints/BendingConstraintSolver.h"
+#include "simulation/constraints/StretchConstraintSolver.h"
+#include "simulation/forces/ExternalForceSolver.h"
+#include "simulation/forces/SimulationForceField.h"
 
 #include <cstdint>
 #include <vector>
@@ -24,7 +24,8 @@ class SceneGpuState;
 class SceneState;
 struct ShaderPaths;
 
-class SimulationPipeline final {
+class SimulationPipeline final
+{
 public:
     SimulationPipeline() = default;
     SimulationPipeline(const SimulationPipeline&) = delete;
@@ -36,7 +37,10 @@ public:
                          SceneGpuState& gpu_state,
                          const std::vector<std::uint32_t>& garment_ids,
                          QOpenGLFunctions_4_5_Core& gl);
-    bool step(SceneState& scene, SceneGpuState& gpu_state, std::uint64_t motion_step_index, QOpenGLFunctions_4_5_Core& gl);
+    bool step(SceneState& scene,
+              SceneGpuState& gpu_state,
+              std::uint64_t motion_step_index,
+              QOpenGLFunctions_4_5_Core& gl);
     void release(QOpenGLFunctions_4_5_Core& gl);
 
 private:

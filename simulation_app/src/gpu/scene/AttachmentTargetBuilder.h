@@ -7,7 +7,8 @@
 
 #include <QOpenGLFunctions_4_5_Core>
 
-class AttachmentTargetBuilder final {
+class AttachmentTargetBuilder final
+{
 public:
     AttachmentTargetBuilder() = default;
     AttachmentTargetBuilder(const AttachmentTargetBuilder&) = delete;

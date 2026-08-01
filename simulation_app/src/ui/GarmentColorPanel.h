@@ -11,7 +11,8 @@ class QEvent;
 class QLineEdit;
 class QSlider;
 
-class GarmentColorPanel final : public QWidget {
+class GarmentColorPanel final : public QWidget
+{
 public:
     using ColorChangedCallback = std::function<void(const glm::vec3& color)>;
     using VisibilityChangedCallback = std::function<void()>;

@@ -4,7 +4,8 @@
 
 #include <QOpenGLFunctions_4_5_Core>
 
-struct CharacterBufferSet final {
+struct CharacterBufferSet final
+{
     GLuint all_frame_position = 0;
     GLuint previous_position = 0;
     GLuint current_position = 0;
@@ -23,7 +24,8 @@ struct CharacterBufferSet final {
     GLuint vertex_normal = 0;
 };
 
-struct CharacterMeshTopologyResources final {
+struct CharacterMeshTopologyResources final
+{
     GLuint triangle_index_buffer = 0;
     GLuint adjacent_triangle_offsets_buffer = 0;
     GLuint adjacent_triangle_indices_buffer = 0;
@@ -32,45 +34,52 @@ struct CharacterMeshTopologyResources final {
     std::uint32_t triangle_count = 0;
 };
 
-struct CharacterAnimationBufferView final {
+struct CharacterAnimationBufferView final
+{
     GLuint position_buffer = 0;
     std::uint32_t frame_count = 0;
     std::uint32_t vertex_count = 0;
 };
 
-struct CharacterVertexBufferView final {
+struct CharacterVertexBufferView final
+{
     GLuint previous_position_buffer = 0;
     GLuint current_position_buffer = 0;
     GLuint vertex_normal_buffer = 0;
     std::uint32_t vertex_count = 0;
 };
 
-struct TriangleGeometryResources final {
+struct TriangleGeometryResources final
+{
     GLuint triangle_geometry_buffer = 0;
     std::uint32_t triangle_count = 0;
 };
 
-struct CharacterNormalResources final {
+struct CharacterNormalResources final
+{
     GLuint triangle_geometry_buffer = 0;
     GLuint vertex_normal_buffer = 0;
     std::uint32_t triangle_count = 0;
 };
 
-struct TriangleBvhResources final {
+struct TriangleBvhResources final
+{
     GLuint node_buffer = 0;
     GLuint triangle_bounds_buffer = 0;
     std::uint32_t node_count = 0;
     std::uint32_t triangle_count = 0;
 };
 
-struct VertexBvhResources final {
+struct VertexBvhResources final
+{
     GLuint node_buffer = 0;
     GLuint vertex_id_buffer = 0;
     GLuint vertex_bounds_buffer = 0;
     std::uint32_t node_count = 0;
 };
 
-struct EdgeBvhResources final {
+struct EdgeBvhResources final
+{
     GLuint node_buffer = 0;
     GLuint edge_index_buffer = 0;
     GLuint edge_bounds_buffer = 0;

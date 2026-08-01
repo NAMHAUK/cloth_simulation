@@ -57,7 +57,8 @@ bool NormalUpdater::initialize(const std::filesystem::path& triangle_normal_shad
     }
 
     triangle_count_location_ = gl.glGetUniformLocation(triangle_program_, "uTriangleCount");
-    position_component_offset_location_ = gl.glGetUniformLocation(triangle_program_, "uPositionComponentOffset");
+    position_component_offset_location_ =
+        gl.glGetUniformLocation(triangle_program_, "uPositionComponentOffset");
     vertex_count_location_ = gl.glGetUniformLocation(vertex_program_, "uVertexCount");
     triangle_normal_stride_location_ = gl.glGetUniformLocation(vertex_program_, "uTriangleNormalStride");
     triangle_normal_offset_location_ = gl.glGetUniformLocation(vertex_program_, "uTriangleNormalOffset");
@@ -163,9 +164,15 @@ void NormalUpdater::update_vertex_normals(GLuint triangle_normal_source_buffer,
 
     // vertex normal 계산
     gl.glUseProgram(vertex_program_);
-    gl.glBindBufferBase(GL_SHADER_STORAGE_BUFFER, vertex_pass_triangle_normals_binding, triangle_normal_source_buffer);
-    gl.glBindBufferBase(GL_SHADER_STORAGE_BUFFER, adjacent_triangle_offsets_binding, adjacent_triangle_offsets_buffer);
-    gl.glBindBufferBase(GL_SHADER_STORAGE_BUFFER, adjacent_triangle_indices_binding, adjacent_triangle_indices_buffer);
+    gl.glBindBufferBase(GL_SHADER_STORAGE_BUFFER,
+                        vertex_pass_triangle_normals_binding,
+                        triangle_normal_source_buffer);
+    gl.glBindBufferBase(GL_SHADER_STORAGE_BUFFER,
+                        adjacent_triangle_offsets_binding,
+                        adjacent_triangle_offsets_buffer);
+    gl.glBindBufferBase(GL_SHADER_STORAGE_BUFFER,
+                        adjacent_triangle_indices_binding,
+                        adjacent_triangle_indices_buffer);
     gl.glBindBufferBase(GL_SHADER_STORAGE_BUFFER, vertex_normals_binding, vertex_normal_buffer);
     if (vertex_count_location_ >= 0) {
         gl.glProgramUniform1ui(vertex_program_, vertex_count_location_, vertex_count);

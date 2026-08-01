@@ -9,7 +9,8 @@
 
 struct ClothMotionBufferView;
 
-class AttachmentConstraintSolver final {
+class AttachmentConstraintSolver final
+{
 public:
     AttachmentConstraintSolver() = default;
     AttachmentConstraintSolver(const AttachmentConstraintSolver&) = delete;

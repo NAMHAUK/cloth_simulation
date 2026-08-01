@@ -9,7 +9,8 @@
 
 struct GarmentObject;
 
-struct ClothBvhBufferView final {
+struct ClothBvhBufferView final
+{
     GLuint collision_triangle_index_buffer = 0;
     GLuint node_buffer = 0;
     GLuint triangle_bounds_buffer = 0;
@@ -18,7 +19,8 @@ struct ClothBvhBufferView final {
     const std::vector<GarmentBvhLayout>* garment_layouts = nullptr;
 };
 
-class ClothBvhResources final {
+class ClothBvhResources final
+{
 public:
     ClothBvhResources() = default;
     ClothBvhResources(const ClothBvhResources&) = delete;

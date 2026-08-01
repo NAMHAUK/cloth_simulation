@@ -1,14 +1,15 @@
 #pragma once
 
 #include "asset/AssetDataTypes.h"
-#include "gpu/character/CharacterGpuDataTypes.h"
 #include "gpu/bvh/BvhDataTypes.h"
+#include "gpu/character/CharacterGpuDataTypes.h"
 
 #include <cstdint>
 
 #include <QOpenGLFunctions_4_5_Core>
 
-class CharacterGpuResources final {
+class CharacterGpuResources final
+{
 public:
     // Construction and state
     CharacterGpuResources() = default;

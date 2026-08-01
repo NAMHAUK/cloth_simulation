@@ -9,7 +9,8 @@
 
 namespace bvh_build {
 namespace {
-struct BvhBuildNode final {
+struct BvhBuildNode final
+{
     glm::vec3 min_bounds{};
     glm::vec3 max_bounds{};
     std::uint32_t left_child_index = invalid_bvh_node;
@@ -18,7 +19,8 @@ struct BvhBuildNode final {
     std::uint32_t element_count = 0;
 };
 
-struct BvhBuildContext final {
+struct BvhBuildContext final
+{
     std::vector<BvhPrimitive>& primitives;
     std::vector<BvhBuildNode>& nodes;
     std::vector<std::uint32_t>& ordered_primitive_indices;
@@ -26,14 +28,17 @@ struct BvhBuildContext final {
     bool split_by_part_labels = false;
 };
 
-struct PartLabelStats final {
+struct PartLabelStats final
+{
     glm::vec3 min_bounds{std::numeric_limits<float>::max()};
     glm::vec3 max_bounds{std::numeric_limits<float>::lowest()};
     std::uint32_t component_count = 0;
 };
 
-struct NextBvhLevel final {
-    explicit NextBvhLevel(const BvhNodeRange& current_level): first_node(current_level.first_node + current_level.node_count)
+struct NextBvhLevel final
+{
+    explicit NextBvhLevel(const BvhNodeRange& current_level)
+        : first_node(current_level.first_node + current_level.node_count)
     {
         node_indices.reserve(static_cast<std::size_t>(current_level.node_count) * 2u);
     }
@@ -152,8 +157,7 @@ std::uint32_t find_best_part_label_split_mask(const std::vector<BvhPrimitive>& p
     std::uint32_t best_split_mask = 0u;
     const std::uint32_t anchor_label_mask = part_label_mask & (~part_label_mask + 1u);
 
-    for (std::uint32_t split_mask = (part_label_mask - 1u) & part_label_mask;
-         split_mask != 0u;
+    for (std::uint32_t split_mask = (part_label_mask - 1u) & part_label_mask; split_mask != 0u;
          split_mask = (split_mask - 1u) & part_label_mask) {
         if ((split_mask & anchor_label_mask) == 0u) {
             continue;
@@ -217,7 +221,8 @@ std::optional<std::size_t> split_mixed_part_labels(std::vector<BvhPrimitive>& pr
         return std::nullopt;
     }
 
-    const std::uint32_t left_part_label_mask = find_best_part_label_split_mask(primitives, begin, end, part_label_mask);
+    const std::uint32_t left_part_label_mask =
+        find_best_part_label_split_mask(primitives, begin, end, part_label_mask);
     if (left_part_label_mask == 0u) {
         return std::nullopt;
     }
@@ -277,7 +282,8 @@ std::uint32_t build_bvh_tree(BvhBuildContext& context, std::size_t begin, std::s
     compute_node_bounds(context.primitives, begin, end, node.min_bounds, node.max_bounds);
 
     const std::size_t primitive_count = end - begin;
-    if (const auto middle = split_mixed_part_labels(context.primitives, begin, end, context.split_by_part_labels)) {
+    if (const auto middle =
+            split_mixed_part_labels(context.primitives, begin, end, context.split_by_part_labels)) {
         const std::uint32_t left_child_index = build_bvh_tree(context, begin, *middle);
         const std::uint32_t right_child_index = build_bvh_tree(context, *middle, end);
         context.nodes[node_index].left_child_index = left_child_index;
@@ -314,10 +320,8 @@ void write_level_ordered_bvh_data(std::uint32_t source_root_node,
     std::vector<std::uint32_t> current_level_node_indices{source_root_node};
 
     while (!current_level_node_indices.empty()) {
-        const BvhNodeRange level_range{
-            static_cast<std::uint32_t>(result_nodes.size()),
-            static_cast<std::uint32_t>(current_level_node_indices.size())
-        };
+        const BvhNodeRange level_range{static_cast<std::uint32_t>(result_nodes.size()),
+                                       static_cast<std::uint32_t>(current_level_node_indices.size())};
         level_order_node_ranges.push_back(level_range);
         NextBvhLevel next_level(level_range);
 
@@ -349,8 +353,12 @@ void write_level_ordered_bvh_data(std::uint32_t source_root_node,
 
 bool is_valid_bounds(const glm::vec3& min_bounds, const glm::vec3& max_bounds)
 {
-    return std::isfinite(min_bounds.x) && std::isfinite(min_bounds.y) && std::isfinite(min_bounds.z) &&
-           std::isfinite(max_bounds.x) && std::isfinite(max_bounds.y) && std::isfinite(max_bounds.z);
+    return std::isfinite(min_bounds.x) &&
+           std::isfinite(min_bounds.y) &&
+           std::isfinite(min_bounds.z) &&
+           std::isfinite(max_bounds.x) &&
+           std::isfinite(max_bounds.y) &&
+           std::isfinite(max_bounds.z);
 }
 
 bool is_leaf_node(std::uint32_t component_count)
@@ -358,8 +366,7 @@ bool is_leaf_node(std::uint32_t component_count)
     return component_count > 0u;
 }
 
-bool has_valid_bvh_node_topology(const std::vector<BvhNode>& nodes,
-                                 std::uint32_t source_element_count)
+bool has_valid_bvh_node_topology(const std::vector<BvhNode>& nodes, std::uint32_t source_element_count)
 {
     const std::size_t node_count = nodes.size();
     for (std::size_t node_index = 0; node_index < node_count; ++node_index) {
@@ -371,9 +378,7 @@ bool has_valid_bvh_node_topology(const std::vector<BvhNode>& nodes,
     return has_valid_shader_stack_depth(nodes);
 }
 
-BvhTree build_bvh(std::vector<BvhPrimitive> primitives,
-                  std::uint32_t leaf_size,
-                  bool split_by_part_labels)
+BvhTree build_bvh(std::vector<BvhPrimitive> primitives, std::uint32_t leaf_size, bool split_by_part_labels)
 {
     BvhTree result;
     if (primitives.empty() || leaf_size == 0u) {
@@ -385,20 +390,13 @@ BvhTree build_bvh(std::vector<BvhPrimitive> primitives,
     build_nodes.reserve(leaf_count * 2u - 1u);
     result.ordered_primitive_indices.reserve(primitives.size());
 
-    BvhBuildContext context{
-        primitives,
-        build_nodes,
-        result.ordered_primitive_indices,
-        leaf_size,
-        split_by_part_labels
-    };
+    BvhBuildContext context{primitives,
+                            build_nodes,
+                            result.ordered_primitive_indices,
+                            leaf_size,
+                            split_by_part_labels};
     const std::uint32_t source_root_node = build_bvh_tree(context, 0u, primitives.size());
-    write_level_ordered_bvh_data(
-        source_root_node,
-        build_nodes,
-        result.nodes,
-        result.node_ranges_by_level
-    );
+    write_level_ordered_bvh_data(source_root_node, build_nodes, result.nodes, result.node_ranges_by_level);
     return result;
 }
 }

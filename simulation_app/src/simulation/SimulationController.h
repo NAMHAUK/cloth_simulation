@@ -20,11 +20,13 @@
 class QOpenGLFunctions_4_5_Core;
 struct ShaderPaths;
 
-class SimulationController final {
+class SimulationController final
+{
 public:
     using GlContextTask = std::function<void(QOpenGLFunctions_4_5_Core&)>;
 
-    struct ViewportCallbacks final {
+    struct ViewportCallbacks final
+    {
         std::function<bool()> is_ready;
         std::function<void(GlContextTask)> run_with_gl_context;
         std::function<void()> request_update;
@@ -71,7 +73,8 @@ public:
     void release_gpu();
 
 private:
-    struct GarmentPlacementState final {
+    struct GarmentPlacementState final
+    {
         std::uint32_t garment_id = 0;
         glm::vec3 position_offset{0.0f};
         float scale = 1.0f;
@@ -86,10 +89,7 @@ private:
             clear_update();
         }
 
-        bool has_update() const
-        {
-            return garment_id != 0 && (position_changed || scale_changed);
-        }
+        bool has_update() const { return garment_id != 0 && (position_changed || scale_changed); }
 
         void clear_update()
         {

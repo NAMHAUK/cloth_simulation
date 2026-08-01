@@ -16,7 +16,8 @@ struct CharacterMeshTopologyResources;
 struct CharacterVertexBufferView;
 struct TriangleGeometryResources;
 
-class CharacterGpuStateUpdater final {
+class CharacterGpuStateUpdater final
+{
 public:
     CharacterGpuStateUpdater(CharacterGpuResources& character_gpu_state,
                              BodyBvhBoundsUpdater& bvh_bounds_updater,

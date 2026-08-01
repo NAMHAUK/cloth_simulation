@@ -30,7 +30,8 @@ class QPushButton;
 class QWidget;
 enum class AssetPanelMode;
 
-class MainWindow final : public QMainWindow {
+class MainWindow final : public QMainWindow
+{
 public:
     explicit MainWindow(const std::filesystem::path& project_root, QWidget* parent = nullptr);
     ~MainWindow() override;
@@ -39,13 +40,15 @@ protected:
     bool eventFilter(QObject* watched, QEvent* event) override;
 
 private:
-    enum class PlacementGroupState {
+    enum class PlacementGroupState
+    {
         Hidden,
         Empty,
         Loaded,
     };
 
-    struct GarmentCard final {
+    struct GarmentCard final
+    {
         std::uint32_t garment_id = 0u;
         glm::vec3 color{1.0f};
         bool is_confirmed = false;
@@ -84,7 +87,7 @@ private:
     void choose_garment_color(std::size_t index);
     void refresh_motion_list();
     void refresh_garment_list();
-    
+
     void request_garment_conversion();
     void request_motion_conversion(const std::filesystem::path& source_path);
     std::optional<ConverterCommand> prepare_garment_conversion();

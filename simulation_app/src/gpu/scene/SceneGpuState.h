@@ -1,8 +1,8 @@
 #pragma once
 
-#include "gpu/character/CharacterGpuStateUpdater.h"
-#include "gpu/character/CharacterGpuResources.h"
 #include "gpu/bvh/BodyBvhBoundsUpdater.h"
+#include "gpu/character/CharacterGpuResources.h"
+#include "gpu/character/CharacterGpuStateUpdater.h"
 #include "gpu/cloth/ClothBvhResources.h"
 #include "gpu/cloth/ClothGpuResources.h"
 #include "gpu/scene/AttachmentTargetBuilder.h"
@@ -16,7 +16,8 @@
 
 struct ShaderPaths;
 
-class SceneGpuState final {
+class SceneGpuState final
+{
 public:
     SceneGpuState();
     SceneGpuState(const SceneGpuState&) = delete;

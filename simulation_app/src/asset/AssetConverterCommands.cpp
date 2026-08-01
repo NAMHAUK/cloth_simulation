@@ -15,10 +15,9 @@ QString to_q_string(const std::filesystem::path& path)
     return QString::fromStdWString(path.wstring());
 }
 
-bool prepare_converter_paths(
-    const ProjectPaths& project_paths,
-    const std::filesystem::path& motion_asset_path,
-    ConverterCommand& command)
+bool prepare_converter_paths(const ProjectPaths& project_paths,
+                             const std::filesystem::path& motion_asset_path,
+                             ConverterCommand& command)
 {
     if (!std::filesystem::exists(project_paths.python)) {
         command.error_message = "Missing project Python: " + project_paths.python.string();
@@ -43,10 +42,9 @@ std::filesystem::path make_garment_converter_exe_path()
 }
 
 namespace asset_converter_commands {
-ConverterCommand make_motion_command(
-    const ProjectPaths& project_paths,
-    const std::filesystem::path& amass_motion_path,
-    const std::filesystem::path& motion_asset_path)
+ConverterCommand make_motion_command(const ProjectPaths& project_paths,
+                                     const std::filesystem::path& amass_motion_path,
+                                     const std::filesystem::path& motion_asset_path)
 {
     ConverterCommand command;
 
@@ -57,13 +55,20 @@ ConverterCommand make_motion_command(
     command.program = to_q_string(project_paths.python);
     command.arguments = {
         to_q_string(project_paths.converter_script),
-        "--input", to_q_string(amass_motion_path),
-        "--neutral-model", to_q_string(project_paths.neutral_smpl_model_path),
-        "--male-model", to_q_string(project_paths.male_smpl_model_path),
-        "--female-model", to_q_string(project_paths.female_smpl_model_path),
-        "--output", to_q_string(motion_asset_path),
-        "--target-fps", QString::number(simulation_settings::character_motion_fps),
-        "--batch-size", "128",
+        "--input",
+        to_q_string(amass_motion_path),
+        "--neutral-model",
+        to_q_string(project_paths.neutral_smpl_model_path),
+        "--male-model",
+        to_q_string(project_paths.male_smpl_model_path),
+        "--female-model",
+        to_q_string(project_paths.female_smpl_model_path),
+        "--output",
+        to_q_string(motion_asset_path),
+        "--target-fps",
+        QString::number(simulation_settings::character_motion_fps),
+        "--batch-size",
+        "128",
     };
     command.working_directory = to_q_string(project_paths.root);
 
@@ -76,12 +81,11 @@ ConverterCommand make_motion_command(
     return command;
 }
 
-ConverterCommand make_garment_command(
-    const ProjectPaths& project_paths,
-    const std::filesystem::path& garment_obj_path,
-    const std::filesystem::path& garment_asset_path,
-    const QString& attachment_type,
-    const QString& garment_category)
+ConverterCommand make_garment_command(const ProjectPaths& project_paths,
+                                      const std::filesystem::path& garment_obj_path,
+                                      const std::filesystem::path& garment_asset_path,
+                                      const QString& attachment_type,
+                                      const QString& garment_category)
 {
     ConverterCommand command;
 
@@ -95,17 +99,22 @@ ConverterCommand make_garment_command(
     std::error_code error;
     std::filesystem::create_directories(garment_asset_path.parent_path(), error);
     if (error) {
-        command.error_message = "Failed to create garment asset directory: " + garment_asset_path.parent_path().string();
+        command.error_message =
+            "Failed to create garment asset directory: " + garment_asset_path.parent_path().string();
         std::cerr << command.error_message << '\n';
         return command;
     }
 
     command.program = to_q_string(converter_exe_path);
     command.arguments = {
-        "--input", to_q_string(garment_obj_path),
-        "--output", to_q_string(garment_asset_path),
-        "--attachment-type", attachment_type,
-        "--garment-category", garment_category,
+        "--input",
+        to_q_string(garment_obj_path),
+        "--output",
+        to_q_string(garment_asset_path),
+        "--attachment-type",
+        attachment_type,
+        "--garment-category",
+        garment_category,
     };
     command.working_directory = to_q_string(project_paths.root);
 

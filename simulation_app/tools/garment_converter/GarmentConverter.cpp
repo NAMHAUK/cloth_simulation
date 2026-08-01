@@ -62,7 +62,8 @@ GarmentDistanceConstraints build_distance_constraints(const std::vector<std::uin
     GarmentDistanceConstraints distance_constraints;
     distance_constraints.colorized_edges = std::move(colorized_edges.edges);
     distance_constraints.color_ranges = std::move(colorized_edges.ranges);
-    distance_constraints.rest_lengths = compute_mesh_edge_lengths(distance_constraints.colorized_edges, vertices);
+    distance_constraints.rest_lengths =
+        compute_mesh_edge_lengths(distance_constraints.colorized_edges, vertices);
     return distance_constraints;
 }
 
@@ -121,8 +122,10 @@ std::vector<MeshEdge> build_boundary_edges(const std::vector<std::uint32_t>& tri
 
 std::vector<std::vector<std::uint32_t>> find_boundary_loops(const GarmentMesh& garment_mesh)
 {
-    const auto vertex_count = static_cast<std::uint32_t>(garment_mesh.vertices.size() / vertex_position_components);
-    const std::vector<MeshEdge> boundary_edges = build_boundary_edges(garment_mesh.triangle_vertex_indices, vertex_count);
+    const auto vertex_count =
+        static_cast<std::uint32_t>(garment_mesh.vertices.size() / vertex_position_components);
+    const std::vector<MeshEdge> boundary_edges =
+        build_boundary_edges(garment_mesh.triangle_vertex_indices, vertex_count);
     if (boundary_edges.empty()) {
         return {};
     }
@@ -177,7 +180,8 @@ float average_loop_y(const std::vector<std::uint32_t>& loop_vertices, const std:
 
 std::vector<std::uint32_t> build_waistband_attachment_vertex_indices(const GarmentMesh& garment_mesh)
 {
-    const auto vertex_count = static_cast<std::uint32_t>(garment_mesh.vertices.size() / vertex_position_components);
+    const auto vertex_count =
+        static_cast<std::uint32_t>(garment_mesh.vertices.size() / vertex_position_components);
     if (vertex_count == 0u) {
         return {};
     }
@@ -219,7 +223,8 @@ void assign_bounds(GarmentMesh& garment_mesh, const glm::vec3& min_bounds, const
 std::uint32_t find_component_root(std::vector<std::uint32_t>& component_parent, std::uint32_t vertex_index)
 {
     if (component_parent[vertex_index] != vertex_index) {
-        component_parent[vertex_index] = find_component_root(component_parent, component_parent[vertex_index]);
+        component_parent[vertex_index] =
+            find_component_root(component_parent, component_parent[vertex_index]);
     }
 
     return component_parent[vertex_index];
@@ -233,7 +238,8 @@ bool validate_garment_obj(const GarmentMesh& garment_mesh, std::uint32_t vertex_
         return false;
     }
 
-    if (garment_mesh.triangle_vertex_indices.empty() || garment_mesh.triangle_vertex_indices.size() % 3u != 0u) {
+    if (garment_mesh.triangle_vertex_indices.empty() ||
+        garment_mesh.triangle_vertex_indices.size() % 3u != 0u) {
         std::cerr << "Invalid garment OBJ triangle data.\n";
         return false;
     }
@@ -303,11 +309,13 @@ bool validate_garment_obj(const GarmentMesh& garment_mesh, std::uint32_t vertex_
     }
 
     if (component_count != 1u) {
-        std::cerr << "Garment OBJ must be one connected component. component_count=" << component_count << '\n';
+        std::cerr << "Garment OBJ must be one connected component. component_count=" << component_count
+                  << '\n';
         return false;
     }
 
-    if (!is_finite_vec3(garment_mesh.bounds_center) || !std::isfinite(garment_mesh.bounds_radius) ||
+    if (!is_finite_vec3(garment_mesh.bounds_center) ||
+        !std::isfinite(garment_mesh.bounds_radius) ||
         garment_mesh.bounds_radius <= 0.0f) {
         std::cerr << "Invalid garment OBJ bounds.\n";
         return false;
@@ -365,9 +373,7 @@ bool parse_vertex_line(std::istringstream& line_stream,
     return true;
 }
 
-bool parse_face_line(std::istringstream& line_stream,
-                     std::uint32_t vertex_count,
-                     GarmentMesh& garment_mesh)
+bool parse_face_line(std::istringstream& line_stream, std::uint32_t vertex_count, GarmentMesh& garment_mesh)
 {
     std::array<std::uint32_t, 3> face_indices{};
     std::string face_token;
@@ -432,18 +438,22 @@ bool build_garment_simulation_data(GarmentMesh& garment_mesh,
                                    std::uint32_t vertex_count,
                                    AttachmentType attachment_type)
 {
-    if (!build_vertex_face_adjacency(vertex_count, garment_mesh.triangle_vertex_indices, garment_mesh.adjacency)) {
+    if (!build_vertex_face_adjacency(vertex_count,
+                                     garment_mesh.triangle_vertex_indices,
+                                     garment_mesh.adjacency)) {
         std::cerr << "Invalid garment OBJ topology.\n";
         return false;
     }
 
-    garment_mesh.stretch_constraints = build_stretch_constraints(garment_mesh.triangle_vertex_indices, garment_mesh.vertices);
+    garment_mesh.stretch_constraints =
+        build_stretch_constraints(garment_mesh.triangle_vertex_indices, garment_mesh.vertices);
     if (!garment_mesh.stretch_constraints.is_valid()) {
         std::cerr << "Invalid garment stretch constraints.\n";
         return false;
     }
 
-    garment_mesh.bending_constraints = build_bending_constraints(garment_mesh.triangle_vertex_indices, garment_mesh.vertices);
+    garment_mesh.bending_constraints =
+        build_bending_constraints(garment_mesh.triangle_vertex_indices, garment_mesh.vertices);
     if (!garment_mesh.bending_constraints.is_valid()) {
         std::cerr << "Invalid garment bending constraints.\n";
         return false;
@@ -485,16 +495,12 @@ bool read_garment_obj(const std::filesystem::path& obj_path,
     }
 
     GarmentMesh next_mesh;
-    glm::vec3 min_bounds{
-        std::numeric_limits<float>::max(),
-        std::numeric_limits<float>::max(),
-        std::numeric_limits<float>::max()
-    };
-    glm::vec3 max_bounds{
-        std::numeric_limits<float>::lowest(),
-        std::numeric_limits<float>::lowest(),
-        std::numeric_limits<float>::lowest()
-    };
+    glm::vec3 min_bounds{std::numeric_limits<float>::max(),
+                         std::numeric_limits<float>::max(),
+                         std::numeric_limits<float>::max()};
+    glm::vec3 max_bounds{std::numeric_limits<float>::lowest(),
+                         std::numeric_limits<float>::lowest(),
+                         std::numeric_limits<float>::lowest()};
     std::uint32_t vertex_count = 0;
 
     if (!read_obj_mesh_lines(input, next_mesh, min_bounds, max_bounds, vertex_count)) {
@@ -519,8 +525,8 @@ bool read_garment_obj(const std::filesystem::path& obj_path,
         return fail("Cannot orient garment triangle winding consistently.");
     }
     if (flipped_triangle_count > 0u) {
-        std::cout << "Oriented garment triangle winding: flipped "
-                  << flipped_triangle_count << " triangles.\n";
+        std::cout << "Oriented garment triangle winding: flipped " << flipped_triangle_count
+                  << " triangles.\n";
     }
 
     if (!build_garment_simulation_data(next_mesh, vertex_count, attachment_type)) {

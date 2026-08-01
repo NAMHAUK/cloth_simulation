@@ -4,7 +4,8 @@
 
 #include <glm/vec3.hpp>
 
-class GroundGridMesh final {
+class GroundGridMesh final
+{
 public:
     GroundGridMesh() = default;
     GroundGridMesh(const GroundGridMesh&) = delete;

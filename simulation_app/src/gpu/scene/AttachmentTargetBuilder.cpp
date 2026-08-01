@@ -30,7 +30,8 @@ bool AttachmentTargetBuilder::is_initialized() const
     return program_ != 0;
 }
 
-bool AttachmentTargetBuilder::initialize(const std::filesystem::path& shader_path, QOpenGLFunctions_4_5_Core& gl)
+bool AttachmentTargetBuilder::initialize(const std::filesystem::path& shader_path,
+                                         QOpenGLFunctions_4_5_Core& gl)
 {
     program_ = load_compute_program(shader_path, "Attachment target build", gl);
     if (program_ == 0) {
@@ -41,9 +42,7 @@ bool AttachmentTargetBuilder::initialize(const std::filesystem::path& shader_pat
     constraint_count_location_ = gl.glGetUniformLocation(program_, "uConstraintCount");
     surface_offset_location_ = gl.glGetUniformLocation(program_, "uSurfaceOffset");
 
-    if (constraint_offset_location_ < 0 ||
-        constraint_count_location_ < 0 ||
-        surface_offset_location_ < 0) {
+    if (constraint_offset_location_ < 0 || constraint_count_location_ < 0 || surface_offset_location_ < 0) {
         std::cerr << "Attachment target build compute shader missing required uniforms.\n";
         release(gl);
         return false;
@@ -78,11 +77,21 @@ bool AttachmentTargetBuilder::build(const ClothMotionBufferView& motion_view,
     }
 
     gl.glUseProgram(program_);
-    gl.glBindBufferBase(GL_SHADER_STORAGE_BUFFER, current_positions_binding, motion_view.current_position_buffer);
-    gl.glBindBufferBase(GL_SHADER_STORAGE_BUFFER, attachment_indices_binding, attachment_view.attachment_index_buffer);
-    gl.glBindBufferBase(GL_SHADER_STORAGE_BUFFER, attachment_barycentric_offsets_binding, attachment_view.barycentric_offset_buffer);
-    gl.glBindBufferBase(GL_SHADER_STORAGE_BUFFER, body_triangle_geometry_binding, body_triangle_geometry.triangle_geometry_buffer);
-    gl.glBindBufferBase(GL_SHADER_STORAGE_BUFFER, body_triangle_bvh_node_binding, body_triangle_bvh.node_buffer);
+    gl.glBindBufferBase(GL_SHADER_STORAGE_BUFFER,
+                        current_positions_binding,
+                        motion_view.current_position_buffer);
+    gl.glBindBufferBase(GL_SHADER_STORAGE_BUFFER,
+                        attachment_indices_binding,
+                        attachment_view.attachment_index_buffer);
+    gl.glBindBufferBase(GL_SHADER_STORAGE_BUFFER,
+                        attachment_barycentric_offsets_binding,
+                        attachment_view.barycentric_offset_buffer);
+    gl.glBindBufferBase(GL_SHADER_STORAGE_BUFFER,
+                        body_triangle_geometry_binding,
+                        body_triangle_geometry.triangle_geometry_buffer);
+    gl.glBindBufferBase(GL_SHADER_STORAGE_BUFFER,
+                        body_triangle_bvh_node_binding,
+                        body_triangle_bvh.node_buffer);
 
     gl.glProgramUniform1ui(program_, constraint_offset_location_, target_range.offset);
     gl.glProgramUniform1ui(program_, constraint_count_location_, target_range.count);

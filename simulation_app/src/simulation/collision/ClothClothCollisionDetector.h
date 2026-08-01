@@ -6,7 +6,8 @@
 
 #include <QOpenGLFunctions_4_5_Core>
 
-class ClothClothCollisionDetector final {
+class ClothClothCollisionDetector final
+{
 public:
     ClothClothCollisionDetector() = default;
     ClothClothCollisionDetector(const ClothClothCollisionDetector&) = delete;
@@ -21,7 +22,8 @@ public:
     void release(QOpenGLFunctions_4_5_Core& gl);
 
 private:
-    struct CandidateDetectionProgram final {
+    struct CandidateDetectionProgram final
+    {
         GLuint program = 0;
         GLint upper_vertex_offset = -1;
         GLint upper_vertex_count = -1;
@@ -34,7 +36,8 @@ private:
         GLint max_candidates = -1;
     };
 
-    struct DispatchSizeProgram final {
+    struct DispatchSizeProgram final
+    {
         GLuint program = 0;
         GLint max_candidates = -1;
         GLint local_size = -1;

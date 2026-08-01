@@ -8,7 +8,8 @@
 struct ClothMotionBufferView;
 struct DistanceConstraintBufferView;
 
-class StretchConstraintSolver final {
+class StretchConstraintSolver final
+{
 public:
     StretchConstraintSolver() = default;
     StretchConstraintSolver(const StretchConstraintSolver&) = delete;
@@ -16,7 +17,8 @@ public:
 
     bool is_initialized() const;
     bool initialize(const std::filesystem::path& shader_path, float stiffness, QOpenGLFunctions_4_5_Core& gl);
-    bool can_solve(const ClothMotionBufferView& motion_view, const DistanceConstraintBufferView& constraint_view) const;
+    bool can_solve(const ClothMotionBufferView& motion_view,
+                   const DistanceConstraintBufferView& constraint_view) const;
     void solve(const ClothMotionBufferView& motion_view,
                const DistanceConstraintBufferView& constraint_view,
                QOpenGLFunctions_4_5_Core& gl) const;
