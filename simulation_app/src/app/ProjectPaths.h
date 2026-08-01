@@ -2,7 +2,8 @@
 
 #include <filesystem>
 
-struct ShaderPaths {
+struct ShaderPaths
+{
     std::filesystem::path shader_dir;
     std::filesystem::path viewer_vertex;
     std::filesystem::path viewer_fragment;
@@ -36,7 +37,8 @@ struct ShaderPaths {
     std::filesystem::path garment_attachment_target_build_compute;
 };
 
-struct ProjectPaths {
+struct ProjectPaths
+{
     std::filesystem::path root;
     ShaderPaths shaders;
     std::filesystem::path python;

@@ -11,7 +11,8 @@
 #include <glm/gtc/quaternion.hpp>
 #include <glm/vec3.hpp>
 
-struct GarmentObject {
+struct GarmentObject
+{
     std::uint32_t id = 0;
     std::uint32_t layer = 0;
     GarmentMesh source_mesh;
@@ -20,18 +21,21 @@ struct GarmentObject {
     std::optional<TriangleBvhData> garment_triangle_bvh;
 };
 
-struct CharacterFrameInterpolation final {
+struct CharacterFrameInterpolation final
+{
     std::uint32_t current_frame_index = 0;
     std::uint32_t next_frame_index = 0;
     float frame_alpha = 0.0f;
 };
 
-struct CharacterReferenceFrame final {
+struct CharacterReferenceFrame final
+{
     glm::vec3 position{};
     glm::quat orientation = glm::quat::wxyz(1.0f, 0.0f, 0.0f, 0.0f);
 };
 
-class SceneState final {
+class SceneState final
+{
 public:
     // Character
     void set_character_mesh(CharacterMesh mesh);
@@ -47,7 +51,9 @@ public:
     std::uint32_t add_garment_mesh(GarmentMesh mesh);
     bool replace_garment_mesh(std::uint32_t garment_id, GarmentMesh mesh);
     bool remove_garment(std::uint32_t garment_id);
-    GarmentObject* update_garment_placement(std::uint32_t garment_id, const glm::vec3& position_offset, float scale);
+    GarmentObject* update_garment_placement(std::uint32_t garment_id,
+                                            const glm::vec3& position_offset,
+                                            float scale);
     bool update_garment_color(std::uint32_t garment_id, const glm::vec3& color);
     GarmentObject* find_garment(std::uint32_t garment_id);
     void clear_garments();

@@ -74,9 +74,15 @@ void GroundCollisionSolver::solve(const ClothMotionBufferView& motion_view,
 
     // shader & GPU 연결
     gl.glUseProgram(program_);
-    gl.glBindBufferBase(GL_SHADER_STORAGE_BUFFER, current_positions_binding, motion_view.current_position_buffer);
-    gl.glBindBufferBase(GL_SHADER_STORAGE_BUFFER, previous_positions_binding, motion_view.previous_position_buffer);
-    gl.glBindBufferBase(GL_SHADER_STORAGE_BUFFER, collision_pushouts_binding, collision_pushout_view.collision_pushout_buffer);
+    gl.glBindBufferBase(GL_SHADER_STORAGE_BUFFER,
+                        current_positions_binding,
+                        motion_view.current_position_buffer);
+    gl.glBindBufferBase(GL_SHADER_STORAGE_BUFFER,
+                        previous_positions_binding,
+                        motion_view.previous_position_buffer);
+    gl.glBindBufferBase(GL_SHADER_STORAGE_BUFFER,
+                        collision_pushouts_binding,
+                        collision_pushout_view.collision_pushout_buffer);
     gl.glBindBufferBase(GL_SHADER_STORAGE_BUFFER,
                         cloth_cloth_pushouts_binding,
                         collision_pushout_view.cloth_cloth_pushout_buffer);

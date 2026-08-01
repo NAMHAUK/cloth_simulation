@@ -7,7 +7,8 @@
 struct ClothMotionBufferView;
 struct DistanceConstraintBufferView;
 
-class BendingConstraintSolver final {
+class BendingConstraintSolver final
+{
 public:
     BendingConstraintSolver() = default;
     BendingConstraintSolver(const BendingConstraintSolver&) = delete;

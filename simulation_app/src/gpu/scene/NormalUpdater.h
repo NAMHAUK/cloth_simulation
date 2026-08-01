@@ -10,7 +10,8 @@ struct CharacterMeshTopologyResources;
 struct ClothMeshTopologyResources;
 struct ClothNormalResources;
 
-class NormalUpdater final {
+class NormalUpdater final
+{
 public:
     NormalUpdater() = default;
     NormalUpdater(const NormalUpdater&) = delete;

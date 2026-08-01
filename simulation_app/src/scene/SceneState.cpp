@@ -29,9 +29,9 @@ glm::quat frame_orientation(const std::vector<float>& orientations, std::uint32_
         return glm::quat::wxyz(1.0f, 0.0f, 0.0f, 0.0f);
     }
     return glm::normalize(glm::quat::wxyz(orientations[base + 3u],
-                                         orientations[base],
-                                         orientations[base + 1u],
-                                         orientations[base + 2u]));
+                                          orientations[base],
+                                          orientations[base + 1u],
+                                          orientations[base + 2u]));
 }
 
 bool prepare_garment_mesh(GarmentMesh& mesh)
@@ -47,8 +47,8 @@ bool prepare_garment_mesh(GarmentMesh& mesh)
         return false;
     }
     if (flipped_triangle_count > 0u) {
-        std::cerr << "Oriented garment triangle winding: flipped "
-                  << flipped_triangle_count << " triangles.\n";
+        std::cerr << "Oriented garment triangle winding: flipped " << flipped_triangle_count
+                  << " triangles.\n";
     }
 
     if (!mesh.adjacency.is_valid(vertex_count) &&
@@ -62,7 +62,7 @@ bool prepare_garment_mesh(GarmentMesh& mesh)
 }
 }
 
-// Character // 
+// Character //
 
 void SceneState::set_character_mesh(CharacterMesh mesh)
 {
@@ -144,7 +144,9 @@ bool SceneState::replace_garment_mesh(std::uint32_t garment_id, GarmentMesh mesh
     return true;
 }
 
-GarmentObject* SceneState::update_garment_placement(std::uint32_t garment_id, const glm::vec3& position_offset, float scale)
+GarmentObject* SceneState::update_garment_placement(std::uint32_t garment_id,
+                                                    const glm::vec3& position_offset,
+                                                    float scale)
 {
     if (scale <= 0.0f) {
         return nullptr;
@@ -165,7 +167,8 @@ GarmentObject* SceneState::update_garment_placement(std::uint32_t garment_id, co
                 source_mesh.vertices[index + 1u],
                 source_mesh.vertices[index + 2u],
             };
-            const glm::vec3 next_position = scale_center + (source_position - scale_center) * scale + position_offset;
+            const glm::vec3 next_position =
+                scale_center + (source_position - scale_center) * scale + position_offset;
             next_mesh.vertices[index] = next_position.x;
             next_mesh.vertices[index + 1u] = next_position.y;
             next_mesh.vertices[index + 2u] = next_position.z;
@@ -204,11 +207,10 @@ bool SceneState::update_garment_color(std::uint32_t garment_id, const glm::vec3&
 
 bool SceneState::remove_garment(std::uint32_t garment_id)
 {
-    const auto iter = std::find_if(garments_.begin(), garments_.end(),
-        [garment_id](const GarmentObject& garment) {
+    const auto iter =
+        std::find_if(garments_.begin(), garments_.end(), [garment_id](const GarmentObject& garment) {
             return garment.id == garment_id;
-        }
-    );
+        });
 
     if (iter == garments_.end()) {
         return false;
@@ -220,11 +222,10 @@ bool SceneState::remove_garment(std::uint32_t garment_id)
 
 GarmentObject* SceneState::find_garment(std::uint32_t garment_id)
 {
-    const auto iter = std::find_if(garments_.begin(), garments_.end(),
-        [garment_id](const GarmentObject& garment) {
+    const auto iter =
+        std::find_if(garments_.begin(), garments_.end(), [garment_id](const GarmentObject& garment) {
             return garment.id == garment_id;
-        }
-    );
+        });
 
     if (iter == garments_.end()) {
         return nullptr;
@@ -250,7 +251,7 @@ bool SceneState::has_multiple_garments() const
     return garments_.size() >= 2u;
 }
 
-// Playback // 
+// Playback //
 void SceneState::update_character_frame(std::uint64_t simulation_step_count,
                                         std::uint32_t character_frame_stride)
 {
@@ -261,9 +262,8 @@ void SceneState::update_character_frame(std::uint64_t simulation_step_count,
     const std::uint64_t frame_index = simulation_step_count / character_frame_stride;
     const std::uint32_t last_frame_index = character_mesh_.frame_count - 1u;
 
-    current_character_frame_ = static_cast<std::uint32_t>(
-        std::min<std::uint64_t>(frame_index, last_frame_index)
-    );
+    current_character_frame_ =
+        static_cast<std::uint32_t>(std::min<std::uint64_t>(frame_index, last_frame_index));
 }
 
 CharacterFrameInterpolation SceneState::character_frame_interpolation(float character_frame_time) const
@@ -290,10 +290,10 @@ CharacterReferenceFrame SceneState::interpolated_character_reference_frame(
 {
     const CharacterFrameInterpolation interpolation = character_frame_interpolation(character_frame_time);
     const bool uses_torso = garment_category == GarmentCategory::Top;
-    const std::vector<float>& positions = uses_torso ? character_mesh_.torso_positions
-                                                     : character_mesh_.root_positions;
-    const std::vector<float>& orientations = uses_torso ? character_mesh_.torso_orientations
-                                                        : character_mesh_.pelvis_orientations;
+    const std::vector<float>& positions =
+        uses_torso ? character_mesh_.torso_positions : character_mesh_.root_positions;
+    const std::vector<float>& orientations =
+        uses_torso ? character_mesh_.torso_orientations : character_mesh_.pelvis_orientations;
     const glm::vec3 current_position = frame_position(positions, interpolation.current_frame_index);
     const glm::vec3 next_position = frame_position(positions, interpolation.next_frame_index);
     const glm::quat current_orientation = frame_orientation(orientations, interpolation.current_frame_index);
@@ -302,10 +302,8 @@ CharacterReferenceFrame SceneState::interpolated_character_reference_frame(
         next_orientation = -next_orientation;
     }
 
-    return {
-        current_position + (next_position - current_position) * interpolation.frame_alpha,
-        glm::normalize(glm::slerp(current_orientation, next_orientation, interpolation.frame_alpha))
-    };
+    return {current_position + (next_position - current_position) * interpolation.frame_alpha,
+            glm::normalize(glm::slerp(current_orientation, next_orientation, interpolation.frame_alpha))};
 }
 
 std::uint32_t SceneState::current_character_frame() const

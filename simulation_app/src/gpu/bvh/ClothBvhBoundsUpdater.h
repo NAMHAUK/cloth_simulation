@@ -8,7 +8,8 @@
 
 #include <QOpenGLFunctions_4_5_Core>
 
-class ClothBvhBoundsUpdater final {
+class ClothBvhBoundsUpdater final
+{
 public:
     ClothBvhBoundsUpdater() = default;
     ClothBvhBoundsUpdater(const ClothBvhBoundsUpdater&) = delete;

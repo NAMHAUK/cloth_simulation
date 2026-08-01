@@ -11,7 +11,8 @@
 namespace {
 constexpr std::uint32_t triangle_vertex_count = 3u;
 
-struct PackedClothBvhData final {
+struct PackedClothBvhData final
+{
     std::vector<std::uint32_t> triangle_indices;
     std::vector<BvhNode> nodes;
     std::vector<GarmentBvhLayout> garment_layouts;
@@ -21,7 +22,8 @@ struct PackedClothBvhData final {
 
 bool can_append(std::uint32_t current_count, std::size_t appended_count)
 {
-    return appended_count <= static_cast<std::size_t>(std::numeric_limits<std::uint32_t>::max() - current_count);
+    return appended_count <=
+           static_cast<std::size_t>(std::numeric_limits<std::uint32_t>::max() - current_count);
 }
 
 bool build_packed_data(const std::vector<GarmentObject>& garments, PackedClothBvhData& packed_data)
@@ -80,7 +82,12 @@ void delete_buffers(GLuint& collision_triangle_index,
 
 ClothBvhBufferView ClothBvhResources::buffer_view() const
 {
-    return {collision_triangle_index_, bvh_node_, triangle_bounds_, triangle_count_, node_count_, &garment_layouts_};
+    return {collision_triangle_index_,
+            bvh_node_,
+            triangle_bounds_,
+            triangle_count_,
+            node_count_,
+            &garment_layouts_};
 }
 
 bool ClothBvhResources::rebuild(const std::vector<GarmentObject>& garments, QOpenGLFunctions_4_5_Core& gl)
@@ -108,9 +115,11 @@ bool ClothBvhResources::rebuild(const std::vector<GarmentObject>& garments, QOpe
         return false;
     }
 
-    const GLsizeiptr triangle_index_bytes = static_cast<GLsizeiptr>(packed_data.triangle_indices.size() * sizeof(std::uint32_t));
+    const GLsizeiptr triangle_index_bytes =
+        static_cast<GLsizeiptr>(packed_data.triangle_indices.size() * sizeof(std::uint32_t));
     const GLsizeiptr bvh_node_bytes = static_cast<GLsizeiptr>(packed_data.nodes.size() * sizeof(BvhNode));
-    const GLsizeiptr triangle_bounds_bytes = static_cast<GLsizeiptr>(static_cast<std::size_t>(packed_data.triangle_count) * sizeof(Aabb));
+    const GLsizeiptr triangle_bounds_bytes =
+        static_cast<GLsizeiptr>(static_cast<std::size_t>(packed_data.triangle_count) * sizeof(Aabb));
     gl.glNamedBufferData(next_collision_triangle_index,
                          triangle_index_bytes,
                          packed_data.triangle_indices.data(),

@@ -6,7 +6,8 @@
 
 #include <glm/vec3.hpp>
 
-class BackgroundGradient final {
+class BackgroundGradient final
+{
 public:
     BackgroundGradient() = default;
     BackgroundGradient(const BackgroundGradient&) = delete;

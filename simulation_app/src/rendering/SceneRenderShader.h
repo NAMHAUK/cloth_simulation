@@ -8,7 +8,8 @@
 
 #include <QOpenGLFunctions_4_5_Core>
 
-class SceneRenderShader final {
+class SceneRenderShader final
+{
 public:
     SceneRenderShader() = default;
     SceneRenderShader(const SceneRenderShader&) = delete;

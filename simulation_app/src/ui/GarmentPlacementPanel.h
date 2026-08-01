@@ -15,18 +15,18 @@ class QPushButton;
 class QSlider;
 class QString;
 
-class GarmentPlacementPanel final : public QWidget {
+class GarmentPlacementPanel final : public QWidget
+{
 public:
     static constexpr std::size_t lower_group_index = 0u;
     static constexpr std::size_t upper_group_index = 1u;
 
-    using PlacementChangedCallback = std::function<void(std::size_t group_index,
-                                                        const glm::vec3& position_offset,
-                                                        float scale)>;
+    using PlacementChangedCallback =
+        std::function<void(std::size_t group_index, const glm::vec3& position_offset, float scale)>;
     using ColorChangedCallback = std::function<void(std::size_t group_index, const glm::vec3& color)>;
     using ColorSelectedCallback = std::function<void(const glm::vec3& color)>;
-    using ColorEditCallback = std::function<void(const glm::vec3& color,
-                                                 ColorSelectedCallback color_selected_callback)>;
+    using ColorEditCallback =
+        std::function<void(const glm::vec3& color, ColorSelectedCallback color_selected_callback)>;
     using AddUpperCallback = std::function<void()>;
     using RemoveUpperCallback = std::function<void()>;
     using ConfirmRunCallback = std::function<void()>;
@@ -54,7 +54,8 @@ protected:
     bool eventFilter(QObject* watched, QEvent* event) override;
 
 private:
-    struct PlacementGroup final {
+    struct PlacementGroup final
+    {
         QFrame* frame = nullptr;
         QLabel* group_label = nullptr;
         QLabel* garment_name_label = nullptr;

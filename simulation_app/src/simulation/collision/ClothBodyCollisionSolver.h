@@ -6,7 +6,8 @@
 
 #include <QOpenGLFunctions_4_5_Core>
 
-class ClothBodyCollisionSolver final {
+class ClothBodyCollisionSolver final
+{
 public:
     ClothBodyCollisionSolver() = default;
     ClothBodyCollisionSolver(const ClothBodyCollisionSolver&) = delete;
@@ -27,13 +28,15 @@ public:
     void release(QOpenGLFunctions_4_5_Core& gl);
 
 private:
-    struct AccumulateStage final {
+    struct AccumulateStage final
+    {
         GLuint program = 0;
         GLint max_candidates = -1;
         GLint thickness = -1;
     };
 
-    struct ApplyStage final {
+    struct ApplyStage final
+    {
         GLuint program = 0;
         GLint vertex_count = -1;
         GLint max_correction = -1;

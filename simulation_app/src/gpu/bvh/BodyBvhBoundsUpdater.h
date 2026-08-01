@@ -1,14 +1,15 @@
 #pragma once
 
-#include "gpu/character/CharacterGpuDataTypes.h"
 #include "gpu/bvh/BvhDataTypes.h"
+#include "gpu/character/CharacterGpuDataTypes.h"
 
 #include <filesystem>
 #include <vector>
 
 #include <QOpenGLFunctions_4_5_Core>
 
-class BodyBvhBoundsUpdater final {
+class BodyBvhBoundsUpdater final
+{
 public:
     BodyBvhBoundsUpdater() = default;
     BodyBvhBoundsUpdater(const BodyBvhBoundsUpdater&) = delete;

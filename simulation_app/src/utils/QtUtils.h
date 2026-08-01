@@ -11,21 +11,15 @@ inline QString to_q_string(const std::filesystem::path& path)
     return QString::fromStdWString(path.wstring());
 }
 
-class ScopedGlContext {
+class ScopedGlContext
+{
 public:
-    explicit ScopedGlContext(QOpenGLWidget& widget)
-        : widget_(widget)
-    {
-        widget_.makeCurrent();
-    }
+    explicit ScopedGlContext(QOpenGLWidget& widget) : widget_(widget) { widget_.makeCurrent(); }
 
     ScopedGlContext(const ScopedGlContext&) = delete;
     ScopedGlContext& operator=(const ScopedGlContext&) = delete;
 
-    ~ScopedGlContext()
-    {
-        widget_.doneCurrent();
-    }
+    ~ScopedGlContext() { widget_.doneCurrent(); }
 
 private:
     QOpenGLWidget& widget_;

@@ -1,7 +1,7 @@
 #pragma once
 
-#include <functional>
 #include <filesystem>
+#include <functional>
 #include <vector>
 
 #include <QHash>
@@ -14,12 +14,14 @@ class QPushButton;
 class QTableWidget;
 class QWidget;
 
-enum class AssetPanelMode {
+enum class AssetPanelMode
+{
     Motions,
     Garments,
 };
 
-class AssetBrowserPanel final : public QWidget {
+class AssetBrowserPanel final : public QWidget
+{
 public:
     explicit AssetBrowserPanel(const std::filesystem::path& motion_catalog_path,
                                const std::filesystem::path& subject_catalog_path,

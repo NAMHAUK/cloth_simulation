@@ -12,7 +12,8 @@ struct ClothCollisionPushoutBufferView;
 struct ClothContactMotionBufferView;
 struct GarmentBufferRanges;
 
-struct ReferenceFrameMotion final {
+struct ReferenceFrameMotion final
+{
     glm::vec3 start_position{};
     glm::vec3 end_position{};
     glm::mat3 rotation{1.0f};
@@ -22,7 +23,8 @@ struct ReferenceFrameMotion final {
     glm::vec3 angular_acceleration{};
 };
 
-class ExternalForceSolver final {
+class ExternalForceSolver final
+{
 public:
     ExternalForceSolver() = default;
     ExternalForceSolver(const ExternalForceSolver&) = delete;

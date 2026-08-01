@@ -77,19 +77,26 @@ bool ClothBodyCollisionSolver::is_initialized() const
            apply_.program != 0;
 }
 
-bool ClothBodyCollisionSolver::initialize(const std::filesystem::path& cloth_vertex_body_face_accumulate_shader_path,
-                                          const std::filesystem::path& cloth_edge_body_edge_accumulate_shader_path,
-                                          const std::filesystem::path& body_vertex_cloth_face_accumulate_shader_path,
-                                          const std::filesystem::path& apply_shader_path,
-                                          float collision_thickness,
-                                          float max_correction_length,
-                                          float static_friction,
-                                          float dynamic_friction,
-                                          QOpenGLFunctions_4_5_Core& gl)
+bool ClothBodyCollisionSolver::initialize(
+    const std::filesystem::path& cloth_vertex_body_face_accumulate_shader_path,
+    const std::filesystem::path& cloth_edge_body_edge_accumulate_shader_path,
+    const std::filesystem::path& body_vertex_cloth_face_accumulate_shader_path,
+    const std::filesystem::path& apply_shader_path,
+    float collision_thickness,
+    float max_correction_length,
+    float static_friction,
+    float dynamic_friction,
+    QOpenGLFunctions_4_5_Core& gl)
 {
-    vf_accumulate_.program = load_compute_program(cloth_vertex_body_face_accumulate_shader_path, "Cloth vertex/body face candidate accumulation", gl);
-    ee_accumulate_.program = load_compute_program(cloth_edge_body_edge_accumulate_shader_path, "Cloth edge/body edge candidate accumulation", gl);
-    bf_accumulate_.program = load_compute_program(body_vertex_cloth_face_accumulate_shader_path, "Body vertex/cloth face candidate accumulation", gl);
+    vf_accumulate_.program = load_compute_program(cloth_vertex_body_face_accumulate_shader_path,
+                                                  "Cloth vertex/body face candidate accumulation",
+                                                  gl);
+    ee_accumulate_.program = load_compute_program(cloth_edge_body_edge_accumulate_shader_path,
+                                                  "Cloth edge/body edge candidate accumulation",
+                                                  gl);
+    bf_accumulate_.program = load_compute_program(body_vertex_cloth_face_accumulate_shader_path,
+                                                  "Body vertex/cloth face candidate accumulation",
+                                                  gl);
     apply_.program = load_compute_program(apply_shader_path, "Cloth-body collision combined apply", gl);
     if (!is_initialized()) {
         release(gl);
@@ -147,9 +154,14 @@ bool ClothBodyCollisionSolver::can_solve(const SimulationGpuViews& views) const
            is_valid_edge_bvh_resource(views.body_edge_bvh) &&
            is_valid_collision_candidate_buffer_view(views.collision_candidates) &&
            views.collision_candidates.vertex_capacity >= views.cloth_motion.vertex_count &&
-           views.collision_candidates.cloth_vertex_body_face.capacity >= views.cloth_motion.vertex_count * CollisionCandidateBuffers::candidate_capacity_multiplier &&
-           views.collision_candidates.cloth_edge_body_edge.capacity >= views.stretch_constraints.constraint_count * CollisionCandidateBuffers::candidate_capacity_multiplier &&
-           views.collision_candidates.cloth_face_body_vertex.capacity >= views.cloth_topology.triangle_count * CollisionCandidateBuffers::candidate_capacity_multiplier &&
+           views.collision_candidates.cloth_vertex_body_face.capacity >=
+               views.cloth_motion.vertex_count * CollisionCandidateBuffers::candidate_capacity_multiplier &&
+           views.collision_candidates.cloth_edge_body_edge.capacity >=
+               views.stretch_constraints.constraint_count *
+                   CollisionCandidateBuffers::candidate_capacity_multiplier &&
+           views.collision_candidates.cloth_face_body_vertex.capacity >=
+               views.cloth_topology.triangle_count *
+                   CollisionCandidateBuffers::candidate_capacity_multiplier &&
            collision_thickness_ > 0.0f &&
            max_correction_length_ > 0.0f &&
            dynamic_friction_ >= 0.0f &&
@@ -190,25 +202,45 @@ void ClothBodyCollisionSolver::release(QOpenGLFunctions_4_5_Core& gl)
     dynamic_friction_ = 0.0f;
 }
 
-void ClothBodyCollisionSolver::clear_correction_sums(const SimulationGpuViews& views, QOpenGLFunctions_4_5_Core& gl) const
+void ClothBodyCollisionSolver::clear_correction_sums(const SimulationGpuViews& views,
+                                                     QOpenGLFunctions_4_5_Core& gl) const
 {
     views.collision_candidates.clear_correction_sums(gl);
 }
 
-void ClothBodyCollisionSolver::vf_accumulate(const SimulationGpuViews& views, QOpenGLFunctions_4_5_Core& gl) const
+void ClothBodyCollisionSolver::vf_accumulate(const SimulationGpuViews& views,
+                                             QOpenGLFunctions_4_5_Core& gl) const
 {
     const CollisionCandidateBuffer& collision_candidates = views.collision_candidates.cloth_vertex_body_face;
     gl.glUseProgram(vf_accumulate_.program);
-    gl.glBindBufferBase(GL_SHADER_STORAGE_BUFFER, vf_binding::cloth_current, views.cloth_motion.current_position_buffer);
-    gl.glBindBufferBase(GL_SHADER_STORAGE_BUFFER, vf_binding::cloth_previous, views.cloth_motion.previous_position_buffer);
-    gl.glBindBufferBase(GL_SHADER_STORAGE_BUFFER, vf_binding::body_triangle_geometry, views.body_triangle_geometry.triangle_geometry_buffer);
+    gl.glBindBufferBase(GL_SHADER_STORAGE_BUFFER,
+                        vf_binding::cloth_current,
+                        views.cloth_motion.current_position_buffer);
+    gl.glBindBufferBase(GL_SHADER_STORAGE_BUFFER,
+                        vf_binding::cloth_previous,
+                        views.cloth_motion.previous_position_buffer);
+    gl.glBindBufferBase(GL_SHADER_STORAGE_BUFFER,
+                        vf_binding::body_triangle_geometry,
+                        views.body_triangle_geometry.triangle_geometry_buffer);
     gl.glBindBufferBase(GL_SHADER_STORAGE_BUFFER, vf_binding::candidates, collision_candidates.candidates);
-    gl.glBindBufferBase(GL_SHADER_STORAGE_BUFFER, vf_binding::candidate_count, collision_candidates.candidate_count);
-    gl.glBindBufferBase(GL_SHADER_STORAGE_BUFFER, vf_binding::normal_correction_sums, views.collision_candidates.normal_correction_sum_buffer);
-    gl.glBindBufferBase(GL_SHADER_STORAGE_BUFFER, vf_binding::friction_correction_sums, views.collision_candidates.friction_correction_sum_buffer);
-    gl.glBindBufferBase(GL_SHADER_STORAGE_BUFFER, vf_binding::body_previous, views.body_vertices.previous_position_buffer);
-    gl.glBindBufferBase(GL_SHADER_STORAGE_BUFFER, vf_binding::body_triangles, views.body_topology.triangle_index_buffer);
-    gl.glBindBufferBase(GL_SHADER_STORAGE_BUFFER, vf_binding::collision_pushouts, views.cloth_collision_pushout.collision_pushout_buffer);
+    gl.glBindBufferBase(GL_SHADER_STORAGE_BUFFER,
+                        vf_binding::candidate_count,
+                        collision_candidates.candidate_count);
+    gl.glBindBufferBase(GL_SHADER_STORAGE_BUFFER,
+                        vf_binding::normal_correction_sums,
+                        views.collision_candidates.normal_correction_sum_buffer);
+    gl.glBindBufferBase(GL_SHADER_STORAGE_BUFFER,
+                        vf_binding::friction_correction_sums,
+                        views.collision_candidates.friction_correction_sum_buffer);
+    gl.glBindBufferBase(GL_SHADER_STORAGE_BUFFER,
+                        vf_binding::body_previous,
+                        views.body_vertices.previous_position_buffer);
+    gl.glBindBufferBase(GL_SHADER_STORAGE_BUFFER,
+                        vf_binding::body_triangles,
+                        views.body_topology.triangle_index_buffer);
+    gl.glBindBufferBase(GL_SHADER_STORAGE_BUFFER,
+                        vf_binding::collision_pushouts,
+                        views.cloth_collision_pushout.collision_pushout_buffer);
     gl.glBindBufferBase(GL_SHADER_STORAGE_BUFFER,
                         vf_binding::cloth_cloth_pushouts,
                         views.cloth_collision_pushout.cloth_cloth_pushout_buffer);
@@ -218,7 +250,9 @@ void ClothBodyCollisionSolver::vf_accumulate(const SimulationGpuViews& views, QO
     gl.glBindBufferBase(GL_SHADER_STORAGE_BUFFER,
                         vf_binding::contact_motion_delta_sums,
                         views.collision_candidates.contact_motion_delta_sum_buffer);
-    gl.glProgramUniform1ui(vf_accumulate_.program, vf_accumulate_.max_candidates, collision_candidates.capacity);
+    gl.glProgramUniform1ui(vf_accumulate_.program,
+                           vf_accumulate_.max_candidates,
+                           collision_candidates.capacity);
     gl.glProgramUniform1f(vf_accumulate_.program, vf_accumulate_.thickness, collision_thickness_);
     gl.glBindBuffer(GL_DISPATCH_INDIRECT_BUFFER, collision_candidates.dispatch_size);
     gl.glDispatchComputeIndirect(0);
@@ -226,21 +260,42 @@ void ClothBodyCollisionSolver::vf_accumulate(const SimulationGpuViews& views, QO
     gl.glMemoryBarrier(GL_SHADER_STORAGE_BARRIER_BIT);
 }
 
-void ClothBodyCollisionSolver::ee_accumulate(const SimulationGpuViews& views, QOpenGLFunctions_4_5_Core& gl) const
+void ClothBodyCollisionSolver::ee_accumulate(const SimulationGpuViews& views,
+                                             QOpenGLFunctions_4_5_Core& gl) const
 {
     const CollisionCandidateBuffer& collision_candidates = views.collision_candidates.cloth_edge_body_edge;
     gl.glUseProgram(ee_accumulate_.program);
-    gl.glBindBufferBase(GL_SHADER_STORAGE_BUFFER, ee_binding::cloth_current, views.cloth_motion.current_position_buffer);
-    gl.glBindBufferBase(GL_SHADER_STORAGE_BUFFER, ee_binding::cloth_previous, views.cloth_motion.previous_position_buffer);
-    gl.glBindBufferBase(GL_SHADER_STORAGE_BUFFER, ee_binding::cloth_edges, views.stretch_constraints.edge_index_buffer);
-    gl.glBindBufferBase(GL_SHADER_STORAGE_BUFFER, ee_binding::body_previous, views.body_vertices.previous_position_buffer);
-    gl.glBindBufferBase(GL_SHADER_STORAGE_BUFFER, ee_binding::body_current, views.body_vertices.current_position_buffer);
-    gl.glBindBufferBase(GL_SHADER_STORAGE_BUFFER, ee_binding::body_edges, views.body_edge_bvh.edge_index_buffer);
+    gl.glBindBufferBase(GL_SHADER_STORAGE_BUFFER,
+                        ee_binding::cloth_current,
+                        views.cloth_motion.current_position_buffer);
+    gl.glBindBufferBase(GL_SHADER_STORAGE_BUFFER,
+                        ee_binding::cloth_previous,
+                        views.cloth_motion.previous_position_buffer);
+    gl.glBindBufferBase(GL_SHADER_STORAGE_BUFFER,
+                        ee_binding::cloth_edges,
+                        views.stretch_constraints.edge_index_buffer);
+    gl.glBindBufferBase(GL_SHADER_STORAGE_BUFFER,
+                        ee_binding::body_previous,
+                        views.body_vertices.previous_position_buffer);
+    gl.glBindBufferBase(GL_SHADER_STORAGE_BUFFER,
+                        ee_binding::body_current,
+                        views.body_vertices.current_position_buffer);
+    gl.glBindBufferBase(GL_SHADER_STORAGE_BUFFER,
+                        ee_binding::body_edges,
+                        views.body_edge_bvh.edge_index_buffer);
     gl.glBindBufferBase(GL_SHADER_STORAGE_BUFFER, ee_binding::candidates, collision_candidates.candidates);
-    gl.glBindBufferBase(GL_SHADER_STORAGE_BUFFER, ee_binding::candidate_count, collision_candidates.candidate_count);
-    gl.glBindBufferBase(GL_SHADER_STORAGE_BUFFER, ee_binding::normal_correction_sums, views.collision_candidates.normal_correction_sum_buffer);
-    gl.glBindBufferBase(GL_SHADER_STORAGE_BUFFER, ee_binding::friction_correction_sums, views.collision_candidates.friction_correction_sum_buffer);
-    gl.glBindBufferBase(GL_SHADER_STORAGE_BUFFER, ee_binding::collision_pushouts, views.cloth_collision_pushout.collision_pushout_buffer);
+    gl.glBindBufferBase(GL_SHADER_STORAGE_BUFFER,
+                        ee_binding::candidate_count,
+                        collision_candidates.candidate_count);
+    gl.glBindBufferBase(GL_SHADER_STORAGE_BUFFER,
+                        ee_binding::normal_correction_sums,
+                        views.collision_candidates.normal_correction_sum_buffer);
+    gl.glBindBufferBase(GL_SHADER_STORAGE_BUFFER,
+                        ee_binding::friction_correction_sums,
+                        views.collision_candidates.friction_correction_sum_buffer);
+    gl.glBindBufferBase(GL_SHADER_STORAGE_BUFFER,
+                        ee_binding::collision_pushouts,
+                        views.cloth_collision_pushout.collision_pushout_buffer);
     gl.glBindBufferBase(GL_SHADER_STORAGE_BUFFER,
                         ee_binding::cloth_cloth_pushouts,
                         views.cloth_collision_pushout.cloth_cloth_pushout_buffer);
@@ -250,7 +305,9 @@ void ClothBodyCollisionSolver::ee_accumulate(const SimulationGpuViews& views, QO
     gl.glBindBufferBase(GL_SHADER_STORAGE_BUFFER,
                         ee_binding::contact_motion_delta_sums,
                         views.collision_candidates.contact_motion_delta_sum_buffer);
-    gl.glProgramUniform1ui(ee_accumulate_.program, ee_accumulate_.max_candidates, collision_candidates.capacity);
+    gl.glProgramUniform1ui(ee_accumulate_.program,
+                           ee_accumulate_.max_candidates,
+                           collision_candidates.capacity);
     gl.glProgramUniform1f(ee_accumulate_.program, ee_accumulate_.thickness, collision_thickness_);
     gl.glBindBuffer(GL_DISPATCH_INDIRECT_BUFFER, collision_candidates.dispatch_size);
     gl.glDispatchComputeIndirect(0);
@@ -258,21 +315,42 @@ void ClothBodyCollisionSolver::ee_accumulate(const SimulationGpuViews& views, QO
     gl.glMemoryBarrier(GL_SHADER_STORAGE_BARRIER_BIT);
 }
 
-void ClothBodyCollisionSolver::bf_accumulate(const SimulationGpuViews& views, QOpenGLFunctions_4_5_Core& gl) const
+void ClothBodyCollisionSolver::bf_accumulate(const SimulationGpuViews& views,
+                                             QOpenGLFunctions_4_5_Core& gl) const
 {
     const CollisionCandidateBuffer& collision_candidates = views.collision_candidates.cloth_face_body_vertex;
     gl.glUseProgram(bf_accumulate_.program);
-    gl.glBindBufferBase(GL_SHADER_STORAGE_BUFFER, bf_binding::cloth_current, views.cloth_motion.current_position_buffer);
-    gl.glBindBufferBase(GL_SHADER_STORAGE_BUFFER, bf_binding::cloth_previous, views.cloth_motion.previous_position_buffer);
-    gl.glBindBufferBase(GL_SHADER_STORAGE_BUFFER, bf_binding::cloth_triangles, views.cloth_topology.triangle_index_buffer);
-    gl.glBindBufferBase(GL_SHADER_STORAGE_BUFFER, bf_binding::body_previous, views.body_vertices.previous_position_buffer);
-    gl.glBindBufferBase(GL_SHADER_STORAGE_BUFFER, bf_binding::body_current, views.body_vertices.current_position_buffer);
-    gl.glBindBufferBase(GL_SHADER_STORAGE_BUFFER, bf_binding::body_normals, views.body_vertices.vertex_normal_buffer);
+    gl.glBindBufferBase(GL_SHADER_STORAGE_BUFFER,
+                        bf_binding::cloth_current,
+                        views.cloth_motion.current_position_buffer);
+    gl.glBindBufferBase(GL_SHADER_STORAGE_BUFFER,
+                        bf_binding::cloth_previous,
+                        views.cloth_motion.previous_position_buffer);
+    gl.glBindBufferBase(GL_SHADER_STORAGE_BUFFER,
+                        bf_binding::cloth_triangles,
+                        views.cloth_topology.triangle_index_buffer);
+    gl.glBindBufferBase(GL_SHADER_STORAGE_BUFFER,
+                        bf_binding::body_previous,
+                        views.body_vertices.previous_position_buffer);
+    gl.glBindBufferBase(GL_SHADER_STORAGE_BUFFER,
+                        bf_binding::body_current,
+                        views.body_vertices.current_position_buffer);
+    gl.glBindBufferBase(GL_SHADER_STORAGE_BUFFER,
+                        bf_binding::body_normals,
+                        views.body_vertices.vertex_normal_buffer);
     gl.glBindBufferBase(GL_SHADER_STORAGE_BUFFER, bf_binding::candidates, collision_candidates.candidates);
-    gl.glBindBufferBase(GL_SHADER_STORAGE_BUFFER, bf_binding::candidate_count, collision_candidates.candidate_count);
-    gl.glBindBufferBase(GL_SHADER_STORAGE_BUFFER, bf_binding::normal_correction_sums, views.collision_candidates.normal_correction_sum_buffer);
-    gl.glBindBufferBase(GL_SHADER_STORAGE_BUFFER, bf_binding::friction_correction_sums, views.collision_candidates.friction_correction_sum_buffer);
-    gl.glBindBufferBase(GL_SHADER_STORAGE_BUFFER, bf_binding::collision_pushouts, views.cloth_collision_pushout.collision_pushout_buffer);
+    gl.glBindBufferBase(GL_SHADER_STORAGE_BUFFER,
+                        bf_binding::candidate_count,
+                        collision_candidates.candidate_count);
+    gl.glBindBufferBase(GL_SHADER_STORAGE_BUFFER,
+                        bf_binding::normal_correction_sums,
+                        views.collision_candidates.normal_correction_sum_buffer);
+    gl.glBindBufferBase(GL_SHADER_STORAGE_BUFFER,
+                        bf_binding::friction_correction_sums,
+                        views.collision_candidates.friction_correction_sum_buffer);
+    gl.glBindBufferBase(GL_SHADER_STORAGE_BUFFER,
+                        bf_binding::collision_pushouts,
+                        views.cloth_collision_pushout.collision_pushout_buffer);
     gl.glBindBufferBase(GL_SHADER_STORAGE_BUFFER,
                         bf_binding::cloth_cloth_pushouts,
                         views.cloth_collision_pushout.cloth_cloth_pushout_buffer);
@@ -282,7 +360,9 @@ void ClothBodyCollisionSolver::bf_accumulate(const SimulationGpuViews& views, QO
     gl.glBindBufferBase(GL_SHADER_STORAGE_BUFFER,
                         bf_binding::contact_motion_delta_sums,
                         views.collision_candidates.contact_motion_delta_sum_buffer);
-    gl.glProgramUniform1ui(bf_accumulate_.program, bf_accumulate_.max_candidates, collision_candidates.capacity);
+    gl.glProgramUniform1ui(bf_accumulate_.program,
+                           bf_accumulate_.max_candidates,
+                           collision_candidates.capacity);
     gl.glProgramUniform1f(bf_accumulate_.program, bf_accumulate_.thickness, collision_thickness_);
     gl.glBindBuffer(GL_DISPATCH_INDIRECT_BUFFER, collision_candidates.dispatch_size);
     gl.glDispatchComputeIndirect(0);
@@ -290,13 +370,22 @@ void ClothBodyCollisionSolver::bf_accumulate(const SimulationGpuViews& views, QO
     gl.glMemoryBarrier(GL_SHADER_STORAGE_BARRIER_BIT);
 }
 
-void ClothBodyCollisionSolver::apply_combined_corrections(const SimulationGpuViews& views, QOpenGLFunctions_4_5_Core& gl) const
+void ClothBodyCollisionSolver::apply_combined_corrections(const SimulationGpuViews& views,
+                                                          QOpenGLFunctions_4_5_Core& gl) const
 {
     gl.glUseProgram(apply_.program);
-    gl.glBindBufferBase(GL_SHADER_STORAGE_BUFFER, apply_binding::cloth_current, views.cloth_motion.current_position_buffer);
-    gl.glBindBufferBase(GL_SHADER_STORAGE_BUFFER, apply_binding::collision_pushouts, views.cloth_collision_pushout.collision_pushout_buffer);
-    gl.glBindBufferBase(GL_SHADER_STORAGE_BUFFER, apply_binding::normal_correction_sums, views.collision_candidates.normal_correction_sum_buffer);
-    gl.glBindBufferBase(GL_SHADER_STORAGE_BUFFER, apply_binding::friction_correction_sums, views.collision_candidates.friction_correction_sum_buffer);
+    gl.glBindBufferBase(GL_SHADER_STORAGE_BUFFER,
+                        apply_binding::cloth_current,
+                        views.cloth_motion.current_position_buffer);
+    gl.glBindBufferBase(GL_SHADER_STORAGE_BUFFER,
+                        apply_binding::collision_pushouts,
+                        views.cloth_collision_pushout.collision_pushout_buffer);
+    gl.glBindBufferBase(GL_SHADER_STORAGE_BUFFER,
+                        apply_binding::normal_correction_sums,
+                        views.collision_candidates.normal_correction_sum_buffer);
+    gl.glBindBufferBase(GL_SHADER_STORAGE_BUFFER,
+                        apply_binding::friction_correction_sums,
+                        views.collision_candidates.friction_correction_sum_buffer);
     gl.glBindBufferBase(GL_SHADER_STORAGE_BUFFER,
                         apply_binding::contact_motion_delta_sums,
                         views.collision_candidates.contact_motion_delta_sum_buffer);

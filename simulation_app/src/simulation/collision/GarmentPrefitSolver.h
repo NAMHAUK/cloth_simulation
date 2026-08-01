@@ -7,7 +7,8 @@
 
 #include <QOpenGLFunctions_4_5_Core>
 
-class GarmentPrefitSolver final {
+class GarmentPrefitSolver final
+{
 public:
     GarmentPrefitSolver() = default;
     GarmentPrefitSolver(const GarmentPrefitSolver&) = delete;

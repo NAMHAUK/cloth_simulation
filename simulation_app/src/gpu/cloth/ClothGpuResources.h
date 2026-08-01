@@ -9,7 +9,8 @@
 
 struct GarmentObject;
 
-class ClothGpuResources final {
+class ClothGpuResources final
+{
 public:
     ClothGpuResources() = default;
 
@@ -20,9 +21,15 @@ public:
 
     bool is_initialized() const;
 
-    bool update_garment_buffers(const std::vector<GarmentObject>& garments, std::uint32_t reset_garment_id, QOpenGLFunctions_4_5_Core& gl);
-    bool update_garment_placement(const GarmentObject& garment, bool update_rest_lengths, QOpenGLFunctions_4_5_Core& gl);
-    bool upload_garment_attachment_vertices(const GarmentObject& garment, ElementRange& target_range, QOpenGLFunctions_4_5_Core& gl);
+    bool update_garment_buffers(const std::vector<GarmentObject>& garments,
+                                std::uint32_t reset_garment_id,
+                                QOpenGLFunctions_4_5_Core& gl);
+    bool update_garment_placement(const GarmentObject& garment,
+                                  bool update_rest_lengths,
+                                  QOpenGLFunctions_4_5_Core& gl);
+    bool upload_garment_attachment_vertices(const GarmentObject& garment,
+                                            ElementRange& target_range,
+                                            QOpenGLFunctions_4_5_Core& gl);
     bool activate_attachment_targets(const ElementRange& target_range);
     bool deactivate_attachment_targets(std::uint32_t garment_id);
     bool save_base_positions(QOpenGLFunctions_4_5_Core& gl);

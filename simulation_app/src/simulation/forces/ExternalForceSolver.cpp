@@ -99,10 +99,16 @@ void ExternalForceSolver::solve(const ClothMotionBufferView& motion_view,
 
     // shader & GPU 연결
     gl.glUseProgram(program_);
-    gl.glBindBufferBase(GL_SHADER_STORAGE_BUFFER, current_positions_binding, motion_view.current_position_buffer);
-    gl.glBindBufferBase(GL_SHADER_STORAGE_BUFFER, previous_positions_binding, motion_view.previous_position_buffer);
+    gl.glBindBufferBase(GL_SHADER_STORAGE_BUFFER,
+                        current_positions_binding,
+                        motion_view.current_position_buffer);
+    gl.glBindBufferBase(GL_SHADER_STORAGE_BUFFER,
+                        previous_positions_binding,
+                        motion_view.previous_position_buffer);
     gl.glBindBufferBase(GL_SHADER_STORAGE_BUFFER, velocities_binding, motion_view.velocity_buffer);
-    gl.glBindBufferBase(GL_SHADER_STORAGE_BUFFER, collision_pushouts_binding, collision_pushout_view.collision_pushout_buffer);
+    gl.glBindBufferBase(GL_SHADER_STORAGE_BUFFER,
+                        collision_pushouts_binding,
+                        collision_pushout_view.collision_pushout_buffer);
     gl.glBindBufferBase(GL_SHADER_STORAGE_BUFFER,
                         cloth_cloth_pushouts_binding,
                         collision_pushout_view.cloth_cloth_pushout_buffer);
@@ -122,40 +128,40 @@ void ExternalForceSolver::solve(const ClothMotionBufferView& motion_view,
                           external_acceleration.z);
     gl.glProgramUniform1f(program_, velocity_damping_location_, velocity_damping);
     gl.glProgramUniform3f(program_,
-                         frame_start_position_location_,
-                         frame_motion.start_position.x,
-                         frame_motion.start_position.y,
-                         frame_motion.start_position.z);
+                          frame_start_position_location_,
+                          frame_motion.start_position.x,
+                          frame_motion.start_position.y,
+                          frame_motion.start_position.z);
     gl.glProgramUniform3f(program_,
-                         frame_end_position_location_,
-                         frame_motion.end_position.x,
-                         frame_motion.end_position.y,
-                         frame_motion.end_position.z);
+                          frame_end_position_location_,
+                          frame_motion.end_position.x,
+                          frame_motion.end_position.y,
+                          frame_motion.end_position.z);
     gl.glProgramUniformMatrix3fv(program_,
-                                frame_rotation_location_,
-                                1,
-                                GL_FALSE,
-                                glm::value_ptr(frame_motion.rotation));
+                                 frame_rotation_location_,
+                                 1,
+                                 GL_FALSE,
+                                 glm::value_ptr(frame_motion.rotation));
     gl.glProgramUniform3f(program_,
-                         previous_frame_velocity_location_,
-                         frame_motion.previous_velocity.x,
-                         frame_motion.previous_velocity.y,
-                         frame_motion.previous_velocity.z);
+                          previous_frame_velocity_location_,
+                          frame_motion.previous_velocity.x,
+                          frame_motion.previous_velocity.y,
+                          frame_motion.previous_velocity.z);
     gl.glProgramUniform3f(program_,
-                         frame_acceleration_location_,
-                         frame_motion.acceleration.x,
-                         frame_motion.acceleration.y,
-                         frame_motion.acceleration.z);
+                          frame_acceleration_location_,
+                          frame_motion.acceleration.x,
+                          frame_motion.acceleration.y,
+                          frame_motion.acceleration.z);
     gl.glProgramUniform3f(program_,
-                         previous_angular_velocity_location_,
-                         frame_motion.previous_angular_velocity.x,
-                         frame_motion.previous_angular_velocity.y,
-                         frame_motion.previous_angular_velocity.z);
+                          previous_angular_velocity_location_,
+                          frame_motion.previous_angular_velocity.x,
+                          frame_motion.previous_angular_velocity.y,
+                          frame_motion.previous_angular_velocity.z);
     gl.glProgramUniform3f(program_,
-                         angular_acceleration_location_,
-                         frame_motion.angular_acceleration.x,
-                         frame_motion.angular_acceleration.y,
-                         frame_motion.angular_acceleration.z);
+                          angular_acceleration_location_,
+                          frame_motion.angular_acceleration.x,
+                          frame_motion.angular_acceleration.y,
+                          frame_motion.angular_acceleration.z);
     gl.glProgramUniform1f(program_, frame_inertia_scale_location_, frame_inertia_scale);
 
     // shader가 외부 가속도에 따른 위치 변화량 계산 (GPU에서 바로 업데이트)

@@ -5,7 +5,8 @@
 #include "gpu/cloth/ClothGpuDataTypes.h"
 #include "gpu/scene/CollisionCandidateBuffers.h"
 
-struct SimulationGpuViews final {
+struct SimulationGpuViews final
+{
     ClothMotionBufferView cloth_motion;
     ClothCollisionPushoutBufferView cloth_collision_pushout;
     ClothContactMotionBufferView cloth_contact_motion;

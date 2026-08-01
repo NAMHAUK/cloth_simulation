@@ -9,7 +9,8 @@
 
 inline constexpr std::uint32_t vertex_position_components = 3;
 
-struct VertexFaceAdjacency final {
+struct VertexFaceAdjacency final
+{
     std::vector<std::uint32_t> offsets;
     std::vector<std::uint32_t> face_indices;
     std::uint32_t face_count = 0;
@@ -17,22 +18,26 @@ struct VertexFaceAdjacency final {
     bool is_valid(std::uint32_t vertex_count) const;
 };
 
-struct MeshEdge final {
+struct MeshEdge final
+{
     std::uint32_t vertex_a = 0;
     std::uint32_t vertex_b = 0;
 };
 
-struct MeshElementRange final {
+struct MeshElementRange final
+{
     std::uint32_t offset = 0;
     std::uint32_t count = 0;
 };
 
-struct ColorizedMeshEdges final {
+struct ColorizedMeshEdges final
+{
     std::vector<MeshEdge> edges;
     std::vector<MeshElementRange> ranges;
 };
 
-struct CharacterMesh {
+struct CharacterMesh
+{
     float fps = 0.0f;
     std::uint32_t frame_count = 0;
     std::uint32_t vertex_count = 0;
@@ -45,12 +50,14 @@ struct CharacterMesh {
     std::vector<float> vertices;
 };
 
-struct MotionAsset {
+struct MotionAsset
+{
     std::filesystem::path motion_asset_path;
     std::string display_name;
 };
 
-struct GarmentDistanceConstraints final {
+struct GarmentDistanceConstraints final
+{
     std::vector<MeshEdge> colorized_edges;
     std::vector<MeshElementRange> color_ranges;
     std::vector<float> rest_lengths;
@@ -63,13 +70,15 @@ struct GarmentDistanceConstraints final {
     }
 };
 
-enum class GarmentCategory : std::uint32_t {
+enum class GarmentCategory : std::uint32_t
+{
     Top,
     Bottom,
     FullBody,
 };
 
-struct GarmentMesh {
+struct GarmentMesh
+{
     GarmentCategory garment_category = GarmentCategory::Top;
     std::vector<float> vertices;
     std::vector<std::uint32_t> triangle_vertex_indices;
@@ -82,7 +91,8 @@ struct GarmentMesh {
     float bounds_radius = 1.0f;
 };
 
-struct GarmentAsset {
+struct GarmentAsset
+{
     std::filesystem::path garment_asset_path;
     std::string display_name;
 };

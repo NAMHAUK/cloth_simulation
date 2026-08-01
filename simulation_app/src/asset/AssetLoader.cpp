@@ -22,7 +22,7 @@ GarmentMeshLoadResult read_garment_mesh(std::filesystem::path garment_asset_path
 // 캐릭터  : load_character_mesh -> (background) file read -> call_character_load_callbacks
 // garment: load_garment_mesh -> (background) file read -> call_garment_load_callbacks
 
-AssetLoader::AssetLoader(QObject* parent): QObject(parent)
+AssetLoader::AssetLoader(QObject* parent) : QObject(parent)
 {
     // watcher의 finish 시그널이 오면 호출되는 함수 설정
     connect(&character_load_watcher_, &QFutureWatcher<CharacterMeshLoadResult>::finished, this, [this]() {
@@ -48,14 +48,13 @@ void AssetLoader::load_character_mesh(std::filesystem::path motion_asset_path)
     }
 
     // background에서 character mesh 파일 read
-    character_load_watcher_.setFuture(QtConcurrent::run(
-        [motion_asset_path = std::move(motion_asset_path)]() mutable {
+    character_load_watcher_.setFuture(
+        QtConcurrent::run([motion_asset_path = std::move(motion_asset_path)]() mutable {
             CharacterMeshLoadResult result;
             result.source_path = std::move(motion_asset_path);
             result.is_loaded = asset_io::read_character_mesh(result.source_path, result.mesh);
             return result;
-        }
-    ));
+        }));
 }
 
 void AssetLoader::call_character_load_callbacks()
@@ -90,11 +89,8 @@ void AssetLoader::load_next_garment_mesh()
     garment_load_queue_.pop_front();
 
     // background에서 garment mesh 파일 read
-    garment_load_watcher_.setFuture(QtConcurrent::run(
-        read_garment_mesh,
-        std::move(request.source_path),
-        request.request_id
-    ));
+    garment_load_watcher_.setFuture(
+        QtConcurrent::run(read_garment_mesh, std::move(request.source_path), request.request_id));
 }
 
 void AssetLoader::call_garment_load_callbacks()

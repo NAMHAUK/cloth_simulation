@@ -4,7 +4,8 @@
 
 #include <QOpenGLFunctions_4_5_Core>
 
-struct CollisionCandidateBuffer final {
+struct CollisionCandidateBuffer final
+{
     GLuint candidates = 0;
     GLuint candidate_count = 0;
     GLuint dispatch_size = 0;
@@ -12,7 +13,8 @@ struct CollisionCandidateBuffer final {
     std::uint32_t capacity = 0;
 };
 
-struct CollisionCandidateBufferView final {
+struct CollisionCandidateBufferView final
+{
     CollisionCandidateBuffer cloth_vertex_body_face;
     CollisionCandidateBuffer cloth_edge_body_edge;
     CollisionCandidateBuffer cloth_face_body_vertex;
@@ -28,7 +30,8 @@ struct CollisionCandidateBufferView final {
     void clear_normal_correction_sums(QOpenGLFunctions_4_5_Core& gl) const;
 };
 
-class CollisionCandidateBuffers final {
+class CollisionCandidateBuffers final
+{
 public:
     static constexpr std::uint32_t candidate_capacity_multiplier = 8;
 
@@ -42,8 +45,8 @@ public:
                          std::uint32_t garment_count,
                          QOpenGLFunctions_4_5_Core& gl);
     static bool calculate_cloth_cloth_candidate_capacity(std::uint32_t vertex_count,
-                                                    std::uint32_t garment_count,
-                                                    std::uint32_t& capacity);
+                                                         std::uint32_t garment_count,
+                                                         std::uint32_t& capacity);
     CollisionCandidateBufferView view() const;
     void release(QOpenGLFunctions_4_5_Core& gl);
 

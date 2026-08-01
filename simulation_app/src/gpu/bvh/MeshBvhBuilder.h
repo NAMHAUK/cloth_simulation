@@ -9,7 +9,8 @@
 
 inline constexpr std::uint32_t body_bvh_excluded_part_mask = (1u << 6u) | (1u << 7u);
 
-class MeshBvhBuilder final {
+class MeshBvhBuilder final
+{
 public:
     MeshBvhBuilder(std::uint32_t vertex_count,
                    const std::vector<std::uint32_t>& triangle_indices,
@@ -25,7 +26,8 @@ public:
     EdgeBvhData build_edge_bvh() const;
 
 private:
-    struct EdgePrimitiveSet final {
+    struct EdgePrimitiveSet final
+    {
         std::vector<MeshEdge> source_edges;
         std::vector<bvh_build::BvhPrimitive> primitives;
     };

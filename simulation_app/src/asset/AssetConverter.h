@@ -8,13 +8,15 @@
 #include <QString>
 #include <QStringList>
 
-struct ConverterResult {
+struct ConverterResult
+{
     bool succeeded = false;
     int exit_code = -1;
     std::string error_message;
 };
 
-struct ConverterCommand {
+struct ConverterCommand
+{
     bool is_valid = false;
     QString program;
     QStringList arguments;
@@ -22,7 +24,8 @@ struct ConverterCommand {
     std::string error_message;
 };
 
-class AssetConverter final : public QObject {
+class AssetConverter final : public QObject
+{
 public:
     using ConversionSucceededCallback = std::function<void()>;
     using ConversionFailedCallback = std::function<void(const std::string&)>;

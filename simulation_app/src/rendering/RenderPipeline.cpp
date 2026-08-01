@@ -30,7 +30,9 @@ bool RenderPipeline::initialize(const ShaderPaths& shader_paths, QOpenGLFunction
         std::cerr << "Failed to create viewer shader program.\n";
         return false;
     }
-    if (!background_gradient_.initialize(shader_paths.background_vertex, shader_paths.background_fragment, gl)) {
+    if (!background_gradient_.initialize(shader_paths.background_vertex,
+                                         shader_paths.background_fragment,
+                                         gl)) {
         std::cerr << "Failed to create background gradient.\n";
         return false;
     }
@@ -61,14 +63,12 @@ void RenderPipeline::draw(const SceneState& scene,
     // shader setting
     viewer_shader_.bind(gl);
     viewer_shader_.set_mvp(mvp, gl);
-    viewer_shader_.set_lighting(
-        light_direction_world,
-        fill_light_direction_world,
-        ambient_strength,
-        diffuse_strength,
-        fill_diffuse_strength,
-        gl
-    );
+    viewer_shader_.set_lighting(light_direction_world,
+                                fill_light_direction_world,
+                                ambient_strength,
+                                diffuse_strength,
+                                fill_diffuse_strength,
+                                gl);
     viewer_shader_.set_attribute_position_mode(gl);
     viewer_shader_.set_opacity(1.0f, gl);
 

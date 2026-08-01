@@ -12,18 +12,21 @@
 
 using GarmentRequestId = std::uint64_t;
 
-struct GarmentMeshLoadResult {
+struct GarmentMeshLoadResult
+{
     std::filesystem::path source_path;
     GarmentRequestId request_id = 0u;
     bool is_loaded = false;
     GarmentMesh mesh;
 };
 
-class AssetLoader final : public QObject {
+class AssetLoader final : public QObject
+{
 public:
     using CharacterLoadedCallback = std::function<void(const std::filesystem::path&, CharacterMesh)>;
     using CharacterLoadFailedCallback = std::function<void(const std::filesystem::path&)>;
-    using GarmentLoadedCallback = std::function<void(GarmentRequestId, const std::filesystem::path&, GarmentMesh)>;
+    using GarmentLoadedCallback =
+        std::function<void(GarmentRequestId, const std::filesystem::path&, GarmentMesh)>;
     using GarmentLoadFailedCallback = std::function<void(GarmentRequestId, const std::filesystem::path&)>;
 
     explicit AssetLoader(QObject* parent = nullptr);
@@ -41,13 +44,15 @@ public:
     GarmentRequestId load_garment_mesh(std::filesystem::path garment_asset_path);
 
 private:
-    struct CharacterMeshLoadResult {
+    struct CharacterMeshLoadResult
+    {
         std::filesystem::path source_path;
         bool is_loaded = false;
         CharacterMesh mesh;
     };
 
-    struct GarmentLoadRequest final {
+    struct GarmentLoadRequest final
+    {
         std::filesystem::path source_path;
         GarmentRequestId request_id = 0u;
     };

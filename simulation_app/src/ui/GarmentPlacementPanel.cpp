@@ -15,9 +15,9 @@
 #include <QPen>
 #include <QPixmap>
 #include <QPushButton>
+#include <QSignalBlocker>
 #include <QSize>
 #include <QSizePolicy>
-#include <QSignalBlocker>
 #include <QSlider>
 #include <QStyle>
 #include <QVBoxLayout>
@@ -83,77 +83,75 @@ QIcon make_confirm_icon()
 }
 }
 
-GarmentPlacementPanel::GarmentPlacementPanel(QWidget* parent): QWidget(parent)
+GarmentPlacementPanel::GarmentPlacementPanel(QWidget* parent) : QWidget(parent)
 {
     setObjectName("garmentPlacementPanel");
-    setStyleSheet(
-        "#garmentPlacementPanel {"
-        "  background-color: rgba(245, 245, 245, 235);"
-        "  border: 1px solid #9a9a9a;"
-        "  border-radius: 4px;"
-        "}"
-        "#garmentPlacementPanel QLabel {"
-        "  border: none;"
-        "  background: transparent;"
-        "}"
-        "#garmentPlacementPanel QPushButton {"
-        "  background-color: #1f6feb;"
-        "  color: white;"
-        "  border: 1px solid #1158c7;"
-        "  border-radius: 4px;"
-        "  padding: 2px 8px;"
-        "}"
-        "#garmentPlacementPanel QPushButton:hover {"
-        "  background-color: #2f81f7;"
-        "}"
-        "#garmentPlacementPanel QPushButton:disabled {"
-        "  background-color: #8caee6;"
-        "  color: #dddddd;"
-        "}"
-        "#garmentPlacementPanel QSlider {"
-        "  background: transparent;"
-        "  border: none;"
-        "}"
-        "#placementGroup {"
-        "  background-color: rgba(255, 255, 255, 150);"
-        "  border: 1px solid #b8b8b8;"
-        "  border-radius: 4px;"
-        "}"
-        "#placementGroup[active=\"true\"] {"
-        "  border: 2px solid #1f6feb;"
-        "}"
-        "#garmentPlacementPanel #placementCancelButton {"
-        "  padding: 0px;"
-        "  background-color: #5a5a5a;"
-        "  border: 1px solid #242424;"
-        "  border-radius: 4px;"
-        "}"
-        "#garmentPlacementPanel #placementCancelButton:hover {"
-        "  background-color: #7a7a7a;"
-        "}"
-        "#garmentPlacementPanel #upperRemoveButton {"
-        "  padding: 0px;"
-        "  background-color: #1f6feb;"
-        "  border: 1px solid #1158c7;"
-        "  border-radius: 4px;"
-        "}"
-        "#garmentPlacementPanel #upperRemoveButton:hover {"
-        "  background-color: #2f81f7;"
-        "}"
-        "#garmentPlacementPanel #addUpperButton {"
-        "  padding: 0;"
-        "}"
-        "#garmentPlacementPanel #placementConfirmButton {"
-        "  background: transparent;"
-        "  border: none;"
-        "  padding: 0;"
-        "}"
-        "#garmentPlacementPanel #placementConfirmButton:hover {"
-        "  background-color: #e8f5e9;"
-        "  border: 1px solid #81c784;"
-        "  border-radius: 4px;"
-        "}"
-    );
+    setStyleSheet("#garmentPlacementPanel {"
+                  "  background-color: rgba(245, 245, 245, 235);"
+                  "  border: 1px solid #9a9a9a;"
+                  "  border-radius: 4px;"
+                  "}"
+                  "#garmentPlacementPanel QLabel {"
+                  "  border: none;"
+                  "  background: transparent;"
+                  "}"
+                  "#garmentPlacementPanel QPushButton {"
+                  "  background-color: #1f6feb;"
+                  "  color: white;"
+                  "  border: 1px solid #1158c7;"
+                  "  border-radius: 4px;"
+                  "  padding: 2px 8px;"
+                  "}"
+                  "#garmentPlacementPanel QPushButton:hover {"
+                  "  background-color: #2f81f7;"
+                  "}"
+                  "#garmentPlacementPanel QPushButton:disabled {"
+                  "  background-color: #8caee6;"
+                  "  color: #dddddd;"
+                  "}"
+                  "#garmentPlacementPanel QSlider {"
+                  "  background: transparent;"
+                  "  border: none;"
+                  "}"
+                  "#placementGroup {"
+                  "  background-color: rgba(255, 255, 255, 150);"
+                  "  border: 1px solid #b8b8b8;"
+                  "  border-radius: 4px;"
+                  "}"
+                  "#placementGroup[active=\"true\"] {"
+                  "  border: 2px solid #1f6feb;"
+                  "}"
+                  "#garmentPlacementPanel #placementCancelButton {"
+                  "  padding: 0px;"
+                  "  background-color: #5a5a5a;"
+                  "  border: 1px solid #242424;"
+                  "  border-radius: 4px;"
+                  "}"
+                  "#garmentPlacementPanel #placementCancelButton:hover {"
+                  "  background-color: #7a7a7a;"
+                  "}"
+                  "#garmentPlacementPanel #upperRemoveButton {"
+                  "  padding: 0px;"
+                  "  background-color: #1f6feb;"
+                  "  border: 1px solid #1158c7;"
+                  "  border-radius: 4px;"
+                  "}"
+                  "#garmentPlacementPanel #upperRemoveButton:hover {"
+                  "  background-color: #2f81f7;"
+                  "}"
+                  "#garmentPlacementPanel #addUpperButton {"
+                  "  padding: 0;"
+                  "}"
+                  "#garmentPlacementPanel #placementConfirmButton {"
+                  "  background: transparent;"
+                  "  border: none;"
+                  "  padding: 0;"
+                  "}"
+                  "#garmentPlacementPanel #placementConfirmButton:hover {"
+                  "  background-color: #e8f5e9;"
+                  "  border: 1px solid #81c784;"
+                  "  border-radius: 4px;"
+                  "}");
 
     auto* root_layout = new QVBoxLayout(this);
     root_layout->setContentsMargins(10, 10, 10, 10);
@@ -288,10 +286,12 @@ void GarmentPlacementPanel::create_group(std::size_t group_index, QWidget* paren
         controls_grid->addWidget(axis_label, axis_index, 0);
         controls_grid->addWidget(group.position_value_labels[axis], axis_index, 1);
         controls_grid->addWidget(group.position_sliders[axis], axis_index, 2);
-        connect(group.position_sliders[axis], &QSlider::valueChanged, this,
-            [this, group_index, axis_index](int value) {
-                set_position_from_slider(group_index, axis_index, value);
-            });
+        connect(group.position_sliders[axis],
+                &QSlider::valueChanged,
+                this,
+                [this, group_index, axis_index](int value) {
+                    set_position_from_slider(group_index, axis_index, value);
+                });
     }
 
     const int scale_row = static_cast<int>(axis_names.size());
@@ -338,16 +338,20 @@ void GarmentPlacementPanel::update_value_labels(std::size_t group_index)
 {
     const PlacementGroup& group = groups_[group_index];
     for (std::size_t index = 0; index < group.position_value_labels.size(); ++index) {
-        group.position_value_labels[index]->setText(format_float(group.position_offset[static_cast<int>(index)]));
+        group.position_value_labels[index]->setText(
+            format_float(group.position_offset[static_cast<int>(index)]));
     }
 
     group.scale_value_label->setText(format_float(group.scale));
 }
 
-void GarmentPlacementPanel::set_position_from_slider(std::size_t group_index, int axis_index, int slider_value)
+void GarmentPlacementPanel::set_position_from_slider(std::size_t group_index,
+                                                     int axis_index,
+                                                     int slider_value)
 {
     set_active_group(group_index);
-    groups_[group_index].position_offset[axis_index] = static_cast<float>(slider_value) * position_slider_factor;
+    groups_[group_index].position_offset[axis_index] =
+        static_cast<float>(slider_value) * position_slider_factor;
     update_value_labels(group_index);
     notify_placement_changed(group_index);
 }
@@ -382,10 +386,12 @@ void GarmentPlacementPanel::update_color_button(std::size_t group_index)
 {
     PlacementGroup& group = groups_[group_index];
     const QColor button_color = QColor::fromRgbF(group.color.r, group.color.g, group.color.b);
-    group.color_button->setStyleSheet(QString(
-        "QPushButton { background-color: rgb(%1, %2, %3); border: 2px solid #666666; border-radius: 13px; padding: 0; }"
-        "QPushButton:hover { border-color: #1f6feb; }"
-    ).arg(button_color.red()).arg(button_color.green()).arg(button_color.blue()));
+    group.color_button->setStyleSheet(QString("QPushButton { background-color: rgb(%1, %2, %3); border: 2px "
+                                              "solid #666666; border-radius: 13px; padding: 0; }"
+                                              "QPushButton:hover { border-color: #1f6feb; }")
+                                          .arg(button_color.red())
+                                          .arg(button_color.green())
+                                          .arg(button_color.blue()));
 }
 
 void GarmentPlacementPanel::reset_group(std::size_t group_index, const glm::vec3& color)

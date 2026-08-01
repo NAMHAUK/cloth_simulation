@@ -15,7 +15,9 @@
 
 namespace {
 
-inline GLuint compile_compute_shader(const char* source, const char* error_context, QOpenGLFunctions_4_5_Core& gl)
+inline GLuint compile_compute_shader(const char* source,
+                                     const char* error_context,
+                                     QOpenGLFunctions_4_5_Core& gl)
 {
     const GLuint shader = gl.glCreateShader(GL_COMPUTE_SHADER);
     gl.glShaderSource(shader, 1, &source, nullptr);
@@ -77,7 +79,8 @@ inline std::optional<std::string> load_shader_source(const std::filesystem::path
     while (std::getline(input, line)) {
         std::filesystem::path include_path;
         if (parse_shader_include(line, include_path)) {
-            const auto include_source = load_shader_source(normalized_path.parent_path() / include_path, include_stack);
+            const auto include_source =
+                load_shader_source(normalized_path.parent_path() / include_path, include_stack);
             if (!include_source) {
                 return std::nullopt;
             }

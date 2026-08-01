@@ -25,42 +25,32 @@ void create_buffer(GLuint& buffer, GLsizeiptr size, QOpenGLFunctions_4_5_Core& g
 }
 
 void create_collision_candidate_buffer(CollisionCandidateBuffer& buffers,
-                                  std::uint32_t capacity,
-                                  std::uint32_t component_count,
-                                  QOpenGLFunctions_4_5_Core& gl)
+                                       std::uint32_t capacity,
+                                       std::uint32_t component_count,
+                                       QOpenGLFunctions_4_5_Core& gl)
 {
     buffers.capacity = capacity;
-    const auto candidate_bytes = static_cast<GLsizeiptr>(static_cast<std::uint64_t>(capacity) *
-                                                    sizeof(std::uint32_t) * component_count);
+    const auto candidate_bytes = static_cast<GLsizeiptr>(
+        static_cast<std::uint64_t>(capacity) * sizeof(std::uint32_t) * component_count);
     create_buffer(buffers.candidates, candidate_bytes, gl);
     create_buffer(buffers.candidate_count, static_cast<GLsizeiptr>(sizeof(std::uint32_t)), gl);
-    create_buffer(buffers.dispatch_size, static_cast<GLsizeiptr>(dispatch_component_count * sizeof(std::uint32_t)), gl);
+    create_buffer(buffers.dispatch_size,
+                  static_cast<GLsizeiptr>(dispatch_component_count * sizeof(std::uint32_t)),
+                  gl);
     create_buffer(buffers.overflow_count, static_cast<GLsizeiptr>(sizeof(std::uint32_t)), gl);
 }
 
 void clear_normal_corrections(GLuint buffer, QOpenGLFunctions_4_5_Core& gl)
 {
     const std::int32_t zero_int[4] = {};
-    gl.glClearNamedBufferData(buffer,
-                              GL_RGBA32I,
-                              GL_RGBA_INTEGER,
-                              GL_INT,
-                              zero_int);
+    gl.glClearNamedBufferData(buffer, GL_RGBA32I, GL_RGBA_INTEGER, GL_INT, zero_int);
 }
 
 void clear_collision_candidate_counts(const CollisionCandidateBuffer& buffers, QOpenGLFunctions_4_5_Core& gl)
 {
     const std::uint32_t zero_uint = 0;
-    gl.glClearNamedBufferData(buffers.candidate_count,
-                              GL_R32UI,
-                              GL_RED_INTEGER,
-                              GL_UNSIGNED_INT,
-                              &zero_uint);
-    gl.glClearNamedBufferData(buffers.overflow_count,
-                              GL_R32UI,
-                              GL_RED_INTEGER,
-                              GL_UNSIGNED_INT,
-                              &zero_uint);
+    gl.glClearNamedBufferData(buffers.candidate_count, GL_R32UI, GL_RED_INTEGER, GL_UNSIGNED_INT, &zero_uint);
+    gl.glClearNamedBufferData(buffers.overflow_count, GL_R32UI, GL_RED_INTEGER, GL_UNSIGNED_INT, &zero_uint);
 }
 
 void delete_collision_candidate_buffer(CollisionCandidateBuffer& buffers, QOpenGLFunctions_4_5_Core& gl)
@@ -75,10 +65,10 @@ void delete_collision_candidate_buffer(CollisionCandidateBuffer& buffers, QOpenG
 }
 
 bool CollisionCandidateBuffers::ensure_capacity(std::uint32_t vertex_count,
-                                           std::uint32_t triangle_count,
-                                           std::uint32_t edge_count,
-                                           std::uint32_t garment_count,
-                                           QOpenGLFunctions_4_5_Core& gl)
+                                                std::uint32_t triangle_count,
+                                                std::uint32_t edge_count,
+                                                std::uint32_t garment_count,
+                                                QOpenGLFunctions_4_5_Core& gl)
 {
     const std::uint64_t cloth_vertex_body_face_capacity_wide =
         static_cast<std::uint64_t>(vertex_count) * candidate_capacity_multiplier;
@@ -90,7 +80,9 @@ bool CollisionCandidateBuffers::ensure_capacity(std::uint32_t vertex_count,
     if (cloth_vertex_body_face_capacity_wide > std::numeric_limits<std::uint32_t>::max() ||
         cloth_edge_body_edge_capacity_wide > std::numeric_limits<std::uint32_t>::max() ||
         cloth_face_body_vertex_capacity_wide > std::numeric_limits<std::uint32_t>::max() ||
-        !calculate_cloth_cloth_candidate_capacity(vertex_count, garment_count, cloth_cloth_vertex_face_capacity)) {
+        !calculate_cloth_cloth_candidate_capacity(vertex_count,
+                                                  garment_count,
+                                                  cloth_cloth_vertex_face_capacity)) {
         std::cerr << "Collision candidate capacity exceeds the supported 32-bit range.\n";
         release(gl);
         return false;
@@ -98,8 +90,7 @@ bool CollisionCandidateBuffers::ensure_capacity(std::uint32_t vertex_count,
 
     const auto cloth_vertex_body_face_capacity =
         static_cast<std::uint32_t>(cloth_vertex_body_face_capacity_wide);
-    const auto cloth_edge_body_edge_capacity =
-        static_cast<std::uint32_t>(cloth_edge_body_edge_capacity_wide);
+    const auto cloth_edge_body_edge_capacity = static_cast<std::uint32_t>(cloth_edge_body_edge_capacity_wide);
     const auto cloth_face_body_vertex_capacity =
         static_cast<std::uint32_t>(cloth_face_body_vertex_capacity_wide);
     const bool has_sufficient_cloth_cloth_buffer =
@@ -125,36 +116,41 @@ bool CollisionCandidateBuffers::ensure_capacity(std::uint32_t vertex_count,
 
     buffers_.vertex_capacity = vertex_count;
     create_collision_candidate_buffer(buffers_.cloth_vertex_body_face,
-                                 cloth_vertex_body_face_capacity,
-                                 cloth_body_candidate_component_count,
-                                 gl);
+                                      cloth_vertex_body_face_capacity,
+                                      cloth_body_candidate_component_count,
+                                      gl);
     create_collision_candidate_buffer(buffers_.cloth_edge_body_edge,
-                                 cloth_edge_body_edge_capacity,
-                                 cloth_body_candidate_component_count,
-                                 gl);
+                                      cloth_edge_body_edge_capacity,
+                                      cloth_body_candidate_component_count,
+                                      gl);
     create_collision_candidate_buffer(buffers_.cloth_face_body_vertex,
-                                 cloth_face_body_vertex_capacity,
-                                 cloth_body_candidate_component_count,
-                                 gl);
+                                      cloth_face_body_vertex_capacity,
+                                      cloth_body_candidate_component_count,
+                                      gl);
     if (cloth_cloth_vertex_face_capacity > 0) {
         create_collision_candidate_buffer(buffers_.cloth_cloth_vertex_face,
-                                     cloth_cloth_vertex_face_capacity,
-                                     cloth_cloth_candidate_component_count,
-                                     gl);
+                                          cloth_cloth_vertex_face_capacity,
+                                          cloth_cloth_candidate_component_count,
+                                          gl);
     }
-    create_buffer(buffers_.normal_correction_sum_buffer, static_cast<GLsizeiptr>(vertex_count * sizeof(std::int32_t) * 4u), gl);
-    create_buffer(buffers_.friction_correction_sum_buffer, static_cast<GLsizeiptr>(vertex_count * sizeof(std::int32_t) * 4u), gl);
-    create_buffer(buffers_.contact_motion_delta_sum_buffer, static_cast<GLsizeiptr>(vertex_count * sizeof(std::int32_t) * 4u), gl);
+    create_buffer(buffers_.normal_correction_sum_buffer,
+                  static_cast<GLsizeiptr>(vertex_count * sizeof(std::int32_t) * 4u),
+                  gl);
+    create_buffer(buffers_.friction_correction_sum_buffer,
+                  static_cast<GLsizeiptr>(vertex_count * sizeof(std::int32_t) * 4u),
+                  gl);
+    create_buffer(buffers_.contact_motion_delta_sum_buffer,
+                  static_cast<GLsizeiptr>(vertex_count * sizeof(std::int32_t) * 4u),
+                  gl);
 
-    const bool initialized =
-        has_collision_candidate_buffer(buffers_.cloth_vertex_body_face) &&
-        has_collision_candidate_buffer(buffers_.cloth_edge_body_edge) &&
-        has_collision_candidate_buffer(buffers_.cloth_face_body_vertex) &&
-        (cloth_cloth_vertex_face_capacity == 0 ||
-         has_collision_candidate_buffer(buffers_.cloth_cloth_vertex_face)) &&
-        buffers_.normal_correction_sum_buffer != 0 &&
-        buffers_.friction_correction_sum_buffer != 0 &&
-        buffers_.contact_motion_delta_sum_buffer != 0;
+    const bool initialized = has_collision_candidate_buffer(buffers_.cloth_vertex_body_face) &&
+                             has_collision_candidate_buffer(buffers_.cloth_edge_body_edge) &&
+                             has_collision_candidate_buffer(buffers_.cloth_face_body_vertex) &&
+                             (cloth_cloth_vertex_face_capacity == 0 ||
+                              has_collision_candidate_buffer(buffers_.cloth_cloth_vertex_face)) &&
+                             buffers_.normal_correction_sum_buffer != 0 &&
+                             buffers_.friction_correction_sum_buffer != 0 &&
+                             buffers_.contact_motion_delta_sum_buffer != 0;
     if (!initialized) {
         release(gl);
     }
@@ -162,18 +158,16 @@ bool CollisionCandidateBuffers::ensure_capacity(std::uint32_t vertex_count,
 }
 
 bool CollisionCandidateBuffers::calculate_cloth_cloth_candidate_capacity(std::uint32_t vertex_count,
-                                                               std::uint32_t garment_count,
-                                                               std::uint32_t& capacity)
+                                                                         std::uint32_t garment_count,
+                                                                         std::uint32_t& capacity)
 {
     if (garment_count < 2u) {
         capacity = 0;
         return true;
     }
 
-    const std::uint64_t directed_query_count =
-        static_cast<std::uint64_t>(garment_count - 1u) * vertex_count;
-    if (directed_query_count >
-        std::numeric_limits<std::uint32_t>::max() / candidate_capacity_multiplier) {
+    const std::uint64_t directed_query_count = static_cast<std::uint64_t>(garment_count - 1u) * vertex_count;
+    if (directed_query_count > std::numeric_limits<std::uint32_t>::max() / candidate_capacity_multiplier) {
         capacity = 0;
         return false;
     }

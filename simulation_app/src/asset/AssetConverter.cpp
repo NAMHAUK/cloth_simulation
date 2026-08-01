@@ -3,9 +3,8 @@
 #include <iostream>
 #include <utility>
 
-AssetConverter::AssetConverter(QObject* parent): QObject(parent)
-{
-}
+AssetConverter::AssetConverter(QObject* parent) : QObject(parent)
+{}
 
 AssetConverter::~AssetConverter()
 {
@@ -77,10 +76,7 @@ void AssetConverter::setup_process_callbacks()
         process_,
         qOverload<int, QProcess::ExitStatus>(&QProcess::finished),
         this,
-        [this](int exit_code, QProcess::ExitStatus exit_status) {
-            finish_process(exit_code, exit_status);
-        }
-    );
+        [this](int exit_code, QProcess::ExitStatus exit_status) { finish_process(exit_code, exit_status); });
 
     connect(process_, &QProcess::errorOccurred, this, [this](QProcess::ProcessError error) {
         if (!process_) {
@@ -108,8 +104,8 @@ void AssetConverter::finish_process(int exit_code, QProcess::ExitStatus exit_sta
     result_.succeeded = exit_status == QProcess::NormalExit && exit_code == 0;
     if (!result_.succeeded && result_.error_message.empty()) {
         result_.error_message = exit_status == QProcess::NormalExit
-            ? "Converter failed with exit code: " + std::to_string(exit_code)
-            : "Converter process crashed.";
+                                    ? "Converter failed with exit code: " + std::to_string(exit_code)
+                                    : "Converter process crashed.";
     }
 
     QProcess* finished_process = process_;

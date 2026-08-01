@@ -35,7 +35,9 @@ bool AttachmentConstraintSolver::is_initialized() const
     return program_ != 0;
 }
 
-bool AttachmentConstraintSolver::initialize(const std::filesystem::path& shader_path, float stiffness, QOpenGLFunctions_4_5_Core& gl)
+bool AttachmentConstraintSolver::initialize(const std::filesystem::path& shader_path,
+                                            float stiffness,
+                                            QOpenGLFunctions_4_5_Core& gl)
 {
     program_ = load_compute_program(shader_path, "Attachment constraint", gl);
     if (program_ == 0) {
@@ -79,10 +81,18 @@ void AttachmentConstraintSolver::solve(const ClothMotionBufferView& motion_view,
     assert(can_solve(motion_view, constraint_view, body_triangle_geometry));
 
     gl.glUseProgram(program_);
-    gl.glBindBufferBase(GL_SHADER_STORAGE_BUFFER, current_positions_binding, motion_view.current_position_buffer);
-    gl.glBindBufferBase(GL_SHADER_STORAGE_BUFFER, attachment_indices_binding, constraint_view.attachment_index_buffer);
-    gl.glBindBufferBase(GL_SHADER_STORAGE_BUFFER, attachment_barycentric_offsets_binding, constraint_view.barycentric_offset_buffer);
-    gl.glBindBufferBase(GL_SHADER_STORAGE_BUFFER, body_triangle_geometry_binding, body_triangle_geometry.triangle_geometry_buffer);
+    gl.glBindBufferBase(GL_SHADER_STORAGE_BUFFER,
+                        current_positions_binding,
+                        motion_view.current_position_buffer);
+    gl.glBindBufferBase(GL_SHADER_STORAGE_BUFFER,
+                        attachment_indices_binding,
+                        constraint_view.attachment_index_buffer);
+    gl.glBindBufferBase(GL_SHADER_STORAGE_BUFFER,
+                        attachment_barycentric_offsets_binding,
+                        constraint_view.barycentric_offset_buffer);
+    gl.glBindBufferBase(GL_SHADER_STORAGE_BUFFER,
+                        body_triangle_geometry_binding,
+                        body_triangle_geometry.triangle_geometry_buffer);
     gl.glProgramUniform1f(program_, stiffness_location_, std::clamp(stiffness_, 0.0f, 1.0f));
 
     for (const ElementRange& range : *constraint_view.ranges) {

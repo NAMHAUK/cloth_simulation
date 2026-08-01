@@ -96,7 +96,5 @@ bool EdgeBvhData::is_valid() const
         }
     }
 
-    return std::all_of(used_edges.begin(), used_edges.end(), [](std::uint8_t used) {
-        return used != 0u;
-    });
+    return std::all_of(used_edges.begin(), used_edges.end(), [](std::uint8_t used) { return used != 0u; });
 }

@@ -14,7 +14,8 @@
 class QMouseEvent;
 class QWheelEvent;
 
-struct OrbitCamera {
+struct OrbitCamera
+{
     glm::vec3 target{};
     float yaw_radians = 0.0f;
     float pitch_radians = 0.0f;
@@ -25,7 +26,8 @@ struct OrbitCamera {
     bool has_last_mouse = false;
 };
 
-class SceneViewport final : public QOpenGLWidget, protected QOpenGLFunctions_4_5_Core {
+class SceneViewport final : public QOpenGLWidget, protected QOpenGLFunctions_4_5_Core
+{
 public:
     using InitializeCallback = std::function<bool(QOpenGLFunctions_4_5_Core&)>;
     using SceneRenderCallback = std::function<void(const glm::mat4&, QOpenGLFunctions_4_5_Core&)>;

@@ -29,12 +29,12 @@ constexpr float character_camera_pitch = 10.0f * pi / 180.0f;
 constexpr glm::vec3 camera_target_offset{0.0f, 0.0f, 0.0f};
 
 // Camera control parameters
-constexpr float orbit_sensitivity    = 0.006f;
-constexpr float max_camera_pitch     = 85.0f * pi / 180.0f;
-constexpr float pan_distance_scale   = 0.0015f;
+constexpr float orbit_sensitivity = 0.006f;
+constexpr float max_camera_pitch = 85.0f * pi / 180.0f;
+constexpr float pan_distance_scale = 0.0015f;
 constexpr float wheel_delta_per_step = 120.0f;
-constexpr float wheel_step_epsilon   = 0.0001f;
-constexpr float zoom_step_scale      = 0.88f;
+constexpr float wheel_step_epsilon = 0.0001f;
+constexpr float zoom_step_scale = 0.88f;
 
 // scene parameters
 constexpr glm::vec3 background_color{0.07f, 0.09f, 0.12f};
@@ -60,8 +60,7 @@ void pan_camera(OrbitCamera& camera, const QPoint& delta, const glm::vec3& eye)
     const float pan_scale = camera.distance * pan_distance_scale;
 
     camera.target +=
-        right * static_cast<float>(-delta.x() * pan_scale) +
-        up * static_cast<float>(delta.y() * pan_scale);
+        right * static_cast<float>(-delta.x() * pan_scale) + up * static_cast<float>(delta.y() * pan_scale);
 }
 
 glm::vec3 camera_position(const OrbitCamera& camera)
@@ -90,9 +89,9 @@ glm::mat4 make_mvp(const OrbitCamera& camera, int width, int height)
 
 SceneViewport::SceneViewport(QWidget* parent) : QOpenGLWidget(parent)
 {
-    camera_.yaw_radians   = default_camera_yaw;
+    camera_.yaw_radians = default_camera_yaw;
     camera_.pitch_radians = default_camera_pitch;
-    camera_.distance      = default_camera_distance;
+    camera_.distance = default_camera_distance;
 
     setFocusPolicy(Qt::StrongFocus);
     setMouseTracking(true);
@@ -142,7 +141,6 @@ void SceneViewport::initializeGL()
 
     // Render state initialization
     glEnable(GL_DEPTH_TEST);
-
 }
 
 void SceneViewport::resizeGL(int width, int height)
@@ -186,35 +184,28 @@ void SceneViewport::update_render_time()
 
 void SceneViewport::draw_display_fps()
 {
-    const QString fps_text = QString("FPS: %1  Frame: %2ms")
-        .arg(render_fps_, 0, 'f', 1)
-        .arg(frame_ms_, 0, 'f', 1);
+    const QString fps_text =
+        QString("FPS: %1  Frame: %2ms").arg(render_fps_, 0, 'f', 1).arg(frame_ms_, 0, 'f', 1);
 
     QPainter painter(this);
     painter.setRenderHint(QPainter::Antialiasing);
 
     const QFontMetrics metrics(painter.font());
     const QRect text_bounds = metrics.boundingRect(fps_text);
-    QRect background_rect(
-        0,
-        0,
-        text_bounds.width() + fps_overlay_horizontal_padding * 2,
-        text_bounds.height() + fps_overlay_vertical_padding * 2
-    );
+    QRect background_rect(0,
+                          0,
+                          text_bounds.width() + fps_overlay_horizontal_padding * 2,
+                          text_bounds.height() + fps_overlay_vertical_padding * 2);
     background_rect.moveBottomRight(QPoint(width() - fps_overlay_margin, height() - fps_overlay_margin));
 
     painter.fillRect(background_rect, QColor(0, 0, 0, 150));
     painter.setPen(QColor(235, 240, 245));
-    painter.drawText(
-        background_rect.adjusted(
-            fps_overlay_horizontal_padding,
-            fps_overlay_vertical_padding,
-            -fps_overlay_horizontal_padding,
-            -fps_overlay_vertical_padding
-        ),
-        Qt::AlignCenter,
-        fps_text
-    );
+    painter.drawText(background_rect.adjusted(fps_overlay_horizontal_padding,
+                                              fps_overlay_vertical_padding,
+                                              -fps_overlay_horizontal_padding,
+                                              -fps_overlay_vertical_padding),
+                     Qt::AlignCenter,
+                     fps_text);
 }
 
 // Camera //

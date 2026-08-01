@@ -31,31 +31,34 @@ bool is_same_edge(const MeshEdge& lhs, const MeshEdge& rhs)
 }
 
 // bending constraint //
-struct MeshEdgeGroup final {
+struct MeshEdgeGroup final
+{
     std::vector<MeshEdge> edges;
     std::vector<std::uint8_t> used_vertices;
 };
 
-struct EdgeOppositeVertex final {
+struct EdgeOppositeVertex final
+{
     MeshEdge edge;
     std::uint32_t edge_opposite_vertex = 0;
 };
 
-struct TriangleEdgeUse final {
+struct TriangleEdgeUse final
+{
     MeshEdge edge;
     std::uint32_t triangle_index = 0;
     bool follows_edge_order = false;
 };
 
-struct TriangleWindingNeighbor final {
+struct TriangleWindingNeighbor final
+{
     std::uint32_t triangle_index = 0;
     bool requires_opposite_flip = false;
 };
 
 bool can_add_edge(const MeshEdgeGroup& group, const MeshEdge& edge)
 {
-    return group.used_vertices[edge.vertex_a] == 0u &&
-           group.used_vertices[edge.vertex_b] == 0u;
+    return group.used_vertices[edge.vertex_a] == 0u && group.used_vertices[edge.vertex_b] == 0u;
 }
 
 void add_edge(MeshEdgeGroup& group, const MeshEdge& edge)
@@ -109,8 +112,12 @@ bool orient_triangle_winding_outward(std::uint32_t vertex_count,
         const std::uint32_t vertex_a = triangle_indices[index_base];
         const std::uint32_t vertex_b = triangle_indices[index_base + 1u];
         const std::uint32_t vertex_c = triangle_indices[index_base + 2u];
-        if (vertex_a >= vertex_count || vertex_b >= vertex_count || vertex_c >= vertex_count ||
-            vertex_a == vertex_b || vertex_b == vertex_c || vertex_c == vertex_a) {
+        if (vertex_a >= vertex_count ||
+            vertex_b >= vertex_count ||
+            vertex_c >= vertex_count ||
+            vertex_a == vertex_b ||
+            vertex_b == vertex_c ||
+            vertex_c == vertex_a) {
             return false;
         }
 
@@ -119,13 +126,12 @@ bool orient_triangle_winding_outward(std::uint32_t vertex_count,
         add_triangle_edge_use(edge_uses, triangle_index, vertex_c, vertex_a);
     }
 
-    std::sort(edge_uses.begin(), edge_uses.end(),
-              [](const TriangleEdgeUse& lhs, const TriangleEdgeUse& rhs) {
-                  if (!is_same_edge(lhs.edge, rhs.edge)) {
-                      return is_less_edge(lhs.edge, rhs.edge);
-                  }
-                  return lhs.triangle_index < rhs.triangle_index;
-              });
+    std::sort(edge_uses.begin(), edge_uses.end(), [](const TriangleEdgeUse& lhs, const TriangleEdgeUse& rhs) {
+        if (!is_same_edge(lhs.edge, rhs.edge)) {
+            return is_less_edge(lhs.edge, rhs.edge);
+        }
+        return lhs.triangle_index < rhs.triangle_index;
+    });
 
     std::vector<std::vector<TriangleWindingNeighbor>> neighbors(triangle_count);
     for (std::size_t group_begin = 0u; group_begin < edge_uses.size();) {
@@ -342,9 +348,9 @@ std::vector<MeshEdge> build_unique_bending_edges(std::uint32_t vertex_count,
     std::vector<MeshEdge> bending_edges;
     for (std::size_t group_begin = 0; group_begin < edge_opposite_vertices.size();) {
         std::size_t group_end = group_begin + 1u;
-        while (group_end < edge_opposite_vertices.size() &&
-               is_same_edge(edge_opposite_vertices[group_begin].edge,
-                            edge_opposite_vertices[group_end].edge)) {
+        while (
+            group_end < edge_opposite_vertices.size() &&
+            is_same_edge(edge_opposite_vertices[group_begin].edge, edge_opposite_vertices[group_end].edge)) {
             ++group_end;
         }
 
@@ -354,8 +360,7 @@ std::vector<MeshEdge> build_unique_bending_edges(std::uint32_t vertex_count,
             const std::uint32_t edge_opposite_vertex_b =
                 edge_opposite_vertices[group_begin + 1u].edge_opposite_vertex;
             if (edge_opposite_vertex_a != edge_opposite_vertex_b) {
-                bending_edges.push_back(make_edge(edge_opposite_vertex_a,
-                                                  edge_opposite_vertex_b));
+                bending_edges.push_back(make_edge(edge_opposite_vertex_a, edge_opposite_vertex_b));
             }
         }
 
@@ -363,15 +368,12 @@ std::vector<MeshEdge> build_unique_bending_edges(std::uint32_t vertex_count,
     }
 
     std::sort(bending_edges.begin(), bending_edges.end(), is_less_edge);
-    bending_edges.erase(std::unique(bending_edges.begin(),
-                                    bending_edges.end(),
-                                    is_same_edge),
+    bending_edges.erase(std::unique(bending_edges.begin(), bending_edges.end(), is_same_edge),
                         bending_edges.end());
     return bending_edges;
 }
 
-ColorizedMeshEdges colorize_mesh_edges(std::uint32_t vertex_count,
-                                       const std::vector<MeshEdge>& edges)
+ColorizedMeshEdges colorize_mesh_edges(std::uint32_t vertex_count, const std::vector<MeshEdge>& edges)
 {
     std::vector<MeshEdgeGroup> edge_groups;
 

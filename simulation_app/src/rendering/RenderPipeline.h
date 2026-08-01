@@ -12,7 +12,8 @@ class SceneGpuState;
 class SceneState;
 struct ShaderPaths;
 
-class RenderPipeline final {
+class RenderPipeline final
+{
 public:
     RenderPipeline() = default;
     RenderPipeline(const RenderPipeline&) = delete;

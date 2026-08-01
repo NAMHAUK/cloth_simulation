@@ -4,7 +4,8 @@
 
 #include <filesystem>
 
-enum class AttachmentType {
+enum class AttachmentType
+{
     None,
     Waistband,
 };

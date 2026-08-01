@@ -6,7 +6,8 @@
 
 #include <QOpenGLFunctions_4_5_Core>
 
-class GroundCollisionSolver final {
+class GroundCollisionSolver final
+{
 public:
     GroundCollisionSolver() = default;
     GroundCollisionSolver(const GroundCollisionSolver&) = delete;
