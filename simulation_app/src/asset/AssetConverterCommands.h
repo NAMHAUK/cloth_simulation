@@ -7,7 +7,7 @@
 
 #include <QString>
 
-namespace asset_converter_commands {
+namespace converter_commands {
 ConverterCommand make_motion_command(const ProjectPaths& project_paths,
                                      const std::filesystem::path& amass_motion_path,
                                      const std::filesystem::path& motion_asset_path);

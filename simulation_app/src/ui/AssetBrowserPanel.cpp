@@ -596,12 +596,11 @@ void AssetBrowserPanel::request_garment_conversion()
         return;
     }
 
-    const ConverterCommand command =
-        asset_converter_commands::make_garment_command(project_paths_,
-                                                       garment_obj_path,
-                                                       garment_asset_path,
-                                                       settings->attachment_type,
-                                                       settings->garment_category);
+    const ConverterCommand command = converter_commands::make_garment_command(project_paths_,
+                                                                              garment_obj_path,
+                                                                              garment_asset_path,
+                                                                              settings->attachment_type,
+                                                                              settings->garment_category);
 
     set_conversion_active(AssetPanelMode::Garments, true);
     garment_converter_->start_conversion(command);
@@ -621,7 +620,7 @@ void AssetBrowserPanel::request_motion_conversion(const std::filesystem::path& s
     }
 
     const ConverterCommand command =
-        asset_converter_commands::make_motion_command(project_paths_, source_path, motion_asset_path);
+        converter_commands::make_motion_command(project_paths_, source_path, motion_asset_path);
 
     converting_motion_path_ = QString::fromStdWString(source_path.wstring());
     set_conversion_active(AssetPanelMode::Motions, true);
