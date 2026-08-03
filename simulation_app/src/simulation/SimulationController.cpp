@@ -169,6 +169,11 @@ bool SimulationController::set_garment_mesh(GarmentLayer layer, GarmentMesh mesh
         std::cerr << "Cannot set garment mesh before OpenGL initialization.\n";
         return false;
     }
+    if (simulation_running_ || !is_default_pose_) {
+        std::cerr << "Cannot set garment mesh before returning to the default pose.\n";
+        return false;
+    }
+
     GarmentPlacementState& placement = garment_placements_[layer];
     if (!placement.is_active && scene_.has_multiple_garments()) {
         std::cerr << "Cannot add more than two garment meshes.\n";
@@ -329,7 +334,8 @@ void SimulationController::reset_scene_to_default()
 
 void SimulationController::return_to_default_pose()
 {
-    if (!simulation_running_ && is_default_pose_) {
+    simulation_running_ = false;
+    if (is_default_pose_) {
         return;
     }
 
@@ -345,7 +351,6 @@ void SimulationController::return_to_default_pose()
             }
         }
 
-        simulation_running_ = false;
         motion_step_index_ = 0;
         clear_garment_placements();
         set_character_mesh_state(default_character_mesh_, gl);
@@ -508,11 +513,6 @@ bool SimulationController::is_simulation_running() const
 bool SimulationController::is_default_pose() const
 {
     return is_default_pose_;
-}
-
-bool SimulationController::has_base_positions() const
-{
-    return has_base_positions_;
 }
 
 std::size_t SimulationController::garment_count() const

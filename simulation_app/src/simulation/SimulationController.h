@@ -64,7 +64,6 @@ public:
     void stop_simulation();
     bool is_simulation_running() const;
     bool is_default_pose() const;
-    bool has_base_positions() const;
     std::size_t garment_count() const;
     bool can_start_garment_placement() const;
     glm::vec3 garment_placement_color(GarmentLayer layer) const;
