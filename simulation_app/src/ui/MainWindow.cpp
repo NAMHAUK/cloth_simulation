@@ -56,6 +56,7 @@ MainWindow::MainWindow(const std::filesystem::path& project_root, QWidget* paren
 MainWindow::~MainWindow()
 {
     AssetBrowserPanel& asset_browser_panel = viewport_->asset_browser_panel();
+    asset_browser_panel.set_motion_loading_changed_callback({});
     asset_browser_panel.set_motion_loaded_callback({});
     asset_browser_panel.set_garment_load_started_callback({});
     asset_browser_panel.set_garment_loaded_callback({});
@@ -128,6 +129,15 @@ void MainWindow::setup_viewport_callbacks()
 void MainWindow::setup_asset_browser_callbacks()
 {
     AssetBrowserPanel& asset_browser_panel = viewport_->asset_browser_panel();
+    asset_browser_panel.set_motion_loading_changed_callback([this](bool is_loading) {
+        if (is_loading) {
+            simulation_controller_->stop_simulation();
+        }
+        viewport_->set_motion_loading(is_loading);
+        if (!is_loading) {
+            update_simulation_button_state();
+        }
+    });
     asset_browser_panel.set_motion_loaded_callback([this](CharacterMesh mesh) {
         placement_controller_->end_session();
         simulation_controller_->set_character_mesh(std::move(mesh));

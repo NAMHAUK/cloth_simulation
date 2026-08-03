@@ -469,12 +469,18 @@ AssetBrowserPanel::AssetBrowserPanel(const ProjectPaths& project_paths, QWidget*
 
     connect(import_button_, &QPushButton::clicked, this, [this]() { request_garment_conversion(); });
 
-    asset_loader_->set_character_loaded_callback([this](CharacterMesh mesh) {
+    asset_loader_->set_motion_loaded_callback([this](CharacterMesh mesh) {
         if (motion_loaded_callback_) {
             motion_loaded_callback_(std::move(mesh));
         }
+        if (motion_loading_changed_callback_) {
+            motion_loading_changed_callback_(false);
+        }
     });
-    asset_loader_->set_character_load_failed_callback([this](const std::filesystem::path& asset_path) {
+    asset_loader_->set_motion_load_failed_callback([this](const std::filesystem::path& asset_path) {
+        if (motion_loading_changed_callback_) {
+            motion_loading_changed_callback_(false);
+        }
         QMessageBox::warning(this,
                              "Load Failed",
                              "Failed to load motion:\n" + QString::fromStdWString(asset_path.wstring()));
@@ -504,8 +510,8 @@ AssetBrowserPanel::AssetBrowserPanel(const ProjectPaths& project_paths, QWidget*
 
 AssetBrowserPanel::~AssetBrowserPanel()
 {
-    asset_loader_->set_character_loaded_callback({});
-    asset_loader_->set_character_load_failed_callback({});
+    asset_loader_->set_motion_loaded_callback({});
+    asset_loader_->set_motion_load_failed_callback({});
     motion_converter_->set_conversion_succeeded_callback({});
     motion_converter_->set_conversion_failed_callback({});
     garment_converter_->set_conversion_succeeded_callback({});
@@ -542,7 +548,10 @@ void AssetBrowserPanel::refresh_garment_list()
 
 void AssetBrowserPanel::load_motion(const std::filesystem::path& asset_path)
 {
-    asset_loader_->load_character_mesh(asset_path);
+    if (motion_loading_changed_callback_) {
+        motion_loading_changed_callback_(true);
+    }
+    asset_loader_->load_motion(asset_path);
 }
 
 void AssetBrowserPanel::load_garment(const std::filesystem::path& asset_path)
@@ -617,6 +626,11 @@ void AssetBrowserPanel::request_motion_conversion(const std::filesystem::path& s
     converting_motion_path_ = QString::fromStdWString(source_path.wstring());
     set_conversion_active(AssetPanelMode::Motions, true);
     motion_converter_->start_conversion(command);
+}
+
+void AssetBrowserPanel::set_motion_loading_changed_callback(MotionLoadingChangedCallback callback)
+{
+    motion_loading_changed_callback_ = std::move(callback);
 }
 
 void AssetBrowserPanel::set_motion_loaded_callback(MotionLoadedCallback callback)

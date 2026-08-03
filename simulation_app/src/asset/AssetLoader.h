@@ -11,8 +11,8 @@
 class AssetLoader final : public QObject
 {
 public:
-    using CharacterLoadedCallback = std::function<void(CharacterMesh)>;
-    using CharacterLoadFailedCallback = std::function<void(const std::filesystem::path&)>;
+    using MotionLoadedCallback = std::function<void(CharacterMesh)>;
+    using MotionLoadFailedCallback = std::function<void(const std::filesystem::path&)>;
 
     explicit AssetLoader(QObject* parent = nullptr);
     ~AssetLoader() override;
@@ -20,23 +20,23 @@ public:
     AssetLoader(const AssetLoader&) = delete;
     AssetLoader& operator=(const AssetLoader&) = delete;
 
-    void set_character_loaded_callback(CharacterLoadedCallback callback);
-    void set_character_load_failed_callback(CharacterLoadFailedCallback callback);
+    void set_motion_loaded_callback(MotionLoadedCallback callback);
+    void set_motion_load_failed_callback(MotionLoadFailedCallback callback);
 
-    void load_character_mesh(std::filesystem::path motion_asset_path);
+    void load_motion(std::filesystem::path motion_asset_path);
 
 private:
-    struct CharacterMeshLoadResult
+    struct MotionLoadResult
     {
         std::filesystem::path source_path;
         bool is_loaded = false;
         CharacterMesh mesh;
     };
 
-    void call_character_load_callbacks();
+    void call_motion_load_callbacks();
 
-    QFutureWatcher<CharacterMeshLoadResult> character_load_watcher_;
+    QFutureWatcher<MotionLoadResult> motion_load_watcher_;
 
-    CharacterLoadedCallback character_loaded_callback_;
-    CharacterLoadFailedCallback character_load_failed_callback_;
+    MotionLoadedCallback motion_loaded_callback_;
+    MotionLoadFailedCallback motion_load_failed_callback_;
 };

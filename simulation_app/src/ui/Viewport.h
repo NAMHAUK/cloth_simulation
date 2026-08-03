@@ -12,7 +12,9 @@
 #include <QPoint>
 
 class QMouseEvent;
+class QLabel;
 class QPushButton;
+class QTimer;
 class QWheelEvent;
 class AssetBrowserPanel;
 class GarmentCardsPanel;
@@ -50,6 +52,7 @@ public:
     void set_default_pose_callback(std::function<void()> callback);
     void set_reset_callback(std::function<void()> callback);
     void set_simulation_button_state(bool simulation_running, bool buttons_enabled);
+    void set_motion_loading(bool is_loading);
     void update_layout();
 
     // Rendering callbacks
@@ -73,6 +76,9 @@ protected:
     void wheelEvent(QWheelEvent* event) override;
 
 private:
+    // Child UI
+    void setup_motion_loading_indicator();
+
     // Rendering
     void update_render_time();
     void draw_display_fps();
@@ -81,6 +87,9 @@ private:
     PlacementPanel* placement_panel_ = nullptr;
     GarmentColorPanel* garment_color_panel_ = nullptr;
     GarmentCardsPanel* garment_cards_panel_ = nullptr;
+    QLabel* motion_loading_indicator_ = nullptr;
+    QTimer* motion_loading_timer_ = nullptr;
+    int motion_loading_step_ = 0;
     QPushButton* play_pause_button_ = nullptr;
     QPushButton* default_pose_button_ = nullptr;
     QPushButton* reset_button_ = nullptr;

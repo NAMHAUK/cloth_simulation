@@ -28,6 +28,7 @@ enum class AssetPanelMode
 class AssetBrowserPanel final : public QWidget
 {
 public:
+    using MotionLoadingChangedCallback = std::function<void(bool)>;
     using MotionLoadedCallback = std::function<void(CharacterMesh)>;
     using GarmentLoadStartedCallback = std::function<void()>;
     using GarmentLoadedCallback =
@@ -38,6 +39,7 @@ public:
 
     bool is_expanded() const;
 
+    void set_motion_loading_changed_callback(MotionLoadingChangedCallback callback);
     void set_motion_loaded_callback(MotionLoadedCallback callback);
     void set_garment_load_started_callback(GarmentLoadStartedCallback callback);
     void set_garment_loaded_callback(GarmentLoadedCallback callback);
@@ -93,6 +95,7 @@ private:
     QHash<QString, QString> converted_motion_paths_;
     QHash<QString, QString> motion_descriptions_;
     QHash<QString, QString> subject_descriptions_;
+    MotionLoadingChangedCallback motion_loading_changed_callback_;
     MotionLoadedCallback motion_loaded_callback_;
     GarmentLoadStartedCallback garment_load_started_callback_;
     GarmentLoadedCallback garment_loaded_callback_;
