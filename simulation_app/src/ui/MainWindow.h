@@ -21,8 +21,10 @@ public:
 
 private:
     // Initialization
+    void setup_simulation_controller();
+    void setup_placement_controller();
     bool initialize_scene(QOpenGLFunctions_4_5_Core& gl);
-    void setup_viewport_callbacks();
+    void setup_viewport_render_callbacks();
     void setup_asset_browser_callbacks();
     void setup_simulation_control_callbacks();
 

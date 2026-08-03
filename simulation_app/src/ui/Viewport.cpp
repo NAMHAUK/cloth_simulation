@@ -428,11 +428,6 @@ void Viewport::set_scene_render_callback(SceneRenderCallback callback)
     scene_render_callback_ = std::move(callback);
 }
 
-bool Viewport::is_gl_initialized() const
-{
-    return gl_initialized_;
-}
-
 QOpenGLFunctions_4_5_Core& Viewport::gl_functions()
 {
     return *this;
@@ -442,7 +437,6 @@ QOpenGLFunctions_4_5_Core& Viewport::gl_functions()
 void Viewport::initializeGL()
 {
     initializeOpenGLFunctions();
-    gl_initialized_ = true;
 
     std::cout << "OpenGL version: " << glGetString(GL_VERSION) << '\n';
     std::cout << "Renderer: " << glGetString(GL_RENDERER) << '\n';
@@ -529,7 +523,7 @@ void Viewport::draw_display_fps()
 
 // Camera //
 // 현재 character root 기준으로 camera 초기화
-void Viewport::reset_camera_to_character_root(const glm::vec3& root_position)
+void Viewport::reset_camera(const glm::vec3& root_position)
 {
     camera_.target = root_position + camera_target_offset;
     camera_.yaw_radians = character_camera_yaw;

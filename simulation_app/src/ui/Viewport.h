@@ -58,11 +58,10 @@ public:
     // Rendering callbacks
     void set_initialize_callback(InitializeCallback callback);
     void set_scene_render_callback(SceneRenderCallback callback);
-    bool is_gl_initialized() const;
     QOpenGLFunctions_4_5_Core& gl_functions();
 
     // Camera
-    void reset_camera_to_character_root(const glm::vec3& root_position);
+    void reset_camera(const glm::vec3& root_position);
     void set_camera_target(const glm::vec3& root_position);
 
 protected:
@@ -105,5 +104,4 @@ private:
     std::uint64_t render_frame_count_ = 0;
     double render_fps_ = 0.0;
     double frame_ms_ = 0.0;
-    bool gl_initialized_ = false;
 };
