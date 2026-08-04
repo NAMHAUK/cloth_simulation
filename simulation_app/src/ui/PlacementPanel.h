@@ -16,7 +16,7 @@ class QPushButton;
 class QSlider;
 class QString;
 
-class GarmentPlacementPanel final : public QWidget
+class PlacementPanel final : public QWidget
 {
 public:
     using PlacementChangedCallback =
@@ -30,7 +30,7 @@ public:
     using ConfirmCallback = std::function<void()>;
     using CancelCallback = std::function<void()>;
 
-    explicit GarmentPlacementPanel(QWidget* parent = nullptr);
+    explicit PlacementPanel(QWidget* parent = nullptr);
 
     void set_placement_changed_callback(PlacementChangedCallback callback);
     void set_color_changed_callback(ColorChangedCallback callback);

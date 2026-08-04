@@ -12,7 +12,13 @@
 #include <QPoint>
 
 class QMouseEvent;
+class QPushButton;
 class QWheelEvent;
+class AssetBrowserPanel;
+class GarmentCardsPanel;
+class GarmentColorPanel;
+class PlacementPanel;
+struct ProjectPaths;
 
 struct OrbitCamera
 {
@@ -26,19 +32,33 @@ struct OrbitCamera
     bool has_last_mouse = false;
 };
 
-class SceneViewport final : public QOpenGLWidget, protected QOpenGLFunctions_4_5_Core
+class Viewport final : public QOpenGLWidget, protected QOpenGLFunctions_4_5_Core
 {
 public:
     using InitializeCallback = std::function<bool(QOpenGLFunctions_4_5_Core&)>;
     using SceneRenderCallback = std::function<void(const glm::mat4&, QOpenGLFunctions_4_5_Core&)>;
 
-    explicit SceneViewport(QWidget* parent = nullptr);
-    ~SceneViewport() override;
+    explicit Viewport(const ProjectPaths& project_paths, QWidget* parent = nullptr);
+    ~Viewport() override;
 
+    // Child UI
+    AssetBrowserPanel& asset_browser_panel();
+    PlacementPanel& placement_panel();
+    GarmentColorPanel& garment_color_panel();
+    GarmentCardsPanel& garment_cards_panel();
+    void set_play_pause_callback(std::function<void()> callback);
+    void set_default_pose_callback(std::function<void()> callback);
+    void set_reset_callback(std::function<void()> callback);
+    void set_simulation_button_state(bool simulation_running, bool buttons_enabled);
+    void update_layout();
+
+    // Rendering callbacks
     void set_initialize_callback(InitializeCallback callback);
     void set_scene_render_callback(SceneRenderCallback callback);
     bool is_gl_initialized() const;
     QOpenGLFunctions_4_5_Core& gl_functions();
+
+    // Camera
     void reset_camera_to_character_root(const glm::vec3& root_position);
     void set_camera_target(const glm::vec3& root_position);
 
@@ -53,8 +73,20 @@ protected:
     void wheelEvent(QWheelEvent* event) override;
 
 private:
+    // Rendering
     void update_render_time();
     void draw_display_fps();
+
+    AssetBrowserPanel* asset_browser_panel_ = nullptr;
+    PlacementPanel* placement_panel_ = nullptr;
+    GarmentColorPanel* garment_color_panel_ = nullptr;
+    GarmentCardsPanel* garment_cards_panel_ = nullptr;
+    QPushButton* play_pause_button_ = nullptr;
+    QPushButton* default_pose_button_ = nullptr;
+    QPushButton* reset_button_ = nullptr;
+    std::function<void()> play_pause_callback_;
+    std::function<void()> default_pose_callback_;
+    std::function<void()> reset_callback_;
 
     InitializeCallback initialize_callback_;
     SceneRenderCallback scene_render_callback_;
