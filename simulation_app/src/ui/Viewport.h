@@ -52,7 +52,7 @@ public:
     void set_default_pose_callback(std::function<void()> callback);
     void set_reset_callback(std::function<void()> callback);
     void set_simulation_button_state(bool simulation_running, bool buttons_enabled);
-    void set_motion_loading(bool is_loading);
+    void set_loading_overlay_active(bool active);
     void update_layout();
 
     // Rendering callbacks
@@ -76,7 +76,11 @@ protected:
 
 private:
     // Child UI
-    void setup_motion_loading_indicator();
+    void setup_loading_overlay();
+    void update_asset_browser_layout();
+    void update_simulation_control_button_layout();
+    void update_right_panel_layout();
+    void update_loading_overlay_layout();
 
     // Rendering
     void update_render_time();
@@ -86,9 +90,9 @@ private:
     PlacementPanel* placement_panel_ = nullptr;
     GarmentColorPanel* garment_color_panel_ = nullptr;
     GarmentCardsPanel* garment_cards_panel_ = nullptr;
-    QLabel* motion_loading_indicator_ = nullptr;
-    QTimer* motion_loading_timer_ = nullptr;
-    int motion_loading_step_ = 0;
+    QLabel* loading_overlay_ = nullptr;
+    QTimer* loading_spinner_timer_ = nullptr;
+    int loading_spinner_step_ = 0;
     QPushButton* play_pause_button_ = nullptr;
     QPushButton* default_pose_button_ = nullptr;
     QPushButton* reset_button_ = nullptr;

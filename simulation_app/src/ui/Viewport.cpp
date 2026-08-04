@@ -7,6 +7,7 @@
 #include "ui/PlacementPanel.h"
 
 #include <algorithm>
+#include <array>
 #include <cmath>
 #include <iostream>
 #include <utility>
@@ -60,17 +61,17 @@ constexpr int render_time_update_interval_ms = 500;
 
 // Child UI
 constexpr int panel_margin = 12;
-constexpr int panel_width = 390;
-constexpr int panel_min_height = 270;
-constexpr int panel_max_height = 540;
+constexpr int asset_panel_width = 390;
+constexpr int asset_panel_max_height = 540;
 constexpr int simulation_button_size = 40;
 constexpr int simulation_button_gap = 10;
 constexpr int simulation_button_count = 3;
 constexpr int simulation_icon_size = 22;
-constexpr int motion_loading_indicator_size = 96;
-constexpr int motion_loading_line_count = 6;
-constexpr int motion_loading_interval_ms = 80;
-constexpr int placement_panel_width = 280;
+constexpr int loading_spinner_size = 96;
+constexpr int loading_spinner_line_count = 6;
+constexpr int loading_spinner_interval_ms = 80;
+constexpr int right_panel_width = 280;
+constexpr int right_panel_gap = 10;
 
 enum class ControlIcon
 {
@@ -80,7 +81,7 @@ enum class ControlIcon
     Reset,
 };
 
-class MotionLoadingOverlay final : public QLabel
+class LoadingOverlay final : public QLabel
 {
 public:
     using QLabel::QLabel;
@@ -137,21 +138,21 @@ QIcon make_simulation_control_icon(ControlIcon icon_type, const QColor& icon_col
     return QIcon{pixmap};
 }
 
-QPixmap make_motion_loading_pixmap(int step)
+QPixmap make_loading_spinner_pixmap(int step)
 {
-    QPixmap pixmap(motion_loading_indicator_size, motion_loading_indicator_size);
+    QPixmap pixmap(loading_spinner_size, loading_spinner_size);
     pixmap.fill(Qt::transparent);
 
     QPainter painter(&pixmap);
     painter.setRenderHint(QPainter::Antialiasing, true);
-    painter.translate(motion_loading_indicator_size * 0.5, motion_loading_indicator_size * 0.5);
+    painter.translate(loading_spinner_size * 0.5, loading_spinner_size * 0.5);
 
-    for (int index = 0; index < motion_loading_line_count; ++index) {
+    for (int index = 0; index < loading_spinner_line_count; ++index) {
         QColor color{"#f5f5f5"};
-        color.setAlpha(55 + ((index + step) % motion_loading_line_count) * 40);
+        color.setAlpha(55 + ((index + step) % loading_spinner_line_count) * 40);
         painter.setPen(QPen{color, 4.0, Qt::SolidLine, Qt::RoundCap});
         painter.drawLine(QPointF{0.0, -20.0}, QPointF{0.0, -38.0});
-        painter.rotate(360.0 / motion_loading_line_count);
+        painter.rotate(360.0 / loading_spinner_line_count);
     }
 
     return pixmap;
@@ -242,7 +243,7 @@ Viewport::Viewport(const ProjectPaths& project_paths, QWidget* parent) : QOpenGL
     setup_control_button(play_pause_button_, ControlIcon::Play, "Run", QColor{"#43a047"});
     setup_control_button(default_pose_button_, ControlIcon::DefaultPose, "Default Pose", QColor{"#1e88e5"});
     setup_control_button(reset_button_, ControlIcon::Reset, "Reset", QColor{"#e53935"});
-    setup_motion_loading_indicator();
+    setup_loading_overlay();
 
     connect(play_pause_button_, &QPushButton::clicked, this, [this]() {
         if (play_pause_callback_) {
@@ -314,107 +315,106 @@ void Viewport::set_simulation_button_state(bool simulation_running, bool buttons
     default_pose_button_->setEnabled(buttons_enabled);
 }
 
-void Viewport::setup_motion_loading_indicator()
+void Viewport::setup_loading_overlay()
 {
-    motion_loading_indicator_ = new MotionLoadingOverlay(this);
-    motion_loading_indicator_->setAlignment(Qt::AlignCenter);
-    motion_loading_indicator_->setFocusPolicy(Qt::StrongFocus);
-    motion_loading_indicator_->setPixmap(make_motion_loading_pixmap(motion_loading_step_));
-    motion_loading_indicator_->setVisible(false);
+    loading_overlay_ = new LoadingOverlay(this);
+    loading_overlay_->setAlignment(Qt::AlignCenter);
+    loading_overlay_->setFocusPolicy(Qt::StrongFocus);
+    loading_overlay_->setPixmap(make_loading_spinner_pixmap(loading_spinner_step_));
+    loading_overlay_->setVisible(false);
 
-    motion_loading_timer_ = new QTimer(this);
-    motion_loading_timer_->setInterval(motion_loading_interval_ms);
-    connect(motion_loading_timer_, &QTimer::timeout, this, [this]() {
-        motion_loading_step_ = (motion_loading_step_ + 1) % motion_loading_line_count;
-        motion_loading_indicator_->setPixmap(make_motion_loading_pixmap(motion_loading_step_));
+    loading_spinner_timer_ = new QTimer(this);
+    loading_spinner_timer_->setInterval(loading_spinner_interval_ms);
+    connect(loading_spinner_timer_, &QTimer::timeout, this, [this]() {
+        loading_spinner_step_ = (loading_spinner_step_ + 1) % loading_spinner_line_count;
+        loading_overlay_->setPixmap(make_loading_spinner_pixmap(loading_spinner_step_));
     });
 }
 
-void Viewport::set_motion_loading(bool is_loading)
+void Viewport::set_loading_overlay_active(bool active)
 {
-    motion_loading_indicator_->setVisible(is_loading);
-    if (is_loading) {
-        motion_loading_indicator_->setFocus(Qt::OtherFocusReason);
-        motion_loading_timer_->start();
-        motion_loading_indicator_->raise();
+    loading_overlay_->setVisible(active);
+    if (active) {
+        loading_overlay_->setFocus(Qt::OtherFocusReason);
+        loading_spinner_timer_->start();
+        loading_overlay_->raise();
     } else {
-        motion_loading_timer_->stop();
+        loading_spinner_timer_->stop();
         setFocus(Qt::OtherFocusReason);
     }
 }
 
 void Viewport::update_layout()
 {
-    const QSize viewport_size = size();
-    const QSize collapsed_size = asset_browser_panel_->sizeHint();
-    const int available_width = std::max(0, viewport_size.width() - panel_margin * 2);
-    const int available_height = std::max(0, viewport_size.height() - panel_margin * 2);
+    update_asset_browser_layout();
+    update_simulation_control_button_layout();
+    update_right_panel_layout();
+    update_loading_overlay_layout();
+}
 
-    int asset_browser_width = std::min(collapsed_size.width(), available_width);
-    int asset_browser_height = std::min(collapsed_size.height(), available_height);
+void Viewport::update_asset_browser_layout()
+{
+    const QSize collapsed_size = asset_browser_panel_->sizeHint();
+
+    int panel_width = collapsed_size.width();
+    int panel_height = collapsed_size.height();
 
     if (asset_browser_panel_->is_expanded()) {
-        asset_browser_width = std::min(panel_width, available_width);
-
-        const int target_height = viewport_size.height() / 2;
-        const int expanded_max_height = std::min(panel_max_height, available_height);
-        asset_browser_height =
-            std::clamp(target_height, std::min(panel_min_height, expanded_max_height), expanded_max_height);
+        panel_width = asset_panel_width;
+        panel_height = std::min(height() / 2, asset_panel_max_height);
     }
 
-    asset_browser_panel_->setGeometry(panel_margin, panel_margin, asset_browser_width, asset_browser_height);
+    asset_browser_panel_->setGeometry(panel_margin, panel_margin, panel_width, panel_height);
     asset_browser_panel_->raise();
+}
 
-    const int controls_width = simulation_button_size * simulation_button_count +
-                               simulation_button_gap * (simulation_button_count - 1);
-    const int controls_x = std::max(panel_margin, (viewport_size.width() - controls_width) / 2);
-    const int controls_y = panel_margin;
-    play_pause_button_->setGeometry(controls_x, controls_y, simulation_button_size, simulation_button_size);
-    default_pose_button_->setGeometry(controls_x + simulation_button_size + simulation_button_gap,
-                                      controls_y,
-                                      simulation_button_size,
-                                      simulation_button_size);
-    reset_button_->setGeometry(controls_x + (simulation_button_size + simulation_button_gap) * 2,
-                               controls_y,
-                               simulation_button_size,
-                               simulation_button_size);
+void Viewport::update_simulation_control_button_layout()
+{
+    constexpr int button_group_width = simulation_button_size * simulation_button_count +
+                                       simulation_button_gap * (simulation_button_count - 1);
+    constexpr int button_x_offset = simulation_button_size + simulation_button_gap;
+
+    const int button_group_left = (width() - button_group_width) / 2;
+
+    play_pause_button_->move(button_group_left, panel_margin);
+    default_pose_button_->move(button_group_left + button_x_offset, panel_margin);
+    reset_button_->move(button_group_left + button_x_offset * 2, panel_margin);
+
     play_pause_button_->raise();
     default_pose_button_->raise();
     reset_button_->raise();
+}
 
-    const int placement_width = std::min(placement_panel_width, available_width);
-    const int placement_x = std::max(panel_margin, viewport_size.width() - panel_margin - placement_width);
-    const int placement_y = controls_y + simulation_button_size + simulation_button_gap;
-    int garment_cards_y = placement_y;
-    if (placement_panel_->isVisible()) {
-        const int placement_available_height =
-            std::max(0, viewport_size.height() - panel_margin - placement_y);
-        const int placement_height =
-            std::min(placement_panel_->sizeHint().height(), placement_available_height);
-        placement_panel_->setGeometry(placement_x, placement_y, placement_width, placement_height);
-        placement_panel_->raise();
-        garment_cards_y += placement_height + simulation_button_gap;
+void Viewport::update_right_panel_layout()
+{
+    // Right panels { PlacementPanel, GarmentCardsPanel, GarmentColorPanel }
+    const int panel_left = width() - panel_margin - right_panel_width;
+    const int panel_bottom = height() - panel_margin;
+
+    const std::array<QWidget*, 3> panels{
+        placement_panel_,
+        garment_cards_panel_,
+        garment_color_panel_,
+    };
+
+    int panel_top = panel_margin + simulation_button_size + right_panel_gap;
+    for (QWidget* panel : panels) {
+        if (!panel->isVisible()) {
+            continue;
+        }
+
+        const int remaining_height = std::max(0, panel_bottom - panel_top);
+        const int panel_height = std::min(panel->sizeHint().height(), remaining_height);
+        panel->setGeometry(panel_left, panel_top, right_panel_width, panel_height);
+        panel->raise();
+        panel_top += panel_height + right_panel_gap;
     }
+}
 
-    int color_panel_y = garment_cards_y;
-    if (garment_cards_panel_->isVisible()) {
-        const int cards_available_height =
-            std::max(0, viewport_size.height() - panel_margin - garment_cards_y);
-        const int cards_height = std::min(garment_cards_panel_->sizeHint().height(), cards_available_height);
-        garment_cards_panel_->setGeometry(placement_x, garment_cards_y, placement_width, cards_height);
-        garment_cards_panel_->raise();
-        color_panel_y += cards_height + simulation_button_gap;
-    }
-
-    if (garment_color_panel_->isVisible()) {
-        const int color_available_height = std::max(0, viewport_size.height() - panel_margin - color_panel_y);
-        const int color_height = std::min(garment_color_panel_->sizeHint().height(), color_available_height);
-        garment_color_panel_->setGeometry(placement_x, color_panel_y, placement_width, color_height);
-        garment_color_panel_->raise();
-    }
-
-    motion_loading_indicator_->setGeometry(rect());
-    motion_loading_indicator_->raise();
+void Viewport::update_loading_overlay_layout()
+{
+    loading_overlay_->setGeometry(rect());
+    loading_overlay_->raise();
 }
 
 // Accessors //

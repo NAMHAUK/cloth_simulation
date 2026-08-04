@@ -138,7 +138,7 @@ void MainWindow::setup_asset_browser_callbacks()
         if (is_loading) {
             simulation_controller_->stop_simulation();
         }
-        viewport_->set_motion_loading(is_loading);
+        viewport_->set_loading_overlay_active(is_loading);
         if (!is_loading) {
             update_simulation_button_state();
         }
