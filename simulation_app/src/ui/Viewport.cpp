@@ -12,7 +12,6 @@
 #include <utility>
 
 #include <QEvent>
-#include <QFontMetrics>
 #include <QIcon>
 #include <QLabel>
 #include <QMouseEvent>
@@ -42,24 +41,20 @@ constexpr float default_camera_distance = 4.0f;
 
 constexpr float character_camera_yaw = 0.5f * pi;
 constexpr float character_camera_pitch = 10.0f * pi / 180.0f;
-constexpr glm::vec3 camera_target_offset{0.0f, 0.0f, 0.0f};
 
 // Camera control parameters
 constexpr float orbit_sensitivity = 0.006f;
 constexpr float max_camera_pitch = 85.0f * pi / 180.0f;
 constexpr float pan_distance_scale = 0.0015f;
-constexpr float wheel_delta_per_step = 120.0f;
-constexpr float wheel_step_epsilon = 0.0001f;
 constexpr float zoom_step_scale = 0.88f;
 
 // scene parameters
 constexpr glm::vec3 background_color{0.07f, 0.09f, 0.12f};
 constexpr glm::vec3 world_up{0.0f, 1.0f, 0.0f};
 
-constexpr int fps_overlay_margin = 14;
-constexpr int fps_overlay_horizontal_padding = 8;
-constexpr int fps_overlay_vertical_padding = 4;
-constexpr int render_time_update_interval_ms = 500;
+constexpr int frame_stats_margin = 14;
+constexpr QSize frame_stats_size{200, 28};
+constexpr int frame_stats_update_interval_ms = 500;
 
 // Child UI
 constexpr int panel_margin = 12;
@@ -187,11 +182,16 @@ void setup_control_button(QPushButton* button,
     )");
 }
 
+bool is_camera_control_button(Qt::MouseButtons buttons)
+{
+    return buttons.testFlag(Qt::RightButton) || buttons.testFlag(Qt::MiddleButton);
+}
+
 void orbit_camera(OrbitCamera& camera, const QPoint& delta)
 {
-    camera.yaw_radians -= static_cast<float>(delta.x()) * orbit_sensitivity;
-    camera.pitch_radians += static_cast<float>(delta.y()) * orbit_sensitivity;
-    camera.pitch_radians = std::clamp(camera.pitch_radians, -max_camera_pitch, max_camera_pitch);
+    camera.yaw_radians -= delta.x() * orbit_sensitivity;
+    const float next_pitch = camera.pitch_radians + delta.y() * orbit_sensitivity;
+    camera.pitch_radians = std::clamp(next_pitch, -max_camera_pitch, max_camera_pitch);
 }
 
 void pan_camera(OrbitCamera& camera, const QPoint& delta, const glm::vec3& eye)
@@ -201,30 +201,19 @@ void pan_camera(OrbitCamera& camera, const QPoint& delta, const glm::vec3& eye)
     const glm::vec3 up = glm::cross(right, forward);
     const float pan_scale = camera.distance * pan_distance_scale;
 
-    camera.target +=
-        right * static_cast<float>(-delta.x() * pan_scale) + up * static_cast<float>(delta.y() * pan_scale);
+    camera.target += right * (-delta.x() * pan_scale) + up * (delta.y() * pan_scale);
 }
 
 glm::vec3 camera_position(const OrbitCamera& camera)
 {
     const float cos_pitch = std::cos(camera.pitch_radians);
-    return {
-        camera.target.x + camera.distance * cos_pitch * std::cos(camera.yaw_radians),
-        camera.target.y + camera.distance * std::sin(camera.pitch_radians),
-        camera.target.z + camera.distance * cos_pitch * std::sin(camera.yaw_radians),
+    const glm::vec3 orbit_direction{
+        cos_pitch * std::cos(camera.yaw_radians),
+        std::sin(camera.pitch_radians),
+        cos_pitch * std::sin(camera.yaw_radians),
     };
-}
 
-glm::mat4 make_mvp(const OrbitCamera& camera, int width, int height)
-{
-    const int viewport_width = std::max(1, width);
-    const int viewport_height = std::max(1, height);
-    const float aspect = static_cast<float>(viewport_width) / static_cast<float>(viewport_height);
-    const float near_plane = std::max(0.01f, camera.distance * 0.01f);
-    const float far_plane = std::max(100.0f, camera.max_distance * 4.0f);
-    const glm::mat4 projection = glm::perspective(45.0f * pi / 180.0f, aspect, near_plane, far_plane);
-    const glm::mat4 view = glm::lookAt(camera_position(camera), camera.target, world_up);
-    return projection * view;
+    return camera.target + camera.distance * orbit_direction;
 }
 
 }
@@ -235,19 +224,53 @@ Viewport::Viewport(const ProjectPaths& project_paths, QWidget* parent) : QOpenGL
     camera_.pitch_radians = default_camera_pitch;
     camera_.distance = default_camera_distance;
 
+    setup_panels(project_paths);
+    setup_simulation_control_buttons();
+    setup_loading_overlay();
+
+    setFocusPolicy(Qt::StrongFocus);
+    setMouseTracking(true);
+    update_layout();
+}
+
+Viewport::~Viewport() = default;
+
+// Initialization
+void Viewport::setup_panels(const ProjectPaths& project_paths)
+{
     asset_browser_panel_ = new AssetBrowserPanel(project_paths, this);
     placement_panel_ = new PlacementPanel(this);
     garment_color_panel_ = new GarmentColorPanel(this);
     garment_cards_panel_ = new GarmentCardsPanel(this);
-    setup_right_panel();
 
+    auto* panel_content = new QWidget;
+    panel_content->setFixedWidth(right_panel_content_width);
+
+    auto* layout = new QVBoxLayout(panel_content);
+    layout->setContentsMargins(0, 0, 0, 0);
+    layout->setSpacing(right_panel_gap);
+    layout->addWidget(placement_panel_);
+    layout->addWidget(garment_cards_panel_);
+    layout->addWidget(garment_color_panel_);
+
+    right_panel_ = new QScrollArea(this);
+    right_panel_->setWidget(panel_content);
+    panel_content->setAutoFillBackground(false);
+    right_panel_->setFrameShape(QFrame::NoFrame);
+    right_panel_->setHorizontalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
+    right_panel_->viewport()->setAutoFillBackground(false);
+
+    asset_browser_panel_->set_expansion_changed_callback([this]() { update_layout(); });
+}
+
+void Viewport::setup_simulation_control_buttons()
+{
     play_pause_button_ = new QPushButton(this);
     default_pose_button_ = new QPushButton(this);
     reset_button_ = new QPushButton(this);
     setup_control_button(play_pause_button_, ControlIcon::Play, "Run", QColor{"#43a047"});
     setup_control_button(default_pose_button_, ControlIcon::DefaultPose, "Default Pose", QColor{"#1e88e5"});
     setup_control_button(reset_button_, ControlIcon::Reset, "Reset", QColor{"#e53935"});
-    setup_loading_overlay();
 
     connect(play_pause_button_, &QPushButton::clicked, this, [this]() {
         if (play_pause_callback_) {
@@ -264,59 +287,6 @@ Viewport::Viewport(const ProjectPaths& project_paths, QWidget* parent) : QOpenGL
             reset_callback_();
         }
     });
-    asset_browser_panel_->set_expansion_changed_callback([this]() { update_layout(); });
-
-    setFocusPolicy(Qt::StrongFocus);
-    setMouseTracking(true);
-    update_layout();
-}
-
-Viewport::~Viewport() = default;
-
-// Child UI //
-AssetBrowserPanel& Viewport::asset_browser_panel()
-{
-    return *asset_browser_panel_;
-}
-
-PlacementPanel& Viewport::placement_panel()
-{
-    return *placement_panel_;
-}
-
-GarmentColorPanel& Viewport::garment_color_panel()
-{
-    return *garment_color_panel_;
-}
-
-GarmentCardsPanel& Viewport::garment_cards_panel()
-{
-    return *garment_cards_panel_;
-}
-
-void Viewport::set_play_pause_callback(std::function<void()> callback)
-{
-    play_pause_callback_ = std::move(callback);
-}
-
-void Viewport::set_default_pose_callback(std::function<void()> callback)
-{
-    default_pose_callback_ = std::move(callback);
-}
-
-void Viewport::set_reset_callback(std::function<void()> callback)
-{
-    reset_callback_ = std::move(callback);
-}
-
-void Viewport::set_simulation_button_state(bool simulation_running, bool buttons_enabled)
-{
-    play_pause_button_->setIcon(
-        make_simulation_control_icon(simulation_running ? ControlIcon::Pause : ControlIcon::Play,
-                                     simulation_running ? QColor{"#f4b400"} : QColor{"#43a047"}));
-    play_pause_button_->setToolTip(simulation_running ? "Pause" : "Run");
-    play_pause_button_->setEnabled(buttons_enabled);
-    default_pose_button_->setEnabled(buttons_enabled);
 }
 
 void Viewport::setup_loading_overlay()
@@ -335,24 +305,34 @@ void Viewport::setup_loading_overlay()
     });
 }
 
-void Viewport::setup_right_panel()
+void Viewport::initializeGL()
 {
-    auto* panel_content = new QWidget;
-    panel_content->setFixedWidth(right_panel_content_width);
+    initializeOpenGLFunctions();
 
-    auto* layout = new QVBoxLayout(panel_content);
-    layout->setContentsMargins(0, 0, 0, 0);
-    layout->setSpacing(right_panel_gap);
-    layout->addWidget(placement_panel_);
-    layout->addWidget(garment_cards_panel_);
-    layout->addWidget(garment_color_panel_);
+    std::cout << "OpenGL version: " << glGetString(GL_VERSION) << '\n';
+    std::cout << "Renderer: " << glGetString(GL_RENDERER) << '\n';
 
-    right_panel_ = new QScrollArea(this);
-    right_panel_->setWidget(panel_content);
-    panel_content->setAutoFillBackground(false);
-    right_panel_->setFrameShape(QFrame::NoFrame);
-    right_panel_->setHorizontalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
-    right_panel_->viewport()->setAutoFillBackground(false);
+    if (!initialize_callback_) {
+        std::cerr << "Scene initialize callback is not set before OpenGL initialization.\n";
+        return;
+    }
+
+    if (!initialize_callback_(gl_functions())) {
+        return;
+    }
+
+    glEnable(GL_DEPTH_TEST);
+}
+
+// UI Updates
+void Viewport::set_simulation_button_state(bool simulation_running, bool buttons_enabled)
+{
+    play_pause_button_->setIcon(
+        make_simulation_control_icon(simulation_running ? ControlIcon::Pause : ControlIcon::Play,
+                                     simulation_running ? QColor{"#f4b400"} : QColor{"#43a047"}));
+    play_pause_button_->setToolTip(simulation_running ? "Pause" : "Run");
+    play_pause_button_->setEnabled(buttons_enabled);
+    default_pose_button_->setEnabled(buttons_enabled);
 }
 
 void Viewport::set_loading_overlay_active(bool active)
@@ -440,47 +420,9 @@ void Viewport::update_loading_overlay_layout()
     loading_overlay_->raise();
 }
 
-// Accessors //
-void Viewport::set_initialize_callback(InitializeCallback callback)
-{
-    initialize_callback_ = std::move(callback);
-}
-
-void Viewport::set_scene_render_callback(SceneRenderCallback callback)
-{
-    scene_render_callback_ = std::move(callback);
-}
-
-QOpenGLFunctions_4_5_Core& Viewport::gl_functions()
-{
-    return *this;
-}
-
-// OpenGL //
-void Viewport::initializeGL()
-{
-    initializeOpenGLFunctions();
-
-    std::cout << "OpenGL version: " << glGetString(GL_VERSION) << '\n';
-    std::cout << "Renderer: " << glGetString(GL_RENDERER) << '\n';
-
-    if (!initialize_callback_) {
-        std::cerr << "Scene initialize callback is not set before OpenGL initialization.\n";
-        return;
-    }
-
-    // Simulation_Controller::initialize_gpu
-    if (!initialize_callback_(gl_functions())) {
-        return;
-    }
-
-    // Render state initialization
-    glEnable(GL_DEPTH_TEST);
-}
-
+// Rendering
 void Viewport::resizeGL(int width, int height)
 {
-    glViewport(0, 0, std::max(1, width), std::max(1, height));
     update_layout();
 }
 
@@ -489,17 +431,24 @@ void Viewport::paintGL()
     glClearColor(background_color.r, background_color.g, background_color.b, 1.0f);
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
-    if (scene_render_callback_) {
-        // MVP 계산 -> shader uMVP로 전달
-        const glm::mat4 mvp = make_mvp(camera_, width(), height());
-        scene_render_callback_(mvp, gl_functions());
-    }
+    const glm::mat4 mvp = make_mvp();
+    scene_render_callback_(mvp, gl_functions());
 
-    update_render_time();
-    draw_display_fps();
+    update_frame_stats();
+    draw_frame_stats();
 }
 
-void Viewport::update_render_time()
+glm::mat4 Viewport::make_mvp() const
+{
+    const float aspect = static_cast<float>(std::max(1, width())) / std::max(1, height());
+    const float near_plane = std::max(0.01f, camera_.distance * 0.01f);
+    const float far_plane = std::max(100.0f, camera_.max_distance * 4.0f);
+    const glm::mat4 projection = glm::perspective(45.0f * pi / 180.0f, aspect, near_plane, far_plane);
+    const glm::mat4 view = glm::lookAt(camera_position(camera_), camera_.target, world_up);
+    return projection * view;
+}
+
+void Viewport::update_frame_stats()
 {
     if (!render_fps_timer_.isValid()) {
         render_fps_timer_.start();
@@ -507,93 +456,76 @@ void Viewport::update_render_time()
 
     ++render_frame_count_;
 
-    const qint64 elapsed_ms = render_fps_timer_.elapsed();
-    if (elapsed_ms < render_time_update_interval_ms) {
+    const double elapsed_ms = static_cast<double>(render_fps_timer_.elapsed());
+    if (elapsed_ms < frame_stats_update_interval_ms) {
         return;
     }
 
-    render_fps_ = static_cast<double>(render_frame_count_) * 1000.0 / static_cast<double>(elapsed_ms);
-    frame_ms_ = static_cast<double>(elapsed_ms) / static_cast<double>(render_frame_count_);
+    render_fps_ = render_frame_count_ * 1000.0 / elapsed_ms;
+    frame_ms_ = elapsed_ms / render_frame_count_;
     render_frame_count_ = 0;
     render_fps_timer_.restart();
 }
 
-void Viewport::draw_display_fps()
+void Viewport::draw_frame_stats()
 {
-    const QString fps_text =
-        QString("FPS: %1  Frame: %2ms").arg(render_fps_, 0, 'f', 1).arg(frame_ms_, 0, 'f', 1);
+    const QString stats_text =
+        QStringLiteral("FPS: %1  Frame time: %2 ms").arg(render_fps_, 0, 'f', 1).arg(frame_ms_, 0, 'f', 1);
 
     QPainter painter(this);
-    painter.setRenderHint(QPainter::Antialiasing);
 
-    const QFontMetrics metrics(painter.font());
-    const QRect text_bounds = metrics.boundingRect(fps_text);
-    QRect background_rect(0,
-                          0,
-                          text_bounds.width() + fps_overlay_horizontal_padding * 2,
-                          text_bounds.height() + fps_overlay_vertical_padding * 2);
-    background_rect.moveBottomRight(QPoint(width() - fps_overlay_margin, height() - fps_overlay_margin));
+    QRect background_rect{QPoint{}, frame_stats_size};
+    background_rect.moveBottomRight(QPoint(width() - frame_stats_margin, height() - frame_stats_margin));
 
     painter.fillRect(background_rect, QColor(0, 0, 0, 150));
     painter.setPen(QColor(235, 240, 245));
-    painter.drawText(background_rect.adjusted(fps_overlay_horizontal_padding,
-                                              fps_overlay_vertical_padding,
-                                              -fps_overlay_horizontal_padding,
-                                              -fps_overlay_vertical_padding),
-                     Qt::AlignCenter,
-                     fps_text);
+    painter.drawText(background_rect, Qt::AlignCenter, stats_text);
 }
 
-// Camera //
-// 현재 character root 기준으로 camera 초기화
+// Camera
 void Viewport::reset_camera(const glm::vec3& root_position)
 {
-    camera_.target = root_position + camera_target_offset;
+    camera_.target = root_position;
     camera_.yaw_radians = character_camera_yaw;
     camera_.pitch_radians = character_camera_pitch;
     camera_.distance = default_camera_distance;
-    camera_.min_distance = 0.25f;
-    camera_.max_distance = 50.0f;
-    camera_.has_last_mouse = false;
+    camera_.is_dragging = false;
 }
 
 void Viewport::set_camera_target(const glm::vec3& root_position)
 {
-    const glm::vec3 next_target = root_position + camera_target_offset;
-    camera_.target.x = next_target.x;
-    camera_.target.z = next_target.z;
+    camera_.target.x = root_position.x;
+    camera_.target.z = root_position.z;
 }
 
-// Mouse Event //
 void Viewport::mousePressEvent(QMouseEvent* event)
 {
-    if (event->button() == Qt::LeftButton) {
+    if (!is_camera_control_button(event->button())) {
         event->ignore();
         return;
     }
 
     camera_.last_mouse_position = event->pos();
-    camera_.has_last_mouse = true;
+    camera_.is_dragging = true;
     event->accept();
 }
 
 void Viewport::mouseMoveEvent(QMouseEvent* event)
 {
-    if (!camera_.has_last_mouse) {
+    const Qt::MouseButtons buttons = event->buttons();
+    if (!camera_.is_dragging || !is_camera_control_button(buttons)) {
         event->ignore();
         return;
     }
 
-    const QPoint delta = event->pos() - camera_.last_mouse_position;
-    camera_.last_mouse_position = event->pos();
+    const QPoint current_position = event->pos();
+    const QPoint delta = current_position - camera_.last_mouse_position;
+    camera_.last_mouse_position = current_position;
 
-    if (event->buttons() & Qt::RightButton) {
+    if (buttons & Qt::RightButton) {
         orbit_camera(camera_, delta);
-    } else if (event->buttons() & Qt::MiddleButton) {
-        pan_camera(camera_, delta, camera_position(camera_));
     } else {
-        event->ignore();
-        return;
+        pan_camera(camera_, delta, camera_position(camera_));
     }
 
     event->accept();
@@ -601,18 +533,71 @@ void Viewport::mouseMoveEvent(QMouseEvent* event)
 
 void Viewport::mouseReleaseEvent(QMouseEvent* event)
 {
-    if (event->buttons() == Qt::NoButton) {
-        camera_.has_last_mouse = false;
+    if (!is_camera_control_button(event->buttons())) {
+        camera_.is_dragging = false;
     }
     event->accept();
 }
 
 void Viewport::wheelEvent(QWheelEvent* event)
 {
-    const float wheel_steps = static_cast<float>(event->angleDelta().y()) / wheel_delta_per_step;
-    if (std::abs(wheel_steps) > wheel_step_epsilon) {
-        camera_.distance *= std::pow(zoom_step_scale, wheel_steps);
-        camera_.distance = std::clamp(camera_.distance, camera_.min_distance, camera_.max_distance);
+    const int wheel_delta = event->angleDelta().y();
+    if (wheel_delta != 0) {
+        const float wheel_steps = static_cast<float>(wheel_delta) / QWheelEvent::DefaultDeltasPerStep;
+        const float scaled_distance = camera_.distance * std::pow(zoom_step_scale, wheel_steps);
+        camera_.distance = std::clamp(scaled_distance, camera_.min_distance, camera_.max_distance);
     }
     event->accept();
+}
+
+// Accessors
+AssetBrowserPanel& Viewport::asset_browser_panel()
+{
+    return *asset_browser_panel_;
+}
+
+PlacementPanel& Viewport::placement_panel()
+{
+    return *placement_panel_;
+}
+
+GarmentColorPanel& Viewport::garment_color_panel()
+{
+    return *garment_color_panel_;
+}
+
+GarmentCardsPanel& Viewport::garment_cards_panel()
+{
+    return *garment_cards_panel_;
+}
+
+QOpenGLFunctions_4_5_Core& Viewport::gl_functions()
+{
+    return *this;
+}
+
+// Callback Registration
+void Viewport::set_play_pause_callback(std::function<void()> callback)
+{
+    play_pause_callback_ = std::move(callback);
+}
+
+void Viewport::set_default_pose_callback(std::function<void()> callback)
+{
+    default_pose_callback_ = std::move(callback);
+}
+
+void Viewport::set_reset_callback(std::function<void()> callback)
+{
+    reset_callback_ = std::move(callback);
+}
+
+void Viewport::set_initialize_callback(InitializeCallback callback)
+{
+    initialize_callback_ = std::move(callback);
+}
+
+void Viewport::set_scene_render_callback(SceneRenderCallback callback)
+{
+    scene_render_callback_ = std::move(callback);
 }
