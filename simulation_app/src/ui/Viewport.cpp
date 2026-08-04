@@ -7,7 +7,6 @@
 #include "ui/PlacementPanel.h"
 
 #include <algorithm>
-#include <array>
 #include <cmath>
 #include <iostream>
 #include <utility>
@@ -21,9 +20,12 @@
 #include <QPixmap>
 #include <QPushButton>
 #include <QRect>
+#include <QScrollArea>
 #include <QSize>
 #include <QString>
+#include <QStyle>
 #include <QTimer>
+#include <QVBoxLayout>
 #include <QWheelEvent>
 
 #include <glm/ext/matrix_clip_space.hpp>
@@ -70,8 +72,9 @@ constexpr int simulation_icon_size = 22;
 constexpr int loading_spinner_size = 96;
 constexpr int loading_spinner_line_count = 6;
 constexpr int loading_spinner_interval_ms = 80;
-constexpr int right_panel_width = 280;
+constexpr int right_panel_content_width = 280;
 constexpr int right_panel_gap = 10;
+constexpr int right_panel_bottom_margin = 50;
 
 enum class ControlIcon
 {
@@ -236,6 +239,7 @@ Viewport::Viewport(const ProjectPaths& project_paths, QWidget* parent) : QOpenGL
     placement_panel_ = new PlacementPanel(this);
     garment_color_panel_ = new GarmentColorPanel(this);
     garment_cards_panel_ = new GarmentCardsPanel(this);
+    setup_right_panel();
 
     play_pause_button_ = new QPushButton(this);
     default_pose_button_ = new QPushButton(this);
@@ -331,6 +335,26 @@ void Viewport::setup_loading_overlay()
     });
 }
 
+void Viewport::setup_right_panel()
+{
+    auto* panel_content = new QWidget;
+    panel_content->setFixedWidth(right_panel_content_width);
+
+    auto* layout = new QVBoxLayout(panel_content);
+    layout->setContentsMargins(0, 0, 0, 0);
+    layout->setSpacing(right_panel_gap);
+    layout->addWidget(placement_panel_);
+    layout->addWidget(garment_cards_panel_);
+    layout->addWidget(garment_color_panel_);
+
+    right_panel_ = new QScrollArea(this);
+    right_panel_->setWidget(panel_content);
+    panel_content->setAutoFillBackground(false);
+    right_panel_->setFrameShape(QFrame::NoFrame);
+    right_panel_->setHorizontalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
+    right_panel_->viewport()->setAutoFillBackground(false);
+}
+
 void Viewport::set_loading_overlay_active(bool active)
 {
     loading_overlay_->setVisible(active);
@@ -387,28 +411,27 @@ void Viewport::update_simulation_control_button_layout()
 
 void Viewport::update_right_panel_layout()
 {
-    // Right panels { PlacementPanel, GarmentCardsPanel, GarmentColorPanel }
-    const int panel_left = width() - panel_margin - right_panel_width;
-    const int panel_bottom = height() - panel_margin;
-
-    const std::array<QWidget*, 3> panels{
-        placement_panel_,
-        garment_cards_panel_,
-        garment_color_panel_,
-    };
-
-    int panel_top = panel_margin + simulation_button_size + right_panel_gap;
-    for (QWidget* panel : panels) {
-        if (!panel->isVisible()) {
-            continue;
-        }
-
-        const int remaining_height = std::max(0, panel_bottom - panel_top);
-        const int panel_height = std::min(panel->sizeHint().height(), remaining_height);
-        panel->setGeometry(panel_left, panel_top, right_panel_width, panel_height);
-        panel->raise();
-        panel_top += panel_height + right_panel_gap;
+    const bool has_any_visible_panel = !placement_panel_->isHidden() ||
+                                       !garment_cards_panel_->isHidden() ||
+                                       !garment_color_panel_->isHidden();
+    right_panel_->setVisible(has_any_visible_panel);
+    if (!has_any_visible_panel) {
+        return;
     }
+
+    QWidget* panel_content = right_panel_->widget();
+    panel_content->adjustSize();
+
+    constexpr int panel_top = panel_margin + simulation_button_size + right_panel_gap;
+    const int content_height = panel_content->height();
+    const int panel_height = std::min(content_height, height() - panel_top - right_panel_bottom_margin);
+    const bool needs_scrollbar = content_height > panel_height;
+    const int scrollbar_width = needs_scrollbar ? style()->pixelMetric(QStyle::PM_ScrollBarExtent) : 0;
+    const int panel_width = right_panel_content_width + scrollbar_width;
+    const int panel_left = width() - panel_margin - panel_width;
+
+    right_panel_->setGeometry(panel_left, panel_top, panel_width, panel_height);
+    right_panel_->raise();
 }
 
 void Viewport::update_loading_overlay_layout()

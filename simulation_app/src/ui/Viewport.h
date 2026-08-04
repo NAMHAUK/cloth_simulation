@@ -14,6 +14,7 @@
 class QMouseEvent;
 class QLabel;
 class QPushButton;
+class QScrollArea;
 class QTimer;
 class QWheelEvent;
 class AssetBrowserPanel;
@@ -77,6 +78,7 @@ protected:
 private:
     // Child UI
     void setup_loading_overlay();
+    void setup_right_panel();
     void update_asset_browser_layout();
     void update_simulation_control_button_layout();
     void update_right_panel_layout();
@@ -90,6 +92,7 @@ private:
     PlacementPanel* placement_panel_ = nullptr;
     GarmentColorPanel* garment_color_panel_ = nullptr;
     GarmentCardsPanel* garment_cards_panel_ = nullptr;
+    QScrollArea* right_panel_ = nullptr;
     QLabel* loading_overlay_ = nullptr;
     QTimer* loading_spinner_timer_ = nullptr;
     int loading_spinner_step_ = 0;

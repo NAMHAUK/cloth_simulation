@@ -18,7 +18,7 @@ namespace {
 constexpr int initial_window_width = 1440;
 constexpr int initial_window_height = 900;
 constexpr int minimum_window_width = 1000;
-constexpr int minimum_window_height = 600;
+constexpr int minimum_window_height = 700;
 constexpr float placement_character_opacity = 0.3f;
 }
 
