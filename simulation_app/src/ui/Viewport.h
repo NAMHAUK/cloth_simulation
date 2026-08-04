@@ -7,6 +7,7 @@
 #include <glm/vec3.hpp>
 
 #include <QElapsedTimer>
+#include <QIcon>
 #include <QOpenGLFunctions_4_5_Core>
 #include <QOpenGLWidget>
 #include <QPoint>
@@ -103,6 +104,8 @@ private:
     QPushButton* play_pause_button_ = nullptr;
     QPushButton* default_pose_button_ = nullptr;
     QPushButton* reset_button_ = nullptr;
+    QIcon play_icon_{QStringLiteral(":/icons/play.svg")};
+    QIcon pause_icon_{QStringLiteral(":/icons/pause.svg")};
     InitializeCallback initialize_callback_;
     SceneRenderCallback scene_render_callback_;
     OrbitCamera camera_;

@@ -27,7 +27,6 @@
 #include <QPaintEvent>
 #include <QPainter>
 #include <QPen>
-#include <QPixmap>
 #include <QPushButton>
 #include <QResizeEvent>
 #include <QScrollBar>
@@ -267,32 +266,6 @@ QWidget* make_motion_conversion_cell(QWidget* content)
     return container;
 }
 
-QIcon make_close_icon()
-{
-    QPixmap pixmap(close_icon_size, close_icon_size);
-    pixmap.fill(Qt::transparent);
-
-    QPainter painter(&pixmap);
-    painter.setRenderHint(QPainter::Antialiasing, true);
-    painter.setPen(QPen{Qt::white, 2.0, Qt::SolidLine, Qt::RoundCap});
-    painter.drawLine(2, 2, close_icon_size - 2, close_icon_size - 2);
-    painter.drawLine(close_icon_size - 2, 2, 2, close_icon_size - 2);
-    return QIcon{pixmap};
-}
-
-QIcon make_plus_icon()
-{
-    QPixmap pixmap(action_icon_size, action_icon_size);
-    pixmap.fill(Qt::transparent);
-
-    QPainter painter(&pixmap);
-    painter.setRenderHint(QPainter::Antialiasing, true);
-    painter.setPen(QPen{Qt::white, 3.0, Qt::SolidLine, Qt::RoundCap});
-    painter.drawLine(4, action_icon_size / 2, action_icon_size - 4, action_icon_size / 2);
-    painter.drawLine(action_icon_size / 2, 4, action_icon_size / 2, action_icon_size - 4);
-    return QIcon{pixmap};
-}
-
 }
 
 AssetBrowserPanel::AssetBrowserPanel(const ProjectPaths& project_paths, QWidget* parent)
@@ -377,7 +350,7 @@ void AssetBrowserPanel::setup_list_panel(QVBoxLayout& root_layout)
 
     auto* close_button = new QPushButton(list_panel_);
     close_button->setFixedSize(26, 26);
-    close_button->setIcon(make_close_icon());
+    close_button->setIcon(QIcon{QStringLiteral(":/icons/close.svg")});
     close_button->setIconSize(QSize{close_icon_size, close_icon_size});
     close_button->setStyleSheet(close_button_style);
     close_button->setToolTip("cancel");
@@ -395,8 +368,7 @@ void AssetBrowserPanel::setup_list_panel(QVBoxLayout& root_layout)
 
     import_button_ = new QPushButton(list_panel_);
     import_button_->setMinimumHeight(32);
-    import_button_->setIcon(
-        QIcon(to_q_string(project_paths_.root / "data/sources/icon/file-import-solid-full.svg")));
+    import_button_->setIcon(QIcon{QStringLiteral(":/icons/file-import-solid-full.svg")});
     import_button_->setIconSize(QSize{action_icon_size, action_icon_size});
     import_button_->setStyleSheet(action_button_style);
     import_button_->setToolTip("Import garment");
@@ -766,7 +738,7 @@ void AssetBrowserPanel::set_motion_row(int row,
 
     auto* convert_button = new QPushButton();
     convert_button->setFixedSize(24, 24);
-    convert_button->setIcon(make_plus_icon());
+    convert_button->setIcon(QIcon{QStringLiteral(":/icons/plus.svg")});
     convert_button->setIconSize(QSize{action_icon_size, action_icon_size});
     convert_button->setStyleSheet(action_button_style);
     convert_button->setToolTip("Motion convert");

@@ -11,7 +11,6 @@
 #include <QMouseEvent>
 #include <QPainter>
 #include <QPen>
-#include <QPixmap>
 #include <QPushButton>
 #include <QRegularExpression>
 #include <QRegularExpressionValidator>
@@ -221,21 +220,6 @@ private:
     qreal value_ = 1.0;
 };
 
-namespace {
-QIcon make_close_icon()
-{
-    QPixmap pixmap(close_icon_size, close_icon_size);
-    pixmap.fill(Qt::transparent);
-
-    QPainter painter(&pixmap);
-    painter.setRenderHint(QPainter::Antialiasing, true);
-    painter.setPen(QPen{Qt::white, 2.0, Qt::SolidLine, Qt::RoundCap});
-    painter.drawLine(2, 2, close_icon_size - 2, close_icon_size - 2);
-    painter.drawLine(close_icon_size - 2, 2, 2, close_icon_size - 2);
-    return QIcon{pixmap};
-}
-}
-
 GarmentColorPanel::GarmentColorPanel(QWidget* parent) : QFrame(parent)
 {
     setObjectName("garmentColorPanel");
@@ -265,7 +249,7 @@ void GarmentColorPanel::setup_header(QVBoxLayout& root_layout)
     auto* close_button = new QPushButton(this);
     close_button->setObjectName("colorPanelCloseButton");
     close_button->setFixedSize(close_button_size, close_button_size);
-    close_button->setIcon(make_close_icon());
+    close_button->setIcon(QIcon{QStringLiteral(":/icons/close.svg")});
     close_button->setIconSize(QSize{close_icon_size, close_icon_size});
     close_button->setToolTip("Close garment color");
 

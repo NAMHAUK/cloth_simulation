@@ -12,9 +12,6 @@
 #include <QHBoxLayout>
 #include <QIcon>
 #include <QLabel>
-#include <QPainter>
-#include <QPen>
-#include <QPixmap>
 #include <QPushButton>
 #include <QSignalBlocker>
 #include <QSize>
@@ -47,44 +44,6 @@ QString format_float(float value)
     return QString::number(value, 'f', 2);
 }
 
-QIcon make_close_icon()
-{
-    QPixmap pixmap(close_icon_size, close_icon_size);
-    pixmap.fill(Qt::transparent);
-
-    QPainter painter(&pixmap);
-    painter.setRenderHint(QPainter::Antialiasing, true);
-    painter.setPen(QPen{Qt::white, 2.0, Qt::SolidLine, Qt::RoundCap});
-    painter.drawLine(2, 2, close_icon_size - 2, close_icon_size - 2);
-    painter.drawLine(close_icon_size - 2, 2, 2, close_icon_size - 2);
-    return QIcon{pixmap};
-}
-
-QIcon make_plus_icon()
-{
-    QPixmap pixmap(action_icon_size, action_icon_size);
-    pixmap.fill(Qt::transparent);
-
-    QPainter painter(&pixmap);
-    painter.setRenderHint(QPainter::Antialiasing, true);
-    painter.setPen(QPen{Qt::white, 3.0, Qt::SolidLine, Qt::RoundCap});
-    painter.drawLine(4, action_icon_size / 2, action_icon_size - 4, action_icon_size / 2);
-    painter.drawLine(action_icon_size / 2, 4, action_icon_size / 2, action_icon_size - 4);
-    return QIcon{pixmap};
-}
-
-QIcon make_confirm_icon()
-{
-    QPixmap pixmap(confirm_icon_size, confirm_icon_size);
-    pixmap.fill(Qt::transparent);
-
-    QPainter painter(&pixmap);
-    painter.setRenderHint(QPainter::Antialiasing, true);
-    painter.setPen(QPen{QColor{"#2e7d32"}, 3.5, Qt::SolidLine, Qt::RoundCap, Qt::RoundJoin});
-    painter.drawLine(QPointF{4.0, 15.0}, QPointF{10.0, 21.0});
-    painter.drawLine(QPointF{10.0, 21.0}, QPointF{24.0, 7.0});
-    return QIcon{pixmap};
-}
 }
 
 PlacementPanel::PlacementPanel(QWidget* parent) : QFrame(parent)
@@ -176,7 +135,7 @@ void PlacementPanel::setup_header(QVBoxLayout& root_layout)
     auto* cancel_button = new QPushButton(this);
     cancel_button->setObjectName("placementCancelButton");
     cancel_button->setFixedSize(placement_button_size, placement_button_size);
-    cancel_button->setIcon(make_close_icon());
+    cancel_button->setIcon(QIcon{QStringLiteral(":/icons/close.svg")});
     cancel_button->setIconSize(QSize{close_icon_size, close_icon_size});
     cancel_button->setToolTip("Cancel garment placement");
     connect(cancel_button, &QPushButton::clicked, this, &PlacementPanel::cancel_requested);
@@ -198,7 +157,7 @@ void PlacementPanel::setup_garment_sections(QVBoxLayout& root_layout)
     add_button_ = new QPushButton(this);
     add_button_->setObjectName("addUpperButton");
     add_button_->setFixedHeight(add_button_height);
-    add_button_->setIcon(make_plus_icon());
+    add_button_->setIcon(QIcon{QStringLiteral(":/icons/plus.svg")});
     add_button_->setIconSize(QSize{action_icon_size, action_icon_size});
     add_button_->setToolTip("Add upper garment");
     connect(add_button_, &QPushButton::clicked, this, &PlacementPanel::add_upper_requested);
@@ -213,7 +172,7 @@ void PlacementPanel::setup_confirm_button(QVBoxLayout& root_layout)
     confirm_run_button_ = new QPushButton(this);
     confirm_run_button_->setObjectName("placementConfirmButton");
     confirm_run_button_->setFixedSize(40, 32);
-    confirm_run_button_->setIcon(make_confirm_icon());
+    confirm_run_button_->setIcon(QIcon{QStringLiteral(":/icons/confirm.svg")});
     confirm_run_button_->setIconSize(QSize{confirm_icon_size, confirm_icon_size});
     confirm_run_button_->setToolTip("Confirm placement & run");
     connect(confirm_run_button_, &QPushButton::clicked, this, &PlacementPanel::confirm_requested);
@@ -268,7 +227,7 @@ void PlacementPanel::setup_section_header(GarmentLayer layer, QVBoxLayout& secti
         upper_remove_button_ = new QPushButton(state.frame);
         upper_remove_button_->setObjectName("upperRemoveButton");
         upper_remove_button_->setFixedSize(placement_button_size, placement_button_size);
-        upper_remove_button_->setIcon(make_close_icon());
+        upper_remove_button_->setIcon(QIcon{QStringLiteral(":/icons/close.svg")});
         upper_remove_button_->setIconSize(QSize{close_icon_size, close_icon_size});
         upper_remove_button_->setToolTip("Remove upper garment");
         header_layout->addWidget(upper_remove_button_);
