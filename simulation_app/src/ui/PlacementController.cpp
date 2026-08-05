@@ -74,7 +74,7 @@ void PlacementController::load_garment(const std::filesystem::path& asset_path, 
     const QString garment_name = QString::fromStdWString(asset_path.stem().wstring());
     const glm::vec3 color = simulation_controller_.garment_placement_color(layer);
     cards_panel_.set_card(layer, garment_name, color);
-    placement_panel_.set_group_garment(layer, garment_name, color);
+    placement_panel_.set_garment(layer, garment_name, color);
     update_controls();
     notify_layout_changed();
 }
@@ -137,7 +137,7 @@ void PlacementController::setup_placement_callbacks()
 
     placement_panel_.set_add_placement_callback([this]() {
         placement_phases_[GarmentLayer::Upper] = PlacementPhase::Waiting;
-        placement_panel_.show_upper_placeholder();
+        placement_panel_.show_upper_section();
         notify_layout_changed();
     });
 
@@ -148,7 +148,7 @@ void PlacementController::setup_placement_callbacks()
         placement_phases_[GarmentLayer::Upper] = PlacementPhase::Hidden;
 
         if (placement_phases_[GarmentLayer::Lower] != PlacementPhase::Hidden) {
-            placement_panel_.remove_upper_group();
+            placement_panel_.hide_upper_section();
         } else {
             reset_session();
         }
@@ -215,7 +215,7 @@ void PlacementController::reset_session()
 {
     active_ = false;
     placement_phases_.fill(PlacementPhase::Hidden);
-    placement_panel_.reset_placement();
+    placement_panel_.reset();
 }
 
 void PlacementController::clear_placement_cards()
@@ -234,10 +234,11 @@ void PlacementController::update_button_state()
             return phase == PlacementPhase::Waiting;
         });
 
-    placement_panel_.set_confirm_enabled(active_ && all_visible_groups_ready);
-    placement_panel_.set_add_enabled(placement_phases_[GarmentLayer::Lower] == PlacementPhase::Ready &&
-                                     placement_phases_[GarmentLayer::Upper] == PlacementPhase::Hidden &&
-                                     simulation_controller_.garment_count() < 2u);
+    placement_panel_.set_confirm_button_enabled(active_ && all_visible_groups_ready);
+    placement_panel_.set_add_button_enabled(placement_phases_[GarmentLayer::Lower] == PlacementPhase::Ready &&
+                                            placement_phases_[GarmentLayer::Upper] ==
+                                                PlacementPhase::Hidden &&
+                                            simulation_controller_.garment_count() < 2u);
 }
 
 void PlacementController::notify_active_changed()
