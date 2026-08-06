@@ -88,8 +88,7 @@ void MainWindow::setup_placement_controller()
     placement_controller_ = std::make_unique<PlacementController>(*simulation_controller_,
                                                                   viewport_->placement_panel(),
                                                                   viewport_->garment_color_panel(),
-                                                                  viewport_->garment_cards_panel(),
-                                                                  *viewport_);
+                                                                  viewport_->garment_cards_panel());
     placement_controller_->set_active_changed_callback([this]() {
         update_simulation_button_state();
         update_asset_button_state();
