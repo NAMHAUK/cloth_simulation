@@ -36,8 +36,6 @@ public:
     void set_garment(GarmentLayer layer, const QString& garment_name, const glm::vec3& color);
     void show_upper_section();
     void hide_upper_section();
-    void set_add_button_enabled(bool enabled);
-    void set_confirm_button_enabled(bool enabled);
     void reset();
 
     GarmentLayer active_layer() const;
@@ -83,6 +81,8 @@ private:
     void update_garment_scale(GarmentLayer layer, int slider_value);
     void choose_garment_color(GarmentLayer layer);
     void set_active_layer(GarmentLayer selected_layer);
+    void set_add_button_enabled(bool enabled);
+    void set_confirm_button_enabled(bool enabled);
 
     std::array<PlacementState, 2> placement_states_{};
     GarmentLayer active_layer_ = GarmentLayer::Lower;

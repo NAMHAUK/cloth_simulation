@@ -361,6 +361,13 @@ void PlacementPanel::set_garment(GarmentLayer layer, const QString& garment_name
     state.color_button->setEnabled(true);
 
     set_active_layer(layer);
+    if (layer == GarmentLayer::Upper) {
+        set_add_button_enabled(false);
+        set_confirm_button_enabled(true);
+    } else if (placement_states_[GarmentLayer::Upper].frame->isHidden()) {
+        set_add_button_enabled(true);
+        set_confirm_button_enabled(true);
+    }
 }
 
 void PlacementPanel::show_upper_section()
@@ -383,6 +390,8 @@ void PlacementPanel::hide_upper_section()
 {
     placement_states_[GarmentLayer::Upper].frame->setVisible(false);
     set_active_layer(GarmentLayer::Lower);
+    set_add_button_enabled(true);
+    set_confirm_button_enabled(true);
 }
 
 void PlacementPanel::set_add_button_enabled(bool enabled)

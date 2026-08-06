@@ -143,7 +143,6 @@ void MainWindow::setup_asset_browser_callbacks()
         }
     });
     asset_browser_panel.set_motion_loaded_callback([this](CharacterMesh mesh) {
-        placement_controller_->end_session();
         simulation_controller_->set_character_mesh(std::move(mesh));
         simulation_controller_->start_simulation();
     });

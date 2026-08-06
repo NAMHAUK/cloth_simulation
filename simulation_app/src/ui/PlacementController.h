@@ -1,14 +1,15 @@
 #pragma once
 
-#include <array>
 #include <cstddef>
 #include <filesystem>
 #include <functional>
+#include <optional>
 
 class GarmentCardsPanel;
 class GarmentColorPanel;
 class PlacementPanel;
 class SimulationController;
+enum GarmentLayer : std::size_t;
 struct GarmentMesh;
 
 class PlacementController final
@@ -27,7 +28,6 @@ public:
     PlacementController& operator=(const PlacementController&) = delete;
 
     void load_garment(const std::filesystem::path& asset_path, GarmentMesh mesh);
-    void end_session();
     void reset();
 
     bool is_active() const;
@@ -36,20 +36,14 @@ public:
     void set_layout_changed_callback(LayoutChangedCallback callback);
 
 private:
-    enum class PlacementPhase
-    {
-        Hidden,
-        Waiting,
-        Ready,
-    };
-
     void setup_placement_callbacks();
     void setup_color_callbacks();
 
+    GarmentLayer target_layer() const;
+    void end_session();
     void reset_session();
 
-    void update_controls();
-    void update_button_state();
+    void set_active(bool active);
 
     void notify_active_changed();
     void notify_layout_changed();
@@ -58,8 +52,7 @@ private:
     PlacementPanel& placement_panel_;
     GarmentColorPanel& color_panel_;
     GarmentCardsPanel& cards_panel_;
-    std::array<PlacementPhase, 2> placement_phases_{};
-    bool is_upper_color_editing_ = false;
+    std::optional<GarmentLayer> color_edit_layer_;
     bool active_ = false;
     ActiveChangedCallback active_changed_callback_;
     LayoutChangedCallback layout_changed_callback_;
