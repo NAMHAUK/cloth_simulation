@@ -33,7 +33,7 @@ public:
 
     explicit PlacementPanel(QWidget* parent = nullptr);
 
-    void set_garment(GarmentLayer layer, const QString& garment_name, const glm::vec3& color);
+    void set_garment(GarmentLayer layer, const QString& garment_name);
     void show_upper_section();
     void hide_upper_section();
     void reset();
@@ -75,7 +75,7 @@ private:
     void setup_section_header(GarmentLayer layer, QVBoxLayout& section_layout);
     void setup_transform_controls(GarmentLayer layer, QVBoxLayout& section_layout);
 
-    void reset_section_values(GarmentLayer layer, const glm::vec3& color = glm::vec3{1.0f});
+    void reset_section_values(GarmentLayer layer);
 
     void update_garment_position(GarmentLayer layer, int axis_index, int slider_value);
     void update_garment_scale(GarmentLayer layer, int slider_value);

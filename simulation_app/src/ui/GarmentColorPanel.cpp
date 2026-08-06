@@ -221,6 +221,7 @@ private:
     qreal value_ = 1.0;
 };
 
+namespace {
 QIcon make_close_icon()
 {
     QPixmap pixmap(close_icon_size, close_icon_size);

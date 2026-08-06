@@ -349,9 +349,9 @@ void PlacementPanel::setup_transform_controls(GarmentLayer layer, QVBoxLayout& s
 }
 
 // UI Updates
-void PlacementPanel::set_garment(GarmentLayer layer, const QString& garment_name, const glm::vec3& color)
+void PlacementPanel::set_garment(GarmentLayer layer, const QString& garment_name)
 {
-    reset_section_values(layer, color);
+    reset_section_values(layer);
 
     PlacementState& state = placement_states_[layer];
     state.frame->setVisible(true);
@@ -417,7 +417,7 @@ void PlacementPanel::reset()
     set_confirm_button_enabled(false);
 }
 
-void PlacementPanel::reset_section_values(GarmentLayer layer, const glm::vec3& color)
+void PlacementPanel::reset_section_values(GarmentLayer layer)
 {
     PlacementState& state = placement_states_[layer];
 
@@ -438,7 +438,7 @@ void PlacementPanel::reset_section_values(GarmentLayer layer, const glm::vec3& c
     state.scale_slider->setValue(scale_slider_center);
 
     // color state reset
-    state.color = color;
+    state.color = glm::vec3{1.0f};
     const QColor button_color = QColor::fromRgbF(state.color.r, state.color.g, state.color.b);
     state.color_button->setStyleSheet(color_button_style.arg(button_color.name()));
 }

@@ -525,12 +525,6 @@ bool SimulationController::can_start_garment_placement() const
     return has_active_placement || !scene_.has_multiple_garments();
 }
 
-glm::vec3 SimulationController::garment_placement_color(GarmentLayer layer) const
-{
-    const GarmentObject* garment = scene_.find_garment(layer);
-    return garment != nullptr ? garment->mesh.color : glm::vec3{1.0f};
-}
-
 bool SimulationController::has_garment_placement_update() const
 {
     return std::any_of(garment_placements_.begin(),

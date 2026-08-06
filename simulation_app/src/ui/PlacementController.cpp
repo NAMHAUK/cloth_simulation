@@ -133,9 +133,8 @@ void PlacementController::load_garment(const std::filesystem::path& asset_path, 
     }
 
     const QString garment_name = QString::fromStdWString(asset_path.stem().wstring());
-    const glm::vec3 color = simulation_controller_.garment_placement_color(layer);
     cards_panel_.set_card(layer, garment_name);
-    placement_panel_.set_garment(layer, garment_name, color);
+    placement_panel_.set_garment(layer, garment_name);
 
     if (!active_) {
         set_active(true);

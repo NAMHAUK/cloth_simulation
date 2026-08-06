@@ -15,8 +15,6 @@
 #include <vector>
 
 namespace {
-constexpr std::array<char, 7> garment_asset_signature_v1 = {'N', 'A', 'M', 'H', 'A', 'U', 'K'};
-constexpr std::array<char, 7> garment_asset_signature_v2 = {'N', 'A', 'M', 'H', 'A', 'U', '2'};
 constexpr std::array<char, 8> motion_asset_signature_v1 = {'S', 'M', 'P', 'L', 'M', 'O', 'T', 'N'};
 constexpr std::array<char, 8> motion_asset_signature_v2 = {'S', 'M', 'P', 'L', 'M', 'O', 'T', '2'};
 constexpr std::uint8_t max_body_part_label = 7u;
@@ -63,18 +61,9 @@ bool read_binary_values(std::ifstream& input, std::vector<T>& values, std::size_
                                         static_cast<std::streamsize>(values.size() * sizeof(T))));
 }
 
-template <std::size_t N>
-bool read_signature(std::ifstream& input, const std::array<char, N>& expected_signature)
-{
-    std::array<char, N> signature{};
-    return static_cast<bool>(input.read(signature.data(), static_cast<std::streamsize>(signature.size()))) &&
-           signature == expected_signature;
-}
-
 bool read_garment_asset_header_values(std::ifstream& input,
                                       GarmentAssetCounts& counts,
-                                      GarmentMesh& garment_mesh,
-                                      bool has_garment_category)
+                                      GarmentMesh& garment_mesh)
 {
     const bool counts_read = read_binary_value(input, counts.vertex_count) &&
                              read_binary_value(input, counts.triangle_count) &&
@@ -85,17 +74,14 @@ bool read_garment_asset_header_values(std::ifstream& input,
                              read_binary_value(input, counts.bending_edge_count) &&
                              read_binary_value(input, counts.bending_range_count) &&
                              read_binary_value(input, counts.attachment_vertex_count);
-    if (!counts_read || (has_garment_category && !read_binary_value(input, garment_mesh.garment_category))) {
+    if (!counts_read || !read_binary_value(input, garment_mesh.garment_category)) {
         return false;
     }
 
     return read_binary_value(input, garment_mesh.bounds_center.x) &&
            read_binary_value(input, garment_mesh.bounds_center.y) &&
            read_binary_value(input, garment_mesh.bounds_center.z) &&
-           read_binary_value(input, garment_mesh.bounds_radius) &&
-           read_binary_value(input, garment_mesh.color.x) &&
-           read_binary_value(input, garment_mesh.color.y) &&
-           read_binary_value(input, garment_mesh.color.z);
+           read_binary_value(input, garment_mesh.bounds_radius);
 }
 
 bool read_garment_asset_header(std::ifstream& input,
@@ -103,16 +89,7 @@ bool read_garment_asset_header(std::ifstream& input,
                                GarmentAssetCounts& counts,
                                GarmentMesh& mesh)
 {
-    std::array<char, garment_asset_signature_v2.size()> signature{};
-    if (!input.read(signature.data(), static_cast<std::streamsize>(signature.size()))) {
-        std::cerr << "Failed to read garment asset signature: " << path << '\n';
-        return false;
-    }
-
-    const bool is_v1 = signature == garment_asset_signature_v1;
-    const bool is_v2 = signature == garment_asset_signature_v2;
-    if ((!is_v1 && !is_v2) ||
-        !read_garment_asset_header_values(input, counts, mesh, is_v2) ||
+    if (!read_garment_asset_header_values(input, counts, mesh) ||
         counts.adjacency_offset_count != counts.vertex_count + 1u) {
         std::cerr << "Failed to read garment asset header: " << path << '\n';
         return false;
@@ -340,17 +317,7 @@ bool write_header_values(std::ofstream& output,
            write_binary_value(output, garment_mesh.bounds_center.x) &&
            write_binary_value(output, garment_mesh.bounds_center.y) &&
            write_binary_value(output, garment_mesh.bounds_center.z) &&
-           write_binary_value(output, garment_mesh.bounds_radius) &&
-           write_binary_value(output, garment_mesh.color.x) &&
-           write_binary_value(output, garment_mesh.color.y) &&
-           write_binary_value(output, garment_mesh.color.z);
-}
-
-bool write_signature(std::ofstream& output)
-{
-    output.write(garment_asset_signature_v2.data(),
-                 static_cast<std::streamsize>(garment_asset_signature_v2.size()));
-    return static_cast<bool>(output);
+           write_binary_value(output, garment_mesh.bounds_radius);
 }
 
 bool write_mesh_data(std::ofstream& output, const GarmentMesh& garment_mesh)
@@ -537,9 +504,7 @@ bool write_garment_asset(const std::filesystem::path& garment_asset_path, const 
     }
 
     const GarmentAssetCounts counts = make_garment_asset_counts(garment_mesh);
-    if (!write_signature(output) ||
-        !write_header_values(output, counts, garment_mesh) ||
-        !write_mesh_data(output, garment_mesh)) {
+    if (!write_header_values(output, counts, garment_mesh) || !write_mesh_data(output, garment_mesh)) {
         std::cerr << "Failed to write full garment asset: " << garment_asset_path << '\n';
         return false;
     }
