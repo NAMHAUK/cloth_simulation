@@ -90,11 +90,7 @@ void PlacementController::setup_placement_callbacks()
             return;
         }
 
-        for (GarmentLayer layer : {GarmentLayer::Lower, GarmentLayer::Upper}) {
-            if (placement_phases_[layer] == PlacementPhase::Ready) {
-                cards_panel_.confirm_card(layer);
-            }
-        }
+        cards_panel_.confirm_cards();
         simulation_controller_.start_simulation();
         end_session();
     });
@@ -102,7 +98,7 @@ void PlacementController::setup_placement_callbacks()
     placement_panel_.set_cancel_callback([this]() {
         color_panel_.close_panel();
         simulation_controller_.cancel_garment_placement();
-        clear_placement_cards();
+        cards_panel_.clear_unconfirmed_cards();
         end_session();
     });
 }
@@ -148,7 +144,7 @@ void PlacementController::load_garment(const std::filesystem::path& asset_path, 
     placement_phases_[layer] = PlacementPhase::Ready;
     const QString garment_name = QString::fromStdWString(asset_path.stem().wstring());
     const glm::vec3 color = simulation_controller_.garment_placement_color(layer);
-    cards_panel_.set_card(layer, garment_name, color);
+    cards_panel_.set_card(layer, garment_name);
     placement_panel_.set_garment(layer, garment_name, color);
     update_controls();
     notify_layout_changed();
@@ -181,15 +177,6 @@ void PlacementController::reset_session()
     active_ = false;
     placement_phases_.fill(PlacementPhase::Hidden);
     placement_panel_.reset();
-}
-
-void PlacementController::clear_placement_cards()
-{
-    for (std::size_t index = 0; index < placement_phases_.size(); ++index) {
-        if (placement_phases_[index] != PlacementPhase::Hidden) {
-            cards_panel_.clear_card(static_cast<GarmentLayer>(index));
-        }
-    }
 }
 
 // UI Updates

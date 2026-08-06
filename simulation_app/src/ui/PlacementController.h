@@ -47,7 +47,6 @@ private:
     void setup_color_callbacks();
 
     void reset_session();
-    void clear_placement_cards();
 
     void update_controls();
     void update_button_state();
