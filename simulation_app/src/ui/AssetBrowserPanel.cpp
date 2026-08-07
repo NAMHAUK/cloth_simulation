@@ -64,89 +64,7 @@ private:
 namespace {
 constexpr int close_icon_size = 12;
 constexpr int action_icon_size = 20;
-
-const QString asset_button_style = QStringLiteral(R"(
-    QPushButton {
-        background-color: #3a3a3a;
-        border: 1px solid #242424;
-        border-radius: 14px;
-        padding: 4px;
-    }
-    QPushButton:checked {
-        background-color: #2f2f2f;
-    }
-    QPushButton:hover {
-        background-color: #4a4a4a;
-    }
-    QPushButton:disabled {
-        background-color: #555555;
-        border-color: #444444;
-    }
-)");
-
-const QString asset_list_panel_style = QStringLiteral(R"(
-    #assetBrowserExpandedPanel {
-        background-color: rgba(245, 245, 245, 235);
-        border: 1px solid #9a9a9a;
-        border-radius: 4px;
-    }
-    QTableWidget {
-        background-color: white;
-        border: 1px solid #b5b5b5;
-        gridline-color: #b5b5b5;
-    }
-    QHeaderView::section {
-        background-color: #5a5a5a;
-        color: white;
-        border: none;
-        border-right: 1px solid #b5b5b5;
-        border-bottom: 1px solid #b5b5b5;
-        padding: 4px;
-        font-weight: 600;
-    }
-    QHeaderView::section:last {
-        border-right: none;
-    }
-    QPushButton {
-        background-color: #5a5a5a;
-        border: 1px solid #242424;
-        border-radius: 4px;
-    }
-    QPushButton:hover {
-        background-color: #7a7a7a;
-    }
-)");
-
-const QString subject_back_button_style = QStringLiteral(R"(
-    QPushButton {
-        background: transparent;
-        border: none;
-        color: #777777;
-        font-size: 12px;
-        padding: 0;
-    }
-    QPushButton:hover {
-        color: #1f6feb;
-    }
-)");
-
-const QString close_button_style = QStringLiteral("padding: 0;");
-const QString title_label_style = QStringLiteral("font-size: 13px; font-weight: 600;");
-
-const QString action_button_style = QStringLiteral(R"(
-    QPushButton {
-        background-color: #1f6feb;
-        border: 1px solid #1158c7;
-        border-radius: 4px;
-        padding: 0;
-    }
-    QPushButton:hover {
-        background-color: #2f81f7;
-    }
-    QPushButton:disabled {
-        background-color: #8caee6;
-    }
-)");
+constexpr int garment_column_width = 369;
 
 struct GarmentConversionSettings final
 {
@@ -308,7 +226,7 @@ void AssetBrowserPanel::setup_asset_buttons(QVBoxLayout& root_layout)
     motion_button_->setToolTip("Motion");
     motion_button_->setCheckable(true);
     motion_button_->setFixedSize(86, 86);
-    motion_button_->setStyleSheet(asset_button_style);
+    motion_button_->setProperty("role", "assetButton");
 
     garment_button_ = new QPushButton(this);
     garment_button_->setIcon(QIcon(to_q_string(icon_dir / "garment.png")));
@@ -316,7 +234,7 @@ void AssetBrowserPanel::setup_asset_buttons(QVBoxLayout& root_layout)
     garment_button_->setToolTip("Garment");
     garment_button_->setCheckable(true);
     garment_button_->setFixedSize(86, 86);
-    garment_button_->setStyleSheet(asset_button_style);
+    garment_button_->setProperty("role", "assetButton");
 
     button_layout->addWidget(motion_button_);
     button_layout->addWidget(garment_button_);
@@ -331,7 +249,6 @@ void AssetBrowserPanel::setup_list_panel(QVBoxLayout& root_layout)
 {
     list_panel_ = new QWidget(this);
     list_panel_->setObjectName("assetBrowserExpandedPanel");
-    list_panel_->setStyleSheet(asset_list_panel_style);
     list_panel_->setVisible(false);
 
     auto* panel_layout = new QVBoxLayout(list_panel_);
@@ -343,21 +260,21 @@ void AssetBrowserPanel::setup_list_panel(QVBoxLayout& root_layout)
     header_layout->setSpacing(6);
 
     subject_back_button_ = new QPushButton(QString("%1 Subjects /").arg(QChar(0x2039)), list_panel_);
+    subject_back_button_->setObjectName("subjectBackButton");
     subject_back_button_->setCursor(Qt::PointingHandCursor);
     subject_back_button_->setMinimumHeight(26);
-    subject_back_button_->setStyleSheet(subject_back_button_style);
     subject_back_button_->setToolTip("Back to subjects list");
 
     auto* close_button = new QPushButton(list_panel_);
+    close_button->setObjectName("assetBrowserCloseButton");
     close_button->setFixedSize(26, 26);
     close_button->setIcon(QIcon{QStringLiteral(":/icons/close.svg")});
     close_button->setIconSize(QSize{close_icon_size, close_icon_size});
-    close_button->setStyleSheet(close_button_style);
     close_button->setToolTip("cancel");
 
     title_label_ = new ElidedLabel(QString{}, list_panel_);
+    title_label_->setObjectName("assetBrowserTitle");
     title_label_->setSizePolicy(QSizePolicy::Ignored, QSizePolicy::Preferred);
-    title_label_->setStyleSheet(title_label_style);
 
     table_widget_ = new QTableWidget(list_panel_);
     table_widget_->setSelectionBehavior(QAbstractItemView::SelectRows);
@@ -370,7 +287,7 @@ void AssetBrowserPanel::setup_list_panel(QVBoxLayout& root_layout)
     import_button_->setMinimumHeight(32);
     import_button_->setIcon(QIcon{QStringLiteral(":/icons/file-import-solid-full.svg")});
     import_button_->setIconSize(QSize{action_icon_size, action_icon_size});
-    import_button_->setStyleSheet(action_button_style);
+    import_button_->setProperty("role", "primaryAction");
     import_button_->setToolTip("Import garment");
 
     header_layout->addWidget(subject_back_button_);
@@ -740,7 +657,7 @@ void AssetBrowserPanel::set_motion_row(int row,
     convert_button->setFixedSize(24, 24);
     convert_button->setIcon(QIcon{QStringLiteral(":/icons/plus.svg")});
     convert_button->setIconSize(QSize{action_icon_size, action_icon_size});
-    convert_button->setStyleSheet(action_button_style);
+    convert_button->setProperty("role", "primaryAction");
     convert_button->setToolTip("Motion convert");
     convert_button->setEnabled(converting_motion_asset_path_.empty());
 
@@ -758,7 +675,8 @@ void AssetBrowserPanel::rebuild_garment_list()
     table_widget_->setColumnCount(1);
     table_widget_->setRowCount(garment_count);
     table_widget_->setHorizontalHeaderLabels({"Garment"});
-    table_widget_->horizontalHeader()->setSectionResizeMode(0, QHeaderView::Stretch);
+    table_widget_->horizontalHeader()->setSectionResizeMode(0, QHeaderView::Fixed);
+    table_widget_->setColumnWidth(0, garment_column_width);
 
     for (int row = 0; row < garment_count; ++row) {
         const std::filesystem::path& asset_path = garment_asset_paths_[row];

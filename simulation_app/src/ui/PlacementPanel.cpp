@@ -66,70 +66,12 @@ PlacementPanel::PlacementPanel(QWidget* parent) : QFrame(parent)
 void PlacementPanel::setup_style()
 {
     setObjectName("garmentPlacementPanel");
-    setStyleSheet(R"(
-        #garmentPlacementPanel {
-            background-color: rgba(245, 245, 245, 235);
-            border: 1px solid #9a9a9a;
-            border-radius: 4px;
-        }
-        QLabel {
-            border: none;
-            background: transparent;
-        }
-        QPushButton {
-            background-color: #1f6feb;
-            color: white;
-            border: 1px solid #1158c7;
-            border-radius: 4px;
-            padding: 2px 8px;
-        }
-        QPushButton:hover {
-            background-color: #2f81f7;
-        }
-        QPushButton:disabled {
-            background-color: #8caee6;
-            color: #dddddd;
-        }
-        QSlider {
-            background: transparent;
-            border: none;
-        }
-        #placementGroup {
-            background-color: rgba(255, 255, 255, 150);
-            border: 1px solid #b8b8b8;
-            border-radius: 4px;
-        }
-        #placementGroup[active="true"] {
-            border: 2px solid #1f6feb;
-        }
-        #placementCancelButton {
-            padding: 0;
-            background-color: #5a5a5a;
-            border: 1px solid #242424;
-        }
-        #placementCancelButton:hover {
-            background-color: #7a7a7a;
-        }
-        #upperRemoveButton, #addUpperButton {
-            padding: 0;
-        }
-        #placementConfirmButton {
-            background: transparent;
-            border: none;
-            padding: 0;
-        }
-        #placementConfirmButton:hover {
-            background-color: #e8f5e9;
-            border: 1px solid #81c784;
-            border-radius: 4px;
-        }
-    )");
 }
 
 void PlacementPanel::setup_header(QVBoxLayout& root_layout)
 {
     auto* title_label = new QLabel("Garment Placement", this);
-    title_label->setStyleSheet("font-size: 16px; font-weight: 600;");
+    title_label->setProperty("role", "title");
     title_label->setContentsMargins(4, 0, 0, 0);
 
     auto* cancel_button = new QPushButton(this);
@@ -215,7 +157,7 @@ void PlacementPanel::setup_section_header(GarmentLayer layer, QVBoxLayout& secti
 
     // Header layout
     auto* layer_label = new QLabel(layer == GarmentLayer::Lower ? "Lower" : "Upper", state.frame);
-    layer_label->setStyleSheet("font-size: 16px; font-weight: 600;");
+    layer_label->setProperty("role", "title");
     layer_label->setContentsMargins(5, 0, 0, 0);
 
     auto* header_layout = new QHBoxLayout();
@@ -238,7 +180,7 @@ void PlacementPanel::setup_section_header(GarmentLayer layer, QVBoxLayout& secti
 
     // Garment name
     state.garment_name_label = new QLabel(state.frame);
-    state.garment_name_label->setStyleSheet("font-size: 14px; font-weight: 560; color: #3f5f7f;");
+    state.garment_name_label->setProperty("role", "garmentName");
     state.garment_name_label->setContentsMargins(5, 0, 0, 10);
 
     QSizePolicy garment_name_policy = state.garment_name_label->sizePolicy();

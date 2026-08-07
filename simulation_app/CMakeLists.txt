@@ -164,6 +164,13 @@ qt_add_resources(simulation_app ui_icons
         ${REPO_ROOT}/data/sources/icon/file-import-solid-full.svg
 )
 
+qt_add_resources(simulation_app ui_styles
+    PREFIX "/styles"
+    BASE "${CMAKE_CURRENT_SOURCE_DIR}/resources/styles"
+    FILES
+        ${CMAKE_CURRENT_SOURCE_DIR}/resources/styles/app.qss
+)
+
 add_executable(garment_converter
     tools/garment_converter/main.cpp
     tools/garment_converter/GarmentConverter.cpp

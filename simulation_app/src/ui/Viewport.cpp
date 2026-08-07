@@ -114,20 +114,7 @@ void setup_control_button(QPushButton* button, const QIcon& icon, const char* to
     button->setIconSize(QSize{simulation_icon_size, simulation_icon_size});
     button->setToolTip(tool_tip);
     button->setFocusPolicy(Qt::NoFocus);
-    button->setStyleSheet(R"(
-        QPushButton {
-            background-color: #eeeeee;
-            border: 1px solid #c8c8c8;
-            border-radius: 7px;
-        }
-        QPushButton:hover {
-            background-color: #f7f7f7;
-        }
-        QPushButton:disabled {
-            background-color: #dddddd;
-            border-color: #c6c6c6;
-        }
-    )");
+    button->setProperty("role", "viewportControl");
 }
 
 bool is_camera_control_button(Qt::MouseButtons buttons)
