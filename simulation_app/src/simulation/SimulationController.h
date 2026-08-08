@@ -40,13 +40,15 @@ public:
     SimulationController(const SimulationController&) = delete;
     SimulationController& operator=(const SimulationController&) = delete;
 
+    // Initialization //
+    bool initialize(const ShaderPaths& shader_paths,
+                    CharacterMesh character_mesh,
+                    const std::vector<std::uint8_t>& triangle_part_labels,
+                    QOpenGLFunctions_4_5_Core& gl);
     void set_viewport_callbacks(ViewportCallbacks callbacks);
 
     // Scene editing //
     void set_character_mesh(CharacterMesh mesh);
-    void load_default_character_mesh(CharacterMesh mesh,
-                                     const std::vector<std::uint8_t>& triangle_part_labels,
-                                     QOpenGLFunctions_4_5_Core& gl);
     bool set_garment_mesh(GarmentLayer layer, GarmentMesh mesh);
     bool remove_garment_placement(GarmentLayer layer);
     void set_garment_placement(GarmentLayer layer, const glm::vec3& position_offset, float scale);
@@ -57,7 +59,6 @@ public:
     void return_to_default_pose();
 
     // GPU / rendering //
-    bool initialize_gpu(const ShaderPaths& shader_paths, QOpenGLFunctions_4_5_Core& gl);
     bool is_gpu_initialized() const;
     void start_simulation();
     void stop_simulation();
@@ -71,6 +72,12 @@ public:
     void release_gpu();
 
 private:
+    // Initialization //
+    bool initialize_gpu(const ShaderPaths& shader_paths, QOpenGLFunctions_4_5_Core& gl);
+    bool load_default_character(CharacterMesh mesh,
+                                const std::vector<std::uint8_t>& triangle_part_labels,
+                                QOpenGLFunctions_4_5_Core& gl);
+
     struct GarmentPlacementState final
     {
         glm::vec3 position_offset{0.0f};

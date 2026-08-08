@@ -10,9 +10,9 @@
 namespace asset_io {
 // Motion //
 bool read_character_mesh(const std::filesystem::path& motion_asset_path, CharacterMesh& character_mesh);
-bool read_default_character_mesh(const std::filesystem::path& motion_asset_path,
-                                 CharacterMesh& character_mesh,
-                                 std::vector<std::uint8_t>& triangle_part_labels);
+bool read_default_character(const std::filesystem::path& motion_asset_path,
+                            CharacterMesh& character_mesh,
+                            std::vector<std::uint8_t>& triangle_part_labels);
 
 // Garment //
 bool read_garment_mesh(const std::filesystem::path& garment_asset_path, GarmentMesh& garment_mesh);

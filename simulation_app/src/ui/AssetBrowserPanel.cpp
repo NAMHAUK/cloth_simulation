@@ -1,14 +1,30 @@
 #include "ui/AssetBrowserPanel.h"
 
+#include "asset/AssetConverter.h"
+#include "asset/AssetConverterCommands.h"
+#include "asset/AssetIO.h"
+#include "asset/AssetLoader.h"
+
+#include <algorithm>
+#include <limits>
+#include <optional>
+#include <string>
+
 #include <QBitmap>
 #include <QColor>
+#include <QComboBox>
+#include <QDialog>
+#include <QDialogButtonBox>
 #include <QFile>
+#include <QFileDialog>
+#include <QFormLayout>
 #include <QHBoxLayout>
 #include <QHeaderView>
 #include <QIcon>
 #include <QJsonDocument>
 #include <QJsonObject>
 #include <QLabel>
+#include <QMessageBox>
 #include <QPaintEvent>
 #include <QPainter>
 #include <QPen>
@@ -59,6 +75,65 @@ private:
 namespace {
 constexpr int close_icon_size = 12;
 constexpr int action_icon_size = 20;
+
+int motion_subject_number(const std::filesystem::path& motion_path)
+{
+    bool is_number = false;
+    const int subject_number =
+        QString::fromStdWString(motion_path.stem().wstring()).section('_', 0, 0).toInt(&is_number);
+    return is_number ? subject_number : std::numeric_limits<int>::max();
+}
+
+bool is_amass_motion_path(const std::filesystem::path& motion_path)
+{
+    const QString motion_name = QString::fromStdWString(motion_path.stem().wstring());
+    return motion_name.size() > 6 && motion_name.endsWith("_poses");
+}
+
+void show_conversion_failure(QWidget* parent, AssetPanelMode mode)
+{
+    const char* message = mode == AssetPanelMode::Motions ? "Failed to convert AMASS motion."
+                                                          : "Failed to convert garment OBJ.";
+
+    QMessageBox::warning(parent, "Conversion Failed", message);
+}
+
+struct GarmentConversionSettings final
+{
+    QString attachment_type;
+    QString garment_category;
+};
+
+std::optional<GarmentConversionSettings> select_garment_conversion_settings(QWidget* parent)
+{
+    QDialog dialog(parent);
+    dialog.setWindowTitle("Garment Conversion Settings");
+
+    QComboBox attachment_type;
+    attachment_type.addItem("None", "none");
+    attachment_type.addItem("Waistband", "waistband");
+
+    QComboBox garment_category;
+    garment_category.addItem("Top", "top");
+    garment_category.addItem("Bottom", "bottom");
+    garment_category.addItem("Full-Body", "full-body");
+
+    QDialogButtonBox buttons(QDialogButtonBox::Ok | QDialogButtonBox::Cancel);
+    QObject::connect(&buttons, &QDialogButtonBox::accepted, &dialog, &QDialog::accept);
+    QObject::connect(&buttons, &QDialogButtonBox::rejected, &dialog, &QDialog::reject);
+
+    QFormLayout layout(&dialog);
+    layout.addRow("Attachment Type", &attachment_type);
+    layout.addRow("Garment Category", &garment_category);
+    layout.addRow(&buttons);
+
+    if (dialog.exec() != QDialog::Accepted) {
+        return std::nullopt;
+    }
+
+    return GarmentConversionSettings{attachment_type.currentData().toString(),
+                                     garment_category.currentData().toString()};
+}
 
 QString make_asset_display_name(const std::filesystem::path& asset_path)
 {
@@ -193,13 +268,16 @@ QIcon make_plus_icon()
 }
 }
 
-AssetBrowserPanel::AssetBrowserPanel(const std::filesystem::path& motion_catalog_path,
-                                     const std::filesystem::path& subject_catalog_path,
-                                     QWidget* parent)
+AssetBrowserPanel::AssetBrowserPanel(const ProjectPaths& project_paths, QWidget* parent)
     : QWidget(parent),
-      motion_descriptions_(read_descriptions(motion_catalog_path)),
-      subject_descriptions_(read_descriptions(subject_catalog_path))
+      project_paths_(project_paths),
+      motion_descriptions_(read_descriptions(project_paths_.motion_asset_dir / "motion_catalog.json")),
+      subject_descriptions_(read_descriptions(project_paths_.motion_asset_dir / "subject_catalog.json"))
 {
+    asset_loader_ = new AssetLoader(this);
+    motion_converter_ = new AssetConverter(this);
+    garment_converter_ = new AssetConverter(this);
+
     auto* layout = new QVBoxLayout(this);
     layout->setContentsMargins(0, 0, 0, 0);
     layout->setSpacing(6);
@@ -389,13 +467,176 @@ AssetBrowserPanel::AssetBrowserPanel(const std::filesystem::path& motion_catalog
 
     connect(table_widget_, &QTableWidget::cellClicked, this, [this](int row) { select_table_row(row); });
 
-    connect(import_button_, &QPushButton::clicked, this, [this]() {
-        if (import_button_callback_) {
-            import_button_callback_();
+    connect(import_button_, &QPushButton::clicked, this, [this]() { request_garment_conversion(); });
+
+    asset_loader_->set_character_loaded_callback([this](CharacterMesh mesh) {
+        if (motion_loaded_callback_) {
+            motion_loaded_callback_(std::move(mesh));
         }
+    });
+    asset_loader_->set_character_load_failed_callback([this](const std::filesystem::path& asset_path) {
+        QMessageBox::warning(this,
+                             "Load Failed",
+                             "Failed to load motion:\n" + QString::fromStdWString(asset_path.wstring()));
+    });
+    asset_loader_->set_garment_loaded_callback(
+        [this](GarmentRequestId, const std::filesystem::path& asset_path, GarmentMesh mesh) {
+            if (garment_loaded_callback_) {
+                garment_loaded_callback_(asset_path, std::move(mesh));
+            }
+        });
+    asset_loader_->set_garment_load_failed_callback(
+        [this](GarmentRequestId, const std::filesystem::path& asset_path) {
+            QMessageBox::warning(this,
+                                 "Load Failed",
+                                 "Failed to load garment:\n" + QString::fromStdWString(asset_path.wstring()));
+        });
+
+    motion_converter_->set_conversion_succeeded_callback([this]() {
+        set_conversion_active(AssetPanelMode::Motions, false);
+        refresh_motion_list();
+    });
+    motion_converter_->set_conversion_failed_callback([this](const std::string&) {
+        set_conversion_active(AssetPanelMode::Motions, false);
+        show_conversion_failure(this, AssetPanelMode::Motions);
+    });
+
+    garment_converter_->set_conversion_succeeded_callback([this]() {
+        set_conversion_active(AssetPanelMode::Garments, false);
+        refresh_garment_list();
+    });
+    garment_converter_->set_conversion_failed_callback([this](const std::string&) {
+        set_conversion_active(AssetPanelMode::Garments, false);
+        show_conversion_failure(this, AssetPanelMode::Garments);
     });
 
     update_expanded_state();
+    refresh_motion_list();
+    refresh_garment_list();
+}
+
+AssetBrowserPanel::~AssetBrowserPanel()
+{
+    asset_loader_->set_character_loaded_callback({});
+    asset_loader_->set_character_load_failed_callback({});
+    asset_loader_->set_garment_loaded_callback({});
+    asset_loader_->set_garment_load_failed_callback({});
+    motion_converter_->set_conversion_succeeded_callback({});
+    motion_converter_->set_conversion_failed_callback({});
+    garment_converter_->set_conversion_succeeded_callback({});
+    garment_converter_->set_conversion_failed_callback({});
+}
+
+// Asset operations
+void AssetBrowserPanel::refresh_motion_list()
+{
+    auto motion_source_paths = asset_io::scan_asset_paths(project_paths_.amass_dir, ".npz");
+    motion_source_paths.erase(std::remove_if(motion_source_paths.begin(),
+                                             motion_source_paths.end(),
+                                             [](const auto& path) { return !is_amass_motion_path(path); }),
+                              motion_source_paths.end());
+
+    auto motion_asset_paths = asset_io::scan_asset_paths(project_paths_.motion_asset_dir, ".motion");
+    motion_asset_paths.erase(std::remove(motion_asset_paths.begin(),
+                                         motion_asset_paths.end(),
+                                         project_paths_.default_character_path),
+                             motion_asset_paths.end());
+    const auto compare_motion_subject = [](const auto& lhs, const auto& rhs) {
+        return motion_subject_number(lhs) < motion_subject_number(rhs);
+    };
+    std::stable_sort(motion_source_paths.begin(), motion_source_paths.end(), compare_motion_subject);
+    std::stable_sort(motion_asset_paths.begin(), motion_asset_paths.end(), compare_motion_subject);
+
+    set_motion_paths(std::move(motion_source_paths), std::move(motion_asset_paths));
+}
+
+void AssetBrowserPanel::refresh_garment_list()
+{
+    set_garment_paths(asset_io::scan_asset_paths(project_paths_.garment_asset_dir, ".garment"));
+}
+
+void AssetBrowserPanel::load_motion(const std::filesystem::path& asset_path)
+{
+    asset_loader_->load_character_mesh(asset_path);
+}
+
+void AssetBrowserPanel::load_garment(const std::filesystem::path& asset_path)
+{
+    if (garment_load_started_callback_) {
+        garment_load_started_callback_();
+    }
+
+    asset_loader_->load_garment_mesh(asset_path);
+}
+
+void AssetBrowserPanel::request_garment_conversion()
+{
+    const QString selected_file =
+        QFileDialog::getOpenFileName(this,
+                                     "Select Garment OBJ",
+                                     QString::fromStdWString(project_paths_.garment_source_dir.wstring()),
+                                     "Garment OBJ (*.obj)");
+
+    if (selected_file.isEmpty()) {
+        return;
+    }
+
+    const std::filesystem::path garment_obj_path = selected_file.toStdWString();
+    const auto garment_asset_path = asset_io::make_garment_asset_path(project_paths_, garment_obj_path);
+    if (std::filesystem::exists(garment_asset_path)) {
+        return;
+    }
+
+    const auto settings = select_garment_conversion_settings(this);
+    if (!settings) {
+        return;
+    }
+
+    const ConverterCommand command =
+        asset_converter_commands::make_garment_command(project_paths_,
+                                                       garment_obj_path,
+                                                       garment_asset_path,
+                                                       settings->attachment_type,
+                                                       settings->garment_category);
+
+    set_conversion_active(AssetPanelMode::Garments, true);
+    garment_converter_->start_conversion(command);
+}
+
+void AssetBrowserPanel::request_motion_conversion(const std::filesystem::path& source_path)
+{
+    if (motion_converter_->is_running()) {
+        return;
+    }
+
+    const auto motion_asset_path =
+        project_paths_.motion_asset_dir / (source_path.stem().string() + ".motion");
+    if (std::filesystem::exists(motion_asset_path)) {
+        refresh_motion_list();
+        return;
+    }
+
+    const ConverterCommand command =
+        asset_converter_commands::make_motion_command(project_paths_, source_path, motion_asset_path);
+
+    converting_motion_path_ = QString::fromStdWString(source_path.wstring());
+    set_conversion_active(AssetPanelMode::Motions, true);
+    motion_converter_->start_conversion(command);
+}
+
+void AssetBrowserPanel::set_motion_loaded_callback(MotionLoadedCallback callback)
+{
+    motion_loaded_callback_ = std::move(callback);
+}
+
+void AssetBrowserPanel::set_garment_load_started_callback(GarmentLoadStartedCallback callback)
+{
+    garment_load_started_callback_ = std::move(callback);
+}
+
+void AssetBrowserPanel::set_garment_loaded_callback(GarmentLoadedCallback callback)
+{
+    garment_loaded_callback_ = std::move(callback);
 }
 
 // panel 상태 전환 //
@@ -595,12 +836,11 @@ void AssetBrowserPanel::rebuild_motion_list()
                                           "}");
             convert_button->setToolTip("Motion convert");
             convert_button->setEnabled(!motion_conversion_active_);
-            connect(convert_button, &QPushButton::clicked, this, [this, source_path, source_path_string]() {
-                if (motion_conversion_active_ || !motion_conversion_callback_) {
+            connect(convert_button, &QPushButton::clicked, this, [this, source_path]() {
+                if (motion_conversion_active_) {
                     return;
                 }
-                converting_motion_path_ = source_path_string;
-                motion_conversion_callback_(source_path);
+                request_motion_conversion(source_path);
             });
             table_widget_->setCellWidget(row, 2, make_centered_cell_widget(convert_button));
         }
@@ -626,18 +866,6 @@ void AssetBrowserPanel::rebuild_garment_list()
     }
 }
 
-void AssetBrowserPanel::set_selected_callback(
-    std::function<void(AssetPanelMode, const std::filesystem::path&)> callback)
-{
-    selected_callback_ = std::move(callback);
-}
-
-void AssetBrowserPanel::set_motion_conversion_callback(
-    std::function<void(const std::filesystem::path&)> callback)
-{
-    motion_conversion_callback_ = std::move(callback);
-}
-
 void AssetBrowserPanel::select_table_row(int row)
 {
     const QTableWidgetItem* item = table_widget_->item(row, 0);
@@ -652,8 +880,14 @@ void AssetBrowserPanel::select_table_row(int row)
     }
 
     const QString asset_path = item->data(Qt::UserRole).toString();
-    if (selected_callback_ && !asset_path.isEmpty()) {
-        selected_callback_(panel_mode_, asset_path.toStdWString());
+    if (asset_path.isEmpty()) {
+        return;
+    }
+
+    if (panel_mode_ == AssetPanelMode::Motions) {
+        load_motion(asset_path.toStdWString());
+    } else {
+        load_garment(asset_path.toStdWString());
     }
 }
 
@@ -674,11 +908,6 @@ void AssetBrowserPanel::set_conversion_active(AssetPanelMode mode, bool active)
         garment_conversion_active_ = active;
         update_import_button_state();
     }
-}
-
-void AssetBrowserPanel::set_import_button_callback(std::function<void()> callback)
-{
-    import_button_callback_ = std::move(callback);
 }
 
 void AssetBrowserPanel::update_import_button_state()

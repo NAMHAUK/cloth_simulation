@@ -85,8 +85,8 @@ add_executable(simulation_app
     src/gpu/scene/NormalUpdater.h
     src/rendering/RenderPipeline.cpp
     src/rendering/RenderPipeline.h
-    src/ui/SceneViewport.cpp
-    src/ui/SceneViewport.h
+    src/ui/Viewport.cpp
+    src/ui/Viewport.h
     src/rendering/SceneRenderShader.cpp
     src/rendering/SceneRenderShader.h
     src/simulation/SimulationPipeline.cpp
@@ -104,8 +104,12 @@ add_executable(simulation_app
     src/ui/AssetBrowserPanel.h
     src/ui/GarmentColorPanel.cpp
     src/ui/GarmentColorPanel.h
-    src/ui/GarmentPlacementPanel.cpp
-    src/ui/GarmentPlacementPanel.h
+    src/ui/GarmentCardsPanel.cpp
+    src/ui/GarmentCardsPanel.h
+    src/ui/PlacementPanel.cpp
+    src/ui/PlacementPanel.h
+    src/ui/PlacementController.cpp
+    src/ui/PlacementController.h
     shaders/rendering/viewer.vert
     shaders/rendering/viewer.frag
     shaders/rendering/background.vert
