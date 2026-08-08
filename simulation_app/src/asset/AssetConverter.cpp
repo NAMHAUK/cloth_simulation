@@ -44,6 +44,13 @@ void AssetConverter::start_conversion(const ConverterCommand& command)
         return;
     }
 
+    if (!command.is_valid) {
+        if (conversion_failed_callback_) {
+            conversion_failed_callback_(command.error_message);
+        }
+        return;
+    }
+
     result_ = {};
     process_ = new QProcess(this);
     process_->setProgram(command.program);

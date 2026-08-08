@@ -11,8 +11,10 @@
 #include <iostream>
 #include <utility>
 
+#include <QEvent>
 #include <QFontMetrics>
 #include <QIcon>
+#include <QLabel>
 #include <QMouseEvent>
 #include <QPainter>
 #include <QPixmap>
@@ -20,6 +22,7 @@
 #include <QRect>
 #include <QSize>
 #include <QString>
+#include <QTimer>
 #include <QWheelEvent>
 
 #include <glm/ext/matrix_clip_space.hpp>
@@ -64,6 +67,9 @@ constexpr int simulation_button_size = 40;
 constexpr int simulation_button_gap = 10;
 constexpr int simulation_button_count = 3;
 constexpr int simulation_icon_size = 22;
+constexpr int motion_loading_indicator_size = 96;
+constexpr int motion_loading_line_count = 6;
+constexpr int motion_loading_interval_ms = 80;
 constexpr int placement_panel_width = 280;
 
 enum class ControlIcon
@@ -72,6 +78,22 @@ enum class ControlIcon
     Pause,
     DefaultPose,
     Reset,
+};
+
+class MotionLoadingOverlay final : public QLabel
+{
+public:
+    using QLabel::QLabel;
+
+protected:
+    bool event(QEvent* event) override
+    {
+        if (!event->isInputEvent()) {
+            return QLabel::event(event);
+        }
+        event->accept();
+        return true;
+    }
 };
 
 QIcon make_simulation_control_icon(ControlIcon icon_type, const QColor& icon_color)
@@ -113,6 +135,26 @@ QIcon make_simulation_control_icon(ControlIcon icon_type, const QColor& icon_col
     }
 
     return QIcon{pixmap};
+}
+
+QPixmap make_motion_loading_pixmap(int step)
+{
+    QPixmap pixmap(motion_loading_indicator_size, motion_loading_indicator_size);
+    pixmap.fill(Qt::transparent);
+
+    QPainter painter(&pixmap);
+    painter.setRenderHint(QPainter::Antialiasing, true);
+    painter.translate(motion_loading_indicator_size * 0.5, motion_loading_indicator_size * 0.5);
+
+    for (int index = 0; index < motion_loading_line_count; ++index) {
+        QColor color{"#f5f5f5"};
+        color.setAlpha(55 + ((index + step) % motion_loading_line_count) * 40);
+        painter.setPen(QPen{color, 4.0, Qt::SolidLine, Qt::RoundCap});
+        painter.drawLine(QPointF{0.0, -20.0}, QPointF{0.0, -38.0});
+        painter.rotate(360.0 / motion_loading_line_count);
+    }
+
+    return pixmap;
 }
 
 void setup_control_button(QPushButton* button,
@@ -200,6 +242,7 @@ Viewport::Viewport(const ProjectPaths& project_paths, QWidget* parent) : QOpenGL
     setup_control_button(play_pause_button_, ControlIcon::Play, "Run", QColor{"#43a047"});
     setup_control_button(default_pose_button_, ControlIcon::DefaultPose, "Default Pose", QColor{"#1e88e5"});
     setup_control_button(reset_button_, ControlIcon::Reset, "Reset", QColor{"#e53935"});
+    setup_motion_loading_indicator();
 
     connect(play_pause_button_, &QPushButton::clicked, this, [this]() {
         if (play_pause_callback_) {
@@ -271,6 +314,35 @@ void Viewport::set_simulation_button_state(bool simulation_running, bool buttons
     default_pose_button_->setEnabled(buttons_enabled);
 }
 
+void Viewport::setup_motion_loading_indicator()
+{
+    motion_loading_indicator_ = new MotionLoadingOverlay(this);
+    motion_loading_indicator_->setAlignment(Qt::AlignCenter);
+    motion_loading_indicator_->setFocusPolicy(Qt::StrongFocus);
+    motion_loading_indicator_->setPixmap(make_motion_loading_pixmap(motion_loading_step_));
+    motion_loading_indicator_->setVisible(false);
+
+    motion_loading_timer_ = new QTimer(this);
+    motion_loading_timer_->setInterval(motion_loading_interval_ms);
+    connect(motion_loading_timer_, &QTimer::timeout, this, [this]() {
+        motion_loading_step_ = (motion_loading_step_ + 1) % motion_loading_line_count;
+        motion_loading_indicator_->setPixmap(make_motion_loading_pixmap(motion_loading_step_));
+    });
+}
+
+void Viewport::set_motion_loading(bool is_loading)
+{
+    motion_loading_indicator_->setVisible(is_loading);
+    if (is_loading) {
+        motion_loading_indicator_->setFocus(Qt::OtherFocusReason);
+        motion_loading_timer_->start();
+        motion_loading_indicator_->raise();
+    } else {
+        motion_loading_timer_->stop();
+        setFocus(Qt::OtherFocusReason);
+    }
+}
+
 void Viewport::update_layout()
 {
     const QSize viewport_size = size();
@@ -340,6 +412,9 @@ void Viewport::update_layout()
         garment_color_panel_->setGeometry(placement_x, color_panel_y, placement_width, color_height);
         garment_color_panel_->raise();
     }
+
+    motion_loading_indicator_->setGeometry(rect());
+    motion_loading_indicator_->raise();
 }
 
 // Accessors //
