@@ -48,7 +48,6 @@ bool build_packed_data(const std::vector<GarmentObject>& garments, PackedClothBv
         }
 
         GarmentBvhLayout layout;
-        layout.range.garment_id = garment.id;
         layout.range.layer = garment.layer;
         layout.range.collision_triangles = {packed_data.triangle_count, local_triangle_count};
         layout.range.bvh_nodes = {packed_data.node_count, static_cast<std::uint32_t>(bvh.nodes.size())};

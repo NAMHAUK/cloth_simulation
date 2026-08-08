@@ -95,7 +95,7 @@ void RenderPipeline::draw(const SceneState& scene,
         }
 
         viewer_shader_.set_solid_color(garment.mesh.color, gl);
-        cloth_gpu_state.draw_garment(garment.id, gl);
+        cloth_gpu_state.draw_garment(garment.layer, gl);
     }
 
     // character

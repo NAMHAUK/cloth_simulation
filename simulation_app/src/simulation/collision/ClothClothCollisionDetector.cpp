@@ -34,12 +34,12 @@ bool is_valid_range(std::uint32_t offset, std::uint32_t count, std::uint32_t tot
 }
 
 const GarmentBufferRanges* find_garment_range(const std::vector<GarmentBufferRanges>& garment_ranges,
-                                              std::uint32_t garment_id)
+                                              GarmentLayer layer)
 {
     const auto iter =
-        std::find_if(garment_ranges.begin(),
-                     garment_ranges.end(),
-                     [garment_id](const GarmentBufferRanges& range) { return range.id == garment_id; });
+        std::find_if(garment_ranges.begin(), garment_ranges.end(), [layer](const GarmentBufferRanges& range) {
+            return range.layer == layer;
+        });
     return iter == garment_ranges.end() ? nullptr : &(*iter);
 }
 
@@ -52,14 +52,12 @@ bool has_valid_garment_layouts(const SimulationGpuViews& views)
         return false;
     }
 
-    std::unordered_set<std::uint32_t> garment_ids;
-    std::unordered_set<std::uint32_t> layers;
+    std::unordered_set<GarmentLayer> layers;
     for (const GarmentBvhLayout& layout : *views.cloth_bvh.garment_layouts) {
         const GarmentBvhRange& bvh_range = layout.range;
         const GarmentBufferRanges* garment_range =
-            find_garment_range(*views.garment_buffer_ranges, bvh_range.garment_id);
+            find_garment_range(*views.garment_buffer_ranges, bvh_range.layer);
         if (garment_range == nullptr ||
-            !garment_ids.insert(bvh_range.garment_id).second ||
             !layers.insert(bvh_range.layer).second ||
             !is_valid_range(garment_range->vertex_offset,
                             garment_range->vertex_count,
@@ -212,9 +210,9 @@ void ClothClothCollisionDetector::detect(const SimulationGpuViews& views, QOpenG
             }
 
             const GarmentBufferRanges* upper_range =
-                find_garment_range(*views.garment_buffer_ranges, upper_layout->range.garment_id);
+                find_garment_range(*views.garment_buffer_ranges, upper_layout->range.layer);
             const GarmentBufferRanges* lower_range =
-                find_garment_range(*views.garment_buffer_ranges, lower_layout->range.garment_id);
+                find_garment_range(*views.garment_buffer_ranges, lower_layout->range.layer);
 
             detect_pair(*upper_range, *upper_layout, *lower_range, *lower_layout, collision_candidates, gl);
         }

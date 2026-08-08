@@ -35,7 +35,7 @@ public:
     bool initialize(const ShaderPaths& shader_paths, QOpenGLFunctions_4_5_Core& gl);
     bool prefit_garments(const SceneState& scene,
                          SceneGpuState& gpu_state,
-                         const std::vector<std::uint32_t>& garment_ids,
+                         const std::vector<GarmentLayer>& layers,
                          QOpenGLFunctions_4_5_Core& gl);
     bool step(SceneState& scene,
               SceneGpuState& gpu_state,

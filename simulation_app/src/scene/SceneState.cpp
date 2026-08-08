@@ -107,29 +107,28 @@ const EdgeBvhData& SceneState::default_body_edge_bvh_data() const
 
 // Garments //
 
-std::uint32_t SceneState::add_garment_mesh(GarmentMesh mesh)
+bool SceneState::add_garment_mesh(GarmentLayer layer, GarmentMesh mesh)
 {
-    if (!prepare_garment_mesh(mesh)) {
-        return 0u;
+    if (find_garment(layer) != nullptr || !prepare_garment_mesh(mesh)) {
+        return false;
     }
 
-    const std::uint32_t garment_id = next_garment_id_++;
-    // Garment insertion order defines lower-to-upper GPU buffer placement.
-    const std::uint32_t garment_layer = next_garment_layer_++;
     GarmentMesh source_mesh = mesh;
     garments_.push_back({
-        garment_id,
-        garment_layer,
+        layer,
         std::move(source_mesh),
         std::move(mesh),
         true,
     });
-    return garment_id;
+    std::sort(garments_.begin(), garments_.end(), [](const GarmentObject& lhs, const GarmentObject& rhs) {
+        return lhs.layer < rhs.layer;
+    });
+    return true;
 }
 
-bool SceneState::replace_garment_mesh(std::uint32_t garment_id, GarmentMesh mesh)
+bool SceneState::replace_garment_mesh(GarmentLayer layer, GarmentMesh mesh)
 {
-    GarmentObject* garment = find_garment(garment_id);
+    GarmentObject* garment = find_garment(layer);
     if (garment == nullptr) {
         return false;
     }
@@ -144,7 +143,7 @@ bool SceneState::replace_garment_mesh(std::uint32_t garment_id, GarmentMesh mesh
     return true;
 }
 
-GarmentObject* SceneState::update_garment_placement(std::uint32_t garment_id,
+GarmentObject* SceneState::update_garment_placement(GarmentLayer layer,
                                                     const glm::vec3& position_offset,
                                                     float scale)
 {
@@ -153,7 +152,7 @@ GarmentObject* SceneState::update_garment_placement(std::uint32_t garment_id,
     }
 
     for (GarmentObject& garment : garments_) {
-        if (garment.id != garment_id) {
+        if (garment.layer != layer) {
             continue;
         }
 
@@ -193,9 +192,9 @@ GarmentObject* SceneState::update_garment_placement(std::uint32_t garment_id,
     return nullptr;
 }
 
-bool SceneState::update_garment_color(std::uint32_t garment_id, const glm::vec3& color)
+bool SceneState::update_garment_color(GarmentLayer layer, const glm::vec3& color)
 {
-    GarmentObject* garment = find_garment(garment_id);
+    GarmentObject* garment = find_garment(layer);
     if (garment == nullptr) {
         return false;
     }
@@ -205,12 +204,11 @@ bool SceneState::update_garment_color(std::uint32_t garment_id, const glm::vec3&
     return true;
 }
 
-bool SceneState::remove_garment(std::uint32_t garment_id)
+bool SceneState::remove_garment(GarmentLayer layer)
 {
-    const auto iter =
-        std::find_if(garments_.begin(), garments_.end(), [garment_id](const GarmentObject& garment) {
-            return garment.id == garment_id;
-        });
+    const auto iter = std::find_if(garments_.begin(), garments_.end(), [layer](const GarmentObject& garment) {
+        return garment.layer == layer;
+    });
 
     if (iter == garments_.end()) {
         return false;
@@ -220,12 +218,11 @@ bool SceneState::remove_garment(std::uint32_t garment_id)
     return true;
 }
 
-GarmentObject* SceneState::find_garment(std::uint32_t garment_id)
+GarmentObject* SceneState::find_garment(GarmentLayer layer)
 {
-    const auto iter =
-        std::find_if(garments_.begin(), garments_.end(), [garment_id](const GarmentObject& garment) {
-            return garment.id == garment_id;
-        });
+    const auto iter = std::find_if(garments_.begin(), garments_.end(), [layer](const GarmentObject& garment) {
+        return garment.layer == layer;
+    });
 
     if (iter == garments_.end()) {
         return nullptr;
@@ -234,11 +231,17 @@ GarmentObject* SceneState::find_garment(std::uint32_t garment_id)
     return &(*iter);
 }
 
+const GarmentObject* SceneState::find_garment(GarmentLayer layer) const
+{
+    const auto iter = std::find_if(garments_.begin(), garments_.end(), [layer](const GarmentObject& garment) {
+        return garment.layer == layer;
+    });
+    return iter == garments_.end() ? nullptr : &(*iter);
+}
+
 void SceneState::clear_garments()
 {
     garments_.clear();
-    next_garment_id_ = 1;
-    next_garment_layer_ = 0;
 }
 
 const std::vector<GarmentObject>& SceneState::garments() const

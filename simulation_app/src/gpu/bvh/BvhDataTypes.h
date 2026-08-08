@@ -1,5 +1,7 @@
 #pragma once
 
+#include "asset/AssetDataTypes.h"
+
 #include <cstddef>
 #include <cstdint>
 #include <vector>
@@ -42,8 +44,7 @@ struct BvhNodeRange final
 
 struct GarmentBvhRange final
 {
-    std::uint32_t garment_id = 0;
-    std::uint32_t layer = 0;
+    GarmentLayer layer = GarmentLayer::Lower;
     BvhBufferRange collision_triangles;
     BvhBufferRange bvh_nodes;
 };
