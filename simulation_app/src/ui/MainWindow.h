@@ -26,7 +26,7 @@ private:
     bool initialize_scene(QOpenGLFunctions_4_5_Core& gl);
     void setup_viewport_render_callbacks();
     void setup_asset_browser_callbacks();
-    void setup_simulation_control_callbacks();
+    void connect_simulation_controls();
 
     // UI updates
     void update_simulation_button_state();

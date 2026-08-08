@@ -2,8 +2,9 @@
 
 #include <cstddef>
 #include <filesystem>
-#include <functional>
 #include <optional>
+
+#include <QObject>
 
 class GarmentCardsPanel;
 class GarmentColorPanel;
@@ -12,12 +13,11 @@ class SimulationController;
 enum GarmentLayer : std::size_t;
 struct GarmentMesh;
 
-class PlacementController final
+class PlacementController final : public QObject
 {
-public:
-    using ActiveChangedCallback = std::function<void()>;
-    using LayoutChangedCallback = std::function<void()>;
+    Q_OBJECT
 
+public:
     PlacementController(SimulationController& simulation_controller,
                         PlacementPanel& placement_panel,
                         GarmentColorPanel& color_panel,
@@ -32,12 +32,13 @@ public:
 
     bool is_active() const;
 
-    void set_active_changed_callback(ActiveChangedCallback callback);
-    void set_layout_changed_callback(LayoutChangedCallback callback);
+Q_SIGNALS:
+    void active_changed();
+    void layout_changed();
 
 private:
-    void setup_placement_callbacks();
-    void setup_color_callbacks();
+    void connect_placement_panel();
+    void connect_color_panels();
 
     GarmentLayer target_layer() const;
     void end_session();
@@ -45,15 +46,10 @@ private:
 
     void set_active(bool active);
 
-    void notify_active_changed();
-    void notify_layout_changed();
-
     SimulationController& simulation_controller_;
     PlacementPanel& placement_panel_;
     GarmentColorPanel& color_panel_;
     GarmentCardsPanel& cards_panel_;
     std::optional<GarmentLayer> color_edit_layer_;
     bool active_ = false;
-    ActiveChangedCallback active_changed_callback_;
-    LayoutChangedCallback layout_changed_callback_;
 };

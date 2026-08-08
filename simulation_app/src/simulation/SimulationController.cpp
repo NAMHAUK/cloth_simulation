@@ -23,15 +23,9 @@ SimulationController::~SimulationController()
 }
 
 // Initialization //
-void SimulationController::set_viewport_functions(std::function<void(GlContextTask)> run_with_gl_context,
-                                                  std::function<void()> viewport_update,
-                                                  std::function<void(const glm::vec3&)> reset_camera,
-                                                  std::function<void(const glm::vec3&)> set_camera_target)
+void SimulationController::set_run_with_gl_context(std::function<void(GlContextTask)> run_with_gl_context)
 {
     run_with_gl_context_ = std::move(run_with_gl_context);
-    viewport_update_ = std::move(viewport_update);
-    reset_camera_ = std::move(reset_camera);
-    set_camera_target_ = std::move(set_camera_target);
 }
 
 bool SimulationController::initialize(const ShaderPaths& shader_paths,
@@ -79,26 +73,27 @@ void SimulationController::tick_frame()
 
     bool simulation_step_finished = false;
     if (simulation_running_ || has_garment_placement_update()) {
-        run_with_gl_context_([this, &simulation_step_finished](QOpenGLFunctions_4_5_Core& gl) {
-            set_current_garment_placement(gl);
+        run_with_gl_context_(
+            [this, &simulation_step_finished](QOpenGLFunctions_4_5_Core& gl) {
+                set_current_garment_placement(gl);
 
-            if (simulation_running_) {
-                simulation_step_finished =
-                    simulation_pipeline_.step(scene_, gpu_state_, motion_step_index_, gl);
-                if (simulation_step_finished) {
-                    ++motion_step_index_;
-                    scene_.update_character_frame(motion_step_index_,
-                                                  simulation_settings::character_frame_stride);
+                if (simulation_running_) {
+                    simulation_step_finished =
+                        simulation_pipeline_.step(scene_, gpu_state_, motion_step_index_, gl);
+                    if (simulation_step_finished) {
+                        ++motion_step_index_;
+                        scene_.update_character_frame(motion_step_index_,
+                                                      simulation_settings::character_frame_stride);
+                    }
                 }
-            }
-        });
+            });
     }
 
     if (simulation_step_finished) {
-        set_camera_target_(scene_.character_root_position(scene_.current_character_frame()));
+        Q_EMIT camera_target_changed(scene_.character_root_position(scene_.current_character_frame()));
     }
 
-    viewport_update_();
+    Q_EMIT viewport_update_requested();
 }
 
 // Object //
@@ -160,7 +155,7 @@ void SimulationController::set_character_mesh(CharacterMesh mesh)
         set_character_mesh_state(std::move(mesh), gl);
     });
 
-    viewport_update_();
+    Q_EMIT viewport_update_requested();
 }
 
 void SimulationController::set_character_mesh_state(CharacterMesh mesh, QOpenGLFunctions_4_5_Core& gl)
@@ -169,7 +164,7 @@ void SimulationController::set_character_mesh_state(CharacterMesh mesh, QOpenGLF
     gpu_state_.set_character_mesh(scene_, gl);
     motion_step_index_ = 0;
     is_default_pose_ = false;
-    reset_camera_(scene_.character_root_position(0));
+    Q_EMIT camera_reset_requested(scene_.character_root_position(0));
 }
 
 bool SimulationController::set_garment_mesh(GarmentLayer layer, GarmentMesh mesh)
@@ -243,7 +238,7 @@ bool SimulationController::set_garment_mesh(GarmentLayer layer, GarmentMesh mesh
         garment_set = true;
     });
 
-    viewport_update_();
+    Q_EMIT viewport_update_requested();
     return garment_set;
 }
 
@@ -337,7 +332,7 @@ void SimulationController::reset_scene_to_default()
         is_default_pose_ = true;
     });
 
-    viewport_update_();
+    Q_EMIT viewport_update_requested();
 }
 
 void SimulationController::return_to_default_pose()
@@ -365,7 +360,7 @@ void SimulationController::return_to_default_pose()
         is_default_pose_ = true;
     });
 
-    viewport_update_();
+    Q_EMIT viewport_update_requested();
 }
 
 // garment placement panel //
@@ -391,7 +386,7 @@ bool SimulationController::remove_garment_placement(GarmentLayer layer)
         has_base_positions_ = false;
     });
 
-    viewport_update_();
+    Q_EMIT viewport_update_requested();
     return garment_removed;
 }
 
@@ -425,7 +420,7 @@ void SimulationController::set_garment_color(GarmentLayer layer, const glm::vec3
     }
 
     if (!simulation_running_) {
-        viewport_update_();
+        Q_EMIT viewport_update_requested();
     }
 }
 
@@ -463,7 +458,7 @@ bool SimulationController::confirm_garment_placement()
         placement_confirmed = true;
     });
 
-    viewport_update_();
+    Q_EMIT viewport_update_requested();
     return placement_confirmed;
 }
 
@@ -491,7 +486,7 @@ void SimulationController::cancel_garment_placement()
         has_base_positions_ = false;
     });
 
-    viewport_update_();
+    Q_EMIT viewport_update_requested();
 }
 
 bool SimulationController::is_gpu_initialized() const

@@ -421,11 +421,11 @@ void AssetBrowserPanel::setup_asset_loader()
 
     asset_loader_->set_motion_loaded_callback([this](CharacterMesh mesh) {
         motion_loaded_callback_(std::move(mesh));
-        motion_loading_changed_callback_(false);
+        Q_EMIT motion_loading_changed(false);
     });
 
     asset_loader_->set_motion_load_failed_callback([this](const std::filesystem::path& asset_path) {
-        motion_loading_changed_callback_(false);
+        Q_EMIT motion_loading_changed(false);
         QMessageBox::warning(this, "Load Failed", "Failed to load motion:\n" + to_q_string(asset_path));
     });
 }
@@ -435,21 +435,21 @@ void AssetBrowserPanel::setup_asset_converters()
     motion_converter_ = new AssetConverter(this);
     garment_converter_ = new AssetConverter(this);
 
-    motion_converter_->set_conversion_succeeded_callback([this]() {
+    connect(motion_converter_, &AssetConverter::conversion_succeeded, this, [this]() {
         converted_motion_paths_.insert(make_motion_id(converting_motion_asset_path_),
                                        to_q_string(converting_motion_asset_path_));
         finish_motion_conversion();
     });
-    motion_converter_->set_conversion_failed_callback([this](const std::string&) {
+    connect(motion_converter_, &AssetConverter::conversion_failed, this, [this](const std::string&) {
         finish_motion_conversion();
         QMessageBox::warning(this, "Conversion Failed", "Failed to convert AMASS motion.");
     });
 
-    garment_converter_->set_conversion_succeeded_callback([this]() {
+    connect(garment_converter_, &AssetConverter::conversion_succeeded, this, [this]() {
         import_button_->setEnabled(true);
         refresh_garment_list();
     });
-    garment_converter_->set_conversion_failed_callback([this](const std::string&) {
+    connect(garment_converter_, &AssetConverter::conversion_failed, this, [this](const std::string&) {
         import_button_->setEnabled(true);
         QMessageBox::warning(this, "Conversion Failed", "Failed to convert garment OBJ.");
     });
@@ -565,7 +565,7 @@ void AssetBrowserPanel::set_state(State state)
     }
 
     if (was_expanded != is_expanded) {
-        expansion_changed_callback_();
+        Q_EMIT expansion_changed();
     }
 }
 
@@ -580,14 +580,12 @@ void AssetBrowserPanel::refresh_garment_list()
 
 void AssetBrowserPanel::load_motion(const std::filesystem::path& asset_path)
 {
-    motion_loading_changed_callback_(true);
+    Q_EMIT motion_loading_changed(true);
     asset_loader_->load_motion(asset_path);
 }
 
 void AssetBrowserPanel::load_garment(const std::filesystem::path& asset_path)
 {
-    garment_load_started_callback_();
-
     GarmentMesh mesh;
     if (!asset_io::read_garment_mesh(asset_path, mesh)) {
         QMessageBox::warning(this, "Load Failed", "Failed to load garment:\n" + to_q_string(asset_path));
@@ -808,27 +806,12 @@ bool AssetBrowserPanel::is_expanded() const
 }
 
 // Callback Registration
-void AssetBrowserPanel::set_motion_loading_changed_callback(MotionLoadingChangedCallback callback)
-{
-    motion_loading_changed_callback_ = std::move(callback);
-}
-
 void AssetBrowserPanel::set_motion_loaded_callback(MotionLoadedCallback callback)
 {
     motion_loaded_callback_ = std::move(callback);
 }
 
-void AssetBrowserPanel::set_garment_load_started_callback(GarmentLoadStartedCallback callback)
-{
-    garment_load_started_callback_ = std::move(callback);
-}
-
 void AssetBrowserPanel::set_garment_loaded_callback(GarmentLoadedCallback callback)
 {
     garment_loaded_callback_ = std::move(callback);
-}
-
-void AssetBrowserPanel::set_expansion_changed_callback(std::function<void()> callback)
-{
-    expansion_changed_callback_ = std::move(callback);
 }

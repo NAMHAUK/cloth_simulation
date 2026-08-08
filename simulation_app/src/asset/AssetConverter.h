@@ -1,6 +1,5 @@
 #pragma once
 
-#include <functional>
 #include <string>
 
 #include <QObject>
@@ -26,10 +25,9 @@ struct ConverterCommand
 
 class AssetConverter final : public QObject
 {
-public:
-    using ConversionSucceededCallback = std::function<void()>;
-    using ConversionFailedCallback = std::function<void(const std::string&)>;
+    Q_OBJECT
 
+public:
     explicit AssetConverter(QObject* parent = nullptr);
     ~AssetConverter() override;
 
@@ -38,17 +36,16 @@ public:
 
     bool is_running() const;
 
-    void set_conversion_succeeded_callback(ConversionSucceededCallback callback);
-    void set_conversion_failed_callback(ConversionFailedCallback callback);
-
     void start_conversion(const ConverterCommand& command);
 
+Q_SIGNALS:
+    void conversion_succeeded();
+    void conversion_failed(const std::string& error_message);
+
 private:
-    void setup_process_callbacks();
+    void connect_process();
     void finish_process(int exit_code, QProcess::ExitStatus exit_status);
 
     QProcess* process_ = nullptr;
     ConverterResult result_;
-    ConversionSucceededCallback conversion_succeeded_callback_;
-    ConversionFailedCallback conversion_failed_callback_;
 };
