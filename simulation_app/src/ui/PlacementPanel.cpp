@@ -87,7 +87,7 @@ QIcon make_confirm_icon()
 }
 }
 
-PlacementPanel::PlacementPanel(QWidget* parent) : QWidget(parent)
+PlacementPanel::PlacementPanel(QWidget* parent) : QFrame(parent)
 {
     setup_style();
 
@@ -179,7 +179,7 @@ void PlacementPanel::setup_header(QVBoxLayout& root_layout)
     cancel_button->setIcon(make_close_icon());
     cancel_button->setIconSize(QSize{close_icon_size, close_icon_size});
     cancel_button->setToolTip("Cancel garment placement");
-    connect(cancel_button, &QPushButton::clicked, this, [this]() { cancel_callback_(); });
+    connect(cancel_button, &QPushButton::clicked, this, &PlacementPanel::cancel_requested);
 
     auto* title_layout = new QHBoxLayout();
     title_layout->setContentsMargins(0, 0, 0, 0);
@@ -201,7 +201,7 @@ void PlacementPanel::setup_garment_sections(QVBoxLayout& root_layout)
     add_button_->setIcon(make_plus_icon());
     add_button_->setIconSize(QSize{action_icon_size, action_icon_size});
     add_button_->setToolTip("Add upper garment");
-    connect(add_button_, &QPushButton::clicked, this, [this]() { add_upper_placement_callback_(); });
+    connect(add_button_, &QPushButton::clicked, this, &PlacementPanel::add_upper_requested);
 
     root_layout.addWidget(placement_states_[GarmentLayer::Lower].frame);
     root_layout.addWidget(placement_states_[GarmentLayer::Upper].frame);
@@ -216,7 +216,7 @@ void PlacementPanel::setup_confirm_button(QVBoxLayout& root_layout)
     confirm_run_button_->setIcon(make_confirm_icon());
     confirm_run_button_->setIconSize(QSize{confirm_icon_size, confirm_icon_size});
     confirm_run_button_->setToolTip("Confirm placement & run");
-    connect(confirm_run_button_, &QPushButton::clicked, this, [this]() { confirm_callback_(); });
+    connect(confirm_run_button_, &QPushButton::clicked, this, &PlacementPanel::confirm_requested);
 
     root_layout.addWidget(confirm_run_button_, 0, Qt::AlignHCenter);
 }
@@ -272,9 +272,7 @@ void PlacementPanel::setup_section_header(GarmentLayer layer, QVBoxLayout& secti
         upper_remove_button_->setIconSize(QSize{close_icon_size, close_icon_size});
         upper_remove_button_->setToolTip("Remove upper garment");
         header_layout->addWidget(upper_remove_button_);
-        connect(upper_remove_button_, &QPushButton::clicked, this, [this]() {
-            remove_upper_placement_callback_();
-        });
+        connect(upper_remove_button_, &QPushButton::clicked, this, &PlacementPanel::remove_upper_requested);
     }
 
     section_layout.addLayout(header_layout);
@@ -368,6 +366,14 @@ void PlacementPanel::set_garment(GarmentLayer layer, const QString& garment_name
         set_add_button_enabled(true);
         set_confirm_button_enabled(true);
     }
+}
+
+void PlacementPanel::set_color(GarmentLayer layer, const glm::vec3& color)
+{
+    PlacementState& state = placement_states_[layer];
+    state.color = color;
+    const QColor button_color = QColor::fromRgbF(color.r, color.g, color.b);
+    state.color_button->setStyleSheet(color_button_style.arg(button_color.name()));
 }
 
 void PlacementPanel::show_upper_section()
@@ -470,7 +476,7 @@ void PlacementPanel::update_garment_position(GarmentLayer layer, int axis_index,
     state.position_offset[axis_index] = slider_value * slider_factor;
     state.position_value_labels[axis_index]->setText(format_float(state.position_offset[axis_index]));
 
-    placement_changed_callback_(layer, state.position_offset, state.scale);
+    Q_EMIT placement_changed(layer, state.position_offset, state.scale);
 }
 
 void PlacementPanel::update_garment_scale(GarmentLayer layer, int slider_value)
@@ -481,22 +487,14 @@ void PlacementPanel::update_garment_scale(GarmentLayer layer, int slider_value)
     state.scale = slider_value * slider_factor;
     state.scale_value_label->setText(format_float(state.scale));
 
-    placement_changed_callback_(layer, state.position_offset, state.scale);
+    Q_EMIT placement_changed(layer, state.position_offset, state.scale);
 }
 
 void PlacementPanel::choose_garment_color(GarmentLayer layer)
 {
     set_active_layer(layer);
 
-    PlacementState& state = placement_states_[layer];
-    open_color_editor_callback_(layer, state.color, [this, layer](const glm::vec3& color) {
-        PlacementState& state = placement_states_[layer];
-        state.color = color;
-        const QColor button_color = QColor::fromRgbF(color.r, color.g, color.b);
-        state.color_button->setStyleSheet(color_button_style.arg(button_color.name()));
-
-        color_changed_callback_(layer, state.color);
-    });
+    Q_EMIT color_edit_requested(layer, placement_states_[layer].color);
 }
 
 void PlacementPanel::set_active_layer(GarmentLayer selected_layer)
@@ -515,40 +513,4 @@ void PlacementPanel::set_active_layer(GarmentLayer selected_layer)
 GarmentLayer PlacementPanel::active_layer() const
 {
     return active_layer_;
-}
-
-// Callback Registration
-void PlacementPanel::set_placement_changed_callback(PlacementChangedCallback callback)
-{
-    placement_changed_callback_ = std::move(callback);
-}
-
-void PlacementPanel::set_color_changed_callback(ColorChangedCallback callback)
-{
-    color_changed_callback_ = std::move(callback);
-}
-
-void PlacementPanel::set_open_color_editor_callback(OpenColorEditorCallback callback)
-{
-    open_color_editor_callback_ = std::move(callback);
-}
-
-void PlacementPanel::set_add_upper_placement_callback(AddUpperPlacementCallback callback)
-{
-    add_upper_placement_callback_ = std::move(callback);
-}
-
-void PlacementPanel::set_remove_upper_placement_callback(RemoveUpperPlacementCallback callback)
-{
-    remove_upper_placement_callback_ = std::move(callback);
-}
-
-void PlacementPanel::set_confirm_callback(ConfirmCallback callback)
-{
-    confirm_callback_ = std::move(callback);
-}
-
-void PlacementPanel::set_cancel_callback(CancelCallback callback)
-{
-    cancel_callback_ = std::move(callback);
 }

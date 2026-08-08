@@ -39,7 +39,7 @@ MainWindow::MainWindow(const std::filesystem::path& project_root, QWidget* paren
 
     setup_viewport_render_callbacks();
     setup_asset_browser_callbacks();
-    setup_simulation_control_callbacks();
+    connect_simulation_controls();
 
     // initial UI state
     viewport_->update_layout();
@@ -48,13 +48,8 @@ MainWindow::MainWindow(const std::filesystem::path& project_root, QWidget* paren
 MainWindow::~MainWindow()
 {
     AssetBrowserPanel& asset_browser_panel = viewport_->asset_browser_panel();
-    asset_browser_panel.set_motion_loading_changed_callback({});
     asset_browser_panel.set_motion_loaded_callback({});
-    asset_browser_panel.set_garment_load_started_callback({});
     asset_browser_panel.set_garment_loaded_callback({});
-    viewport_->set_play_pause_callback({});
-    viewport_->set_default_pose_callback({});
-    viewport_->set_reset_callback({});
     placement_controller_.reset();
     simulation_controller_->release_gpu();
     viewport_->set_initialize_callback({});
@@ -71,16 +66,20 @@ void MainWindow::setup_simulation_controller()
     auto run_gl_task = [viewport](SimulationController::GlContextTask task) {
         run_with_gl_context(*viewport, [viewport, &task]() { task(viewport->gl_functions()); });
     };
-    auto viewport_update = [viewport]() { viewport->update(); };
-    auto reset_camera = [viewport](const glm::vec3& root_position) { viewport->reset_camera(root_position); };
-    auto set_camera_target = [viewport](const glm::vec3& root_position) {
-        viewport->set_camera_target(root_position);
-    };
+    simulation_controller_->set_run_with_gl_context(std::move(run_gl_task));
 
-    simulation_controller_->set_viewport_functions(std::move(run_gl_task),
-                                                   std::move(viewport_update),
-                                                   std::move(reset_camera),
-                                                   std::move(set_camera_target));
+    connect(simulation_controller_.get(),
+            &SimulationController::viewport_update_requested,
+            viewport,
+            qOverload<>(&Viewport::update));
+    connect(simulation_controller_.get(),
+            &SimulationController::camera_reset_requested,
+            viewport,
+            &Viewport::reset_camera);
+    connect(simulation_controller_.get(),
+            &SimulationController::camera_target_changed,
+            viewport,
+            &Viewport::set_camera_target);
 }
 
 void MainWindow::setup_placement_controller()
@@ -89,11 +88,14 @@ void MainWindow::setup_placement_controller()
                                                                   viewport_->placement_panel(),
                                                                   viewport_->garment_color_panel(),
                                                                   viewport_->garment_cards_panel());
-    placement_controller_->set_active_changed_callback([this]() {
+    connect(placement_controller_.get(), &PlacementController::active_changed, this, [this]() {
         update_simulation_button_state();
         update_asset_button_state();
     });
-    placement_controller_->set_layout_changed_callback([this]() { viewport_->update_layout(); });
+    connect(placement_controller_.get(),
+            &PlacementController::layout_changed,
+            viewport_,
+            &Viewport::update_layout);
 }
 
 bool MainWindow::initialize_scene(QOpenGLFunctions_4_5_Core& gl)
@@ -133,7 +135,7 @@ void MainWindow::setup_viewport_render_callbacks()
 void MainWindow::setup_asset_browser_callbacks()
 {
     AssetBrowserPanel& asset_browser_panel = viewport_->asset_browser_panel();
-    asset_browser_panel.set_motion_loading_changed_callback([this](bool is_loading) {
+    connect(&asset_browser_panel, &AssetBrowserPanel::motion_loading_changed, this, [this](bool is_loading) {
         if (is_loading) {
             simulation_controller_->stop_simulation();
         }
@@ -146,19 +148,17 @@ void MainWindow::setup_asset_browser_callbacks()
         simulation_controller_->set_character_mesh(std::move(mesh));
         simulation_controller_->start_simulation();
     });
-    asset_browser_panel.set_garment_load_started_callback([this]() {
-        simulation_controller_->return_to_default_pose();
-        update_simulation_button_state();
-    });
     asset_browser_panel.set_garment_loaded_callback(
         [this](const std::filesystem::path& asset_path, GarmentMesh mesh) {
+            simulation_controller_->return_to_default_pose();
             placement_controller_->load_garment(asset_path, std::move(mesh));
+            update_simulation_button_state();
         });
 }
 
-void MainWindow::setup_simulation_control_callbacks()
+void MainWindow::connect_simulation_controls()
 {
-    viewport_->set_play_pause_callback([this]() {
+    connect(viewport_, &Viewport::play_pause_requested, this, [this]() {
         if (simulation_controller_->is_simulation_running()) {
             simulation_controller_->stop_simulation();
         } else {
@@ -167,12 +167,12 @@ void MainWindow::setup_simulation_control_callbacks()
         update_simulation_button_state();
     });
 
-    viewport_->set_default_pose_callback([this]() {
+    connect(viewport_, &Viewport::default_pose_requested, this, [this]() {
         simulation_controller_->return_to_default_pose();
         update_simulation_button_state();
     });
 
-    viewport_->set_reset_callback([this]() {
+    connect(viewport_, &Viewport::reset_requested, this, [this]() {
         placement_controller_->reset();
         simulation_controller_->reset_scene_to_default();
         update_simulation_button_state();

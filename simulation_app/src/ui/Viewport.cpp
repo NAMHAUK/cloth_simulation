@@ -260,7 +260,7 @@ void Viewport::setup_panels(const ProjectPaths& project_paths)
     right_panel_->setHorizontalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
     right_panel_->viewport()->setAutoFillBackground(false);
 
-    asset_browser_panel_->set_expansion_changed_callback([this]() { update_layout(); });
+    connect(asset_browser_panel_, &AssetBrowserPanel::expansion_changed, this, &Viewport::update_layout);
 }
 
 void Viewport::setup_simulation_control_buttons()
@@ -272,21 +272,9 @@ void Viewport::setup_simulation_control_buttons()
     setup_control_button(default_pose_button_, ControlIcon::DefaultPose, "Default Pose", QColor{"#1e88e5"});
     setup_control_button(reset_button_, ControlIcon::Reset, "Reset", QColor{"#e53935"});
 
-    connect(play_pause_button_, &QPushButton::clicked, this, [this]() {
-        if (play_pause_callback_) {
-            play_pause_callback_();
-        }
-    });
-    connect(default_pose_button_, &QPushButton::clicked, this, [this]() {
-        if (default_pose_callback_) {
-            default_pose_callback_();
-        }
-    });
-    connect(reset_button_, &QPushButton::clicked, this, [this]() {
-        if (reset_callback_) {
-            reset_callback_();
-        }
-    });
+    connect(play_pause_button_, &QPushButton::clicked, this, &Viewport::play_pause_requested);
+    connect(default_pose_button_, &QPushButton::clicked, this, &Viewport::default_pose_requested);
+    connect(reset_button_, &QPushButton::clicked, this, &Viewport::reset_requested);
 }
 
 void Viewport::setup_loading_overlay()
@@ -577,21 +565,6 @@ QOpenGLFunctions_4_5_Core& Viewport::gl_functions()
 }
 
 // Callback Registration
-void Viewport::set_play_pause_callback(std::function<void()> callback)
-{
-    play_pause_callback_ = std::move(callback);
-}
-
-void Viewport::set_default_pose_callback(std::function<void()> callback)
-{
-    default_pose_callback_ = std::move(callback);
-}
-
-void Viewport::set_reset_callback(std::function<void()> callback)
-{
-    reset_callback_ = std::move(callback);
-}
-
 void Viewport::set_initialize_callback(InitializeCallback callback)
 {
     initialize_callback_ = std::move(callback);

@@ -3,50 +3,39 @@
 #include "asset/AssetDataTypes.h"
 
 #include <array>
-#include <functional>
-
 #include <glm/vec3.hpp>
 
-#include <QWidget>
+#include <QFrame>
 
 class QEvent;
-class QFrame;
 class QLabel;
 class QPushButton;
 class QSlider;
 class QString;
 class QVBoxLayout;
 
-class PlacementPanel final : public QWidget
+class PlacementPanel final : public QFrame
 {
-public:
-    using PlacementChangedCallback =
-        std::function<void(GarmentLayer layer, const glm::vec3& position_offset, float scale)>;
-    using ColorChangedCallback = std::function<void(GarmentLayer layer, const glm::vec3& color)>;
-    using ColorSelectedCallback = std::function<void(const glm::vec3& color)>;
-    using OpenColorEditorCallback = std::function<
-        void(GarmentLayer layer, const glm::vec3& color, ColorSelectedCallback color_selected_callback)>;
-    using AddUpperPlacementCallback = std::function<void()>;
-    using RemoveUpperPlacementCallback = std::function<void()>;
-    using ConfirmCallback = std::function<void()>;
-    using CancelCallback = std::function<void()>;
+    Q_OBJECT
 
+public:
     explicit PlacementPanel(QWidget* parent = nullptr);
 
     void set_garment(GarmentLayer layer, const QString& garment_name);
+    void set_color(GarmentLayer layer, const glm::vec3& color);
     void show_upper_section();
     void hide_upper_section();
     void reset();
 
     GarmentLayer active_layer() const;
 
-    void set_placement_changed_callback(PlacementChangedCallback callback);
-    void set_color_changed_callback(ColorChangedCallback callback);
-    void set_open_color_editor_callback(OpenColorEditorCallback callback);
-    void set_add_upper_placement_callback(AddUpperPlacementCallback callback);
-    void set_remove_upper_placement_callback(RemoveUpperPlacementCallback callback);
-    void set_confirm_callback(ConfirmCallback callback);
-    void set_cancel_callback(CancelCallback callback);
+Q_SIGNALS:
+    void placement_changed(GarmentLayer layer, const glm::vec3& position_offset, float scale);
+    void color_edit_requested(GarmentLayer layer, const glm::vec3& color);
+    void add_upper_requested();
+    void remove_upper_requested();
+    void confirm_requested();
+    void cancel_requested();
 
 protected:
     bool eventFilter(QObject* watched, QEvent* event) override;
@@ -89,11 +78,4 @@ private:
     QPushButton* add_button_ = nullptr;
     QPushButton* upper_remove_button_ = nullptr;
     QPushButton* confirm_run_button_ = nullptr;
-    PlacementChangedCallback placement_changed_callback_;
-    ColorChangedCallback color_changed_callback_;
-    OpenColorEditorCallback open_color_editor_callback_;
-    AddUpperPlacementCallback add_upper_placement_callback_;
-    RemoveUpperPlacementCallback remove_upper_placement_callback_;
-    ConfirmCallback confirm_callback_;
-    CancelCallback cancel_callback_;
 };

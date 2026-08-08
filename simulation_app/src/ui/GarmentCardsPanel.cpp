@@ -154,7 +154,7 @@ void GarmentCardsPanel::request_color_edit(GarmentLayer layer)
     update_color_button(GarmentLayer::Lower);
     update_color_button(GarmentLayer::Upper);
 
-    color_edit_callback_(layer, cards_[layer].color);
+    Q_EMIT color_edit_requested(layer, cards_[layer].color);
 }
 
 void GarmentCardsPanel::clear_edit_highlight()
@@ -170,10 +170,4 @@ void GarmentCardsPanel::update_color_button(GarmentLayer layer)
     const QColor button_color = QColor::fromRgbF(card.color.r, card.color.g, card.color.b);
     const QString border_color = edit_card_layer_ == layer ? "#1f6feb" : "#111111";
     card.color_button->setStyleSheet(color_button_style.arg(button_color.name(), border_color));
-}
-
-// Callback Registration
-void GarmentCardsPanel::set_color_edit_callback(ColorEditCallback callback)
-{
-    color_edit_callback_ = std::move(callback);
 }

@@ -8,9 +8,6 @@ AssetConverter::AssetConverter(QObject* parent) : QObject(parent)
 
 AssetConverter::~AssetConverter()
 {
-    conversion_succeeded_callback_ = {};
-    conversion_failed_callback_ = {};
-
     if (!process_) {
         return;
     }
@@ -28,16 +25,6 @@ bool AssetConverter::is_running() const
     return process_ != nullptr;
 }
 
-void AssetConverter::set_conversion_succeeded_callback(ConversionSucceededCallback callback)
-{
-    conversion_succeeded_callback_ = std::move(callback);
-}
-
-void AssetConverter::set_conversion_failed_callback(ConversionFailedCallback callback)
-{
-    conversion_failed_callback_ = std::move(callback);
-}
-
 void AssetConverter::start_conversion(const ConverterCommand& command)
 {
     if (process_) {
@@ -45,9 +32,7 @@ void AssetConverter::start_conversion(const ConverterCommand& command)
     }
 
     if (!command.is_valid) {
-        if (conversion_failed_callback_) {
-            conversion_failed_callback_(command.error_message);
-        }
+        Q_EMIT conversion_failed(command.error_message);
         return;
     }
 
@@ -57,11 +42,11 @@ void AssetConverter::start_conversion(const ConverterCommand& command)
     process_->setArguments(command.arguments);
     process_->setWorkingDirectory(command.working_directory);
 
-    setup_process_callbacks();
+    connect_process();
     process_->start();
 }
 
-void AssetConverter::setup_process_callbacks()
+void AssetConverter::connect_process()
 {
     connect(process_, &QProcess::readyReadStandardOutput, this, [this]() {
         if (!process_) {
@@ -120,11 +105,9 @@ void AssetConverter::finish_process(int exit_code, QProcess::ExitStatus exit_sta
     finished_process->deleteLater();
 
     if (result_.succeeded) {
-        if (conversion_succeeded_callback_) {
-            conversion_succeeded_callback_();
-        }
-    } else if (conversion_failed_callback_) {
-        conversion_failed_callback_(result_.error_message);
+        Q_EMIT conversion_succeeded();
+    } else {
+        Q_EMIT conversion_failed(result_.error_message);
     }
 
     result_ = {};

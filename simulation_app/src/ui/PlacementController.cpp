@@ -20,50 +20,36 @@ PlacementController::PlacementController(SimulationController& simulation_contro
       color_panel_(color_panel),
       cards_panel_(cards_panel)
 {
-    setup_placement_callbacks();
-    setup_color_callbacks();
+    connect_placement_panel();
+    connect_color_panels();
     set_active(false);
 }
 
-PlacementController::~PlacementController()
-{
-    color_panel_.set_visibility_changed_callback({});
-    cards_panel_.set_color_edit_callback({});
-    placement_panel_.set_placement_changed_callback({});
-    placement_panel_.set_color_changed_callback({});
-    placement_panel_.set_open_color_editor_callback({});
-    placement_panel_.set_add_upper_placement_callback({});
-    placement_panel_.set_remove_upper_placement_callback({});
-    placement_panel_.set_confirm_callback({});
-    placement_panel_.set_cancel_callback({});
-}
+PlacementController::~PlacementController() = default;
 
 // Initialization
-void PlacementController::setup_placement_callbacks()
+void PlacementController::connect_placement_panel()
 {
-    placement_panel_.set_placement_changed_callback(
-        [this](GarmentLayer layer, const glm::vec3& offset, float scale) {
-            simulation_controller_.set_garment_placement(layer, offset, scale);
-        });
+    connect(&placement_panel_,
+            &PlacementPanel::placement_changed,
+            &simulation_controller_,
+            &SimulationController::set_garment_placement);
 
-    placement_panel_.set_color_changed_callback([this](GarmentLayer layer, const glm::vec3& color) {
-        simulation_controller_.set_garment_color(layer, color);
-        cards_panel_.set_card_color(layer, color);
-    });
+    connect(&placement_panel_,
+            &PlacementPanel::color_edit_requested,
+            this,
+            [this](GarmentLayer layer, const glm::vec3& color) {
+                color_edit_layer_ = layer;
+                cards_panel_.clear_edit_highlight();
+                color_panel_.open_panel(color);
+            });
 
-    placement_panel_.set_open_color_editor_callback(
-        [this](GarmentLayer layer, const glm::vec3& color, PlacementPanel::ColorSelectedCallback callback) {
-            color_edit_layer_ = layer;
-            cards_panel_.clear_edit_highlight();
-            color_panel_.open_panel(color, std::move(callback));
-        });
-
-    placement_panel_.set_add_upper_placement_callback([this]() {
+    connect(&placement_panel_, &PlacementPanel::add_upper_requested, this, [this]() {
         placement_panel_.show_upper_section();
-        notify_layout_changed();
+        Q_EMIT layout_changed();
     });
 
-    placement_panel_.set_remove_upper_placement_callback([this]() {
+    connect(&placement_panel_, &PlacementPanel::remove_upper_requested, this, [this]() {
         if (color_edit_layer_ == GarmentLayer::Upper) {
             color_panel_.close_panel();
         }
@@ -72,10 +58,10 @@ void PlacementController::setup_placement_callbacks()
 
         placement_panel_.hide_upper_section();
 
-        notify_layout_changed();
+        Q_EMIT layout_changed();
     });
 
-    placement_panel_.set_confirm_callback([this]() {
+    connect(&placement_panel_, &PlacementPanel::confirm_requested, this, [this]() {
         color_panel_.close_panel();
 
         if (!simulation_controller_.confirm_garment_placement()) {
@@ -90,7 +76,7 @@ void PlacementController::setup_placement_callbacks()
         end_session();
     });
 
-    placement_panel_.set_cancel_callback([this]() {
+    connect(&placement_panel_, &PlacementPanel::cancel_requested, this, [this]() {
         color_panel_.close_panel();
         simulation_controller_.cancel_garment_placement();
         cards_panel_.clear_unconfirmed_cards();
@@ -98,24 +84,34 @@ void PlacementController::setup_placement_callbacks()
     });
 }
 
-void PlacementController::setup_color_callbacks()
+void PlacementController::connect_color_panels()
 {
-    color_panel_.set_visibility_changed_callback([this](bool visible) {
+    connect(&color_panel_, &GarmentColorPanel::visibility_changed, this, [this](bool visible) {
         if (!visible) {
             color_edit_layer_.reset();
             cards_panel_.clear_edit_highlight();
         }
-        notify_layout_changed();
+        Q_EMIT layout_changed();
     });
 
-    cards_panel_.set_color_edit_callback([this](GarmentLayer layer, const glm::vec3& color) {
-        color_edit_layer_ = layer;
+    connect(&color_panel_, &GarmentColorPanel::color_changed, this, [this](const glm::vec3& color) {
+        if (!color_edit_layer_) {
+            return;
+        }
 
-        color_panel_.open_panel(color, [this, layer](const glm::vec3& selected_color) {
-            simulation_controller_.set_garment_color(layer, selected_color);
-            cards_panel_.set_card_color(layer, selected_color);
-        });
+        const GarmentLayer layer = *color_edit_layer_;
+        simulation_controller_.set_garment_color(layer, color);
+        placement_panel_.set_color(layer, color);
+        cards_panel_.set_card_color(layer, color);
     });
+
+    connect(&cards_panel_,
+            &GarmentCardsPanel::color_edit_requested,
+            this,
+            [this](GarmentLayer layer, const glm::vec3& color) {
+                color_edit_layer_ = layer;
+                color_panel_.open_panel(color);
+            });
 }
 
 // Placement Session
@@ -138,9 +134,9 @@ void PlacementController::load_garment(const std::filesystem::path& asset_path, 
 
     if (!active_) {
         set_active(true);
-        notify_active_changed();
+        Q_EMIT active_changed();
     }
-    notify_layout_changed();
+    Q_EMIT layout_changed();
 }
 
 GarmentLayer PlacementController::target_layer() const
@@ -157,8 +153,8 @@ GarmentLayer PlacementController::target_layer() const
 void PlacementController::end_session()
 {
     reset_session();
-    notify_active_changed();
-    notify_layout_changed();
+    Q_EMIT active_changed();
+    Q_EMIT layout_changed();
 }
 
 void PlacementController::reset_session()
@@ -179,33 +175,11 @@ void PlacementController::reset()
     color_panel_.close_panel();
     cards_panel_.clear_cards();
     reset_session();
-    notify_layout_changed();
+    Q_EMIT layout_changed();
 }
 
 // Accessors
 bool PlacementController::is_active() const
 {
     return active_;
-}
-
-// Callback Registration
-void PlacementController::set_active_changed_callback(ActiveChangedCallback callback)
-{
-    active_changed_callback_ = std::move(callback);
-}
-
-void PlacementController::set_layout_changed_callback(LayoutChangedCallback callback)
-{
-    layout_changed_callback_ = std::move(callback);
-}
-
-// Callback Notification
-void PlacementController::notify_active_changed()
-{
-    active_changed_callback_();
-}
-
-void PlacementController::notify_layout_changed()
-{
-    layout_changed_callback_();
 }

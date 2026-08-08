@@ -15,13 +15,16 @@
 #include <glm/mat4x4.hpp>
 #include <glm/vec3.hpp>
 
+#include <QObject>
 #include <QTimer>
 
 class QOpenGLFunctions_4_5_Core;
 struct ShaderPaths;
 
-class SimulationController final
+class SimulationController final : public QObject
 {
+    Q_OBJECT
+
 public:
     using GlContextTask = std::function<void(QOpenGLFunctions_4_5_Core&)>;
 
@@ -32,10 +35,7 @@ public:
     SimulationController& operator=(const SimulationController&) = delete;
 
     // Initialization //
-    void set_viewport_functions(std::function<void(GlContextTask)> run_with_gl_context,
-                                std::function<void()> viewport_update,
-                                std::function<void(const glm::vec3&)> reset_camera,
-                                std::function<void(const glm::vec3&)> set_camera_target);
+    void set_run_with_gl_context(std::function<void(GlContextTask)> run_with_gl_context);
     bool initialize(const ShaderPaths& shader_paths,
                     CharacterMesh character_mesh,
                     const std::vector<std::uint8_t>& triangle_part_labels,
@@ -62,6 +62,11 @@ public:
     bool can_start_garment_placement() const;
     void draw(const glm::mat4& mvp, float character_opacity, QOpenGLFunctions_4_5_Core& gl);
     void release_gpu();
+
+Q_SIGNALS:
+    void viewport_update_requested();
+    void camera_reset_requested(const glm::vec3& root_position);
+    void camera_target_changed(const glm::vec3& root_position);
 
 private:
     // Initialization //
@@ -125,7 +130,4 @@ private:
     QTimer frame_timer_;
 
     std::function<void(GlContextTask)> run_with_gl_context_;
-    std::function<void()> viewport_update_;
-    std::function<void(const glm::vec3&)> reset_camera_;
-    std::function<void(const glm::vec3&)> set_camera_target_;
 };

@@ -3,7 +3,7 @@
 #include "asset/AssetDataTypes.h"
 
 #include <array>
-#include <functional>
+#include <cstddef>
 #include <optional>
 
 #include <glm/vec3.hpp>
@@ -17,9 +17,9 @@ class QString;
 
 class GarmentCardsPanel final : public QWidget
 {
-public:
-    using ColorEditCallback = std::function<void(GarmentLayer layer, const glm::vec3& color)>;
+    Q_OBJECT
 
+public:
     explicit GarmentCardsPanel(QWidget* parent = nullptr);
 
     void set_card(GarmentLayer layer, const QString& garment_name);
@@ -31,7 +31,8 @@ public:
 
     void clear_edit_highlight();
 
-    void set_color_edit_callback(ColorEditCallback callback);
+Q_SIGNALS:
+    void color_edit_requested(GarmentLayer layer, const glm::vec3& color);
 
 private:
     enum class CardState
@@ -59,5 +60,4 @@ private:
 
     std::array<Card, 2> cards_{};
     std::optional<GarmentLayer> edit_card_layer_;
-    ColorEditCallback color_edit_callback_;
 };

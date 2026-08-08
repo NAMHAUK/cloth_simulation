@@ -23,10 +23,10 @@ class AssetLoader;
 
 class AssetBrowserPanel final : public QWidget
 {
+    Q_OBJECT
+
 public:
-    using MotionLoadingChangedCallback = std::function<void(bool)>;
     using MotionLoadedCallback = std::function<void(CharacterMesh)>;
-    using GarmentLoadStartedCallback = std::function<void()>;
     using GarmentLoadedCallback =
         std::function<void(const std::filesystem::path& asset_path, GarmentMesh mesh)>;
 
@@ -38,11 +38,12 @@ public:
 
     bool is_expanded() const;
 
-    void set_motion_loading_changed_callback(MotionLoadingChangedCallback callback);
     void set_motion_loaded_callback(MotionLoadedCallback callback);
-    void set_garment_load_started_callback(GarmentLoadStartedCallback callback);
     void set_garment_loaded_callback(GarmentLoadedCallback callback);
-    void set_expansion_changed_callback(std::function<void()> callback);
+
+Q_SIGNALS:
+    void motion_loading_changed(bool is_loading);
+    void expansion_changed();
 
 private:
     enum class State
@@ -105,9 +106,6 @@ private:
     QHash<QString, QString> converted_motion_paths_;
     QJsonObject motion_descriptions_;
     QJsonObject subject_descriptions_;
-    MotionLoadingChangedCallback motion_loading_changed_callback_;
     MotionLoadedCallback motion_loaded_callback_;
-    GarmentLoadStartedCallback garment_load_started_callback_;
     GarmentLoadedCallback garment_loaded_callback_;
-    std::function<void()> expansion_changed_callback_;
 };

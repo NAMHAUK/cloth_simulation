@@ -236,7 +236,7 @@ QIcon make_close_icon()
 }
 }
 
-GarmentColorPanel::GarmentColorPanel(QWidget* parent) : QWidget(parent)
+GarmentColorPanel::GarmentColorPanel(QWidget* parent) : QFrame(parent)
 {
     setObjectName("garmentColorPanel");
     setStyleSheet(panel_style);
@@ -303,15 +303,13 @@ void GarmentColorPanel::setup_picker(QVBoxLayout& root_layout)
 }
 
 // UI Updates
-void GarmentColorPanel::open_panel(const glm::vec3& color, ColorChangedCallback color_changed_callback)
+void GarmentColorPanel::open_panel(const glm::vec3& color)
 {
-    color_changed_callback_ = std::move(color_changed_callback);
-
     set_color(QColor::fromRgbF(color.r, color.g, color.b));
 
     if (!isVisible()) {
         setVisible(true);
-        visibility_changed_callback_(true);
+        Q_EMIT visibility_changed(true);
     }
 }
 
@@ -322,8 +320,7 @@ void GarmentColorPanel::close_panel()
     }
 
     setVisible(false);
-    color_changed_callback_ = {};
-    visibility_changed_callback_(false);
+    Q_EMIT visibility_changed(false);
 }
 
 // Color Interaction
@@ -366,7 +363,7 @@ void GarmentColorPanel::apply_color_hex()
 void GarmentColorPanel::apply_color(const QColor& color)
 {
     set_color(color);
-    color_changed_callback_({
+    Q_EMIT color_changed({
         static_cast<float>(color_.redF()),
         static_cast<float>(color_.greenF()),
         static_cast<float>(color_.blueF()),
@@ -386,10 +383,4 @@ void GarmentColorPanel::set_color(const QColor& color)
     const QString text_color = qGray(color.rgb()) >= 128 ? "#111111" : "#ffffff";
     color_hex_->setText(color_name);
     color_hex_->setStyleSheet(color_display_style.arg(color_name, text_color));
-}
-
-// Callback Registration
-void GarmentColorPanel::set_visibility_changed_callback(VisibilityChangedCallback callback)
-{
-    visibility_changed_callback_ = std::move(callback);
 }

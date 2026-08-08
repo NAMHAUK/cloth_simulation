@@ -37,6 +37,8 @@ struct OrbitCamera
 
 class Viewport final : public QOpenGLWidget, protected QOpenGLFunctions_4_5_Core
 {
+    Q_OBJECT
+
 public:
     using InitializeCallback = std::function<bool(QOpenGLFunctions_4_5_Core&)>;
     using SceneRenderCallback = std::function<void(const glm::mat4&, QOpenGLFunctions_4_5_Core&)>;
@@ -57,11 +59,13 @@ public:
     GarmentCardsPanel& garment_cards_panel();
     QOpenGLFunctions_4_5_Core& gl_functions();
 
-    void set_play_pause_callback(std::function<void()> callback);
-    void set_default_pose_callback(std::function<void()> callback);
-    void set_reset_callback(std::function<void()> callback);
     void set_initialize_callback(InitializeCallback callback);
     void set_scene_render_callback(SceneRenderCallback callback);
+
+Q_SIGNALS:
+    void play_pause_requested();
+    void default_pose_requested();
+    void reset_requested();
 
 protected:
     void initializeGL() override;
@@ -99,10 +103,6 @@ private:
     QPushButton* play_pause_button_ = nullptr;
     QPushButton* default_pose_button_ = nullptr;
     QPushButton* reset_button_ = nullptr;
-    std::function<void()> play_pause_callback_;
-    std::function<void()> default_pose_callback_;
-    std::function<void()> reset_callback_;
-
     InitializeCallback initialize_callback_;
     SceneRenderCallback scene_render_callback_;
     OrbitCamera camera_;
