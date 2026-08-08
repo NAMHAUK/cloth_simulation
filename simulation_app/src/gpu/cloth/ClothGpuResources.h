@@ -3,6 +3,7 @@
 #include "gpu/cloth/ClothGpuDataTypes.h"
 
 #include <cstdint>
+#include <optional>
 #include <vector>
 
 #include <QOpenGLFunctions_4_5_Core>
@@ -22,7 +23,7 @@ public:
     bool is_initialized() const;
 
     bool update_garment_buffers(const std::vector<GarmentObject>& garments,
-                                std::uint32_t reset_garment_id,
+                                std::optional<GarmentLayer> reset_layer,
                                 QOpenGLFunctions_4_5_Core& gl);
     bool update_garment_placement(const GarmentObject& garment,
                                   bool update_rest_lengths,
@@ -31,7 +32,7 @@ public:
                                             ElementRange& target_range,
                                             QOpenGLFunctions_4_5_Core& gl);
     bool activate_attachment_targets(const ElementRange& target_range);
-    bool deactivate_attachment_targets(std::uint32_t garment_id);
+    bool deactivate_attachment_targets(GarmentLayer layer);
     bool save_base_positions(QOpenGLFunctions_4_5_Core& gl);
     bool restore_base_positions(QOpenGLFunctions_4_5_Core& gl) const;
     void clear_base_positions(QOpenGLFunctions_4_5_Core& gl);
@@ -47,12 +48,12 @@ public:
     ClothMeshTopologyResources mesh_topology_resources() const;
     ClothNormalResources mesh_normal_resources() const;
     void bind_vertex_normals(GLuint binding_index, QOpenGLFunctions_4_5_Core& gl) const;
-    void draw_garment(std::uint32_t garment_id, QOpenGLFunctions_4_5_Core& gl) const;
+    void draw_garment(GarmentLayer layer, QOpenGLFunctions_4_5_Core& gl) const;
     void release(QOpenGLFunctions_4_5_Core& gl);
 
 private:
     bool rebuild_buffers(const std::vector<GarmentObject>& garments,
-                         std::uint32_t reset_garment_id,
+                         std::optional<GarmentLayer> reset_layer,
                          QOpenGLFunctions_4_5_Core& gl);
     void replace_with_rebuild_buffers(ClothBufferSet rebuild_buffer_set,
                                       std::vector<GarmentBufferRanges> rebuild_ranges,
@@ -69,7 +70,7 @@ private:
     void configure_vao(QOpenGLFunctions_4_5_Core& gl);
     static void delete_buffer_set(ClothBufferSet& buffers, QOpenGLFunctions_4_5_Core& gl);
     void delete_gpu_objects(QOpenGLFunctions_4_5_Core& gl);
-    const GarmentBufferRanges* find_garment_buffer_ranges(std::uint32_t garment_id) const;
+    const GarmentBufferRanges* find_garment_buffer_ranges(GarmentLayer layer) const;
     void reset_resources() noexcept;
 
     ClothBufferSet buffers_;

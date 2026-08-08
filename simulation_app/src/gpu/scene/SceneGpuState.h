@@ -10,7 +10,7 @@
 #include "gpu/scene/NormalUpdater.h"
 #include "scene/SceneState.h"
 
-#include <cstdint>
+#include <optional>
 
 #include <QOpenGLFunctions_4_5_Core>
 
@@ -39,15 +39,15 @@ public:
     CollisionCandidateBufferView collision_candidate_buffer_view() const;
     bool update_garment_meshes(const SceneState& scene,
                                QOpenGLFunctions_4_5_Core& gl,
-                               std::uint32_t reset_garment_id = 0u);
+                               std::optional<GarmentLayer> reset_layer = std::nullopt);
     bool update_garment_placement(const GarmentObject& garment,
                                   bool update_rest_lengths,
                                   QOpenGLFunctions_4_5_Core& gl);
     bool build_garment_attachment_targets(SceneState& scene,
-                                          std::uint32_t garment_id,
+                                          GarmentLayer layer,
                                           float surface_offset,
                                           QOpenGLFunctions_4_5_Core& gl);
-    void deactivate_garment_attachment_targets(std::uint32_t garment_id);
+    void deactivate_garment_attachment_targets(GarmentLayer layer);
     bool save_base_positions(QOpenGLFunctions_4_5_Core& gl);
     bool restore_base_positions(QOpenGLFunctions_4_5_Core& gl);
     void clear_base_positions(QOpenGLFunctions_4_5_Core& gl);

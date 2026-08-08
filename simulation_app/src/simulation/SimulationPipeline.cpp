@@ -17,12 +17,12 @@ namespace {
 constexpr float angular_velocity_epsilon = 1.0e-8f;
 
 const GarmentBufferRanges* find_garment_range(const std::vector<GarmentBufferRanges>& garment_ranges,
-                                              std::uint32_t garment_id)
+                                              GarmentLayer layer)
 {
     const auto iter =
-        std::find_if(garment_ranges.begin(),
-                     garment_ranges.end(),
-                     [garment_id](const GarmentBufferRanges& range) { return range.id == garment_id; });
+        std::find_if(garment_ranges.begin(), garment_ranges.end(), [layer](const GarmentBufferRanges& range) {
+            return range.layer == layer;
+        });
     return iter == garment_ranges.end() ? nullptr : &(*iter);
 }
 
@@ -183,12 +183,12 @@ bool SimulationPipeline::initialize(const ShaderPaths& shader_paths, QOpenGLFunc
 
 bool SimulationPipeline::prefit_garments(const SceneState& scene,
                                          SceneGpuState& gpu_state,
-                                         const std::vector<std::uint32_t>& garment_ids,
+                                         const std::vector<GarmentLayer>& layers,
                                          QOpenGLFunctions_4_5_Core& gl)
 {
-    if (!initialized_ || garment_ids.empty()) {
-        std::cerr
-            << "Cannot pre-fit garments before simulation pipeline initialization or without garment ids.\n";
+    if (!initialized_ || layers.empty()) {
+        std::cerr << "Cannot pre-fit garments before simulation pipeline initialization or without garment "
+                     "layers.\n";
         return false;
     }
 
@@ -199,10 +199,9 @@ bool SimulationPipeline::prefit_garments(const SceneState& scene,
     }
 
     std::vector<const GarmentBufferRanges*> garment_ranges;
-    garment_ranges.reserve(garment_ids.size());
-    for (std::uint32_t garment_id : garment_ids) {
-        const GarmentBufferRanges* garment_range =
-            find_garment_range(*views.garment_buffer_ranges, garment_id);
+    garment_ranges.reserve(layers.size());
+    for (GarmentLayer layer : layers) {
+        const GarmentBufferRanges* garment_range = find_garment_range(*views.garment_buffer_ranges, layer);
         if (garment_range == nullptr || !garment_prefit_solver_.can_solve(views.cloth_motion,
                                                                           *garment_range,
                                                                           views.body_triangle_geometry,
@@ -311,7 +310,7 @@ bool SimulationPipeline::step(SceneState& scene,
 
         for (const GarmentObject& garment : scene.garments()) {
             const GarmentBufferRanges* garment_range =
-                find_garment_range(*views.garment_buffer_ranges, garment.id);
+                find_garment_range(*views.garment_buffer_ranges, garment.layer);
             if (garment_range == nullptr) {
                 std::cerr << "Cannot apply external forces because garment GPU ranges are missing.\n";
                 return false;

@@ -1,5 +1,6 @@
 #pragma once
 
+#include <cstddef>
 #include <cstdint>
 #include <filesystem>
 #include <string>
@@ -75,6 +76,12 @@ enum class GarmentCategory : std::uint32_t
     Top,
     Bottom,
     FullBody,
+};
+
+enum GarmentLayer : std::size_t
+{
+    Lower = 0u,
+    Upper = 1u,
 };
 
 struct GarmentMesh

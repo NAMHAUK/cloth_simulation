@@ -13,6 +13,7 @@
 
 #include "app/ProjectPaths.h"
 #include "asset/AssetConverter.h"
+#include "asset/AssetDataTypes.h"
 
 class AssetBrowserPanel;
 class AssetLoader;
@@ -49,8 +50,8 @@ private:
 
     struct GarmentCard final
     {
-        std::uint32_t garment_id = 0u;
         glm::vec3 color{1.0f};
+        bool has_garment = false;
         bool is_confirmed = false;
         QFrame* frame = nullptr;
         QPushButton* color_button = nullptr;
@@ -68,23 +69,20 @@ private:
     void update_viewer_layout();
     void update_simulation_controls();
     void request_garment_load(const std::filesystem::path& asset_path);
-    std::optional<std::size_t> take_garment_request_group(std::uint64_t request_id);
+    std::optional<GarmentLayer> take_garment_request_layer(std::uint64_t request_id);
     bool has_pending_garment_load() const;
     bool has_visible_placement_group() const;
     bool has_placement_session() const;
     void update_placement_actions();
     void end_placement_session();
     void create_garment_cards();
-    void set_garment_card(std::size_t index,
-                          std::uint32_t garment_id,
-                          const QString& garment_name,
-                          const glm::vec3& color);
-    void update_garment_card_color(std::size_t index, const glm::vec3& color);
+    void set_garment_card(GarmentLayer layer, const QString& garment_name, const glm::vec3& color);
+    void update_garment_card_color(GarmentLayer layer, const glm::vec3& color);
     void update_garment_cards();
-    void clear_garment_card(std::size_t index);
+    void clear_garment_card(GarmentLayer layer);
     void clear_placement_garment_cards();
-    void highlight_color_edit_card(std::optional<std::size_t> index);
-    void choose_garment_color(std::size_t index);
+    void highlight_color_edit_card(std::optional<GarmentLayer> layer);
+    void choose_garment_color(GarmentLayer layer);
     void refresh_motion_list();
     void refresh_garment_list();
 
@@ -109,5 +107,5 @@ private:
     std::array<PlacementGroupState, 2> placement_group_states_{};
     std::array<std::optional<std::uint64_t>, 2> garment_request_ids_{};
     std::array<GarmentCard, 2> garment_cards_{};
-    std::optional<std::size_t> color_edit_card_index_;
+    std::optional<GarmentLayer> color_edit_card_layer_;
 };

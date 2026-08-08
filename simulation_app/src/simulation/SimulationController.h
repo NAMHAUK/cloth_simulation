@@ -47,11 +47,10 @@ public:
     void load_default_character_mesh(CharacterMesh mesh,
                                      const std::vector<std::uint8_t>& triangle_part_labels,
                                      QOpenGLFunctions_4_5_Core& gl);
-    bool set_garment_mesh(std::size_t placement_index, GarmentMesh mesh);
-    bool remove_garment_placement(std::size_t placement_index);
-    void set_garment_placement(std::size_t placement_index, const glm::vec3& position_offset, float scale);
-    void set_garment_color(std::size_t placement_index, const glm::vec3& color);
-    void set_garment_color_by_id(std::uint32_t garment_id, const glm::vec3& color);
+    bool set_garment_mesh(GarmentLayer layer, GarmentMesh mesh);
+    bool remove_garment_placement(GarmentLayer layer);
+    void set_garment_placement(GarmentLayer layer, const glm::vec3& position_offset, float scale);
+    void set_garment_color(GarmentLayer layer, const glm::vec3& color);
     bool confirm_garment_placement();
     void cancel_garment_placement();
     void reset_scene_to_default();
@@ -67,29 +66,28 @@ public:
     bool has_base_positions() const;
     std::size_t garment_count() const;
     bool can_start_garment_placement() const;
-    std::uint32_t garment_placement_id(std::size_t placement_index) const;
-    glm::vec3 garment_placement_color(std::size_t placement_index) const;
+    glm::vec3 garment_placement_color(GarmentLayer layer) const;
     void draw(const glm::mat4& mvp, float character_opacity, QOpenGLFunctions_4_5_Core& gl);
     void release_gpu();
 
 private:
     struct GarmentPlacementState final
     {
-        std::uint32_t garment_id = 0;
         glm::vec3 position_offset{0.0f};
         float scale = 1.0f;
+        bool is_active = false;
         bool position_changed = false;
         bool scale_changed = false;
 
         void clear()
         {
-            garment_id = 0;
             position_offset = glm::vec3{0.0f};
             scale = 1.0f;
+            is_active = false;
             clear_update();
         }
 
-        bool has_update() const { return garment_id != 0 && (position_changed || scale_changed); }
+        bool has_update() const { return is_active && (position_changed || scale_changed); }
 
         void clear_update()
         {
@@ -103,10 +101,9 @@ private:
     void set_character_mesh_state(CharacterMesh mesh, QOpenGLFunctions_4_5_Core& gl);
     bool has_garment_placement_update() const;
     void set_current_garment_placement(QOpenGLFunctions_4_5_Core& gl);
-    bool build_garment_triangle_bvh(std::uint32_t garment_id);
-    std::vector<std::uint32_t> garment_placement_ids() const;
-    void restore_garment_placements(const std::vector<std::uint32_t>& garment_ids,
-                                    QOpenGLFunctions_4_5_Core& gl);
+    bool build_garment_triangle_bvh(GarmentLayer layer);
+    std::vector<GarmentLayer> garment_placement_layers() const;
+    void restore_garment_placements(const std::vector<GarmentLayer>& layers, QOpenGLFunctions_4_5_Core& gl);
     void clear_garment_placements();
 
     // CPU-side scene state //

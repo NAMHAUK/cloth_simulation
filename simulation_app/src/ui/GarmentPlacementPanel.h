@@ -1,7 +1,8 @@
 #pragma once
 
+#include "asset/AssetDataTypes.h"
+
 #include <array>
-#include <cstddef>
 #include <functional>
 
 #include <glm/vec3.hpp>
@@ -18,12 +19,9 @@ class QString;
 class GarmentPlacementPanel final : public QWidget
 {
 public:
-    static constexpr std::size_t lower_group_index = 0u;
-    static constexpr std::size_t upper_group_index = 1u;
-
     using PlacementChangedCallback =
-        std::function<void(std::size_t group_index, const glm::vec3& position_offset, float scale)>;
-    using ColorChangedCallback = std::function<void(std::size_t group_index, const glm::vec3& color)>;
+        std::function<void(GarmentLayer layer, const glm::vec3& position_offset, float scale)>;
+    using ColorChangedCallback = std::function<void(GarmentLayer layer, const glm::vec3& color)>;
     using ColorSelectedCallback = std::function<void(const glm::vec3& color)>;
     using ColorEditCallback =
         std::function<void(const glm::vec3& color, ColorSelectedCallback color_selected_callback)>;
@@ -41,13 +39,13 @@ public:
     void set_remove_upper_callback(RemoveUpperCallback callback);
     void set_confirm_run_callback(ConfirmRunCallback callback);
     void set_cancel_callback(CancelCallback callback);
-    void begin_session(std::size_t group_index, const QString& garment_name, const glm::vec3& color);
-    void set_group_garment(std::size_t group_index, const QString& garment_name, const glm::vec3& color);
+    void begin_session(GarmentLayer layer, const QString& garment_name, const glm::vec3& color);
+    void set_group_garment(GarmentLayer layer, const QString& garment_name, const glm::vec3& color);
     void show_upper_placeholder();
     void remove_upper_group();
     void set_add_enabled(bool enabled);
     void set_confirm_enabled(bool enabled);
-    std::size_t active_group_index() const;
+    GarmentLayer active_layer() const;
     void reset_placement();
 
 protected:
@@ -70,18 +68,18 @@ private:
         QPushButton* color_button = nullptr;
     };
 
-    void create_group(std::size_t group_index, QWidget* parent);
-    void set_active_group(std::size_t group_index);
-    void set_position_from_slider(std::size_t group_index, int axis_index, int slider_value);
-    void set_scale_from_slider(std::size_t group_index, int slider_value);
-    void choose_group_color(std::size_t group_index);
-    void notify_placement_changed(std::size_t group_index);
-    void update_color_button(std::size_t group_index);
-    void update_value_labels(std::size_t group_index);
-    void reset_group(std::size_t group_index, const glm::vec3& color = glm::vec3{1.0f});
+    void create_group(GarmentLayer layer, QWidget* parent);
+    void set_active_group(GarmentLayer layer);
+    void set_position_from_slider(GarmentLayer layer, int axis_index, int slider_value);
+    void set_scale_from_slider(GarmentLayer layer, int slider_value);
+    void choose_group_color(GarmentLayer layer);
+    void notify_placement_changed(GarmentLayer layer);
+    void update_color_button(GarmentLayer layer);
+    void update_value_labels(GarmentLayer layer);
+    void reset_group(GarmentLayer layer, const glm::vec3& color = glm::vec3{1.0f});
 
     std::array<PlacementGroup, 2> groups_{};
-    std::size_t active_group_index_ = lower_group_index;
+    GarmentLayer active_layer_ = GarmentLayer::Lower;
     QPushButton* add_button_ = nullptr;
     QPushButton* confirm_run_button_ = nullptr;
     PlacementChangedCallback placement_changed_callback_;

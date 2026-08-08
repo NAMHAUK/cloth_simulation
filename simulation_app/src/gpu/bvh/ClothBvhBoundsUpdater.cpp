@@ -42,12 +42,12 @@ bool has_valid_node_level_ranges(const GarmentBvhLayout& layout)
 
 const GarmentBufferRanges* find_garment_buffer_ranges(
     const std::vector<GarmentBufferRanges>& garment_buffer_ranges,
-    std::uint32_t garment_id)
+    GarmentLayer layer)
 {
     const auto iter =
         std::find_if(garment_buffer_ranges.begin(),
                      garment_buffer_ranges.end(),
-                     [garment_id](const GarmentBufferRanges& range) { return range.id == garment_id; });
+                     [layer](const GarmentBufferRanges& range) { return range.layer == layer; });
     return iter == garment_buffer_ranges.end() ? nullptr : &(*iter);
 }
 }
@@ -99,7 +99,7 @@ bool ClothBvhBoundsUpdater::can_update(const ClothMotionBufferView& motion_view,
     for (const GarmentBvhLayout& layout : *bvh_view.garment_layouts) {
         const GarmentBvhRange& bvh_range = layout.range;
         const GarmentBufferRanges* garment_range =
-            find_garment_buffer_ranges(garment_buffer_ranges, bvh_range.garment_id);
+            find_garment_buffer_ranges(garment_buffer_ranges, bvh_range.layer);
         if (garment_range == nullptr ||
             !is_valid_range(garment_range->vertex_offset,
                             garment_range->vertex_count,
@@ -162,7 +162,7 @@ bool ClothBvhBoundsUpdater::update(const ClothMotionBufferView& motion_view,
 
             const GarmentBvhRange& bvh_range = layout.range;
             const GarmentBufferRanges* garment_range =
-                find_garment_buffer_ranges(garment_buffer_ranges, bvh_range.garment_id);
+                find_garment_buffer_ranges(garment_buffer_ranges, bvh_range.layer);
             const BvhNodeRange& level_range = layout.node_ranges_by_level[level_index];
 
             gl.glProgramUniform1ui(program_, vertex_offset_location_, garment_range->vertex_offset);

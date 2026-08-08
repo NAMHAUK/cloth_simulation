@@ -1,5 +1,7 @@
 #pragma once
 
+#include "asset/AssetDataTypes.h"
+
 #include <cstdint>
 #include <vector>
 
@@ -107,7 +109,7 @@ struct AttachmentConstraintBufferView final
 
 struct GarmentBufferRanges final
 {
-    std::uint32_t id = 0;
+    GarmentLayer layer = GarmentLayer::Lower;
     std::uint32_t vertex_offset = 0;
     std::uint32_t vertex_count = 0;
     std::uint32_t index_offset = 0;

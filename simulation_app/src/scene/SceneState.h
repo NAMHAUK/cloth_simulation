@@ -13,8 +13,7 @@
 
 struct GarmentObject
 {
-    std::uint32_t id = 0;
-    std::uint32_t layer = 0;
+    GarmentLayer layer = GarmentLayer::Lower;
     GarmentMesh source_mesh;
     GarmentMesh mesh;
     bool visible = true;
@@ -48,14 +47,15 @@ public:
     const EdgeBvhData& default_body_edge_bvh_data() const;
 
     // Garments
-    std::uint32_t add_garment_mesh(GarmentMesh mesh);
-    bool replace_garment_mesh(std::uint32_t garment_id, GarmentMesh mesh);
-    bool remove_garment(std::uint32_t garment_id);
-    GarmentObject* update_garment_placement(std::uint32_t garment_id,
+    bool add_garment_mesh(GarmentLayer layer, GarmentMesh mesh);
+    bool replace_garment_mesh(GarmentLayer layer, GarmentMesh mesh);
+    bool remove_garment(GarmentLayer layer);
+    GarmentObject* update_garment_placement(GarmentLayer layer,
                                             const glm::vec3& position_offset,
                                             float scale);
-    bool update_garment_color(std::uint32_t garment_id, const glm::vec3& color);
-    GarmentObject* find_garment(std::uint32_t garment_id);
+    bool update_garment_color(GarmentLayer layer, const glm::vec3& color);
+    GarmentObject* find_garment(GarmentLayer layer);
+    const GarmentObject* find_garment(GarmentLayer layer) const;
     void clear_garments();
     const std::vector<GarmentObject>& garments() const;
     bool has_multiple_garments() const;
@@ -77,8 +77,6 @@ private:
 
     // Garments
     std::vector<GarmentObject> garments_;
-    std::uint32_t next_garment_id_ = 1;
-    std::uint32_t next_garment_layer_ = 0;
 
     // Playback
     std::uint32_t current_character_frame_ = 0;
