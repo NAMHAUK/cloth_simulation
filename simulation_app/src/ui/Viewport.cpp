@@ -67,7 +67,7 @@ constexpr int simulation_button_size = 40;
 constexpr int simulation_button_gap = 10;
 constexpr int simulation_button_count = 3;
 constexpr int simulation_icon_size = 22;
-constexpr int motion_loading_indicator_size = 48;
+constexpr int motion_loading_indicator_size = 96;
 constexpr int motion_loading_line_count = 6;
 constexpr int motion_loading_interval_ms = 80;
 constexpr int placement_panel_width = 280;
@@ -150,7 +150,7 @@ QPixmap make_motion_loading_pixmap(int step)
         QColor color{"#f5f5f5"};
         color.setAlpha(55 + ((index + step) % motion_loading_line_count) * 40);
         painter.setPen(QPen{color, 4.0, Qt::SolidLine, Qt::RoundCap});
-        painter.drawLine(QPointF{0.0, -10.0}, QPointF{0.0, -19.0});
+        painter.drawLine(QPointF{0.0, -20.0}, QPointF{0.0, -38.0});
         painter.rotate(360.0 / motion_loading_line_count);
     }
 
