@@ -1,0 +1,238 @@
+/* Asset Browser */
+QPushButton[role="assetButton"] {
+    background-color: #3a3a3a;
+    border: 1px solid #242424;
+    border-radius: 14px;
+    padding: 4px;
+}
+
+QPushButton[role="assetButton"]:checked {
+    background-color: #2f2f2f;
+}
+
+QPushButton[role="assetButton"]:hover {
+    background-color: #4a4a4a;
+}
+
+QPushButton[role="assetButton"]:disabled {
+    background-color: #555555;
+    border-color: #444444;
+}
+
+#assetBrowserExpandedPanel {
+    background-color: rgba(245, 245, 245, 235);
+    border: 1px solid #9a9a9a;
+    border-radius: 4px;
+}
+
+#assetBrowserExpandedPanel QTableWidget {
+    background-color: white;
+    border: 1px solid #b5b5b5;
+    gridline-color: #b5b5b5;
+}
+
+#assetBrowserExpandedPanel QHeaderView::section {
+    background-color: #5a5a5a;
+    color: white;
+    border: none;
+    border-right: 1px solid #b5b5b5;
+    border-bottom: 1px solid #b5b5b5;
+    padding: 4px;
+    font-weight: 600;
+}
+
+#assetBrowserExpandedPanel QHeaderView::section:last {
+    border-right: none;
+}
+
+#assetBrowserExpandedPanel QPushButton {
+    background-color: #5a5a5a;
+    border: 1px solid #242424;
+    border-radius: 4px;
+}
+
+#assetBrowserExpandedPanel QPushButton:hover {
+    background-color: #7a7a7a;
+}
+
+#assetBrowserExpandedPanel #subjectBackButton {
+    background: transparent;
+    border: none;
+    color: #777777;
+    font-size: 12px;
+    padding: 0;
+}
+
+#assetBrowserExpandedPanel #subjectBackButton:hover {
+    color: #1f6feb;
+}
+
+#assetBrowserExpandedPanel #assetBrowserCloseButton {
+    padding: 0;
+}
+
+#assetBrowserExpandedPanel #assetBrowserTitle {
+    font-size: 13px;
+    font-weight: 600;
+}
+
+#assetBrowserExpandedPanel QPushButton[role="primaryAction"] {
+    background-color: #1f6feb;
+    border: 1px solid #1158c7;
+    border-radius: 4px;
+    padding: 0;
+}
+
+#assetBrowserExpandedPanel QPushButton[role="primaryAction"]:hover {
+    background-color: #2f81f7;
+}
+
+#assetBrowserExpandedPanel QPushButton[role="primaryAction"]:disabled {
+    background-color: #8caee6;
+}
+
+/* Garment Cards */
+#garmentCardBody {
+    background-color: #3a3a3a;
+    border: none;
+    border-radius: 8px;
+    color: white;
+    font-size: 16px;
+    font-weight: 600;
+}
+
+/* Garment Color */
+#garmentColorPanel {
+    background-color: rgba(245, 245, 245, 235);
+    border: 1px solid #9a9a9a;
+    border-radius: 4px;
+}
+
+#garmentColorPanel QLineEdit {
+    background: transparent;
+    border: none;
+}
+
+#garmentColorPanel #colorPanelCloseButton {
+    padding: 0;
+    background-color: #5a5a5a;
+    border: 1px solid #242424;
+    border-radius: 4px;
+}
+
+#garmentColorPanel #colorPanelCloseButton:hover {
+    background-color: #7a7a7a;
+}
+
+#garmentColorPanel QSlider#hueSlider::groove:vertical {
+    background: qlineargradient(x1:0, y1:1, x2:0, y2:0,
+        stop:0 #ff0000, stop:0.166 #ffff00, stop:0.333 #00ff00,
+        stop:0.5 #00ffff, stop:0.666 #0000ff, stop:0.833 #ff00ff, stop:1 #ff0000);
+    width: 24px;
+    border: 1px solid #666666;
+}
+
+#garmentColorPanel QSlider#hueSlider::handle:vertical {
+    background: transparent;
+    border: 2px solid white;
+    height: 6px;
+    margin: 0 -3px;
+}
+
+/* Placement */
+#garmentPlacementPanel {
+    background-color: rgba(245, 245, 245, 235);
+    border: 1px solid #9a9a9a;
+    border-radius: 4px;
+}
+
+#garmentPlacementPanel QLabel {
+    border: none;
+    background: transparent;
+}
+
+#garmentPlacementPanel QPushButton {
+    background-color: #1f6feb;
+    color: white;
+    border: 1px solid #1158c7;
+    border-radius: 4px;
+    padding: 2px 8px;
+}
+
+#garmentPlacementPanel QPushButton:hover {
+    background-color: #2f81f7;
+}
+
+#garmentPlacementPanel QPushButton:disabled {
+    background-color: #8caee6;
+    color: #dddddd;
+}
+
+#garmentPlacementPanel QSlider {
+    background: transparent;
+    border: none;
+}
+
+#garmentPlacementPanel #placementGroup {
+    background-color: rgba(255, 255, 255, 150);
+    border: 1px solid #b8b8b8;
+    border-radius: 4px;
+}
+
+#garmentPlacementPanel #placementGroup[active="true"] {
+    border: 2px solid #1f6feb;
+}
+
+#garmentPlacementPanel #placementCancelButton {
+    padding: 0;
+    background-color: #5a5a5a;
+    border: 1px solid #242424;
+}
+
+#garmentPlacementPanel #placementCancelButton:hover {
+    background-color: #7a7a7a;
+}
+
+#garmentPlacementPanel #upperRemoveButton,
+#garmentPlacementPanel #addUpperButton {
+    padding: 0;
+}
+
+#garmentPlacementPanel #placementConfirmButton {
+    background: transparent;
+    border: none;
+    padding: 0;
+}
+
+#garmentPlacementPanel #placementConfirmButton:hover {
+    background-color: #e8f5e9;
+    border: 1px solid #81c784;
+    border-radius: 4px;
+}
+
+#garmentPlacementPanel QLabel[role="title"] {
+    font-size: 16px;
+    font-weight: 600;
+}
+
+#garmentPlacementPanel QLabel[role="garmentName"] {
+    font-size: 14px;
+    font-weight: 560;
+    color: #3f5f7f;
+}
+
+/* Viewport */
+QPushButton[role="viewportControl"] {
+    background-color: #eeeeee;
+    border: 1px solid #c8c8c8;
+    border-radius: 7px;
+}
+
+QPushButton[role="viewportControl"]:hover {
+    background-color: #f7f7f7;
+}
+
+QPushButton[role="viewportControl"]:disabled {
+    background-color: #dddddd;
+    border-color: #c6c6c6;
+}

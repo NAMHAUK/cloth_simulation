@@ -6,7 +6,7 @@ set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_AUTOMOC ON)
 
-find_package(Qt6 CONFIG REQUIRED COMPONENTS Widgets OpenGLWidgets OpenGL Concurrent)
+find_package(Qt6 CONFIG REQUIRED COMPONENTS Widgets OpenGLWidgets OpenGL Concurrent Svg)
 find_package(glm CONFIG REQUIRED)
 
 get_filename_component(REPO_ROOT "${CMAKE_CURRENT_SOURCE_DIR}/.." ABSOLUTE)
@@ -150,6 +150,27 @@ add_executable(simulation_app
     shaders/body/body_mesh_search.glsl
 )
 
+qt_add_resources(simulation_app ui_icons
+    PREFIX "/icons"
+    BASE "${REPO_ROOT}/data/sources/icon"
+    FILES
+        ${REPO_ROOT}/data/sources/icon/play.svg
+        ${REPO_ROOT}/data/sources/icon/pause.svg
+        ${REPO_ROOT}/data/sources/icon/default-pose.svg
+        ${REPO_ROOT}/data/sources/icon/reset-scene.svg
+        ${REPO_ROOT}/data/sources/icon/close.svg
+        ${REPO_ROOT}/data/sources/icon/plus.svg
+        ${REPO_ROOT}/data/sources/icon/confirm.svg
+        ${REPO_ROOT}/data/sources/icon/file-import-solid-full.svg
+)
+
+qt_add_resources(simulation_app ui_styles
+    PREFIX "/styles"
+    BASE "${CMAKE_CURRENT_SOURCE_DIR}/resources/styles"
+    FILES
+        ${CMAKE_CURRENT_SOURCE_DIR}/resources/styles/app.qss
+)
+
 add_executable(garment_converter
     tools/garment_converter/main.cpp
     tools/garment_converter/GarmentConverter.cpp
@@ -183,6 +204,7 @@ target_link_libraries(simulation_app PRIVATE
     Qt6::OpenGLWidgets
     Qt6::OpenGL
     Qt6::Concurrent
+    Qt6::Svg
     glm::glm
     opengl32
 )

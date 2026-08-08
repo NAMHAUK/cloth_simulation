@@ -71,14 +71,6 @@ constexpr int right_panel_content_width = 280;
 constexpr int right_panel_gap = 10;
 constexpr int right_panel_bottom_margin = 50;
 
-enum class ControlIcon
-{
-    Play,
-    Pause,
-    DefaultPose,
-    Reset,
-};
-
 class LoadingOverlay final : public QLabel
 {
 public:
@@ -94,47 +86,6 @@ protected:
         return true;
     }
 };
-
-QIcon make_simulation_control_icon(ControlIcon icon_type, const QColor& icon_color)
-{
-    QPixmap pixmap(simulation_icon_size, simulation_icon_size);
-    pixmap.fill(Qt::transparent);
-
-    QPainter painter(&pixmap);
-    painter.setRenderHint(QPainter::Antialiasing, true);
-    painter.setPen(Qt::NoPen);
-    painter.setBrush(icon_color);
-
-    switch (icon_type) {
-    case ControlIcon::Play: {
-        QPolygonF triangle;
-        triangle << QPointF{6.0, 4.0} << QPointF{6.0, 18.0} << QPointF{18.0, 11.0};
-        painter.drawPolygon(triangle);
-        break;
-    }
-    case ControlIcon::Pause:
-        painter.drawRect(QRectF{6.0, 4.0, 4.5, 14.0});
-        painter.drawRect(QRectF{13.5, 4.0, 4.5, 14.0});
-        break;
-    case ControlIcon::DefaultPose: {
-        painter.setBrush(Qt::NoBrush);
-        painter.setPen(QPen{icon_color, 3.0, Qt::SolidLine, Qt::RoundCap, Qt::RoundJoin});
-        painter.drawArc(QRectF{4.0, 3.5, 14.0, 14.0}, -35 * 16, 285 * 16);
-
-        painter.setPen(Qt::NoPen);
-        painter.setBrush(icon_color);
-        QPolygonF arrow;
-        arrow << QPointF{4.2, 7.0} << QPointF{4.2, 2.5} << QPointF{8.6, 6.8};
-        painter.drawPolygon(arrow);
-        break;
-    }
-    case ControlIcon::Reset:
-        painter.drawRect(QRectF{5.0, 5.0, 12.0, 12.0});
-        break;
-    }
-
-    return QIcon{pixmap};
-}
 
 QPixmap make_loading_spinner_pixmap(int step)
 {
@@ -156,30 +107,14 @@ QPixmap make_loading_spinner_pixmap(int step)
     return pixmap;
 }
 
-void setup_control_button(QPushButton* button,
-                          ControlIcon icon_type,
-                          const char* tool_tip,
-                          const QColor& icon_color)
+void setup_control_button(QPushButton* button, const QIcon& icon, const char* tool_tip)
 {
     button->setFixedSize(simulation_button_size, simulation_button_size);
-    button->setIcon(make_simulation_control_icon(icon_type, icon_color));
+    button->setIcon(icon);
     button->setIconSize(QSize{simulation_icon_size, simulation_icon_size});
     button->setToolTip(tool_tip);
     button->setFocusPolicy(Qt::NoFocus);
-    button->setStyleSheet(R"(
-        QPushButton {
-            background-color: #eeeeee;
-            border: 1px solid #c8c8c8;
-            border-radius: 7px;
-        }
-        QPushButton:hover {
-            background-color: #f7f7f7;
-        }
-        QPushButton:disabled {
-            background-color: #dddddd;
-            border-color: #c6c6c6;
-        }
-    )");
+    button->setProperty("role", "viewportControl");
 }
 
 bool is_camera_control_button(Qt::MouseButtons buttons)
@@ -268,9 +203,11 @@ void Viewport::setup_simulation_control_buttons()
     play_pause_button_ = new QPushButton(this);
     default_pose_button_ = new QPushButton(this);
     reset_button_ = new QPushButton(this);
-    setup_control_button(play_pause_button_, ControlIcon::Play, "Run", QColor{"#43a047"});
-    setup_control_button(default_pose_button_, ControlIcon::DefaultPose, "Default Pose", QColor{"#1e88e5"});
-    setup_control_button(reset_button_, ControlIcon::Reset, "Reset", QColor{"#e53935"});
+    setup_control_button(play_pause_button_, play_icon_, "Run");
+    setup_control_button(default_pose_button_,
+                         QIcon{QStringLiteral(":/icons/default-pose.svg")},
+                         "Return to Default Pose");
+    setup_control_button(reset_button_, QIcon{QStringLiteral(":/icons/reset-scene.svg")}, "Reset Scene");
 
     connect(play_pause_button_, &QPushButton::clicked, this, &Viewport::play_pause_requested);
     connect(default_pose_button_, &QPushButton::clicked, this, &Viewport::default_pose_requested);
@@ -315,9 +252,7 @@ void Viewport::initializeGL()
 // UI Updates
 void Viewport::set_simulation_button_state(bool simulation_running, bool buttons_enabled)
 {
-    play_pause_button_->setIcon(
-        make_simulation_control_icon(simulation_running ? ControlIcon::Pause : ControlIcon::Play,
-                                     simulation_running ? QColor{"#f4b400"} : QColor{"#43a047"}));
+    play_pause_button_->setIcon(simulation_running ? pause_icon_ : play_icon_);
     play_pause_button_->setToolTip(simulation_running ? "Pause" : "Run");
     play_pause_button_->setEnabled(buttons_enabled);
     default_pose_button_->setEnabled(buttons_enabled);

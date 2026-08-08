@@ -15,17 +15,6 @@ namespace {
 constexpr int garment_color_button_size = 38;
 constexpr int garment_card_height = garment_color_button_size;
 
-const QString card_style = QStringLiteral(R"(
-    #garmentCardBody {
-        background-color: #3a3a3a;
-        border: none;
-        border-radius: 8px;
-        color: white;
-        font-size: 16px;
-        font-weight: 600;
-    }
-)");
-
 const QString color_button_style = QStringLiteral(R"(
     QPushButton {
         background-color: %1;
@@ -43,7 +32,6 @@ GarmentCardsPanel::GarmentCardsPanel(QWidget* parent) : QWidget(parent)
     auto* cards_layout = new QVBoxLayout(this);
     cards_layout->setContentsMargins(0, 0, 0, 0);
     cards_layout->setSpacing(8);
-    setStyleSheet(card_style);
 
     setup_card(GarmentLayer::Lower);
     setup_card(GarmentLayer::Upper);

@@ -11,7 +11,6 @@
 #include <QMouseEvent>
 #include <QPainter>
 #include <QPen>
-#include <QPixmap>
 #include <QPushButton>
 #include <QRegularExpression>
 #include <QRegularExpressionValidator>
@@ -29,43 +28,6 @@ constexpr int color_picker_width = 226;
 constexpr int color_picker_height = 150;
 constexpr int hue_slider_width = 26;
 constexpr qreal color_selector_radius = 6.0;
-
-const QString panel_style = QStringLiteral(R"(
-    #garmentColorPanel {
-        background-color: rgba(245, 245, 245, 235);
-        border: 1px solid #9a9a9a;
-        border-radius: 4px;
-    }
-    #garmentColorPanel QLineEdit {
-        background: transparent;
-        border: none;
-    }
-    #garmentColorPanel #colorPanelCloseButton {
-        padding: 0;
-        background-color: #5a5a5a;
-        border: 1px solid #242424;
-        border-radius: 4px;
-    }
-    #garmentColorPanel #colorPanelCloseButton:hover {
-        background-color: #7a7a7a;
-    }
-)");
-
-const QString hue_slider_style = QStringLiteral(R"(
-    QSlider::groove:vertical {
-        background: qlineargradient(x1:0, y1:1, x2:0, y2:0,
-            stop:0 #ff0000, stop:0.166 #ffff00, stop:0.333 #00ff00,
-            stop:0.5 #00ffff, stop:0.666 #0000ff, stop:0.833 #ff00ff, stop:1 #ff0000);
-        width: 24px;
-        border: 1px solid #666666;
-    }
-    QSlider::handle:vertical {
-        background: transparent;
-        border: 2px solid white;
-        height: 6px;
-        margin: 0 -3px;
-    }
-)");
 
 const QString color_display_style = QStringLiteral("background-color: %1; color: %2; "
                                                    "border: 1px solid #666666;");
@@ -221,25 +183,9 @@ private:
     qreal value_ = 1.0;
 };
 
-namespace {
-QIcon make_close_icon()
-{
-    QPixmap pixmap(close_icon_size, close_icon_size);
-    pixmap.fill(Qt::transparent);
-
-    QPainter painter(&pixmap);
-    painter.setRenderHint(QPainter::Antialiasing, true);
-    painter.setPen(QPen{Qt::white, 2.0, Qt::SolidLine, Qt::RoundCap});
-    painter.drawLine(2, 2, close_icon_size - 2, close_icon_size - 2);
-    painter.drawLine(close_icon_size - 2, 2, 2, close_icon_size - 2);
-    return QIcon{pixmap};
-}
-}
-
 GarmentColorPanel::GarmentColorPanel(QWidget* parent) : QFrame(parent)
 {
     setObjectName("garmentColorPanel");
-    setStyleSheet(panel_style);
 
     auto* root_layout = new QVBoxLayout(this);
     root_layout->setContentsMargins(10, 10, 10, 10);
@@ -265,7 +211,7 @@ void GarmentColorPanel::setup_header(QVBoxLayout& root_layout)
     auto* close_button = new QPushButton(this);
     close_button->setObjectName("colorPanelCloseButton");
     close_button->setFixedSize(close_button_size, close_button_size);
-    close_button->setIcon(make_close_icon());
+    close_button->setIcon(QIcon{QStringLiteral(":/icons/close.svg")});
     close_button->setIconSize(QSize{close_icon_size, close_icon_size});
     close_button->setToolTip("Close garment color");
 
@@ -284,9 +230,9 @@ void GarmentColorPanel::setup_picker(QVBoxLayout& root_layout)
     saturation_value_picker_->setFixedSize(color_picker_width, color_picker_height);
 
     hue_slider_ = new HueSlider(this);
+    hue_slider_->setObjectName("hueSlider");
     hue_slider_->setRange(0, hue_slider_max);
     hue_slider_->setFixedSize(hue_slider_width, color_picker_height);
-    hue_slider_->setStyleSheet(hue_slider_style);
 
     auto* picker_layout = new QHBoxLayout();
     picker_layout->setContentsMargins(0, 0, 0, 0);
