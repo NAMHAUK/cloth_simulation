@@ -21,32 +21,41 @@ public:
     using ColorEditCallback = std::function<void(GarmentLayer layer, const glm::vec3& color)>;
 
     explicit GarmentCardsPanel(QWidget* parent = nullptr);
-    void set_color_edit_callback(ColorEditCallback callback);
 
-    // Card state
-    void set_card(GarmentLayer layer, const QString& garment_name, const glm::vec3& color);
-    void confirm_card(GarmentLayer layer);
+    void set_card(GarmentLayer layer, const QString& garment_name);
     void set_card_color(GarmentLayer layer, const glm::vec3& color);
+    void confirm_cards();
     void clear_card(GarmentLayer layer);
+    void clear_unconfirmed_cards();
     void clear_cards();
+
     void clear_edit_highlight();
 
+    void set_color_edit_callback(ColorEditCallback callback);
+
 private:
+    enum class CardState
+    {
+        Empty,
+        Placement,
+        Confirmed,
+    };
+
     struct Card final
     {
         glm::vec3 color{1.0f};
-        bool has_garment = false;
-        bool is_confirmed = false;
+        CardState state = CardState::Empty;
         QFrame* frame = nullptr;
         QPushButton* color_button = nullptr;
         QLabel* name_label = nullptr;
     };
 
-    // Internal UI
-    void create_card(GarmentLayer layer);
-    void request_color_edit(GarmentLayer layer);
-    void update_card_color(GarmentLayer layer);
+    void setup_card(GarmentLayer layer);
+
     void update_card_visibility();
+
+    void request_color_edit(GarmentLayer layer);
+    void update_color_button(GarmentLayer layer);
 
     std::array<Card, 2> cards_{};
     std::optional<GarmentLayer> edit_card_layer_;

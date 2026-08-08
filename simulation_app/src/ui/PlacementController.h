@@ -1,15 +1,15 @@
 #pragma once
 
-#include <array>
 #include <cstddef>
 #include <filesystem>
 #include <functional>
+#include <optional>
 
 class GarmentCardsPanel;
 class GarmentColorPanel;
 class PlacementPanel;
 class SimulationController;
-class QWidget;
+enum GarmentLayer : std::size_t;
 struct GarmentMesh;
 
 class PlacementController final
@@ -21,37 +21,30 @@ public:
     PlacementController(SimulationController& simulation_controller,
                         PlacementPanel& placement_panel,
                         GarmentColorPanel& color_panel,
-                        GarmentCardsPanel& cards_panel,
-                        QWidget& message_parent);
+                        GarmentCardsPanel& cards_panel);
     ~PlacementController();
 
     PlacementController(const PlacementController&) = delete;
     PlacementController& operator=(const PlacementController&) = delete;
 
-    void set_active_changed_callback(ActiveChangedCallback callback);
-    void set_layout_changed_callback(LayoutChangedCallback callback);
     void load_garment(const std::filesystem::path& asset_path, GarmentMesh mesh);
-    void end_session();
     void reset();
+
     bool is_active() const;
 
-private:
-    enum class PlacementPhase
-    {
-        Hidden,
-        Waiting,
-        Ready,
-    };
+    void set_active_changed_callback(ActiveChangedCallback callback);
+    void set_layout_changed_callback(LayoutChangedCallback callback);
 
-    // Callback setup
+private:
     void setup_placement_callbacks();
     void setup_color_callbacks();
 
-    // Placement state
+    GarmentLayer target_layer() const;
+    void end_session();
     void reset_session();
-    void clear_placement_cards();
-    void update_controls();
-    void update_button_state();
+
+    void set_active(bool active);
+
     void notify_active_changed();
     void notify_layout_changed();
 
@@ -59,8 +52,7 @@ private:
     PlacementPanel& placement_panel_;
     GarmentColorPanel& color_panel_;
     GarmentCardsPanel& cards_panel_;
-    QWidget& message_parent_;
-    std::array<PlacementPhase, 2> placement_phases_{};
+    std::optional<GarmentLayer> color_edit_layer_;
     bool active_ = false;
     ActiveChangedCallback active_changed_callback_;
     LayoutChangedCallback layout_changed_callback_;

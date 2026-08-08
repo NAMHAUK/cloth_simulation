@@ -14,6 +14,28 @@
 namespace {
 constexpr int garment_color_button_size = 38;
 constexpr int garment_card_height = garment_color_button_size;
+
+const QString card_style = QStringLiteral(R"(
+    #garmentCardBody {
+        background-color: #3a3a3a;
+        border: none;
+        border-radius: 8px;
+        color: white;
+        font-size: 16px;
+        font-weight: 600;
+    }
+)");
+
+const QString color_button_style = QStringLiteral(R"(
+    QPushButton {
+        background-color: %1;
+        border: 3px solid %2;
+        border-radius: 19px;
+    }
+    QPushButton:hover {
+        border-color: #1f6feb;
+    }
+)");
 }
 
 GarmentCardsPanel::GarmentCardsPanel(QWidget* parent) : QWidget(parent)
@@ -21,125 +43,35 @@ GarmentCardsPanel::GarmentCardsPanel(QWidget* parent) : QWidget(parent)
     auto* cards_layout = new QVBoxLayout(this);
     cards_layout->setContentsMargins(0, 0, 0, 0);
     cards_layout->setSpacing(8);
-    setStyleSheet(R"(
-        #garmentCard {
-            background: transparent;
-            border: none;
-        }
-        #garmentCardBody {
-            background-color: #3a3a3a;
-            border: none;
-            border-radius: 8px;
-        }
-        #garmentCardBody QLabel {
-            background: transparent;
-            border: none;
-            color: white;
-            font-size: 16px;
-            font-weight: 600;
-        }
-    )");
+    setStyleSheet(card_style);
 
-    for (std::size_t index = 0; index < cards_.size(); ++index) {
-        create_card(static_cast<GarmentLayer>(index));
-    }
+    setup_card(GarmentLayer::Lower);
+    setup_card(GarmentLayer::Upper);
 
     update_card_visibility();
 }
 
-void GarmentCardsPanel::set_color_edit_callback(ColorEditCallback callback)
-{
-    color_edit_callback_ = std::move(callback);
-}
-
-// Card state
-void GarmentCardsPanel::set_card(GarmentLayer layer, const QString& garment_name, const glm::vec3& color)
-{
-    Card& card = cards_[layer];
-    card.color = color;
-    card.has_garment = true;
-    card.is_confirmed = false;
-    card.name_label->setText(garment_name);
-    card.name_label->setToolTip(garment_name);
-    update_card_color(layer);
-    update_card_visibility();
-}
-
-void GarmentCardsPanel::confirm_card(GarmentLayer layer)
-{
-    if (!cards_[layer].has_garment) {
-        return;
-    }
-
-    cards_[layer].is_confirmed = true;
-    update_card_visibility();
-}
-
-void GarmentCardsPanel::set_card_color(GarmentLayer layer, const glm::vec3& color)
-{
-    if (!cards_[layer].has_garment) {
-        return;
-    }
-
-    cards_[layer].color = color;
-    update_card_color(layer);
-}
-
-void GarmentCardsPanel::clear_card(GarmentLayer layer)
-{
-    Card& card = cards_[layer];
-    card.has_garment = false;
-    card.is_confirmed = false;
-    card.name_label->clear();
-    update_card_visibility();
-}
-
-void GarmentCardsPanel::clear_cards()
-{
-    for (Card& card : cards_) {
-        card.has_garment = false;
-        card.is_confirmed = false;
-        card.name_label->clear();
-    }
-    update_card_visibility();
-}
-
-void GarmentCardsPanel::clear_edit_highlight()
-{
-    edit_card_layer_.reset();
-    for (std::size_t index = 0; index < cards_.size(); ++index) {
-        update_card_color(static_cast<GarmentLayer>(index));
-    }
-}
-
-// Internal UI
-void GarmentCardsPanel::create_card(GarmentLayer layer)
+// Initialization
+void GarmentCardsPanel::setup_card(GarmentLayer layer)
 {
     Card& card = cards_[layer];
     card.frame = new QFrame(this);
-    card.frame->setObjectName("garmentCard");
     card.frame->setFixedHeight(garment_card_height);
 
     auto* card_layout = new QGridLayout(card.frame);
     card_layout->setContentsMargins(0, 0, 0, 0);
 
-    auto* card_body = new QFrame(card.frame);
-    card_body->setObjectName("garmentCardBody");
-    card_body->setFixedHeight(garment_card_height);
-
-    auto* body_layout = new QHBoxLayout(card_body);
-    body_layout->setContentsMargins(garment_color_button_size / 2 + 10, 0, 12, 0);
-
+    card.name_label = new QLabel(card.frame);
+    card.name_label->setObjectName("garmentCardBody");
+    card.name_label->setContentsMargins(garment_color_button_size / 2 + 10, 0, 12, 0);
     auto* body_row_layout = new QHBoxLayout();
     body_row_layout->setContentsMargins(garment_color_button_size / 2, 0, 0, 0);
-    body_row_layout->addWidget(card_body);
+    body_row_layout->addWidget(card.name_label);
 
     card.color_button = new QPushButton(card.frame);
     card.color_button->setFixedSize(garment_color_button_size, garment_color_button_size);
     card.color_button->setToolTip("Choose garment color");
-    card.name_label = new QLabel(card_body);
 
-    body_layout->addWidget(card.name_label);
     card_layout->addLayout(body_row_layout, 0, 0);
     card_layout->addWidget(card.color_button, 0, 0, Qt::AlignLeft | Qt::AlignVCenter);
     card.color_button->raise();
@@ -148,56 +80,100 @@ void GarmentCardsPanel::create_card(GarmentLayer layer)
     connect(card.color_button, &QPushButton::clicked, this, [this, layer]() { request_color_edit(layer); });
 }
 
-void GarmentCardsPanel::request_color_edit(GarmentLayer layer)
+// Card State
+void GarmentCardsPanel::set_card(GarmentLayer layer, const QString& garment_name)
 {
-    const Card& card = cards_[layer];
-    if (!card.has_garment || !card.is_confirmed) {
-        return;
-    }
+    Card& card = cards_[layer];
+    card.color = glm::vec3{1.0f};
+    card.state = CardState::Placement;
+    card.name_label->setText(garment_name);
+    card.name_label->setToolTip(garment_name);
 
-    edit_card_layer_ = layer;
-    for (std::size_t card_index = 0; card_index < cards_.size(); ++card_index) {
-        update_card_color(static_cast<GarmentLayer>(card_index));
-    }
-    if (color_edit_callback_) {
-        color_edit_callback_(layer, card.color);
-    }
+    update_color_button(layer);
+    update_card_visibility();
 }
 
-void GarmentCardsPanel::update_card_color(GarmentLayer layer)
+void GarmentCardsPanel::set_card_color(GarmentLayer layer, const glm::vec3& color)
 {
-    if (!cards_[layer].has_garment) {
-        return;
+    cards_[layer].color = color;
+    update_color_button(layer);
+}
+
+void GarmentCardsPanel::confirm_cards()
+{
+    for (Card& card : cards_) {
+        if (card.state == CardState::Placement) {
+            card.state = CardState::Confirmed;
+        }
     }
 
-    const Card& card = cards_[layer];
-    const QColor button_color = QColor::fromRgbF(card.color.r, card.color.g, card.color.b);
-    const QString border_color = edit_card_layer_ == layer ? "#1f6feb" : "#111111";
-    card.color_button->setStyleSheet(QString(R"(
-        QPushButton {
-            background-color: rgb(%1, %2, %3);
-            border: 3px solid %4;
-            border-radius: 19px;
-            padding: 0;
+    update_card_visibility();
+}
+
+void GarmentCardsPanel::clear_card(GarmentLayer layer)
+{
+    cards_[layer].state = CardState::Empty;
+    update_card_visibility();
+}
+
+void GarmentCardsPanel::clear_unconfirmed_cards()
+{
+    for (Card& card : cards_) {
+        if (card.state == CardState::Placement) {
+            card.state = CardState::Empty;
         }
-        QPushButton:hover {
-            border-color: #1f6feb;
-        }
-    )")
-                                         .arg(button_color.red())
-                                         .arg(button_color.green())
-                                         .arg(button_color.blue())
-                                         .arg(border_color));
+    }
+
+    update_card_visibility();
+}
+
+void GarmentCardsPanel::clear_cards()
+{
+    for (Card& card : cards_) {
+        card.state = CardState::Empty;
+    }
+
+    update_card_visibility();
 }
 
 void GarmentCardsPanel::update_card_visibility()
 {
-    bool has_visible_card = false;
-    for (const Card& card : cards_) {
-        const bool is_visible = card.has_garment && card.is_confirmed;
-        card.frame->setVisible(is_visible);
-        has_visible_card = has_visible_card || is_visible;
-    }
+    const bool lower_visible = cards_[GarmentLayer::Lower].state == CardState::Confirmed;
+    const bool upper_visible = cards_[GarmentLayer::Upper].state == CardState::Confirmed;
 
-    setVisible(has_visible_card);
+    cards_[GarmentLayer::Lower].frame->setVisible(lower_visible);
+    cards_[GarmentLayer::Upper].frame->setVisible(upper_visible);
+
+    setVisible(lower_visible || upper_visible);
+}
+
+// Color Editing
+void GarmentCardsPanel::request_color_edit(GarmentLayer layer)
+{
+    edit_card_layer_ = layer;
+    update_color_button(GarmentLayer::Lower);
+    update_color_button(GarmentLayer::Upper);
+
+    color_edit_callback_(layer, cards_[layer].color);
+}
+
+void GarmentCardsPanel::clear_edit_highlight()
+{
+    edit_card_layer_.reset();
+    update_color_button(GarmentLayer::Lower);
+    update_color_button(GarmentLayer::Upper);
+}
+
+void GarmentCardsPanel::update_color_button(GarmentLayer layer)
+{
+    const Card& card = cards_[layer];
+    const QColor button_color = QColor::fromRgbF(card.color.r, card.color.g, card.color.b);
+    const QString border_color = edit_card_layer_ == layer ? "#1f6feb" : "#111111";
+    card.color_button->setStyleSheet(color_button_style.arg(button_color.name(), border_color));
+}
+
+// Callback Registration
+void GarmentCardsPanel::set_color_edit_callback(ColorEditCallback callback)
+{
+    color_edit_callback_ = std::move(callback);
 }
