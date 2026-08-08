@@ -14,6 +14,7 @@
 class QMouseEvent;
 class QLabel;
 class QPushButton;
+class QScrollArea;
 class QTimer;
 class QWheelEvent;
 class AssetBrowserPanel;
@@ -31,7 +32,7 @@ struct OrbitCamera
     float min_distance = 0.25f;
     float max_distance = 50.0f;
     QPoint last_mouse_position;
-    bool has_last_mouse = false;
+    bool is_dragging = false;
 };
 
 class Viewport final : public QOpenGLWidget, protected QOpenGLFunctions_4_5_Core
@@ -43,30 +44,28 @@ public:
     explicit Viewport(const ProjectPaths& project_paths, QWidget* parent = nullptr);
     ~Viewport() override;
 
-    // Child UI
+    void set_simulation_button_state(bool simulation_running, bool buttons_enabled);
+    void set_loading_overlay_active(bool active);
+    void update_layout();
+
+    void reset_camera(const glm::vec3& root_position);
+    void set_camera_target(const glm::vec3& root_position);
+
     AssetBrowserPanel& asset_browser_panel();
     PlacementPanel& placement_panel();
     GarmentColorPanel& garment_color_panel();
     GarmentCardsPanel& garment_cards_panel();
+    QOpenGLFunctions_4_5_Core& gl_functions();
+
     void set_play_pause_callback(std::function<void()> callback);
     void set_default_pose_callback(std::function<void()> callback);
     void set_reset_callback(std::function<void()> callback);
-    void set_simulation_button_state(bool simulation_running, bool buttons_enabled);
-    void set_motion_loading(bool is_loading);
-    void update_layout();
-
-    // Rendering callbacks
     void set_initialize_callback(InitializeCallback callback);
     void set_scene_render_callback(SceneRenderCallback callback);
-    bool is_gl_initialized() const;
-    QOpenGLFunctions_4_5_Core& gl_functions();
-
-    // Camera
-    void reset_camera_to_character_root(const glm::vec3& root_position);
-    void set_camera_target(const glm::vec3& root_position);
 
 protected:
     void initializeGL() override;
+
     void resizeGL(int width, int height) override;
     void paintGL() override;
 
@@ -76,20 +75,27 @@ protected:
     void wheelEvent(QWheelEvent* event) override;
 
 private:
-    // Child UI
-    void setup_motion_loading_indicator();
+    void setup_panels(const ProjectPaths& project_paths);
+    void setup_simulation_control_buttons();
+    void setup_loading_overlay();
 
-    // Rendering
-    void update_render_time();
-    void draw_display_fps();
+    void update_asset_browser_layout();
+    void update_simulation_control_button_layout();
+    void update_right_panel_layout();
+    void update_loading_overlay_layout();
+
+    glm::mat4 make_mvp() const;
+    void update_frame_stats();
+    void draw_frame_stats();
 
     AssetBrowserPanel* asset_browser_panel_ = nullptr;
     PlacementPanel* placement_panel_ = nullptr;
     GarmentColorPanel* garment_color_panel_ = nullptr;
     GarmentCardsPanel* garment_cards_panel_ = nullptr;
-    QLabel* motion_loading_indicator_ = nullptr;
-    QTimer* motion_loading_timer_ = nullptr;
-    int motion_loading_step_ = 0;
+    QScrollArea* right_panel_ = nullptr;
+    QLabel* loading_overlay_ = nullptr;
+    QTimer* loading_spinner_timer_ = nullptr;
+    int loading_spinner_step_ = 0;
     QPushButton* play_pause_button_ = nullptr;
     QPushButton* default_pose_button_ = nullptr;
     QPushButton* reset_button_ = nullptr;
@@ -105,5 +111,4 @@ private:
     std::uint64_t render_frame_count_ = 0;
     double render_fps_ = 0.0;
     double frame_ms_ = 0.0;
-    bool gl_initialized_ = false;
 };

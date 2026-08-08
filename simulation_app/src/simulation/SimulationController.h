@@ -25,15 +25,6 @@ class SimulationController final
 public:
     using GlContextTask = std::function<void(QOpenGLFunctions_4_5_Core&)>;
 
-    struct ViewportCallbacks final
-    {
-        std::function<bool()> is_ready;
-        std::function<void(GlContextTask)> run_with_gl_context;
-        std::function<void()> request_update;
-        std::function<void(const glm::vec3&)> reset_camera_to_character_root;
-        std::function<void(const glm::vec3&)> set_camera_target;
-    };
-
     SimulationController();
     ~SimulationController();
 
@@ -41,11 +32,14 @@ public:
     SimulationController& operator=(const SimulationController&) = delete;
 
     // Initialization //
+    void set_viewport_functions(std::function<void(GlContextTask)> run_with_gl_context,
+                                std::function<void()> viewport_update,
+                                std::function<void(const glm::vec3&)> reset_camera,
+                                std::function<void(const glm::vec3&)> set_camera_target);
     bool initialize(const ShaderPaths& shader_paths,
                     CharacterMesh character_mesh,
                     const std::vector<std::uint8_t>& triangle_part_labels,
                     QOpenGLFunctions_4_5_Core& gl);
-    void set_viewport_callbacks(ViewportCallbacks callbacks);
 
     // Scene editing //
     void set_character_mesh(CharacterMesh mesh);
@@ -64,7 +58,6 @@ public:
     void stop_simulation();
     bool is_simulation_running() const;
     bool is_default_pose() const;
-    bool has_base_positions() const;
     std::size_t garment_count() const;
     bool can_start_garment_placement() const;
     glm::vec3 garment_placement_color(GarmentLayer layer) const;
@@ -104,7 +97,6 @@ private:
     };
 
     void tick_frame();
-    bool is_viewport_ready() const;
     void set_character_mesh_state(CharacterMesh mesh, QOpenGLFunctions_4_5_Core& gl);
     bool has_garment_placement_update() const;
     void set_current_garment_placement(QOpenGLFunctions_4_5_Core& gl);
@@ -133,5 +125,8 @@ private:
     bool has_base_positions_ = false;
     QTimer frame_timer_;
 
-    ViewportCallbacks viewport_callbacks_;
+    std::function<void(GlContextTask)> run_with_gl_context_;
+    std::function<void()> viewport_update_;
+    std::function<void(const glm::vec3&)> reset_camera_;
+    std::function<void(const glm::vec3&)> set_camera_target_;
 };

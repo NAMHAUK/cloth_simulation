@@ -23,6 +23,17 @@ SimulationController::~SimulationController()
 }
 
 // Initialization //
+void SimulationController::set_viewport_functions(std::function<void(GlContextTask)> run_with_gl_context,
+                                                  std::function<void()> viewport_update,
+                                                  std::function<void(const glm::vec3&)> reset_camera,
+                                                  std::function<void(const glm::vec3&)> set_camera_target)
+{
+    run_with_gl_context_ = std::move(run_with_gl_context);
+    viewport_update_ = std::move(viewport_update);
+    reset_camera_ = std::move(reset_camera);
+    set_camera_target_ = std::move(set_camera_target);
+}
+
 bool SimulationController::initialize(const ShaderPaths& shader_paths,
                                       CharacterMesh character_mesh,
                                       const std::vector<std::uint8_t>& triangle_part_labels,
@@ -62,34 +73,32 @@ void SimulationController::draw(const glm::mat4& mvp, float character_opacity, Q
 
 void SimulationController::tick_frame()
 {
-    if (!is_viewport_ready() || !is_gpu_initialized()) {
+    if (!is_gpu_initialized()) {
         return;
     }
 
     bool simulation_step_finished = false;
     if (simulation_running_ || has_garment_placement_update()) {
-        viewport_callbacks_.run_with_gl_context(
-            [this, &simulation_step_finished](QOpenGLFunctions_4_5_Core& gl) {
-                set_current_garment_placement(gl);
+        run_with_gl_context_([this, &simulation_step_finished](QOpenGLFunctions_4_5_Core& gl) {
+            set_current_garment_placement(gl);
 
-                if (simulation_running_) {
-                    simulation_step_finished =
-                        simulation_pipeline_.step(scene_, gpu_state_, motion_step_index_, gl);
-                    if (simulation_step_finished) {
-                        ++motion_step_index_;
-                        scene_.update_character_frame(motion_step_index_,
-                                                      simulation_settings::character_frame_stride);
-                    }
+            if (simulation_running_) {
+                simulation_step_finished =
+                    simulation_pipeline_.step(scene_, gpu_state_, motion_step_index_, gl);
+                if (simulation_step_finished) {
+                    ++motion_step_index_;
+                    scene_.update_character_frame(motion_step_index_,
+                                                  simulation_settings::character_frame_stride);
                 }
-            });
+            }
+        });
     }
 
     if (simulation_step_finished) {
-        viewport_callbacks_.set_camera_target(
-            scene_.character_root_position(scene_.current_character_frame()));
+        set_camera_target_(scene_.character_root_position(scene_.current_character_frame()));
     }
 
-    viewport_callbacks_.request_update();
+    viewport_update_();
 }
 
 // Object //
@@ -132,12 +141,12 @@ bool SimulationController::load_default_character(CharacterMesh mesh,
 
 void SimulationController::set_character_mesh(CharacterMesh mesh)
 {
-    if (!is_viewport_ready()) {
-        std::cerr << "Cannot set character mesh before OpenGL initialization.\n";
+    if (!is_gpu_initialized()) {
+        std::cerr << "Cannot set character mesh before GPU initialization.\n";
         return;
     }
 
-    viewport_callbacks_.run_with_gl_context([this, &mesh](QOpenGLFunctions_4_5_Core& gl) {
+    run_with_gl_context_([this, &mesh](QOpenGLFunctions_4_5_Core& gl) {
         if (!scene_.garments().empty()) {
             if (!has_base_positions_) {
                 has_base_positions_ = gpu_state_.save_base_positions(gl);
@@ -151,7 +160,7 @@ void SimulationController::set_character_mesh(CharacterMesh mesh)
         set_character_mesh_state(std::move(mesh), gl);
     });
 
-    viewport_callbacks_.request_update();
+    viewport_update_();
 }
 
 void SimulationController::set_character_mesh_state(CharacterMesh mesh, QOpenGLFunctions_4_5_Core& gl)
@@ -160,15 +169,20 @@ void SimulationController::set_character_mesh_state(CharacterMesh mesh, QOpenGLF
     gpu_state_.set_character_mesh(scene_, gl);
     motion_step_index_ = 0;
     is_default_pose_ = false;
-    viewport_callbacks_.reset_camera_to_character_root(scene_.character_root_position(0));
+    reset_camera_(scene_.character_root_position(0));
 }
 
 bool SimulationController::set_garment_mesh(GarmentLayer layer, GarmentMesh mesh)
 {
-    if (!is_viewport_ready()) {
-        std::cerr << "Cannot set garment mesh before OpenGL initialization.\n";
+    if (!is_gpu_initialized()) {
+        std::cerr << "Cannot set garment mesh before GPU initialization.\n";
         return false;
     }
+    if (simulation_running_ || !is_default_pose_) {
+        std::cerr << "Cannot set garment mesh before returning to the default pose.\n";
+        return false;
+    }
+
     GarmentPlacementState& placement = garment_placements_[layer];
     if (!placement.is_active && scene_.has_multiple_garments()) {
         std::cerr << "Cannot add more than two garment meshes.\n";
@@ -176,8 +190,7 @@ bool SimulationController::set_garment_mesh(GarmentLayer layer, GarmentMesh mesh
     }
 
     bool garment_set = false;
-    viewport_callbacks_.run_with_gl_context([this, layer, &placement, &mesh, &garment_set](
-                                                QOpenGLFunctions_4_5_Core& gl) {
+    run_with_gl_context_([this, layer, &placement, &mesh, &garment_set](QOpenGLFunctions_4_5_Core& gl) {
         if (placement.is_active) {
             GarmentObject* existing_garment = scene_.find_garment(layer);
             if (existing_garment == nullptr) {
@@ -230,7 +243,7 @@ bool SimulationController::set_garment_mesh(GarmentLayer layer, GarmentMesh mesh
         garment_set = true;
     });
 
-    viewport_callbacks_.request_update();
+    viewport_update_();
     return garment_set;
 }
 
@@ -306,12 +319,12 @@ void SimulationController::clear_garment_placements()
 
 void SimulationController::reset_scene_to_default()
 {
-    if (!is_viewport_ready()) {
-        std::cerr << "Cannot reset scene before OpenGL initialization.\n";
+    if (!is_gpu_initialized()) {
+        std::cerr << "Cannot reset scene before GPU initialization.\n";
         return;
     }
 
-    viewport_callbacks_.run_with_gl_context([this](QOpenGLFunctions_4_5_Core& gl) {
+    run_with_gl_context_([this](QOpenGLFunctions_4_5_Core& gl) {
         simulation_running_ = false;
         motion_step_index_ = 0;
         clear_garment_placements();
@@ -324,41 +337,41 @@ void SimulationController::reset_scene_to_default()
         is_default_pose_ = true;
     });
 
-    viewport_callbacks_.request_update();
+    viewport_update_();
 }
 
 void SimulationController::return_to_default_pose()
 {
-    if (!simulation_running_ && is_default_pose_) {
+    simulation_running_ = false;
+    if (is_default_pose_) {
         return;
     }
 
-    if (!is_viewport_ready()) {
-        std::cerr << "Cannot return to default pose before OpenGL initialization.\n";
+    if (!is_gpu_initialized()) {
+        std::cerr << "Cannot return to default pose before GPU initialization.\n";
         return;
     }
 
-    viewport_callbacks_.run_with_gl_context([this](QOpenGLFunctions_4_5_Core& gl) {
+    run_with_gl_context_([this](QOpenGLFunctions_4_5_Core& gl) {
         if (!scene_.garments().empty()) {
             if (!has_base_positions_ || !gpu_state_.restore_base_positions(gl)) {
                 return;
             }
         }
 
-        simulation_running_ = false;
         motion_step_index_ = 0;
         clear_garment_placements();
         set_character_mesh_state(default_character_mesh_, gl);
         is_default_pose_ = true;
     });
 
-    viewport_callbacks_.request_update();
+    viewport_update_();
 }
 
 // garment placement panel //
 bool SimulationController::remove_garment_placement(GarmentLayer layer)
 {
-    if (!is_viewport_ready()) {
+    if (!is_gpu_initialized()) {
         return false;
     }
 
@@ -368,18 +381,17 @@ bool SimulationController::remove_garment_placement(GarmentLayer layer)
     }
 
     bool garment_removed = false;
-    viewport_callbacks_.run_with_gl_context(
-        [this, layer, &placement, &garment_removed](QOpenGLFunctions_4_5_Core& gl) {
-            garment_removed = scene_.remove_garment(layer);
-            if (garment_removed) {
-                gpu_state_.update_garment_meshes(scene_, gl);
-            }
-            placement.clear();
-            gpu_state_.clear_base_positions(gl);
-            has_base_positions_ = false;
-        });
+    run_with_gl_context_([this, layer, &placement, &garment_removed](QOpenGLFunctions_4_5_Core& gl) {
+        garment_removed = scene_.remove_garment(layer);
+        if (garment_removed) {
+            gpu_state_.update_garment_meshes(scene_, gl);
+        }
+        placement.clear();
+        gpu_state_.clear_base_positions(gl);
+        has_base_positions_ = false;
+    });
 
-    viewport_callbacks_.request_update();
+    viewport_update_();
     return garment_removed;
 }
 
@@ -413,19 +425,19 @@ void SimulationController::set_garment_color(GarmentLayer layer, const glm::vec3
     }
 
     if (!simulation_running_) {
-        viewport_callbacks_.request_update();
+        viewport_update_();
     }
 }
 
 bool SimulationController::confirm_garment_placement()
 {
-    if (!is_viewport_ready()) {
-        std::cerr << "Cannot confirm garment placement before OpenGL initialization.\n";
+    if (!is_gpu_initialized()) {
+        std::cerr << "Cannot confirm garment placement before GPU initialization.\n";
         return false;
     }
 
     bool placement_confirmed = false;
-    viewport_callbacks_.run_with_gl_context([this, &placement_confirmed](QOpenGLFunctions_4_5_Core& gl) {
+    run_with_gl_context_([this, &placement_confirmed](QOpenGLFunctions_4_5_Core& gl) {
         set_current_garment_placement(gl);
         const std::vector<GarmentLayer> layers = garment_placement_layers();
         if (!simulation_pipeline_.prefit_garments(scene_, gpu_state_, layers, gl)) {
@@ -451,18 +463,18 @@ bool SimulationController::confirm_garment_placement()
         placement_confirmed = true;
     });
 
-    viewport_callbacks_.request_update();
+    viewport_update_();
     return placement_confirmed;
 }
 
 void SimulationController::cancel_garment_placement()
 {
-    if (!is_viewport_ready()) {
-        std::cerr << "Cannot cancel garment placement before OpenGL initialization.\n";
+    if (!is_gpu_initialized()) {
+        std::cerr << "Cannot cancel garment placement before GPU initialization.\n";
         return;
     }
 
-    viewport_callbacks_.run_with_gl_context([this](QOpenGLFunctions_4_5_Core& gl) {
+    run_with_gl_context_([this](QOpenGLFunctions_4_5_Core& gl) {
         bool garment_removed = false;
         for (std::size_t index = 0; index < garment_placements_.size(); ++index) {
             GarmentPlacementState& placement = garment_placements_[index];
@@ -479,18 +491,7 @@ void SimulationController::cancel_garment_placement()
         has_base_positions_ = false;
     });
 
-    viewport_callbacks_.request_update();
-}
-
-// getter //
-bool SimulationController::is_viewport_ready() const
-{
-    return viewport_callbacks_.is_ready &&
-           viewport_callbacks_.run_with_gl_context &&
-           viewport_callbacks_.request_update &&
-           viewport_callbacks_.reset_camera_to_character_root &&
-           viewport_callbacks_.set_camera_target &&
-           viewport_callbacks_.is_ready();
+    viewport_update_();
 }
 
 bool SimulationController::is_gpu_initialized() const
@@ -508,11 +509,6 @@ bool SimulationController::is_simulation_running() const
 bool SimulationController::is_default_pose() const
 {
     return is_default_pose_;
-}
-
-bool SimulationController::has_base_positions() const
-{
-    return has_base_positions_;
 }
 
 std::size_t SimulationController::garment_count() const
@@ -553,18 +549,13 @@ void SimulationController::stop_simulation()
     simulation_running_ = false;
 }
 
-void SimulationController::set_viewport_callbacks(ViewportCallbacks callbacks)
-{
-    viewport_callbacks_ = std::move(callbacks);
-}
-
 void SimulationController::release_gpu()
 {
-    if (!is_viewport_ready() || !is_gpu_initialized()) {
+    if (!is_gpu_initialized()) {
         return;
     }
 
-    viewport_callbacks_.run_with_gl_context([this](QOpenGLFunctions_4_5_Core& gl) {
+    run_with_gl_context_([this](QOpenGLFunctions_4_5_Core& gl) {
         render_pipeline_.release(gl);
         simulation_pipeline_.release(gl);
         gpu_state_.release(gl);

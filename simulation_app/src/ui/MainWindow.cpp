@@ -18,7 +18,7 @@ namespace {
 constexpr int initial_window_width = 1440;
 constexpr int initial_window_height = 900;
 constexpr int minimum_window_width = 1000;
-constexpr int minimum_window_height = 600;
+constexpr int minimum_window_height = 700;
 constexpr float placement_character_opacity = 0.3f;
 }
 
@@ -31,21 +31,13 @@ MainWindow::MainWindow(const std::filesystem::path& project_root, QWidget* paren
     resize(initial_window_width, initial_window_height);
 
     viewport_ = new Viewport(project_paths_, this);
-    simulation_controller_ = std::make_unique<SimulationController>();
-    placement_controller_ = std::make_unique<PlacementController>(*simulation_controller_,
-                                                                  viewport_->placement_panel(),
-                                                                  viewport_->garment_color_panel(),
-                                                                  viewport_->garment_cards_panel(),
-                                                                  *viewport_);
-    placement_controller_->set_active_changed_callback([this]() {
-        update_simulation_button_state();
-        update_asset_button_state();
-    });
-    placement_controller_->set_layout_changed_callback([this]() { viewport_->update_layout(); });
+
+    setup_simulation_controller();
+    setup_placement_controller();
 
     setCentralWidget(viewport_);
 
-    setup_viewport_callbacks();
+    setup_viewport_render_callbacks();
     setup_asset_browser_callbacks();
     setup_simulation_control_callbacks();
 
@@ -65,12 +57,46 @@ MainWindow::~MainWindow()
     viewport_->set_reset_callback({});
     placement_controller_.reset();
     simulation_controller_->release_gpu();
-    simulation_controller_->set_viewport_callbacks({});
     viewport_->set_initialize_callback({});
     viewport_->set_scene_render_callback({});
 }
 
 // Initialization
+void MainWindow::setup_simulation_controller()
+{
+    simulation_controller_ = std::make_unique<SimulationController>();
+
+    Viewport* const viewport = viewport_;
+
+    auto run_gl_task = [viewport](SimulationController::GlContextTask task) {
+        run_with_gl_context(*viewport, [viewport, &task]() { task(viewport->gl_functions()); });
+    };
+    auto viewport_update = [viewport]() { viewport->update(); };
+    auto reset_camera = [viewport](const glm::vec3& root_position) { viewport->reset_camera(root_position); };
+    auto set_camera_target = [viewport](const glm::vec3& root_position) {
+        viewport->set_camera_target(root_position);
+    };
+
+    simulation_controller_->set_viewport_functions(std::move(run_gl_task),
+                                                   std::move(viewport_update),
+                                                   std::move(reset_camera),
+                                                   std::move(set_camera_target));
+}
+
+void MainWindow::setup_placement_controller()
+{
+    placement_controller_ = std::make_unique<PlacementController>(*simulation_controller_,
+                                                                  viewport_->placement_panel(),
+                                                                  viewport_->garment_color_panel(),
+                                                                  viewport_->garment_cards_panel(),
+                                                                  *viewport_);
+    placement_controller_->set_active_changed_callback([this]() {
+        update_simulation_button_state();
+        update_asset_button_state();
+    });
+    placement_controller_->set_layout_changed_callback([this]() { viewport_->update_layout(); });
+}
+
 bool MainWindow::initialize_scene(QOpenGLFunctions_4_5_Core& gl)
 {
     CharacterMesh character_mesh;
@@ -87,29 +113,8 @@ bool MainWindow::initialize_scene(QOpenGLFunctions_4_5_Core& gl)
                                               gl);
 }
 
-void MainWindow::setup_viewport_callbacks()
+void MainWindow::setup_viewport_render_callbacks()
 {
-    // Controller callbacks
-    SimulationController::ViewportCallbacks callbacks;
-
-    callbacks.is_ready = [this]() { return viewport_->is_gl_initialized(); };
-
-    callbacks.run_with_gl_context = [this](SimulationController::GlContextTask task) {
-        run_with_gl_context(*viewport_, [this, &task]() { task(viewport_->gl_functions()); });
-    };
-
-    callbacks.request_update = [this]() { viewport_->update(); };
-
-    callbacks.reset_camera_to_character_root = [this](const glm::vec3& root_position) {
-        viewport_->reset_camera_to_character_root(root_position);
-    };
-
-    callbacks.set_camera_target = [this](const glm::vec3& root_position) {
-        viewport_->set_camera_target(root_position);
-    };
-
-    simulation_controller_->set_viewport_callbacks(std::move(callbacks));
-
     // Scene initialization
     viewport_->set_initialize_callback(
         [this](QOpenGLFunctions_4_5_Core& gl) { return initialize_scene(gl); });
@@ -133,7 +138,7 @@ void MainWindow::setup_asset_browser_callbacks()
         if (is_loading) {
             simulation_controller_->stop_simulation();
         }
-        viewport_->set_motion_loading(is_loading);
+        viewport_->set_loading_overlay_active(is_loading);
         if (!is_loading) {
             update_simulation_button_state();
         }
