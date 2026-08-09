@@ -71,25 +71,20 @@ void SimulationController::tick_frame()
         return;
     }
 
-    bool simulation_step_finished = false;
     if (simulation_running_ || has_garment_placement_update()) {
-        run_with_gl_context_(
-            [this, &simulation_step_finished](QOpenGLFunctions_4_5_Core& gl) {
-                set_current_garment_placement(gl);
+        run_with_gl_context_([this](QOpenGLFunctions_4_5_Core& gl) {
+            set_current_garment_placement(gl);
 
-                if (simulation_running_) {
-                    simulation_step_finished =
-                        simulation_pipeline_.step(scene_, gpu_state_, motion_step_index_, gl);
-                    if (simulation_step_finished) {
-                        ++motion_step_index_;
-                        scene_.update_character_frame(motion_step_index_,
-                                                      simulation_settings::character_frame_stride);
-                    }
-                }
-            });
+            if (simulation_running_) {
+                simulation_pipeline_.step(scene_, gpu_state_, motion_step_index_, gl);
+                ++motion_step_index_;
+                scene_.update_character_frame(motion_step_index_,
+                                              simulation_settings::character_frame_stride);
+            }
+        });
     }
 
-    if (simulation_step_finished) {
+    if (simulation_running_) {
         Q_EMIT camera_target_changed(scene_.character_root_position(scene_.current_character_frame()));
     }
 

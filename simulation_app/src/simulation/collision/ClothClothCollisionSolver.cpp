@@ -187,12 +187,10 @@ bool ClothClothCollisionSolver::can_build_body_triangle_ids(const SimulationGpuV
            is_valid_triangle_bvh_resource(views.body_triangle_bvh);
 }
 
-bool ClothClothCollisionSolver::build_body_triangle_ids(const SimulationGpuViews& views,
+void ClothClothCollisionSolver::build_body_triangle_ids(const SimulationGpuViews& views,
                                                         QOpenGLFunctions_4_5_Core& gl) const
 {
-    if (!can_build_body_triangle_ids(views)) {
-        return false;
-    }
+    assert(can_build_body_triangle_ids(views));
 
     gl.glUseProgram(body_triangle_id_build_.program);
     gl.glBindBufferBase(GL_SHADER_STORAGE_BUFFER,
@@ -218,7 +216,6 @@ bool ClothClothCollisionSolver::build_body_triangle_ids(const SimulationGpuViews
         1,
         1);
     gl.glMemoryBarrier(GL_SHADER_STORAGE_BARRIER_BIT);
-    return true;
 }
 
 void ClothClothCollisionSolver::solve(const SimulationGpuViews& views, QOpenGLFunctions_4_5_Core& gl) const

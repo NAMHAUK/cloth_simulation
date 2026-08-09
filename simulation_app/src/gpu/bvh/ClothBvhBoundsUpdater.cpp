@@ -4,6 +4,7 @@
 #include "utils/ShaderUtils.h"
 
 #include <algorithm>
+#include <cassert>
 #include <cmath>
 #include <cstdint>
 #include <iostream>
@@ -122,16 +123,13 @@ bool ClothBvhBoundsUpdater::can_update(const ClothMotionBufferView& motion_view,
     return expected_triangle_offset == bvh_view.triangle_count && expected_node_offset == bvh_view.node_count;
 }
 
-bool ClothBvhBoundsUpdater::update(const ClothMotionBufferView& motion_view,
+void ClothBvhBoundsUpdater::update(const ClothMotionBufferView& motion_view,
                                    const ClothBvhBufferView& bvh_view,
                                    const std::vector<GarmentBufferRanges>& garment_buffer_ranges,
                                    float bounds_margin,
                                    QOpenGLFunctions_4_5_Core& gl) const
 {
-    if (!can_update(motion_view, bvh_view, garment_buffer_ranges, bounds_margin)) {
-        std::cerr << "Cannot update cloth BVH bounds because required GPU resources or ranges are invalid.\n";
-        return false;
-    }
+    assert(can_update(motion_view, bvh_view, garment_buffer_ranges, bounds_margin));
 
     gl.glUseProgram(program_);
     gl.glBindBufferBase(GL_SHADER_STORAGE_BUFFER,
@@ -179,8 +177,6 @@ bool ClothBvhBoundsUpdater::update(const ClothMotionBufferView& motion_view,
 
         gl.glMemoryBarrier(GL_SHADER_STORAGE_BARRIER_BIT);
     }
-
-    return true;
 }
 
 void ClothBvhBoundsUpdater::release(QOpenGLFunctions_4_5_Core& gl)

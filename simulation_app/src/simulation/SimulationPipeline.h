@@ -37,7 +37,7 @@ public:
                          SceneGpuState& gpu_state,
                          const std::vector<GarmentLayer>& layers,
                          QOpenGLFunctions_4_5_Core& gl);
-    bool step(SceneState& scene,
+    void step(SceneState& scene,
               SceneGpuState& gpu_state,
               std::uint64_t motion_step_index,
               QOpenGLFunctions_4_5_Core& gl);
@@ -45,10 +45,9 @@ public:
 
 private:
     static SimulationGpuViews collect_gpu_views(const SceneGpuState& gpu_state);
-    bool update_cloth_bvh_bounds(const SimulationGpuViews& views,
+    void update_cloth_bvh_bounds(const SimulationGpuViews& views,
                                  float bounds_margin,
                                  QOpenGLFunctions_4_5_Core& gl) const;
-    bool can_solve_constraint_iteration(const SimulationGpuViews& views) const;
 
     ClothBvhBoundsUpdater cloth_bvh_bounds_updater_;
     SimulationForceField force_field_;

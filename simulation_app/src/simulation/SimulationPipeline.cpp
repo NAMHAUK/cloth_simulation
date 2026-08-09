@@ -6,6 +6,7 @@
 #include "simulation/SimulationSettings.h"
 
 #include <algorithm>
+#include <cassert>
 #include <cmath>
 #include <iostream>
 
@@ -39,7 +40,7 @@ float character_frame_time(std::uint64_t motion_step_index, std::int32_t substep
     return std::max(frame_time, 0.0f);
 }
 
-void update_character_substep_frame(const SceneState& scene,
+void update_character_pose(const SceneState& scene,
                                     SceneGpuState& gpu_state,
                                     float frame_time,
                                     QOpenGLFunctions_4_5_Core& gl)
@@ -236,55 +237,39 @@ bool SimulationPipeline::prefit_garments(const SceneState& scene,
     if (has_multiple_garments) {
         for (std::uint32_t iteration = 0; iteration < simulation_settings::solver_iteration_count;
              ++iteration) {
-            if (!update_cloth_bvh_bounds(views,
-                                         simulation_settings::cloth_collision_initial_detection_distance,
-                                         gl)) {
-                return false;
-            }
+            update_cloth_bvh_bounds(views,
+                                    simulation_settings::cloth_collision_initial_detection_distance,
+                                    gl);
             cloth_cloth_collision_detector_.detect(views, gl);
             cloth_cloth_collision_solver_.solve_initial(views, gl);
             gpu_state.cloth_gpu_state().copy_current_positions_to_previous(gl);
         }
     }
 
-    if (has_multiple_garments && !cloth_cloth_collision_solver_.build_body_triangle_ids(views, gl)) {
-        std::cerr << "Cannot cache cloth body triangle ids after garment pre-fit.\n";
-        return false;
+    if (has_multiple_garments) {
+        cloth_cloth_collision_solver_.build_body_triangle_ids(views, gl);
     }
 
     gpu_state.update_mesh_normals(gl);
     return true;
 }
 
-bool SimulationPipeline::step(SceneState& scene,
+void SimulationPipeline::step(SceneState& scene,
                               SceneGpuState& gpu_state,
                               std::uint64_t motion_step_index,
                               QOpenGLFunctions_4_5_Core& gl)
 {
-    if (!initialized_) {
-        return false;
-    }
-
     if (scene.garments().empty()) {
-        const float end_frame_time =
-            character_frame_time(motion_step_index,
-                                 static_cast<std::int32_t>(simulation_settings::substep_count));
-        update_character_substep_frame(scene, gpu_state, end_frame_time, gl);
-        return true;
+        const float frame_time = character_frame_time(motion_step_index + 1u, 0);
+        update_character_pose(scene, gpu_state, frame_time, gl);
+        return;
     }
 
     const auto views = collect_gpu_views(gpu_state);
-    if (!can_solve_constraint_iteration(views) || views.garment_buffer_ranges == nullptr) {
-        std::cerr
-            << "Cannot run simulation because required constraint or collision GPU resources are invalid.\n";
-        return false;
-    }
-
     const bool has_multiple_garments = scene.has_multiple_garments();
 
-    if (has_multiple_garments && !cloth_cloth_collision_solver_.build_body_triangle_ids(views, gl)) {
-        std::cerr << "Cannot update cloth body triangle ids for simulation step.\n";
-        return false;
+    if (has_multiple_garments) {
+        cloth_cloth_collision_solver_.build_body_triangle_ids(views, gl);
     }
 
     const glm::vec3 external_acceleration = force_field_.external_acceleration();
@@ -306,15 +291,12 @@ bool SimulationPipeline::step(SceneState& scene,
                                                                           end_frame_time,
                                                                           substep_dt_);
 
-        update_character_substep_frame(scene, gpu_state, end_frame_time, gl);
+        update_character_pose(scene, gpu_state, end_frame_time, gl);
 
         for (const GarmentObject& garment : scene.garments()) {
             const GarmentBufferRanges* garment_range =
                 find_garment_range(*views.garment_buffer_ranges, garment.layer);
-            if (garment_range == nullptr) {
-                std::cerr << "Cannot apply external forces because garment GPU ranges are missing.\n";
-                return false;
-            }
+            assert(garment_range != nullptr);
 
             const ReferenceFrameMotion& frame_motion =
                 garment.mesh.garment_category == GarmentCategory::Top ? torso_motion : pelvis_motion;
@@ -334,11 +316,7 @@ bool SimulationPipeline::step(SceneState& scene,
         cloth_body_collision_detector_.detect(views, gl);
 
         if (has_multiple_garments) {
-            const bool bounds_updated =
-                update_cloth_bvh_bounds(views, simulation_settings::cloth_collision_detection_distance, gl);
-            if (!bounds_updated) {
-                return false;
-            }
+            update_cloth_bvh_bounds(views, simulation_settings::cloth_collision_detection_distance, gl);
             cloth_cloth_collision_detector_.detect(views, gl);
         }
 
@@ -362,7 +340,6 @@ bool SimulationPipeline::step(SceneState& scene,
     }
 
     gpu_state.update_mesh_normals(gl);
-    return true;
 }
 
 void SimulationPipeline::release(QOpenGLFunctions_4_5_Core& gl)
@@ -406,35 +383,13 @@ SimulationGpuViews SimulationPipeline::collect_gpu_views(const SceneGpuState& gp
     return views;
 }
 
-bool SimulationPipeline::update_cloth_bvh_bounds(const SimulationGpuViews& views,
+void SimulationPipeline::update_cloth_bvh_bounds(const SimulationGpuViews& views,
                                                  float bounds_margin,
                                                  QOpenGLFunctions_4_5_Core& gl) const
 {
-    if (views.garment_buffer_ranges == nullptr) {
-        std::cerr << "Cannot update cloth BVH bounds because garment buffer ranges are missing.\n";
-        return false;
-    }
-
-    return cloth_bvh_bounds_updater_.update(views.cloth_motion,
-                                            views.cloth_bvh,
-                                            *views.garment_buffer_ranges,
-                                            bounds_margin,
-                                            gl);
-}
-
-bool SimulationPipeline::can_solve_constraint_iteration(const SimulationGpuViews& views) const
-{
-    return stretch_constraint_solver_.can_solve(views.cloth_motion, views.stretch_constraints) &&
-           bending_constraint_solver_.can_solve(views.cloth_motion, views.bending_constraints) &&
-           (views.attachment_constraints.constraint_count == 0 ||
-            attachment_constraint_solver_.can_solve(views.cloth_motion,
-                                                    views.attachment_constraints,
-                                                    views.body_triangle_geometry)) &&
-           cloth_body_collision_detector_.can_detect(views) &&
-           cloth_body_collision_solver_.can_solve(views) &&
-           cloth_cloth_collision_detector_.can_detect(views) &&
-           cloth_cloth_collision_solver_.can_solve(views) &&
-           ground_collision_solver_.can_solve(views.cloth_motion,
-                                              views.cloth_collision_pushout,
-                                              views.cloth_contact_motion);
+    cloth_bvh_bounds_updater_.update(views.cloth_motion,
+                                     views.cloth_bvh,
+                                     *views.garment_buffer_ranges,
+                                     bounds_margin,
+                                     gl);
 }

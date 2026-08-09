@@ -16,7 +16,7 @@ public:
     ClothBvhBoundsUpdater& operator=(const ClothBvhBoundsUpdater&) = delete;
 
     bool initialize(const std::filesystem::path& shader_path, QOpenGLFunctions_4_5_Core& gl);
-    bool update(const ClothMotionBufferView& motion_view,
+    void update(const ClothMotionBufferView& motion_view,
                 const ClothBvhBufferView& bvh_view,
                 const std::vector<GarmentBufferRanges>& garment_buffer_ranges,
                 float bounds_margin,

@@ -25,7 +25,7 @@ public:
     bool can_solve(const SimulationGpuViews& views) const;
     bool can_solve_initial(const SimulationGpuViews& views) const;
     bool can_build_body_triangle_ids(const SimulationGpuViews& views) const;
-    bool build_body_triangle_ids(const SimulationGpuViews& views, QOpenGLFunctions_4_5_Core& gl) const;
+    void build_body_triangle_ids(const SimulationGpuViews& views, QOpenGLFunctions_4_5_Core& gl) const;
     void solve(const SimulationGpuViews& views, QOpenGLFunctions_4_5_Core& gl) const;
     void solve_initial(const SimulationGpuViews& views, QOpenGLFunctions_4_5_Core& gl) const;
     void release(QOpenGLFunctions_4_5_Core& gl);
