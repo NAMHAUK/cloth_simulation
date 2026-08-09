@@ -4,7 +4,6 @@
 #include "gpu/character/CharacterGpuDataTypes.h"
 #include "gpu/character/CharacterGpuResources.h"
 #include "gpu/scene/NormalUpdater.h"
-#include "scene/SceneState.h"
 #include "utils/BufferUtils.h"
 #include "utils/ShaderUtils.h"
 
@@ -105,7 +104,7 @@ bool CharacterGpuStateUpdater::initialize(const std::filesystem::path& position_
 }
 
 void CharacterGpuStateUpdater::initialize_character_pose_state(
-    const CharacterFrameInterpolation& interpolation,
+    float frame_alpha,
     const std::vector<BvhNodeRange>& body_triangle_node_ranges_by_level,
     const std::vector<BvhNodeRange>& body_vertex_node_ranges_by_level,
     const std::vector<BvhNodeRange>& body_edge_node_ranges_by_level,
@@ -118,7 +117,7 @@ void CharacterGpuStateUpdater::initialize_character_pose_state(
 
     // Initialization writes the selected pose to current, then mirrors it into previous.
     const CharacterVertexBufferView vertex_view = character_gpu_state_.character_vertex_buffer_view();
-    write_current_position_buffer(interpolation, vertex_view, gl);
+    write_current_position_buffer(frame_alpha, vertex_view, gl);
     copy_current_position_to_previous(vertex_view, gl);
     update_derived_pose_state(body_triangle_node_ranges_by_level,
                               body_vertex_node_ranges_by_level,
@@ -128,7 +127,7 @@ void CharacterGpuStateUpdater::initialize_character_pose_state(
 }
 
 void CharacterGpuStateUpdater::update_character_pose_state(
-    const CharacterFrameInterpolation& interpolation,
+    float frame_alpha,
     const std::vector<BvhNodeRange>& body_triangle_node_ranges_by_level,
     const std::vector<BvhNodeRange>& body_vertex_node_ranges_by_level,
     const std::vector<BvhNodeRange>& body_edge_node_ranges_by_level,
@@ -142,7 +141,7 @@ void CharacterGpuStateUpdater::update_character_pose_state(
     // Continuous update carries old current into previous before writing the new current pose.
     const CharacterVertexBufferView vertex_view = character_gpu_state_.character_vertex_buffer_view();
     copy_current_position_to_previous(vertex_view, gl);
-    write_current_position_buffer(interpolation, vertex_view, gl);
+    write_current_position_buffer(frame_alpha, vertex_view, gl);
     update_derived_pose_state(body_triangle_node_ranges_by_level,
                               body_vertex_node_ranges_by_level,
                               body_edge_node_ranges_by_level,
@@ -150,7 +149,7 @@ void CharacterGpuStateUpdater::update_character_pose_state(
                               gl);
 }
 
-void CharacterGpuStateUpdater::write_current_position_buffer(const CharacterFrameInterpolation& interpolation,
+void CharacterGpuStateUpdater::write_current_position_buffer(float frame_alpha,
                                                              const CharacterVertexBufferView& vertex_view,
                                                              QOpenGLFunctions_4_5_Core& gl) const
 {
@@ -160,9 +159,9 @@ void CharacterGpuStateUpdater::write_current_position_buffer(const CharacterFram
     }
 
     const std::uint32_t current_frame_base =
-        character_gpu_state_.frame_position_begin_index(interpolation.current_frame_index);
+        character_gpu_state_.frame_position_begin_index(character_gpu_state_.current_frame_index());
     const std::uint32_t next_frame_base =
-        character_gpu_state_.frame_position_begin_index(interpolation.next_frame_index);
+        character_gpu_state_.frame_position_begin_index(character_gpu_state_.next_frame_index());
 
     gl.glUseProgram(position_program_);
     gl.glBindBufferBase(GL_SHADER_STORAGE_BUFFER,
@@ -173,7 +172,7 @@ void CharacterGpuStateUpdater::write_current_position_buffer(const CharacterFram
                         vertex_view.current_position_buffer);
     gl.glProgramUniform1ui(position_program_, position_current_frame_base_location_, current_frame_base);
     gl.glProgramUniform1ui(position_program_, position_next_frame_base_location_, next_frame_base);
-    gl.glProgramUniform1f(position_program_, position_frame_alpha_location_, interpolation.frame_alpha);
+    gl.glProgramUniform1f(position_program_, position_frame_alpha_location_, frame_alpha);
     gl.glProgramUniform1ui(position_program_, position_vertex_count_location_, vertex_view.vertex_count);
 
     gl.glDispatchCompute(compute_group_count(vertex_view.vertex_count, position_update_local_size), 1, 1);

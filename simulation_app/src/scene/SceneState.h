@@ -21,13 +21,6 @@ struct GarmentObject
     std::optional<TriangleBvhData> garment_triangle_bvh;
 };
 
-struct CharacterFrameInterpolation final
-{
-    std::uint32_t current_frame_index = 0;
-    std::uint32_t next_frame_index = 0;
-    float frame_alpha = 0.0f;
-};
-
 struct CharacterReferenceFrame final
 {
     glm::vec3 position{};
@@ -63,12 +56,11 @@ public:
 
     // Playback
     void update_character_frame(std::uint64_t simulation_step_count, std::uint32_t character_frame_stride);
-    void update_kinematics(const CharacterFrameInterpolation& interpolation, float dt);
-    const Kinematics& kinematics(GarmentCategory garment_category) const;
-    CharacterFrameInterpolation character_frame_interpolation(float character_frame_time) const;
-    CharacterReferenceFrame interpolated_character_reference_frame(
-        const CharacterFrameInterpolation& interpolation,
-        GarmentCategory garment_category) const;
+    void update_reference_kinematics(float frame_alpha, float dt);
+    const Kinematics& reference_kinematics(GarmentCategory garment_category) const;
+    float character_frame_alpha(float character_frame_time) const;
+    CharacterReferenceFrame interpolated_character_reference_frame(float frame_alpha,
+                                                                   GarmentCategory garment_category) const;
     std::uint32_t current_character_frame() const;
     glm::vec3 character_root_position(std::uint32_t frame_index) const;
 

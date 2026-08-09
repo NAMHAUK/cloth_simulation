@@ -6,13 +6,6 @@
 #include <iostream>
 #include <limits>
 
-namespace {
-CharacterFrameInterpolation make_single_frame_interpolation(std::uint32_t frame_index)
-{
-    return {frame_index, frame_index, 0.0f};
-}
-}
-
 SceneGpuState::SceneGpuState()
     : character_gpu_state_updater_(character_gpu_state_, bvh_bounds_updater_, normal_updater_)
 {}
@@ -121,7 +114,7 @@ void SceneGpuState::set_character_mesh(const SceneState& scene,
                                      gl);
     character_gpu_state_.set_current_frame(0);
     character_gpu_state_updater_.initialize_character_pose_state(
-        make_single_frame_interpolation(0),
+        0.0f,
         scene.default_body_triangle_bvh_data().node_ranges_by_level,
         scene.default_body_vertex_bvh_data().node_ranges_by_level,
         scene.default_body_edge_bvh_data().node_ranges_by_level,
@@ -129,17 +122,18 @@ void SceneGpuState::set_character_mesh(const SceneState& scene,
         gl);
 }
 
-void SceneGpuState::update_character_frame_interpolation(const SceneState& scene,
-                                                         const CharacterFrameInterpolation& interpolation,
-                                                         float body_collision_thickness,
-                                                         QOpenGLFunctions_4_5_Core& gl)
+void SceneGpuState::update_character_pose(const SceneState& scene,
+                                          float frame_alpha,
+                                          float body_collision_thickness,
+                                          QOpenGLFunctions_4_5_Core& gl)
 {
     if (!is_initialized() || !character_gpu_state_.is_initialized()) {
         return;
     }
 
+    character_gpu_state_.set_current_frame(scene.current_character_frame());
     character_gpu_state_updater_.update_character_pose_state(
-        interpolation,
+        frame_alpha,
         scene.default_body_triangle_bvh_data().node_ranges_by_level,
         scene.default_body_vertex_bvh_data().node_ranges_by_level,
         scene.default_body_edge_bvh_data().node_ranges_by_level,

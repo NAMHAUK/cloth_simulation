@@ -27,10 +27,10 @@ public:
     bool is_initialized() const;
     bool initialize(const ShaderPaths& shader_paths, QOpenGLFunctions_4_5_Core& gl);
     void release(QOpenGLFunctions_4_5_Core& gl);
-    void update_character_frame_interpolation(const SceneState& scene,
-                                              const CharacterFrameInterpolation& interpolation,
-                                              float body_collision_thickness,
-                                              QOpenGLFunctions_4_5_Core& gl);
+    void update_character_pose(const SceneState& scene,
+                               float frame_alpha,
+                               float body_collision_thickness,
+                               QOpenGLFunctions_4_5_Core& gl);
     void update_mesh_normals(QOpenGLFunctions_4_5_Core& gl);
     SimulationGpuView simulation_view() const;
 

@@ -166,11 +166,8 @@ void SimulationPipeline::step(SceneState& scene,
 {
     if (scene.garments().empty()) {
         const float frame_time = params_.step.character_frame_time(motion_step_index + 1u, 0);
-        const CharacterFrameInterpolation interpolation = scene.character_frame_interpolation(frame_time);
-        gpu_state.update_character_frame_interpolation(scene,
-                                                       interpolation,
-                                                       params_.collisions.body.thickness,
-                                                       gl);
+        const float frame_alpha = scene.character_frame_alpha(frame_time);
+        gpu_state.update_character_pose(scene, frame_alpha, params_.collisions.body.thickness, gl);
         return;
     }
 
@@ -183,22 +180,19 @@ void SimulationPipeline::step(SceneState& scene,
 
     const glm::vec3 external_acceleration = force_field_.external_acceleration();
     for (std::uint32_t substep = 0; substep < params_.step.substep_count; ++substep) {
-        const float frame_time =
-            params_.step.character_frame_time(motion_step_index, static_cast<std::int32_t>(substep + 1u));
-        const CharacterFrameInterpolation interpolation = scene.character_frame_interpolation(frame_time);
-        scene.update_kinematics(interpolation, substep_dt_);
+        const float frame_time = params_.step.character_frame_time(motion_step_index, substep + 1u);
+        const float frame_alpha = scene.character_frame_alpha(frame_time);
+        scene.update_reference_kinematics(frame_alpha, substep_dt_);
 
-        gpu_state.update_character_frame_interpolation(scene,
-                                                       interpolation,
-                                                       params_.collisions.body.thickness,
-                                                       gl);
+        gpu_state.update_character_pose(scene, frame_alpha, params_.collisions.body.thickness, gl);
 
         for (const GarmentObject& garment : scene.garments()) {
             const GarmentBufferRanges* garment_range =
                 find_garment_range(*views.garment_buffer_ranges, garment.layer);
             assert(garment_range != nullptr);
 
-            const Kinematics& kinematics = scene.kinematics(garment.mesh.garment_category);
+            const Kinematics& reference_kinematics =
+                scene.reference_kinematics(garment.mesh.garment_category);
             external_force_solver_.solve(views.cloth_motion,
                                          views.cloth_collision_pushout,
                                          views.cloth_contact_motion,
@@ -206,7 +200,7 @@ void SimulationPipeline::step(SceneState& scene,
                                          substep_dt_,
                                          inverse_substep_dt_,
                                          external_acceleration,
-                                         kinematics,
+                                         reference_kinematics,
                                          gl);
         }
 

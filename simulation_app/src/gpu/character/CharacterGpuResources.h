@@ -26,6 +26,7 @@ public:
                      QOpenGLFunctions_4_5_Core& gl);
     void set_current_frame(std::uint32_t frame_index);
     std::uint32_t current_frame_index() const;
+    std::uint32_t next_frame_index() const;
     std::uint32_t frame_position_begin_index(std::uint32_t frame_index) const;
     std::uint32_t vertex_count() const;
 

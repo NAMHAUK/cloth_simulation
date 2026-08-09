@@ -237,6 +237,15 @@ std::uint32_t CharacterGpuResources::current_frame_index() const
     return current_frame_index_;
 }
 
+std::uint32_t CharacterGpuResources::next_frame_index() const
+{
+    if (frame_count_ == 0 || current_frame_index_ + 1u >= frame_count_) {
+        return current_frame_index_;
+    }
+
+    return current_frame_index_ + 1u;
+}
+
 std::uint32_t CharacterGpuResources::frame_position_begin_index(std::uint32_t frame_index) const
 {
     if (!is_initialized() || frame_index >= frame_count_) {

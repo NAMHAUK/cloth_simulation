@@ -11,15 +11,10 @@ struct SimulationStepParams final
 
     constexpr std::uint32_t motion_stride() const { return fps / motion_fps; }
 
-    constexpr float character_frame_time(std::uint64_t motion_step_index, std::int32_t substep_boundary) const
+    constexpr float character_frame_time(std::uint64_t motion_step_index, std::uint32_t substep) const
     {
-        if (motion_stride() == 0 || substep_count == 0) {
-            return 0.0f;
-        }
-
-        const float substep_fraction = static_cast<float>(substep_boundary) / substep_count;
-        const float frame_time = (static_cast<float>(motion_step_index) + substep_fraction) / motion_stride();
-        return frame_time > 0.0f ? frame_time : 0.0f;
+        const float substep_fraction = static_cast<float>(substep) / substep_count;
+        return (static_cast<float>(motion_step_index) + substep_fraction) / motion_stride();
     }
 
     constexpr int tick_ms() const { return 1000 / static_cast<int>(fps); }
