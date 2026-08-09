@@ -12,12 +12,12 @@ struct ClothMotionBufferView;
 class AttachmentConstraintSolver final
 {
 public:
-    AttachmentConstraintSolver() = default;
+    explicit AttachmentConstraintSolver(float stiffness);
     AttachmentConstraintSolver(const AttachmentConstraintSolver&) = delete;
     AttachmentConstraintSolver& operator=(const AttachmentConstraintSolver&) = delete;
 
     bool is_initialized() const;
-    bool initialize(const std::filesystem::path& shader_path, float stiffness, QOpenGLFunctions_4_5_Core& gl);
+    bool initialize(const std::filesystem::path& shader_path, QOpenGLFunctions_4_5_Core& gl);
     bool can_solve(const ClothMotionBufferView& motion_view,
                    const AttachmentConstraintBufferView& constraint_view,
                    const TriangleGeometryResources& body_triangle_geometry) const;

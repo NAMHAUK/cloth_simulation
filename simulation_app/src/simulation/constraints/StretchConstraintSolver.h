@@ -11,12 +11,12 @@ struct DistanceConstraintBufferView;
 class StretchConstraintSolver final
 {
 public:
-    StretchConstraintSolver() = default;
+    explicit StretchConstraintSolver(float stiffness);
     StretchConstraintSolver(const StretchConstraintSolver&) = delete;
     StretchConstraintSolver& operator=(const StretchConstraintSolver&) = delete;
 
     bool is_initialized() const;
-    bool initialize(const std::filesystem::path& shader_path, float stiffness, QOpenGLFunctions_4_5_Core& gl);
+    bool initialize(const std::filesystem::path& shader_path, QOpenGLFunctions_4_5_Core& gl);
     bool can_solve(const ClothMotionBufferView& motion_view,
                    const DistanceConstraintBufferView& constraint_view) const;
     void solve(const ClothMotionBufferView& motion_view,

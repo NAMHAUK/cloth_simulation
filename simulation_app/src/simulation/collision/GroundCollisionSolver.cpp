@@ -1,5 +1,6 @@
 #include "simulation/collision/GroundCollisionSolver.h"
 
+#include "simulation/SimulationParams.h"
 #include "utils/BufferUtils.h"
 #include "utils/ShaderUtils.h"
 
@@ -15,15 +16,18 @@ constexpr GLuint contact_motion_deltas_binding = 4;
 constexpr std::uint32_t ground_collision_local_size = 128;
 }
 
+GroundCollisionSolver::GroundCollisionSolver(const GroundCollisionParams& params)
+    : floor_height_(params.height),
+      static_friction_(params.static_friction),
+      dynamic_friction_(params.dynamic_friction)
+{}
+
 bool GroundCollisionSolver::is_initialized() const
 {
     return program_ != 0;
 }
 
 bool GroundCollisionSolver::initialize(const std::filesystem::path& shader_path,
-                                       float floor_height,
-                                       float static_friction,
-                                       float dynamic_friction,
                                        QOpenGLFunctions_4_5_Core& gl)
 {
     program_ = load_compute_program(shader_path, "Ground collision", gl);
@@ -45,9 +49,6 @@ bool GroundCollisionSolver::initialize(const std::filesystem::path& shader_path,
         return false;
     }
 
-    floor_height_ = floor_height;
-    static_friction_ = static_friction;
-    dynamic_friction_ = dynamic_friction;
     return true;
 }
 
@@ -110,7 +111,4 @@ void GroundCollisionSolver::release(QOpenGLFunctions_4_5_Core& gl)
     floor_height_location_ = -1;
     static_friction_location_ = -1;
     dynamic_friction_location_ = -1;
-    floor_height_ = 0.0f;
-    static_friction_ = 0.0f;
-    dynamic_friction_ = 0.0f;
 }

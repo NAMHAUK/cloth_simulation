@@ -15,13 +15,15 @@ constexpr GLuint rest_lengths_binding = 2;
 constexpr std::uint32_t stretch_constraint_local_size = 128;
 }
 
+StretchConstraintSolver::StretchConstraintSolver(float stiffness) : stiffness_(stiffness)
+{}
+
 bool StretchConstraintSolver::is_initialized() const
 {
     return program_ != 0;
 }
 
 bool StretchConstraintSolver::initialize(const std::filesystem::path& shader_path,
-                                         float stiffness,
                                          QOpenGLFunctions_4_5_Core& gl)
 {
     program_ = load_compute_program(shader_path, "Stretch constraint", gl);
@@ -39,7 +41,6 @@ bool StretchConstraintSolver::initialize(const std::filesystem::path& shader_pat
         return false;
     }
 
-    stiffness_ = stiffness;
     return true;
 }
 
@@ -86,5 +87,4 @@ void StretchConstraintSolver::release(QOpenGLFunctions_4_5_Core& gl)
     constraint_offset_location_ = -1;
     constraint_count_location_ = -1;
     stiffness_location_ = -1;
-    stiffness_ = 0.0f;
 }

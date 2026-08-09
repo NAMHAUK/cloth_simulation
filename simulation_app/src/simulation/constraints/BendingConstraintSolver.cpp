@@ -16,13 +16,15 @@ constexpr GLuint rest_lengths_binding = 2;
 constexpr std::uint32_t bending_constraint_local_size = 128;
 }
 
+BendingConstraintSolver::BendingConstraintSolver(float stiffness) : stiffness_(stiffness)
+{}
+
 bool BendingConstraintSolver::is_initialized() const
 {
     return program_ != 0;
 }
 
 bool BendingConstraintSolver::initialize(const std::filesystem::path& shader_path,
-                                         float stiffness,
                                          QOpenGLFunctions_4_5_Core& gl)
 {
     program_ = load_compute_program(shader_path, "Bending constraint", gl);
@@ -40,7 +42,6 @@ bool BendingConstraintSolver::initialize(const std::filesystem::path& shader_pat
         return false;
     }
 
-    stiffness_ = stiffness;
     return true;
 }
 
@@ -87,5 +88,4 @@ void BendingConstraintSolver::release(QOpenGLFunctions_4_5_Core& gl)
     constraint_offset_location_ = -1;
     constraint_count_location_ = -1;
     stiffness_location_ = -1;
-    stiffness_ = 0.0f;
 }

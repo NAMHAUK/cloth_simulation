@@ -18,6 +18,11 @@ constexpr GLuint contact_motion_deltas_binding = 5;
 constexpr std::uint32_t external_force_local_size = 128;
 }
 
+ExternalForceSolver::ExternalForceSolver(float velocity_damping, float frame_inertia_scale)
+    : velocity_damping_(velocity_damping),
+      frame_inertia_scale_(frame_inertia_scale)
+{}
+
 bool ExternalForceSolver::is_initialized() const
 {
     return program_ != 0;
@@ -76,9 +81,7 @@ void ExternalForceSolver::solve(const ClothMotionBufferView& motion_view,
                                 float dt,
                                 float inverse_dt,
                                 const glm::vec3& external_acceleration,
-                                float velocity_damping,
                                 const ReferenceFrameMotion& frame_motion,
-                                float frame_inertia_scale,
                                 QOpenGLFunctions_4_5_Core& gl) const
 {
     const bool has_valid_garment_range =
@@ -126,7 +129,7 @@ void ExternalForceSolver::solve(const ClothMotionBufferView& motion_view,
                           external_acceleration.x,
                           external_acceleration.y,
                           external_acceleration.z);
-    gl.glProgramUniform1f(program_, velocity_damping_location_, velocity_damping);
+    gl.glProgramUniform1f(program_, velocity_damping_location_, velocity_damping_);
     gl.glProgramUniform3f(program_,
                           frame_start_position_location_,
                           frame_motion.start_position.x,
@@ -162,7 +165,7 @@ void ExternalForceSolver::solve(const ClothMotionBufferView& motion_view,
                           frame_motion.angular_acceleration.x,
                           frame_motion.angular_acceleration.y,
                           frame_motion.angular_acceleration.z);
-    gl.glProgramUniform1f(program_, frame_inertia_scale_location_, frame_inertia_scale);
+    gl.glProgramUniform1f(program_, frame_inertia_scale_location_, frame_inertia_scale_);
 
     // shader가 외부 가속도에 따른 위치 변화량 계산 (GPU에서 바로 업데이트)
     gl.glDispatchCompute(compute_group_count(garment_range.vertex_count, external_force_local_size), 1, 1);

@@ -6,10 +6,12 @@
 
 #include <QOpenGLFunctions_4_5_Core>
 
+struct BodyCollisionParams;
+
 class ClothBodyCollisionSolver final
 {
 public:
-    ClothBodyCollisionSolver() = default;
+    explicit ClothBodyCollisionSolver(const BodyCollisionParams& params);
     ClothBodyCollisionSolver(const ClothBodyCollisionSolver&) = delete;
     ClothBodyCollisionSolver& operator=(const ClothBodyCollisionSolver&) = delete;
 
@@ -18,10 +20,6 @@ public:
                     const std::filesystem::path& cloth_edge_body_edge_accumulate_shader_path,
                     const std::filesystem::path& body_vertex_cloth_face_accumulate_shader_path,
                     const std::filesystem::path& apply_shader_path,
-                    float collision_thickness,
-                    float max_correction_length,
-                    float static_friction,
-                    float dynamic_friction,
                     QOpenGLFunctions_4_5_Core& gl);
     bool can_solve(const SimulationGpuView& views) const;
     void solve(const SimulationGpuView& views, QOpenGLFunctions_4_5_Core& gl) const;

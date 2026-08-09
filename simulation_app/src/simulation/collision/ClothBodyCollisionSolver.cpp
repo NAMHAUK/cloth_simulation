@@ -1,5 +1,6 @@
 #include "simulation/collision/ClothBodyCollisionSolver.h"
 
+#include "simulation/SimulationParams.h"
 #include "utils/BufferUtils.h"
 #include "utils/ShaderUtils.h"
 
@@ -69,6 +70,13 @@ constexpr GLuint contact_motion_deltas = 5;
 }
 }
 
+ClothBodyCollisionSolver::ClothBodyCollisionSolver(const BodyCollisionParams& params)
+    : collision_thickness_(params.thickness),
+      max_correction_length_(params.max_correction_length),
+      static_friction_(params.static_friction),
+      dynamic_friction_(params.dynamic_friction)
+{}
+
 bool ClothBodyCollisionSolver::is_initialized() const
 {
     return vf_accumulate_.program != 0 &&
@@ -82,10 +90,6 @@ bool ClothBodyCollisionSolver::initialize(
     const std::filesystem::path& cloth_edge_body_edge_accumulate_shader_path,
     const std::filesystem::path& body_vertex_cloth_face_accumulate_shader_path,
     const std::filesystem::path& apply_shader_path,
-    float collision_thickness,
-    float max_correction_length,
-    float static_friction,
-    float dynamic_friction,
     QOpenGLFunctions_4_5_Core& gl)
 {
     vf_accumulate_.program = load_compute_program(cloth_vertex_body_face_accumulate_shader_path,
@@ -129,10 +133,6 @@ bool ClothBodyCollisionSolver::initialize(
         return false;
     }
 
-    collision_thickness_ = collision_thickness;
-    max_correction_length_ = max_correction_length;
-    static_friction_ = static_friction;
-    dynamic_friction_ = dynamic_friction;
     return true;
 }
 
@@ -196,10 +196,6 @@ void ClothBodyCollisionSolver::release(QOpenGLFunctions_4_5_Core& gl)
     ee_accumulate_ = {};
     bf_accumulate_ = {};
     apply_ = {};
-    collision_thickness_ = 0.0f;
-    max_correction_length_ = 0.0f;
-    static_friction_ = 0.0f;
-    dynamic_friction_ = 0.0f;
 }
 
 void ClothBodyCollisionSolver::clear_correction_sums(const SimulationGpuView& views,

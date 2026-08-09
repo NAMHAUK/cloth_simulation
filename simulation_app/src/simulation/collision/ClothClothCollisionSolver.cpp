@@ -1,10 +1,10 @@
 #include "simulation/collision/ClothClothCollisionSolver.h"
 
+#include "simulation/SimulationParams.h"
 #include "utils/BufferUtils.h"
 #include "utils/ShaderUtils.h"
 
 #include <cassert>
-#include <cmath>
 #include <iostream>
 
 namespace {
@@ -67,6 +67,13 @@ bool has_valid_common_solve_views(const SimulationGpuView& views)
 }
 }
 
+ClothClothCollisionSolver::ClothClothCollisionSolver(const ClothCollisionParams& params)
+    : collision_thickness_(params.thickness),
+      collision_stiffness_(params.stiffness),
+      max_correction_length_(params.max_correction_length),
+      surface_search_radius_(params.body_search_radius)
+{}
+
 bool ClothClothCollisionSolver::is_initialized() const
 {
     return accumulate_.program != 0 &&
@@ -79,26 +86,8 @@ bool ClothClothCollisionSolver::initialize(const std::filesystem::path& accumula
                                            const std::filesystem::path& initial_accumulate_shader_path,
                                            const std::filesystem::path& body_triangle_id_build_shader_path,
                                            const std::filesystem::path& apply_shader_path,
-                                           float collision_thickness,
-                                           float collision_stiffness,
-                                           float max_correction_length,
-                                           float surface_search_radius,
                                            QOpenGLFunctions_4_5_Core& gl)
 {
-    if (!std::isfinite(collision_thickness) ||
-        collision_thickness <= 0.0f ||
-        !std::isfinite(collision_stiffness) ||
-        collision_stiffness < 0.0f ||
-        collision_stiffness > 1.0f ||
-        !std::isfinite(max_correction_length) ||
-        max_correction_length <= 0.0f ||
-        !std::isfinite(surface_search_radius) ||
-        surface_search_radius <= 0.0f) {
-        std::cerr << "Cloth-cloth collision settings are invalid.\n";
-        release(gl);
-        return false;
-    }
-
     accumulate_.program =
         load_compute_program(accumulate_shader_path, "Cloth-cloth vertex-face candidate accumulation", gl);
     initial_accumulate_.program = load_compute_program(initial_accumulate_shader_path,
@@ -153,10 +142,6 @@ bool ClothClothCollisionSolver::initialize(const std::filesystem::path& accumula
         return false;
     }
 
-    collision_thickness_ = collision_thickness;
-    collision_stiffness_ = collision_stiffness;
-    max_correction_length_ = max_correction_length;
-    surface_search_radius_ = surface_search_radius;
     return true;
 }
 
@@ -354,8 +339,4 @@ void ClothClothCollisionSolver::release(QOpenGLFunctions_4_5_Core& gl)
     initial_accumulate_ = {};
     body_triangle_id_build_ = {};
     apply_ = {};
-    collision_thickness_ = 0.0f;
-    collision_stiffness_ = 0.0f;
-    max_correction_length_ = 0.0f;
-    surface_search_radius_ = 0.0f;
 }

@@ -28,7 +28,7 @@ class SimulationController final : public QObject
 public:
     using GlContextTask = std::function<void(QOpenGLFunctions_4_5_Core&)>;
 
-    SimulationController();
+    explicit SimulationController(SimulationParams params = default_simulation_params);
     ~SimulationController();
 
     SimulationController(const SimulationController&) = delete;
@@ -108,6 +108,9 @@ private:
     std::vector<GarmentLayer> garment_placement_layers() const;
     void restore_garment_placements(const std::vector<GarmentLayer>& layers, QOpenGLFunctions_4_5_Core& gl);
     void clear_garment_placements();
+
+    // Simulation configuration //
+    SimulationParams params_;
 
     // CPU-side scene state //
     SceneState scene_;

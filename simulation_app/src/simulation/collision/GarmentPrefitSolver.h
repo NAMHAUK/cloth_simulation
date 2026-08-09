@@ -7,18 +7,17 @@
 
 #include <QOpenGLFunctions_4_5_Core>
 
+struct PrefitParams;
+
 class GarmentPrefitSolver final
 {
 public:
-    GarmentPrefitSolver() = default;
+    explicit GarmentPrefitSolver(const PrefitParams& params);
     GarmentPrefitSolver(const GarmentPrefitSolver&) = delete;
     GarmentPrefitSolver& operator=(const GarmentPrefitSolver&) = delete;
 
     bool is_initialized() const;
-    bool initialize(const std::filesystem::path& shader_path,
-                    float search_radius,
-                    float pushout_margin,
-                    QOpenGLFunctions_4_5_Core& gl);
+    bool initialize(const std::filesystem::path& shader_path, QOpenGLFunctions_4_5_Core& gl);
     bool can_solve(const ClothMotionBufferView& motion_view,
                    const GarmentBufferRanges& garment_range,
                    const TriangleGeometryResources& body_triangle_geometry,

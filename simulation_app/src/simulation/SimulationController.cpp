@@ -2,7 +2,7 @@
 
 #include "app/ProjectPaths.h"
 #include "gpu/bvh/MeshBvhBuilder.h"
-#include "simulation/SimulationSettings.h"
+#include "simulation/SimulationParams.h"
 
 #include <algorithm>
 #include <cassert>
@@ -11,7 +11,9 @@
 
 #include <QObject>
 
-SimulationController::SimulationController()
+SimulationController::SimulationController(SimulationParams params)
+    : params_(params),
+      simulation_pipeline_(params)
 {
     // tick마다 frame update 함수 설정
     QObject::connect(&frame_timer_, &QTimer::timeout, &frame_timer_, [this]() { tick_frame(); });
@@ -54,7 +56,7 @@ bool SimulationController::initialize_gpu(const ShaderPaths& shader_paths, QOpen
         return false;
     }
 
-    frame_timer_.start(simulation_settings::simulation_tick_ms);
+    frame_timer_.start(params_.step.tick_ms());
     return true;
 }
 
@@ -78,8 +80,7 @@ void SimulationController::tick_frame()
             if (simulation_running_) {
                 simulation_pipeline_.step(scene_, gpu_state_, motion_step_index_, gl);
                 ++motion_step_index_;
-                scene_.update_character_frame(motion_step_index_,
-                                              simulation_settings::character_frame_stride);
+                scene_.update_character_frame(motion_step_index_, params_.step.motion_stride());
             }
         });
     }
@@ -156,7 +157,7 @@ void SimulationController::set_character_mesh(CharacterMesh mesh)
 void SimulationController::set_character_mesh_state(CharacterMesh mesh, QOpenGLFunctions_4_5_Core& gl)
 {
     scene_.set_character_mesh(std::move(mesh));
-    gpu_state_.set_character_mesh(scene_, gl);
+    gpu_state_.set_character_mesh(scene_, params_.collisions.body.thickness, gl);
     motion_step_index_ = 0;
     is_default_pose_ = false;
     Q_EMIT camera_reset_requested(scene_.character_root_position(0));
@@ -439,7 +440,7 @@ bool SimulationController::confirm_garment_placement()
         for (GarmentLayer layer : layers) {
             if (!gpu_state_.build_garment_attachment_targets(scene_,
                                                              layer,
-                                                             simulation_settings::attachment_surface_offset,
+                                                             params_.constraints.attachment_surface_offset,
                                                              gl)) {
                 std::cerr << "Cannot confirm garment placement because attachment target creation failed.\n";
                 restore_garment_placements(layers, gl);

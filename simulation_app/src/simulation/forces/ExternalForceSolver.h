@@ -26,7 +26,7 @@ struct ReferenceFrameMotion final
 class ExternalForceSolver final
 {
 public:
-    ExternalForceSolver() = default;
+    ExternalForceSolver(float velocity_damping, float frame_inertia_scale);
     ExternalForceSolver(const ExternalForceSolver&) = delete;
     ExternalForceSolver& operator=(const ExternalForceSolver&) = delete;
 
@@ -39,9 +39,7 @@ public:
                float dt,
                float inverse_dt,
                const glm::vec3& external_acceleration,
-               float velocity_damping,
                const ReferenceFrameMotion& frame_motion,
-               float frame_inertia_scale,
                QOpenGLFunctions_4_5_Core& gl) const;
     void release(QOpenGLFunctions_4_5_Core& gl);
 
@@ -61,4 +59,6 @@ private:
     GLint previous_angular_velocity_location_ = -1;
     GLint angular_acceleration_location_ = -1;
     GLint frame_inertia_scale_location_ = -1;
+    float velocity_damping_ = 0.0f;
+    float frame_inertia_scale_ = 0.0f;
 };

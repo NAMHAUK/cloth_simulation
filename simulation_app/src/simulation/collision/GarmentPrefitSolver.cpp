@@ -1,5 +1,6 @@
 #include "simulation/collision/GarmentPrefitSolver.h"
 
+#include "simulation/SimulationParams.h"
 #include "utils/BufferUtils.h"
 #include "utils/ShaderUtils.h"
 
@@ -13,15 +14,17 @@ constexpr GLuint body_triangle_bvh_node_binding = 3;
 constexpr std::uint32_t garment_prefit_local_size = 128;
 }
 
+GarmentPrefitSolver::GarmentPrefitSolver(const PrefitParams& params)
+    : search_radius_(params.surface_search_radius),
+      pushout_margin_(params.pushout_margin)
+{}
+
 bool GarmentPrefitSolver::is_initialized() const
 {
     return program_ != 0;
 }
 
-bool GarmentPrefitSolver::initialize(const std::filesystem::path& shader_path,
-                                     float search_radius,
-                                     float pushout_margin,
-                                     QOpenGLFunctions_4_5_Core& gl)
+bool GarmentPrefitSolver::initialize(const std::filesystem::path& shader_path, QOpenGLFunctions_4_5_Core& gl)
 {
     program_ = load_compute_program(shader_path, "Garment pre-fit", gl);
     if (program_ == 0) {
@@ -42,8 +45,6 @@ bool GarmentPrefitSolver::initialize(const std::filesystem::path& shader_path,
         return false;
     }
 
-    search_radius_ = search_radius;
-    pushout_margin_ = pushout_margin;
     return true;
 }
 
@@ -100,6 +101,4 @@ void GarmentPrefitSolver::release(QOpenGLFunctions_4_5_Core& gl)
     vertex_count_location_ = -1;
     search_radius_squared_location_ = -1;
     pushout_margin_location_ = -1;
-    search_radius_ = 0.0f;
-    pushout_margin_ = 0.0f;
 }

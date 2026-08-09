@@ -1,6 +1,6 @@
 #include "asset/AssetConverterCommands.h"
 
-#include "simulation/SimulationSettings.h"
+#include "simulation/SimulationParams.h"
 
 #include <filesystem>
 #include <iostream>
@@ -66,7 +66,7 @@ ConverterCommand make_motion_command(const ProjectPaths& project_paths,
         "--output",
         to_q_string(motion_asset_path),
         "--target-fps",
-        QString::number(simulation_settings::character_motion_fps),
+        QString::number(default_simulation_params.step.motion_fps),
         "--batch-size",
         "128",
     };

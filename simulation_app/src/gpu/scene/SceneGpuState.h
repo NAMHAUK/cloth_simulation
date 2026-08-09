@@ -29,12 +29,15 @@ public:
     void release(QOpenGLFunctions_4_5_Core& gl);
     void update_character_frame_interpolation(const SceneState& scene,
                                               const CharacterFrameInterpolation& interpolation,
+                                              float body_collision_thickness,
                                               QOpenGLFunctions_4_5_Core& gl);
     void update_mesh_normals(QOpenGLFunctions_4_5_Core& gl);
     SimulationGpuView simulation_view() const;
 
     const CharacterGpuResources& character_gpu_state() const;
-    void set_character_mesh(const SceneState& scene, QOpenGLFunctions_4_5_Core& gl);
+    void set_character_mesh(const SceneState& scene,
+                            float body_collision_thickness,
+                            QOpenGLFunctions_4_5_Core& gl);
 
     const ClothGpuResources& cloth_gpu_state() const;
     ClothBvhBufferView cloth_bvh_buffer_view() const;

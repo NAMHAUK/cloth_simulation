@@ -2,7 +2,6 @@
 
 #include "app/ProjectPaths.h"
 #include "scene/SceneState.h"
-#include "simulation/SimulationSettings.h"
 
 #include <iostream>
 #include <limits>
@@ -109,7 +108,9 @@ const CharacterGpuResources& SceneGpuState::character_gpu_state() const
     return character_gpu_state_;
 }
 
-void SceneGpuState::set_character_mesh(const SceneState& scene, QOpenGLFunctions_4_5_Core& gl)
+void SceneGpuState::set_character_mesh(const SceneState& scene,
+                                       float body_collision_thickness,
+                                       QOpenGLFunctions_4_5_Core& gl)
 {
     // 새 character mesh가 들어오면 전체 frame character mesh를 GPU에 올리고 frame 상태 설정
     const CharacterMesh& character_mesh = scene.character_mesh();
@@ -124,12 +125,13 @@ void SceneGpuState::set_character_mesh(const SceneState& scene, QOpenGLFunctions
         scene.default_body_triangle_bvh_data().node_ranges_by_level,
         scene.default_body_vertex_bvh_data().node_ranges_by_level,
         scene.default_body_edge_bvh_data().node_ranges_by_level,
-        simulation_settings::body_collision_thickness,
+        body_collision_thickness,
         gl);
 }
 
 void SceneGpuState::update_character_frame_interpolation(const SceneState& scene,
                                                          const CharacterFrameInterpolation& interpolation,
+                                                         float body_collision_thickness,
                                                          QOpenGLFunctions_4_5_Core& gl)
 {
     if (!is_initialized() || !character_gpu_state_.is_initialized()) {
@@ -141,7 +143,7 @@ void SceneGpuState::update_character_frame_interpolation(const SceneState& scene
         scene.default_body_triangle_bvh_data().node_ranges_by_level,
         scene.default_body_vertex_bvh_data().node_ranges_by_level,
         scene.default_body_edge_bvh_data().node_ranges_by_level,
-        simulation_settings::body_collision_thickness,
+        body_collision_thickness,
         gl);
 }
 

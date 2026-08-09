@@ -1,8 +1,9 @@
 #include "simulation/forces/SimulationForceField.h"
 
-#include "simulation/SimulationSettings.h"
+SimulationForceField::SimulationForceField(float gravity) : gravity_(gravity)
+{}
 
 glm::vec3 SimulationForceField::external_acceleration() const
 {
-    return {0.0f, simulation_settings::gravity, 0.0f};
+    return {0.0f, gravity_, 0.0f};
 }

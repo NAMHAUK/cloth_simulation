@@ -30,13 +30,15 @@ bool is_valid_attachment_constraint_view(const AttachmentConstraintBufferView& c
 }
 }
 
+AttachmentConstraintSolver::AttachmentConstraintSolver(float stiffness) : stiffness_(stiffness)
+{}
+
 bool AttachmentConstraintSolver::is_initialized() const
 {
     return program_ != 0;
 }
 
 bool AttachmentConstraintSolver::initialize(const std::filesystem::path& shader_path,
-                                            float stiffness,
                                             QOpenGLFunctions_4_5_Core& gl)
 {
     program_ = load_compute_program(shader_path, "Attachment constraint", gl);
@@ -54,7 +56,6 @@ bool AttachmentConstraintSolver::initialize(const std::filesystem::path& shader_
         return false;
     }
 
-    stiffness_ = stiffness;
     return true;
 }
 
@@ -115,5 +116,4 @@ void AttachmentConstraintSolver::release(QOpenGLFunctions_4_5_Core& gl)
     constraint_offset_location_ = -1;
     constraint_count_location_ = -1;
     stiffness_location_ = -1;
-    stiffness_ = 0.0f;
 }

@@ -6,19 +6,17 @@
 
 #include <QOpenGLFunctions_4_5_Core>
 
+struct GroundCollisionParams;
+
 class GroundCollisionSolver final
 {
 public:
-    GroundCollisionSolver() = default;
+    explicit GroundCollisionSolver(const GroundCollisionParams& params);
     GroundCollisionSolver(const GroundCollisionSolver&) = delete;
     GroundCollisionSolver& operator=(const GroundCollisionSolver&) = delete;
 
     bool is_initialized() const;
-    bool initialize(const std::filesystem::path& shader_path,
-                    float floor_height,
-                    float static_friction,
-                    float dynamic_friction,
-                    QOpenGLFunctions_4_5_Core& gl);
+    bool initialize(const std::filesystem::path& shader_path, QOpenGLFunctions_4_5_Core& gl);
     bool can_solve(const ClothMotionBufferView& motion_view,
                    const ClothCollisionPushoutBufferView& collision_pushout_view,
                    const ClothContactMotionBufferView& contact_motion_view) const;
