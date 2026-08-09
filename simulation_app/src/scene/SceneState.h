@@ -2,6 +2,7 @@
 
 #include "asset/AssetDataTypes.h"
 #include "gpu/bvh/BvhDataTypes.h"
+#include "scene/Kinematics.h"
 
 #include <cstddef>
 #include <cstdint>
@@ -62,9 +63,12 @@ public:
 
     // Playback
     void update_character_frame(std::uint64_t simulation_step_count, std::uint32_t character_frame_stride);
+    void update_kinematics(const CharacterFrameInterpolation& interpolation, float dt);
+    const Kinematics& kinematics(GarmentCategory garment_category) const;
     CharacterFrameInterpolation character_frame_interpolation(float character_frame_time) const;
-    CharacterReferenceFrame interpolated_character_reference_frame(float character_frame_time,
-                                                                   GarmentCategory garment_category) const;
+    CharacterReferenceFrame interpolated_character_reference_frame(
+        const CharacterFrameInterpolation& interpolation,
+        GarmentCategory garment_category) const;
     std::uint32_t current_character_frame() const;
     glm::vec3 character_root_position(std::uint32_t frame_index) const;
 
@@ -80,4 +84,6 @@ private:
 
     // Playback
     std::uint32_t current_character_frame_ = 0;
+    Kinematics pelvis_kinematics_;
+    Kinematics torso_kinematics_;
 };
