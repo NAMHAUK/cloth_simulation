@@ -27,7 +27,7 @@ add_executable(simulation_app
     src/simulation/SimulationController.h
     src/simulation/forces/SimulationForceField.cpp
     src/simulation/forces/SimulationForceField.h
-    src/simulation/SimulationGpuViews.h
+    src/gpu/scene/SimulationGpuView.h
     src/simulation/SimulationSettings.h
     src/simulation/forces/ExternalForceSolver.cpp
     src/simulation/forces/ExternalForceSolver.h

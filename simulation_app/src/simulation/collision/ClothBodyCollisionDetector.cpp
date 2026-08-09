@@ -114,7 +114,7 @@ bool ClothBodyCollisionDetector::initialize(
     return true;
 }
 
-bool ClothBodyCollisionDetector::can_detect(const SimulationGpuViews& views) const
+bool ClothBodyCollisionDetector::can_detect(const SimulationGpuView& views) const
 {
     return is_initialized() &&
            is_valid_motion_view(views.cloth_motion) &&
@@ -138,7 +138,7 @@ bool ClothBodyCollisionDetector::can_detect(const SimulationGpuViews& views) con
            collision_thickness_ > 0.0f;
 }
 
-void ClothBodyCollisionDetector::detect(const SimulationGpuViews& views, QOpenGLFunctions_4_5_Core& gl) const
+void ClothBodyCollisionDetector::detect(const SimulationGpuView& views, QOpenGLFunctions_4_5_Core& gl) const
 {
     assert(can_detect(views));
 

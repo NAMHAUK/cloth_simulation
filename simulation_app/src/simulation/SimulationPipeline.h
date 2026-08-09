@@ -1,7 +1,7 @@
 #pragma once
 
 #include "gpu/bvh/ClothBvhBoundsUpdater.h"
-#include "simulation/SimulationGpuViews.h"
+#include "gpu/scene/SimulationGpuView.h"
 #include "simulation/SimulationSettings.h"
 #include "simulation/collision/ClothBodyCollisionDetector.h"
 #include "simulation/collision/ClothBodyCollisionSolver.h"
@@ -44,8 +44,7 @@ public:
     void release(QOpenGLFunctions_4_5_Core& gl);
 
 private:
-    static SimulationGpuViews collect_gpu_views(const SceneGpuState& gpu_state);
-    void update_cloth_bvh_bounds(const SimulationGpuViews& views,
+    void update_cloth_bvh_bounds(const SimulationGpuView& views,
                                  float bounds_margin,
                                  QOpenGLFunctions_4_5_Core& gl) const;
 

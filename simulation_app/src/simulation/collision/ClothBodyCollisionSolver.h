@@ -1,6 +1,6 @@
 #pragma once
 
-#include "simulation/SimulationGpuViews.h"
+#include "gpu/scene/SimulationGpuView.h"
 
 #include <filesystem>
 
@@ -23,8 +23,8 @@ public:
                     float static_friction,
                     float dynamic_friction,
                     QOpenGLFunctions_4_5_Core& gl);
-    bool can_solve(const SimulationGpuViews& views) const;
-    void solve(const SimulationGpuViews& views, QOpenGLFunctions_4_5_Core& gl) const;
+    bool can_solve(const SimulationGpuView& views) const;
+    void solve(const SimulationGpuView& views, QOpenGLFunctions_4_5_Core& gl) const;
     void release(QOpenGLFunctions_4_5_Core& gl);
 
 private:
@@ -44,11 +44,11 @@ private:
         GLint dynamic_friction = -1;
     };
 
-    void clear_correction_sums(const SimulationGpuViews& views, QOpenGLFunctions_4_5_Core& gl) const;
-    void vf_accumulate(const SimulationGpuViews& views, QOpenGLFunctions_4_5_Core& gl) const;
-    void ee_accumulate(const SimulationGpuViews& views, QOpenGLFunctions_4_5_Core& gl) const;
-    void bf_accumulate(const SimulationGpuViews& views, QOpenGLFunctions_4_5_Core& gl) const;
-    void apply_combined_corrections(const SimulationGpuViews& views, QOpenGLFunctions_4_5_Core& gl) const;
+    void clear_correction_sums(const SimulationGpuView& views, QOpenGLFunctions_4_5_Core& gl) const;
+    void vf_accumulate(const SimulationGpuView& views, QOpenGLFunctions_4_5_Core& gl) const;
+    void ee_accumulate(const SimulationGpuView& views, QOpenGLFunctions_4_5_Core& gl) const;
+    void bf_accumulate(const SimulationGpuView& views, QOpenGLFunctions_4_5_Core& gl) const;
+    void apply_combined_corrections(const SimulationGpuView& views, QOpenGLFunctions_4_5_Core& gl) const;
 
     AccumulateStage vf_accumulate_;
     AccumulateStage ee_accumulate_;

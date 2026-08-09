@@ -43,7 +43,7 @@ const GarmentBufferRanges* find_garment_range(const std::vector<GarmentBufferRan
     return iter == garment_ranges.end() ? nullptr : &(*iter);
 }
 
-bool has_valid_garment_layouts(const SimulationGpuViews& views)
+bool has_valid_garment_layouts(const SimulationGpuView& views)
 {
     if (!is_valid_motion_view(views.cloth_motion) ||
         !is_valid_cloth_bvh_buffer_view(views.cloth_bvh) ||
@@ -135,7 +135,7 @@ bool ClothClothCollisionDetector::initialize(const std::filesystem::path& candid
     return true;
 }
 
-bool ClothClothCollisionDetector::can_detect(const SimulationGpuViews& views) const
+bool ClothClothCollisionDetector::can_detect(const SimulationGpuView& views) const
 {
     if (!is_initialized() || !has_valid_garment_layouts(views)) {
         return false;
@@ -156,7 +156,7 @@ bool ClothClothCollisionDetector::can_detect(const SimulationGpuViews& views) co
            views.collision_candidates.cloth_cloth_vertex_face.capacity >= required_capacity;
 }
 
-void ClothClothCollisionDetector::detect(const SimulationGpuViews& views, QOpenGLFunctions_4_5_Core& gl) const
+void ClothClothCollisionDetector::detect(const SimulationGpuView& views, QOpenGLFunctions_4_5_Core& gl) const
 {
     assert(can_detect(views));
 

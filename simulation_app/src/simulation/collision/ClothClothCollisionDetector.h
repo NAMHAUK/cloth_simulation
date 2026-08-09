@@ -1,6 +1,6 @@
 #pragma once
 
-#include "simulation/SimulationGpuViews.h"
+#include "gpu/scene/SimulationGpuView.h"
 #include <cstdint>
 #include <filesystem>
 
@@ -17,8 +17,8 @@ public:
     bool initialize(const std::filesystem::path& candidate_detect_shader_path,
                     const std::filesystem::path& dispatch_size_shader_path,
                     QOpenGLFunctions_4_5_Core& gl);
-    bool can_detect(const SimulationGpuViews& views) const;
-    void detect(const SimulationGpuViews& views, QOpenGLFunctions_4_5_Core& gl) const;
+    bool can_detect(const SimulationGpuView& views) const;
+    void detect(const SimulationGpuView& views, QOpenGLFunctions_4_5_Core& gl) const;
     void release(QOpenGLFunctions_4_5_Core& gl);
 
 private:

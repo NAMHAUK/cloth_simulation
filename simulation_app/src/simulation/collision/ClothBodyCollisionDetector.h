@@ -1,7 +1,7 @@
 #pragma once
 
 #include "gpu/scene/CollisionCandidateBuffers.h"
-#include "simulation/SimulationGpuViews.h"
+#include "gpu/scene/SimulationGpuView.h"
 
 #include <cstdint>
 #include <filesystem>
@@ -22,8 +22,8 @@ public:
                     const std::filesystem::path& dispatch_size_shader_path,
                     float collision_thickness,
                     QOpenGLFunctions_4_5_Core& gl);
-    bool can_detect(const SimulationGpuViews& views) const;
-    void detect(const SimulationGpuViews& views, QOpenGLFunctions_4_5_Core& gl) const;
+    bool can_detect(const SimulationGpuView& views) const;
+    void detect(const SimulationGpuView& views, QOpenGLFunctions_4_5_Core& gl) const;
     void release(QOpenGLFunctions_4_5_Core& gl);
 
 private:

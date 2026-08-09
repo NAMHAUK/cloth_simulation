@@ -136,7 +136,7 @@ bool ClothBodyCollisionSolver::initialize(
     return true;
 }
 
-bool ClothBodyCollisionSolver::can_solve(const SimulationGpuViews& views) const
+bool ClothBodyCollisionSolver::can_solve(const SimulationGpuView& views) const
 {
     return is_initialized() &&
            is_valid_motion_view(views.cloth_motion) &&
@@ -168,7 +168,7 @@ bool ClothBodyCollisionSolver::can_solve(const SimulationGpuViews& views) const
            static_friction_ >= dynamic_friction_;
 }
 
-void ClothBodyCollisionSolver::solve(const SimulationGpuViews& views, QOpenGLFunctions_4_5_Core& gl) const
+void ClothBodyCollisionSolver::solve(const SimulationGpuView& views, QOpenGLFunctions_4_5_Core& gl) const
 {
     assert(can_solve(views));
 
@@ -202,13 +202,13 @@ void ClothBodyCollisionSolver::release(QOpenGLFunctions_4_5_Core& gl)
     dynamic_friction_ = 0.0f;
 }
 
-void ClothBodyCollisionSolver::clear_correction_sums(const SimulationGpuViews& views,
+void ClothBodyCollisionSolver::clear_correction_sums(const SimulationGpuView& views,
                                                      QOpenGLFunctions_4_5_Core& gl) const
 {
     views.collision_candidates.clear_correction_sums(gl);
 }
 
-void ClothBodyCollisionSolver::vf_accumulate(const SimulationGpuViews& views,
+void ClothBodyCollisionSolver::vf_accumulate(const SimulationGpuView& views,
                                              QOpenGLFunctions_4_5_Core& gl) const
 {
     const CollisionCandidateBuffer& collision_candidates = views.collision_candidates.cloth_vertex_body_face;
@@ -260,7 +260,7 @@ void ClothBodyCollisionSolver::vf_accumulate(const SimulationGpuViews& views,
     gl.glMemoryBarrier(GL_SHADER_STORAGE_BARRIER_BIT);
 }
 
-void ClothBodyCollisionSolver::ee_accumulate(const SimulationGpuViews& views,
+void ClothBodyCollisionSolver::ee_accumulate(const SimulationGpuView& views,
                                              QOpenGLFunctions_4_5_Core& gl) const
 {
     const CollisionCandidateBuffer& collision_candidates = views.collision_candidates.cloth_edge_body_edge;
@@ -315,7 +315,7 @@ void ClothBodyCollisionSolver::ee_accumulate(const SimulationGpuViews& views,
     gl.glMemoryBarrier(GL_SHADER_STORAGE_BARRIER_BIT);
 }
 
-void ClothBodyCollisionSolver::bf_accumulate(const SimulationGpuViews& views,
+void ClothBodyCollisionSolver::bf_accumulate(const SimulationGpuView& views,
                                              QOpenGLFunctions_4_5_Core& gl) const
 {
     const CollisionCandidateBuffer& collision_candidates = views.collision_candidates.cloth_face_body_vertex;
@@ -370,7 +370,7 @@ void ClothBodyCollisionSolver::bf_accumulate(const SimulationGpuViews& views,
     gl.glMemoryBarrier(GL_SHADER_STORAGE_BARRIER_BIT);
 }
 
-void ClothBodyCollisionSolver::apply_combined_corrections(const SimulationGpuViews& views,
+void ClothBodyCollisionSolver::apply_combined_corrections(const SimulationGpuView& views,
                                                           QOpenGLFunctions_4_5_Core& gl) const
 {
     gl.glUseProgram(apply_.program);

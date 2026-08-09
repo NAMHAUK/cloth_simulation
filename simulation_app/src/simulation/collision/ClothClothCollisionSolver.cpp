@@ -51,7 +51,7 @@ bool are_uniform_locations_valid(Locations... locations)
     return ((locations >= 0) && ...);
 }
 
-bool has_valid_common_solve_views(const SimulationGpuViews& views)
+bool has_valid_common_solve_views(const SimulationGpuView& views)
 {
     return is_valid_motion_view(views.cloth_motion) &&
            is_valid_collision_pushout_view(views.cloth_collision_pushout) &&
@@ -160,7 +160,7 @@ bool ClothClothCollisionSolver::initialize(const std::filesystem::path& accumula
     return true;
 }
 
-bool ClothClothCollisionSolver::can_solve(const SimulationGpuViews& views) const
+bool ClothClothCollisionSolver::can_solve(const SimulationGpuView& views) const
 {
     return is_initialized() &&
            has_valid_common_solve_views(views) &&
@@ -169,7 +169,7 @@ bool ClothClothCollisionSolver::can_solve(const SimulationGpuViews& views) const
              views.cloth_body_triangle_ids.vertex_count == views.cloth_motion.vertex_count));
 }
 
-bool ClothClothCollisionSolver::can_solve_initial(const SimulationGpuViews& views) const
+bool ClothClothCollisionSolver::can_solve_initial(const SimulationGpuView& views) const
 {
     return is_initialized() &&
            has_valid_common_solve_views(views) &&
@@ -177,7 +177,7 @@ bool ClothClothCollisionSolver::can_solve_initial(const SimulationGpuViews& view
             is_valid_triangle_bvh_resource(views.body_triangle_bvh));
 }
 
-bool ClothClothCollisionSolver::can_build_body_triangle_ids(const SimulationGpuViews& views) const
+bool ClothClothCollisionSolver::can_build_body_triangle_ids(const SimulationGpuView& views) const
 {
     return is_initialized() &&
            is_valid_motion_view(views.cloth_motion) &&
@@ -187,7 +187,7 @@ bool ClothClothCollisionSolver::can_build_body_triangle_ids(const SimulationGpuV
            is_valid_triangle_bvh_resource(views.body_triangle_bvh);
 }
 
-void ClothClothCollisionSolver::build_body_triangle_ids(const SimulationGpuViews& views,
+void ClothClothCollisionSolver::build_body_triangle_ids(const SimulationGpuView& views,
                                                         QOpenGLFunctions_4_5_Core& gl) const
 {
     assert(can_build_body_triangle_ids(views));
@@ -218,7 +218,7 @@ void ClothClothCollisionSolver::build_body_triangle_ids(const SimulationGpuViews
     gl.glMemoryBarrier(GL_SHADER_STORAGE_BARRIER_BIT);
 }
 
-void ClothClothCollisionSolver::solve(const SimulationGpuViews& views, QOpenGLFunctions_4_5_Core& gl) const
+void ClothClothCollisionSolver::solve(const SimulationGpuView& views, QOpenGLFunctions_4_5_Core& gl) const
 {
     assert(can_solve(views));
     if (views.cloth_bvh.garment_layouts->size() < 2u) {
@@ -268,7 +268,7 @@ void ClothClothCollisionSolver::solve(const SimulationGpuViews& views, QOpenGLFu
     apply_corrections(views, gl);
 }
 
-void ClothClothCollisionSolver::solve_initial(const SimulationGpuViews& views,
+void ClothClothCollisionSolver::solve_initial(const SimulationGpuView& views,
                                               QOpenGLFunctions_4_5_Core& gl) const
 {
     assert(can_solve_initial(views));
@@ -325,7 +325,7 @@ void ClothClothCollisionSolver::solve_initial(const SimulationGpuViews& views,
     apply_corrections(views, gl);
 }
 
-void ClothClothCollisionSolver::apply_corrections(const SimulationGpuViews& views,
+void ClothClothCollisionSolver::apply_corrections(const SimulationGpuView& views,
                                                   QOpenGLFunctions_4_5_Core& gl) const
 {
     gl.glUseProgram(apply_.program);

@@ -8,6 +8,7 @@
 #include "gpu/scene/AttachmentTargetBuilder.h"
 #include "gpu/scene/CollisionCandidateBuffers.h"
 #include "gpu/scene/NormalUpdater.h"
+#include "gpu/scene/SimulationGpuView.h"
 #include "scene/SceneState.h"
 
 #include <optional>
@@ -30,6 +31,7 @@ public:
                                               const CharacterFrameInterpolation& interpolation,
                                               QOpenGLFunctions_4_5_Core& gl);
     void update_mesh_normals(QOpenGLFunctions_4_5_Core& gl);
+    SimulationGpuView simulation_view() const;
 
     const CharacterGpuResources& character_gpu_state() const;
     void set_character_mesh(const SceneState& scene, QOpenGLFunctions_4_5_Core& gl);

@@ -193,7 +193,7 @@ bool SimulationPipeline::prefit_garments(const SceneState& scene,
         return false;
     }
 
-    const auto views = collect_gpu_views(gpu_state);
+    const auto views = gpu_state.simulation_view();
     if (views.garment_buffer_ranges == nullptr) {
         std::cerr << "Cannot pre-fit garment because garment buffer ranges are missing.\n";
         return false;
@@ -265,7 +265,7 @@ void SimulationPipeline::step(SceneState& scene,
         return;
     }
 
-    const auto views = collect_gpu_views(gpu_state);
+    const auto views = gpu_state.simulation_view();
     const bool has_multiple_garments = scene.has_multiple_garments();
 
     if (has_multiple_garments) {
@@ -360,30 +360,7 @@ void SimulationPipeline::release(QOpenGLFunctions_4_5_Core& gl)
     initialized_ = false;
 }
 
-SimulationGpuViews SimulationPipeline::collect_gpu_views(const SceneGpuState& gpu_state)
-{
-    SimulationGpuViews views;
-    views.cloth_motion = gpu_state.cloth_gpu_state().motion_buffer_view();
-    views.cloth_collision_pushout = gpu_state.cloth_gpu_state().collision_pushout_buffer_view();
-    views.cloth_contact_motion = gpu_state.cloth_gpu_state().contact_motion_buffer_view();
-    views.cloth_body_triangle_ids = gpu_state.cloth_gpu_state().body_triangle_id_buffer_view();
-    views.cloth_topology = gpu_state.cloth_gpu_state().mesh_topology_resources();
-    views.cloth_bvh = gpu_state.cloth_bvh_buffer_view();
-    views.garment_buffer_ranges = &gpu_state.cloth_gpu_state().garment_buffer_ranges();
-    views.body_topology = gpu_state.character_gpu_state().mesh_topology_resources();
-    views.body_vertices = gpu_state.character_gpu_state().character_vertex_buffer_view();
-    views.body_triangle_geometry = gpu_state.character_gpu_state().character_triangle_geometry_resources();
-    views.body_triangle_bvh = gpu_state.character_gpu_state().body_triangle_bvh_resources();
-    views.body_vertex_bvh = gpu_state.character_gpu_state().body_vertex_bvh_resources();
-    views.body_edge_bvh = gpu_state.character_gpu_state().body_edge_bvh_resources();
-    views.collision_candidates = gpu_state.collision_candidate_buffer_view();
-    views.stretch_constraints = gpu_state.cloth_gpu_state().stretch_constraint_buffer_view();
-    views.bending_constraints = gpu_state.cloth_gpu_state().bending_constraint_buffer_view();
-    views.attachment_constraints = gpu_state.cloth_gpu_state().attachment_constraint_buffer_view();
-    return views;
-}
-
-void SimulationPipeline::update_cloth_bvh_bounds(const SimulationGpuViews& views,
+void SimulationPipeline::update_cloth_bvh_bounds(const SimulationGpuView& views,
                                                  float bounds_margin,
                                                  QOpenGLFunctions_4_5_Core& gl) const
 {
