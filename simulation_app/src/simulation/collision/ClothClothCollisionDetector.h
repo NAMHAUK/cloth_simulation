@@ -43,9 +43,9 @@ private:
         GLint local_size = -1;
     };
 
-    void detect_pair(const GarmentBufferRanges& upper_range,
+    void detect_pair(const ElementRange& upper_vertex_range,
                      const GarmentBvhLayout& upper_layout,
-                     const GarmentBufferRanges& lower_range,
+                     const ElementRange& lower_vertex_range,
                      const GarmentBvhLayout& lower_layout,
                      const CollisionCandidateBuffer& collision_candidates,
                      QOpenGLFunctions_4_5_Core& gl) const;

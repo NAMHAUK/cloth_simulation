@@ -19,11 +19,11 @@ public:
     bool is_initialized() const;
     bool initialize(const std::filesystem::path& shader_path, QOpenGLFunctions_4_5_Core& gl);
     bool can_solve(const ClothMotionBufferView& motion_view,
-                   const GarmentBufferRanges& garment_range,
+                   const ElementRange& vertex_range,
                    const TriangleGeometryResources& body_triangle_geometry,
                    const TriangleBvhResources& body_triangle_bvh) const;
     void solve(const ClothMotionBufferView& motion_view,
-               const GarmentBufferRanges& garment_range,
+               const ElementRange& vertex_range,
                const TriangleGeometryResources& body_triangle_geometry,
                const TriangleBvhResources& body_triangle_bvh,
                QOpenGLFunctions_4_5_Core& gl) const;

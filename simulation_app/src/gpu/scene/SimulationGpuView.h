@@ -5,6 +5,8 @@
 #include "gpu/cloth/ClothGpuDataTypes.h"
 #include "gpu/scene/CollisionCandidateBuffers.h"
 
+#include <array>
+
 struct SimulationGpuView final
 {
     // Cloth state
@@ -14,7 +16,7 @@ struct SimulationGpuView final
     ClothBodyTriangleIdBufferView cloth_body_triangle_ids;
     ClothMeshTopologyResources cloth_topology;
     ClothBvhBufferView cloth_bvh;
-    const std::vector<GarmentBufferRanges>* garment_buffer_ranges = nullptr;
+    std::array<ElementRange, 2> garment_vertex_ranges{};
     DistanceConstraintBufferView stretch_constraints;
     DistanceConstraintBufferView bending_constraints;
     AttachmentConstraintBufferView attachment_constraints;

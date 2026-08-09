@@ -2,6 +2,7 @@
 
 #include "asset/AssetDataTypes.h"
 
+#include <array>
 #include <cstdint>
 #include <vector>
 
@@ -109,19 +110,13 @@ struct AttachmentConstraintBufferView final
 
 struct GarmentBufferRanges final
 {
-    GarmentLayer layer = GarmentLayer::Lower;
-    std::uint32_t vertex_offset = 0;
-    std::uint32_t vertex_count = 0;
-    std::uint32_t index_offset = 0;
-    std::uint32_t index_count = 0;
-    std::uint32_t triangle_offset = 0;
-    std::uint32_t triangle_count = 0;
-    std::uint32_t adjacency_entry_offset = 0;
-    std::uint32_t adjacency_entry_count = 0;
-    std::uint32_t stretch_constraint_offset = 0;
-    std::uint32_t stretch_constraint_count = 0;
-    std::uint32_t bending_constraint_offset = 0;
-    std::uint32_t bending_constraint_count = 0;
-    std::uint32_t attachment_constraint_offset = 0;
-    std::uint32_t attachment_constraint_count = 0;
+    ElementRange vertices;
+    ElementRange indices;
+    ElementRange triangles;
+    ElementRange adjacency_entries;
+    ElementRange stretch_constraints;
+    ElementRange bending_constraints;
+    ElementRange attachment_constraints;
+
+    bool is_loaded() const { return vertices.count != 0u; }
 };

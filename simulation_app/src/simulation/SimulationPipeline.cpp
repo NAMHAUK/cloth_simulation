@@ -4,24 +4,10 @@
 #include "gpu/scene/SceneGpuState.h"
 #include "scene/SceneState.h"
 
-#include <algorithm>
 #include <cassert>
 #include <iostream>
 
 #include <glm/vec3.hpp>
-
-namespace {
-const GarmentBufferRanges* find_garment_range(const std::vector<GarmentBufferRanges>& garment_ranges,
-                                              GarmentLayer layer)
-{
-    const auto iter =
-        std::find_if(garment_ranges.begin(), garment_ranges.end(), [layer](const GarmentBufferRanges& range) {
-            return range.layer == layer;
-        });
-    return iter == garment_ranges.end() ? nullptr : &(*iter);
-}
-
-}
 
 SimulationPipeline::SimulationPipeline(SimulationParams params)
     : params_(params),
@@ -103,23 +89,18 @@ bool SimulationPipeline::prefit_garments(const SceneState& scene,
     }
 
     const auto views = gpu_state.simulation_view();
-    if (views.garment_buffer_ranges == nullptr) {
-        std::cerr << "Cannot pre-fit garment because garment buffer ranges are missing.\n";
-        return false;
-    }
-
-    std::vector<const GarmentBufferRanges*> garment_ranges;
-    garment_ranges.reserve(layers.size());
+    std::vector<ElementRange> garment_vertex_ranges;
+    garment_vertex_ranges.reserve(layers.size());
     for (GarmentLayer layer : layers) {
-        const GarmentBufferRanges* garment_range = find_garment_range(*views.garment_buffer_ranges, layer);
-        if (garment_range == nullptr || !garment_prefit_solver_.can_solve(views.cloth_motion,
-                                                                          *garment_range,
+        const ElementRange& vertex_range = views.garment_vertex_ranges[layer];
+        if (vertex_range.count == 0u || !garment_prefit_solver_.can_solve(views.cloth_motion,
+                                                                          vertex_range,
                                                                           views.body_triangle_geometry,
                                                                           views.body_triangle_bvh)) {
             std::cerr << "Cannot pre-fit garment because required GPU buffers are missing.\n";
             return false;
         }
-        garment_ranges.push_back(garment_range);
+        garment_vertex_ranges.push_back(vertex_range);
     }
 
     const bool has_multiple_garments = scene.has_multiple_garments();
@@ -130,10 +111,10 @@ bool SimulationPipeline::prefit_garments(const SceneState& scene,
         return false;
     }
 
-    for (const GarmentBufferRanges* garment_range : garment_ranges) {
+    for (const ElementRange& vertex_range : garment_vertex_ranges) {
         for (std::uint32_t iteration = 0; iteration < params_.prefit.iteration_count; ++iteration) {
             garment_prefit_solver_.solve(views.cloth_motion,
-                                         *garment_range,
+                                         vertex_range,
                                          views.body_triangle_geometry,
                                          views.body_triangle_bvh,
                                          gl);
@@ -187,16 +168,15 @@ void SimulationPipeline::step(SceneState& scene,
         gpu_state.update_character_pose(scene, frame_alpha, params_.collisions.body.thickness, gl);
 
         for (const GarmentObject& garment : scene.garments()) {
-            const GarmentBufferRanges* garment_range =
-                find_garment_range(*views.garment_buffer_ranges, garment.layer);
-            assert(garment_range != nullptr);
+            const ElementRange& vertex_range = views.garment_vertex_ranges[garment.layer];
+            assert(vertex_range.count != 0u);
 
             const Kinematics& reference_kinematics =
                 scene.reference_kinematics(garment.mesh.garment_category);
             external_force_solver_.solve(views.cloth_motion,
                                          views.cloth_collision_pushout,
                                          views.cloth_contact_motion,
-                                         *garment_range,
+                                         vertex_range,
                                          substep_dt_,
                                          inverse_substep_dt_,
                                          external_acceleration,
@@ -256,7 +236,7 @@ void SimulationPipeline::update_cloth_bvh_bounds(const SimulationGpuView& views,
 {
     cloth_bvh_bounds_updater_.update(views.cloth_motion,
                                      views.cloth_bvh,
-                                     *views.garment_buffer_ranges,
+                                     views.garment_vertex_ranges,
                                      bounds_margin,
                                      gl);
 }

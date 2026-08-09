@@ -11,7 +11,7 @@
 struct ClothMotionBufferView;
 struct ClothCollisionPushoutBufferView;
 struct ClothContactMotionBufferView;
-struct GarmentBufferRanges;
+struct ElementRange;
 
 class ExternalForceSolver final
 {
@@ -28,7 +28,7 @@ public:
     void solve(const ClothMotionBufferView& motion_view,
                const ClothCollisionPushoutBufferView& collision_pushout_view,
                const ClothContactMotionBufferView& contact_motion_view,
-               const GarmentBufferRanges& garment_range,
+               const ElementRange& vertex_range,
                float dt,
                float inverse_dt,
                const glm::vec3& external_acceleration,

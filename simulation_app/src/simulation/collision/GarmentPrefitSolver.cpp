@@ -49,15 +49,15 @@ bool GarmentPrefitSolver::initialize(const std::filesystem::path& shader_path, Q
 }
 
 bool GarmentPrefitSolver::can_solve(const ClothMotionBufferView& motion_view,
-                                    const GarmentBufferRanges& garment_range,
+                                    const ElementRange& vertex_range,
                                     const TriangleGeometryResources& body_triangle_geometry,
                                     const TriangleBvhResources& body_triangle_bvh) const
 {
     return is_initialized() &&
            is_valid_motion_view(motion_view) &&
-           garment_range.vertex_count != 0u &&
-           garment_range.vertex_offset <= motion_view.vertex_count &&
-           garment_range.vertex_count <= motion_view.vertex_count - garment_range.vertex_offset &&
+           vertex_range.count != 0u &&
+           vertex_range.offset <= motion_view.vertex_count &&
+           vertex_range.count <= motion_view.vertex_count - vertex_range.offset &&
            is_valid_triangle_geometry_resource(body_triangle_geometry) &&
            is_valid_triangle_bvh_resource(body_triangle_bvh) &&
            search_radius_ > 0.0f &&
@@ -65,12 +65,12 @@ bool GarmentPrefitSolver::can_solve(const ClothMotionBufferView& motion_view,
 }
 
 void GarmentPrefitSolver::solve(const ClothMotionBufferView& motion_view,
-                                const GarmentBufferRanges& garment_range,
+                                const ElementRange& vertex_range,
                                 const TriangleGeometryResources& body_triangle_geometry,
                                 const TriangleBvhResources& body_triangle_bvh,
                                 QOpenGLFunctions_4_5_Core& gl) const
 {
-    assert(can_solve(motion_view, garment_range, body_triangle_geometry, body_triangle_bvh));
+    assert(can_solve(motion_view, vertex_range, body_triangle_geometry, body_triangle_bvh));
 
     gl.glUseProgram(program_);
     gl.glBindBufferBase(GL_SHADER_STORAGE_BUFFER,
@@ -83,12 +83,12 @@ void GarmentPrefitSolver::solve(const ClothMotionBufferView& motion_view,
                         body_triangle_bvh_node_binding,
                         body_triangle_bvh.node_buffer);
 
-    gl.glProgramUniform1ui(program_, vertex_offset_location_, garment_range.vertex_offset);
-    gl.glProgramUniform1ui(program_, vertex_count_location_, garment_range.vertex_count);
+    gl.glProgramUniform1ui(program_, vertex_offset_location_, vertex_range.offset);
+    gl.glProgramUniform1ui(program_, vertex_count_location_, vertex_range.count);
     gl.glProgramUniform1f(program_, search_radius_squared_location_, search_radius_ * search_radius_);
     gl.glProgramUniform1f(program_, pushout_margin_location_, pushout_margin_);
 
-    gl.glDispatchCompute(compute_group_count(garment_range.vertex_count, garment_prefit_local_size), 1, 1);
+    gl.glDispatchCompute(compute_group_count(vertex_range.count, garment_prefit_local_size), 1, 1);
     gl.glMemoryBarrier(GL_SHADER_STORAGE_BARRIER_BIT);
 }
 

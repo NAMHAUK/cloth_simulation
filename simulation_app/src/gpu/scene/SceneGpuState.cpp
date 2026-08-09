@@ -67,7 +67,7 @@ SimulationGpuView SceneGpuState::simulation_view() const
     views.cloth_body_triangle_ids = cloth_gpu_state_.body_triangle_id_buffer_view();
     views.cloth_topology = cloth_gpu_state_.mesh_topology_resources();
     views.cloth_bvh = cloth_bvh_resources_.buffer_view();
-    views.garment_buffer_ranges = &cloth_gpu_state_.garment_buffer_ranges();
+    views.garment_vertex_ranges = cloth_gpu_state_.garment_vertex_ranges();
     views.stretch_constraints = cloth_gpu_state_.stretch_constraint_buffer_view();
     views.bending_constraints = cloth_gpu_state_.bending_constraint_buffer_view();
     views.attachment_constraints = cloth_gpu_state_.attachment_constraint_buffer_view();

@@ -89,24 +89,23 @@ bool ExternalForceSolver::initialize(const std::filesystem::path& shader_path, Q
 void ExternalForceSolver::solve(const ClothMotionBufferView& motion_view,
                                 const ClothCollisionPushoutBufferView& collision_pushout_view,
                                 const ClothContactMotionBufferView& contact_motion_view,
-                                const GarmentBufferRanges& garment_range,
+                                const ElementRange& vertex_range,
                                 float dt,
                                 float inverse_dt,
                                 const glm::vec3& external_acceleration,
                                 const Kinematics& kinematics,
                                 QOpenGLFunctions_4_5_Core& gl) const
 {
-    const bool has_valid_garment_range =
-        garment_range.vertex_count > 0u &&
-        garment_range.vertex_offset <= motion_view.vertex_count &&
-        garment_range.vertex_count <= motion_view.vertex_count - garment_range.vertex_offset;
+    const bool has_valid_vertices = vertex_range.count > 0u &&
+                                    vertex_range.offset <= motion_view.vertex_count &&
+                                    vertex_range.count <= motion_view.vertex_count - vertex_range.offset;
     if (!is_initialized() ||
         !is_valid_motion_view(motion_view) ||
         !is_valid_collision_pushout_view(collision_pushout_view) ||
         !is_valid_contact_motion_view(contact_motion_view) ||
         motion_view.vertex_count != collision_pushout_view.vertex_count ||
         motion_view.vertex_count != contact_motion_view.vertex_count ||
-        !has_valid_garment_range ||
+        !has_valid_vertices ||
         dt <= 0.0f ||
         inverse_dt <= 0.0f) {
         return;
@@ -137,8 +136,8 @@ void ExternalForceSolver::solve(const ClothMotionBufferView& motion_view,
                         contact_motion_view.contact_motion_delta_buffer);
 
     // shader에 값 전달
-    gl.glProgramUniform1ui(program_, vertex_offset_location_, garment_range.vertex_offset);
-    gl.glProgramUniform1ui(program_, vertex_count_location_, garment_range.vertex_count);
+    gl.glProgramUniform1ui(program_, vertex_offset_location_, vertex_range.offset);
+    gl.glProgramUniform1ui(program_, vertex_count_location_, vertex_range.count);
     gl.glProgramUniform1f(program_, delta_time_location_, dt);
     gl.glProgramUniform1f(program_, inverse_delta_time_location_, inverse_dt);
     gl.glProgramUniform3f(program_,
@@ -185,7 +184,7 @@ void ExternalForceSolver::solve(const ClothMotionBufferView& motion_view,
     gl.glProgramUniform1f(program_, frame_inertia_scale_location_, frame_inertia_scale_);
 
     // shader가 외부 가속도에 따른 위치 변화량 계산 (GPU에서 바로 업데이트)
-    gl.glDispatchCompute(compute_group_count(garment_range.vertex_count, external_force_local_size), 1, 1);
+    gl.glDispatchCompute(compute_group_count(vertex_range.count, external_force_local_size), 1, 1);
     gl.glMemoryBarrier(GL_SHADER_STORAGE_BARRIER_BIT);
 }
 

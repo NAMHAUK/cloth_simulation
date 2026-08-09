@@ -3,6 +3,7 @@
 #include "gpu/cloth/ClothBvhResources.h"
 #include "gpu/cloth/ClothGpuDataTypes.h"
 
+#include <array>
 #include <filesystem>
 #include <vector>
 
@@ -18,7 +19,7 @@ public:
     bool initialize(const std::filesystem::path& shader_path, QOpenGLFunctions_4_5_Core& gl);
     void update(const ClothMotionBufferView& motion_view,
                 const ClothBvhBufferView& bvh_view,
-                const std::vector<GarmentBufferRanges>& garment_buffer_ranges,
+                const std::array<ElementRange, 2>& garment_vertex_ranges,
                 float bounds_margin,
                 QOpenGLFunctions_4_5_Core& gl) const;
     void release(QOpenGLFunctions_4_5_Core& gl);
@@ -26,7 +27,7 @@ public:
 private:
     bool can_update(const ClothMotionBufferView& motion_view,
                     const ClothBvhBufferView& bvh_view,
-                    const std::vector<GarmentBufferRanges>& garment_buffer_ranges,
+                    const std::array<ElementRange, 2>& garment_vertex_ranges,
                     float bounds_margin) const;
 
     GLuint program_ = 0;
