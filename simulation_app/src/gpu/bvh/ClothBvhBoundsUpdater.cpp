@@ -1,5 +1,6 @@
 #include "gpu/bvh/ClothBvhBoundsUpdater.h"
 
+#include "gpu/scene/SimulationGpuView.h"
 #include "utils/BufferUtils.h"
 #include "utils/ShaderUtils.h"
 
@@ -72,11 +73,10 @@ bool ClothBvhBoundsUpdater::initialize(const std::filesystem::path& shader_path,
     return true;
 }
 
-bool ClothBvhBoundsUpdater::can_update(const ClothMotionBufferView& motion_view,
-                                       const ClothBvhBufferView& bvh_view,
-                                       const std::array<ElementRange, 2>& garment_vertex_ranges,
-                                       float bounds_margin) const
+bool ClothBvhBoundsUpdater::can_update(const SimulationGpuView& views, float bounds_margin) const
 {
+    const auto& motion_view = views.cloth_motion;
+    const auto& bvh_view = views.cloth_bvh;
     if (program_ == 0 ||
         !is_valid_motion_view(motion_view) ||
         !is_valid_cloth_bvh_buffer_view(bvh_view) ||
@@ -89,7 +89,7 @@ bool ClothBvhBoundsUpdater::can_update(const ClothMotionBufferView& motion_view,
     std::uint32_t expected_node_offset = 0;
     for (const GarmentBvhLayout& layout : *bvh_view.garment_layouts) {
         const GarmentBvhRange& bvh_range = layout.range;
-        const ElementRange& vertex_range = garment_vertex_ranges[bvh_range.layer];
+        const ElementRange& vertex_range = views.garment_vertex_ranges[bvh_range.layer];
         if (!is_valid_range(vertex_range.offset, vertex_range.count, motion_view.vertex_count) ||
             !is_valid_range(bvh_range.collision_triangles.offset,
                             bvh_range.collision_triangles.count,
@@ -108,13 +108,14 @@ bool ClothBvhBoundsUpdater::can_update(const ClothMotionBufferView& motion_view,
     return expected_triangle_offset == bvh_view.triangle_count && expected_node_offset == bvh_view.node_count;
 }
 
-void ClothBvhBoundsUpdater::update(const ClothMotionBufferView& motion_view,
-                                   const ClothBvhBufferView& bvh_view,
-                                   const std::array<ElementRange, 2>& garment_vertex_ranges,
+void ClothBvhBoundsUpdater::update(const SimulationGpuView& views,
                                    float bounds_margin,
                                    QOpenGLFunctions_4_5_Core& gl) const
 {
-    assert(can_update(motion_view, bvh_view, garment_vertex_ranges, bounds_margin));
+    assert(can_update(views, bounds_margin));
+
+    const auto& motion_view = views.cloth_motion;
+    const auto& bvh_view = views.cloth_bvh;
 
     gl.glUseProgram(program_);
     gl.glBindBufferBase(GL_SHADER_STORAGE_BUFFER,
@@ -144,7 +145,7 @@ void ClothBvhBoundsUpdater::update(const ClothMotionBufferView& motion_view,
             }
 
             const GarmentBvhRange& bvh_range = layout.range;
-            const ElementRange& vertex_range = garment_vertex_ranges[bvh_range.layer];
+            const ElementRange& vertex_range = views.garment_vertex_ranges[bvh_range.layer];
             const BvhNodeRange& level_range = layout.node_ranges_by_level[level_index];
 
             gl.glProgramUniform1ui(program_, vertex_offset_location_, vertex_range.offset);

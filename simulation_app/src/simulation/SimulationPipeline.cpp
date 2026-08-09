@@ -39,11 +39,10 @@ bool SimulationPipeline::initialize(const ShaderPaths& shader_paths, QOpenGLFunc
     }
 
     substep_dt_ = params_.step.dt() / static_cast<float>(params_.step.substep_count);
-    inverse_substep_dt_ = 1.0f / substep_dt_;
 
     const bool solvers_initialized =
         cloth_bvh_bounds_updater_.initialize(shader_paths.cloth_bvh_bounds_update_compute, gl) &&
-        external_force_solver_.initialize(shader_paths.cloth_external_force_compute, gl) &&
+        external_force_solver_.initialize(shader_paths.cloth_external_force_compute, substep_dt_, gl) &&
         stretch_constraint_solver_.initialize(shader_paths.cloth_stretch_constraint_compute, gl) &&
         bending_constraint_solver_.initialize(shader_paths.cloth_bending_constraint_compute, gl) &&
         attachment_constraint_solver_.initialize(shader_paths.cloth_attachment_constraint_compute, gl) &&
@@ -93,10 +92,7 @@ bool SimulationPipeline::prefit_garments(const SceneState& scene,
     garment_vertex_ranges.reserve(layers.size());
     for (GarmentLayer layer : layers) {
         const ElementRange& vertex_range = views.garment_vertex_ranges[layer];
-        if (vertex_range.count == 0u || !garment_prefit_solver_.can_solve(views.cloth_motion,
-                                                                          vertex_range,
-                                                                          views.body_triangle_geometry,
-                                                                          views.body_triangle_bvh)) {
+        if (vertex_range.count == 0u || !garment_prefit_solver_.can_solve(views, vertex_range)) {
             std::cerr << "Cannot pre-fit garment because required GPU buffers are missing.\n";
             return false;
         }
@@ -113,11 +109,7 @@ bool SimulationPipeline::prefit_garments(const SceneState& scene,
 
     for (const ElementRange& vertex_range : garment_vertex_ranges) {
         for (std::uint32_t iteration = 0; iteration < params_.prefit.iteration_count; ++iteration) {
-            garment_prefit_solver_.solve(views.cloth_motion,
-                                         vertex_range,
-                                         views.body_triangle_geometry,
-                                         views.body_triangle_bvh,
-                                         gl);
+            garment_prefit_solver_.solve(views, vertex_range, gl);
         }
     }
 
@@ -125,7 +117,7 @@ bool SimulationPipeline::prefit_garments(const SceneState& scene,
 
     if (has_multiple_garments) {
         for (std::uint32_t iteration = 0; iteration < params_.step.iteration_count; ++iteration) {
-            update_cloth_bvh_bounds(views, params_.collisions.cloth.initial_detection_distance, gl);
+            cloth_bvh_bounds_updater_.update(views, params_.collisions.cloth.initial_detection_distance, gl);
             cloth_cloth_collision_detector_.detect(views, gl);
             cloth_cloth_collision_solver_.solve_initial(views, gl);
             gpu_state.cloth_gpu_state().copy_current_positions_to_previous(gl);
@@ -173,12 +165,8 @@ void SimulationPipeline::step(SceneState& scene,
 
             const Kinematics& reference_kinematics =
                 scene.reference_kinematics(garment.mesh.garment_category);
-            external_force_solver_.solve(views.cloth_motion,
-                                         views.cloth_collision_pushout,
-                                         views.cloth_contact_motion,
+            external_force_solver_.solve(views,
                                          vertex_range,
-                                         substep_dt_,
-                                         inverse_substep_dt_,
                                          external_acceleration,
                                          reference_kinematics,
                                          gl);
@@ -187,25 +175,19 @@ void SimulationPipeline::step(SceneState& scene,
         cloth_body_collision_detector_.detect(views, gl);
 
         if (has_multiple_garments) {
-            update_cloth_bvh_bounds(views, params_.collisions.cloth.detection_distance(), gl);
+            cloth_bvh_bounds_updater_.update(views, params_.collisions.cloth.detection_distance(), gl);
             cloth_cloth_collision_detector_.detect(views, gl);
         }
 
         for (std::uint32_t iteration = 0; iteration < params_.step.iteration_count; ++iteration) {
-            stretch_constraint_solver_.solve(views.cloth_motion, views.stretch_constraints, gl);
-            bending_constraint_solver_.solve(views.cloth_motion, views.bending_constraints, gl);
-            attachment_constraint_solver_.solve(views.cloth_motion,
-                                                views.attachment_constraints,
-                                                views.body_triangle_geometry,
-                                                gl);
+            stretch_constraint_solver_.solve(views, gl);
+            bending_constraint_solver_.solve(views, gl);
+            attachment_constraint_solver_.solve(views, gl);
             cloth_body_collision_solver_.solve(views, gl);
             if (has_multiple_garments) {
                 cloth_cloth_collision_solver_.solve(views, gl);
             }
-            ground_collision_solver_.solve(views.cloth_motion,
-                                           views.cloth_collision_pushout,
-                                           views.cloth_contact_motion,
-                                           gl);
+            ground_collision_solver_.solve(views, gl);
         }
     }
 
@@ -226,17 +208,5 @@ void SimulationPipeline::release(QOpenGLFunctions_4_5_Core& gl)
     external_force_solver_.release(gl);
     cloth_bvh_bounds_updater_.release(gl);
     substep_dt_ = 0.0f;
-    inverse_substep_dt_ = 0.0f;
     initialized_ = false;
-}
-
-void SimulationPipeline::update_cloth_bvh_bounds(const SimulationGpuView& views,
-                                                 float bounds_margin,
-                                                 QOpenGLFunctions_4_5_Core& gl) const
-{
-    cloth_bvh_bounds_updater_.update(views.cloth_motion,
-                                     views.cloth_bvh,
-                                     views.garment_vertex_ranges,
-                                     bounds_margin,
-                                     gl);
 }

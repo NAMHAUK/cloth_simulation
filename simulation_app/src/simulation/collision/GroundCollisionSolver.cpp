@@ -1,5 +1,6 @@
 #include "simulation/collision/GroundCollisionSolver.h"
 
+#include "gpu/scene/SimulationGpuView.h"
 #include "simulation/SimulationParams.h"
 #include "utils/BufferUtils.h"
 #include "utils/ShaderUtils.h"
@@ -52,26 +53,25 @@ bool GroundCollisionSolver::initialize(const std::filesystem::path& shader_path,
     return true;
 }
 
-bool GroundCollisionSolver::can_solve(const ClothMotionBufferView& motion_view,
-                                      const ClothCollisionPushoutBufferView& collision_pushout_view,
-                                      const ClothContactMotionBufferView& contact_motion_view) const
+bool GroundCollisionSolver::can_solve(const SimulationGpuView& views) const
 {
     return is_initialized() &&
-           is_valid_motion_view(motion_view) &&
-           is_valid_collision_pushout_view(collision_pushout_view) &&
-           is_valid_contact_motion_view(contact_motion_view) &&
-           motion_view.vertex_count == collision_pushout_view.vertex_count &&
-           motion_view.vertex_count == contact_motion_view.vertex_count &&
+           is_valid_motion_view(views.cloth_motion) &&
+           is_valid_collision_pushout_view(views.cloth_collision_pushout) &&
+           is_valid_contact_motion_view(views.cloth_contact_motion) &&
+           views.cloth_motion.vertex_count == views.cloth_collision_pushout.vertex_count &&
+           views.cloth_motion.vertex_count == views.cloth_contact_motion.vertex_count &&
            dynamic_friction_ >= 0.0f &&
            static_friction_ >= dynamic_friction_;
 }
 
-void GroundCollisionSolver::solve(const ClothMotionBufferView& motion_view,
-                                  const ClothCollisionPushoutBufferView& collision_pushout_view,
-                                  const ClothContactMotionBufferView& contact_motion_view,
-                                  QOpenGLFunctions_4_5_Core& gl) const
+void GroundCollisionSolver::solve(const SimulationGpuView& views, QOpenGLFunctions_4_5_Core& gl) const
 {
-    assert(can_solve(motion_view, collision_pushout_view, contact_motion_view));
+    assert(can_solve(views));
+
+    const auto& motion_view = views.cloth_motion;
+    const auto& collision_pushout_view = views.cloth_collision_pushout;
+    const auto& contact_motion_view = views.cloth_contact_motion;
 
     // shader & GPU 연결
     gl.glUseProgram(program_);

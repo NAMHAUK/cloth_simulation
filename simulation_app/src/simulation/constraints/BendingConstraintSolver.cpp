@@ -1,6 +1,7 @@
 #include "simulation/constraints/BendingConstraintSolver.h"
 
 #include "gpu/cloth/ClothGpuResources.h"
+#include "gpu/scene/SimulationGpuView.h"
 #include "utils/BufferUtils.h"
 #include "utils/ShaderUtils.h"
 
@@ -45,20 +46,20 @@ bool BendingConstraintSolver::initialize(const std::filesystem::path& shader_pat
     return true;
 }
 
-bool BendingConstraintSolver::can_solve(const ClothMotionBufferView& motion_view,
-                                        const DistanceConstraintBufferView& constraint_view) const
+bool BendingConstraintSolver::can_solve(const SimulationGpuView& views) const
 {
     return is_initialized() &&
-           is_valid_motion_view(motion_view) &&
-           is_valid_distance_constraint_view(constraint_view) &&
+           is_valid_motion_view(views.cloth_motion) &&
+           is_valid_distance_constraint_view(views.bending_constraints) &&
            stiffness_ > 0.0f;
 }
 
-void BendingConstraintSolver::solve(const ClothMotionBufferView& motion_view,
-                                    const DistanceConstraintBufferView& constraint_view,
-                                    QOpenGLFunctions_4_5_Core& gl) const
+void BendingConstraintSolver::solve(const SimulationGpuView& views, QOpenGLFunctions_4_5_Core& gl) const
 {
-    assert(can_solve(motion_view, constraint_view));
+    assert(can_solve(views));
+
+    const auto& motion_view = views.cloth_motion;
+    const auto& constraint_view = views.bending_constraints;
 
     gl.glUseProgram(program_);
     gl.glBindBufferBase(GL_SHADER_STORAGE_BUFFER,

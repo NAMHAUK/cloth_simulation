@@ -1,5 +1,6 @@
 #include "simulation/constraints/AttachmentConstraintSolver.h"
 
+#include "gpu/scene/SimulationGpuView.h"
 #include "utils/BufferUtils.h"
 #include "utils/ShaderUtils.h"
 
@@ -59,28 +60,26 @@ bool AttachmentConstraintSolver::initialize(const std::filesystem::path& shader_
     return true;
 }
 
-bool AttachmentConstraintSolver::can_solve(const ClothMotionBufferView& motion_view,
-                                           const AttachmentConstraintBufferView& constraint_view,
-                                           const TriangleGeometryResources& body_triangle_geometry) const
+bool AttachmentConstraintSolver::can_solve(const SimulationGpuView& views) const
 {
     return is_initialized() &&
-           is_valid_motion_view(motion_view) &&
-           is_valid_attachment_constraint_view(constraint_view) &&
-           is_valid_triangle_geometry_resource(body_triangle_geometry) &&
+           is_valid_motion_view(views.cloth_motion) &&
+           is_valid_attachment_constraint_view(views.attachment_constraints) &&
+           is_valid_triangle_geometry_resource(views.body_triangle_geometry) &&
            stiffness_ > 0.0f;
 }
 
-void AttachmentConstraintSolver::solve(const ClothMotionBufferView& motion_view,
-                                       const AttachmentConstraintBufferView& constraint_view,
-                                       const TriangleGeometryResources& body_triangle_geometry,
-                                       QOpenGLFunctions_4_5_Core& gl) const
+void AttachmentConstraintSolver::solve(const SimulationGpuView& views, QOpenGLFunctions_4_5_Core& gl) const
 {
+    const auto& constraint_view = views.attachment_constraints;
     if (!has_attachment_constraints(constraint_view)) {
         return;
     }
 
-    assert(can_solve(motion_view, constraint_view, body_triangle_geometry));
+    assert(can_solve(views));
 
+    const auto& motion_view = views.cloth_motion;
+    const auto& body_triangle_geometry = views.body_triangle_geometry;
     gl.glUseProgram(program_);
     gl.glBindBufferBase(GL_SHADER_STORAGE_BUFFER,
                         current_positions_binding,

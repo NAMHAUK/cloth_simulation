@@ -1,6 +1,7 @@
 #include "simulation/forces/ExternalForceSolver.h"
 
 #include "gpu/cloth/ClothGpuResources.h"
+#include "gpu/scene/SimulationGpuView.h"
 #include "utils/BufferUtils.h"
 #include "utils/ShaderUtils.h"
 
@@ -40,8 +41,14 @@ bool ExternalForceSolver::is_initialized() const
     return program_ != 0;
 }
 
-bool ExternalForceSolver::initialize(const std::filesystem::path& shader_path, QOpenGLFunctions_4_5_Core& gl)
+bool ExternalForceSolver::initialize(const std::filesystem::path& shader_path,
+                                     float dt,
+                                     QOpenGLFunctions_4_5_Core& gl)
 {
+    if (dt <= 0.0f) {
+        return false;
+    }
+
     program_ = load_compute_program(shader_path, "Cloth external force", gl);
     if (program_ == 0) {
         return false;
@@ -82,20 +89,21 @@ bool ExternalForceSolver::initialize(const std::filesystem::path& shader_path, Q
         return false;
     }
 
+    dt_ = dt;
+    inverse_dt_ = 1.0f / dt_;
     return true;
 }
 
 // 외부 힘 계산 -> 힘에 따른 위치 변화 GPU에서 갱신
-void ExternalForceSolver::solve(const ClothMotionBufferView& motion_view,
-                                const ClothCollisionPushoutBufferView& collision_pushout_view,
-                                const ClothContactMotionBufferView& contact_motion_view,
+void ExternalForceSolver::solve(const SimulationGpuView& views,
                                 const ElementRange& vertex_range,
-                                float dt,
-                                float inverse_dt,
                                 const glm::vec3& external_acceleration,
                                 const Kinematics& kinematics,
                                 QOpenGLFunctions_4_5_Core& gl) const
 {
+    const auto& motion_view = views.cloth_motion;
+    const auto& collision_pushout_view = views.cloth_collision_pushout;
+    const auto& contact_motion_view = views.cloth_contact_motion;
     const bool has_valid_vertices = vertex_range.count > 0u &&
                                     vertex_range.offset <= motion_view.vertex_count &&
                                     vertex_range.count <= motion_view.vertex_count - vertex_range.offset;
@@ -106,8 +114,8 @@ void ExternalForceSolver::solve(const ClothMotionBufferView& motion_view,
         motion_view.vertex_count != collision_pushout_view.vertex_count ||
         motion_view.vertex_count != contact_motion_view.vertex_count ||
         !has_valid_vertices ||
-        dt <= 0.0f ||
-        inverse_dt <= 0.0f) {
+        dt_ <= 0.0f ||
+        inverse_dt_ <= 0.0f) {
         return;
     }
 
@@ -138,8 +146,8 @@ void ExternalForceSolver::solve(const ClothMotionBufferView& motion_view,
     // shader에 값 전달
     gl.glProgramUniform1ui(program_, vertex_offset_location_, vertex_range.offset);
     gl.glProgramUniform1ui(program_, vertex_count_location_, vertex_range.count);
-    gl.glProgramUniform1f(program_, delta_time_location_, dt);
-    gl.glProgramUniform1f(program_, inverse_delta_time_location_, inverse_dt);
+    gl.glProgramUniform1f(program_, delta_time_location_, dt_);
+    gl.glProgramUniform1f(program_, inverse_delta_time_location_, inverse_dt_);
     gl.glProgramUniform3f(program_,
                           external_acceleration_location_,
                           external_acceleration.x,
@@ -207,4 +215,6 @@ void ExternalForceSolver::release(QOpenGLFunctions_4_5_Core& gl)
     frame_start_angular_velocity_location_ = -1;
     angular_acceleration_location_ = -1;
     frame_inertia_scale_location_ = -1;
+    dt_ = 0.0f;
+    inverse_dt_ = 0.0f;
 }

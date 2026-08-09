@@ -44,10 +44,6 @@ public:
     void release(QOpenGLFunctions_4_5_Core& gl);
 
 private:
-    void update_cloth_bvh_bounds(const SimulationGpuView& views,
-                                 float bounds_margin,
-                                 QOpenGLFunctions_4_5_Core& gl) const;
-
     SimulationParams params_;
     ClothBvhBoundsUpdater cloth_bvh_bounds_updater_;
     SimulationForceField force_field_;
@@ -62,6 +58,5 @@ private:
     ClothClothCollisionSolver cloth_cloth_collision_solver_;
     GarmentPrefitSolver garment_prefit_solver_;
     float substep_dt_ = 0.0f;
-    float inverse_substep_dt_ = 0.0f;
     bool initialized_ = false;
 };

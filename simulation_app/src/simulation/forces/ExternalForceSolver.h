@@ -8,10 +8,8 @@
 #include <QOpenGLFunctions_4_5_Core>
 #include <glm/vec3.hpp>
 
-struct ClothMotionBufferView;
-struct ClothCollisionPushoutBufferView;
-struct ClothContactMotionBufferView;
 struct ElementRange;
+struct SimulationGpuView;
 
 class ExternalForceSolver final
 {
@@ -24,13 +22,9 @@ public:
     ExternalForceSolver& operator=(const ExternalForceSolver&) = delete;
 
     bool is_initialized() const;
-    bool initialize(const std::filesystem::path& shader_path, QOpenGLFunctions_4_5_Core& gl);
-    void solve(const ClothMotionBufferView& motion_view,
-               const ClothCollisionPushoutBufferView& collision_pushout_view,
-               const ClothContactMotionBufferView& contact_motion_view,
+    bool initialize(const std::filesystem::path& shader_path, float dt, QOpenGLFunctions_4_5_Core& gl);
+    void solve(const SimulationGpuView& views,
                const ElementRange& vertex_range,
-               float dt,
-               float inverse_dt,
                const glm::vec3& external_acceleration,
                const Kinematics& kinematics,
                QOpenGLFunctions_4_5_Core& gl) const;
@@ -52,6 +46,8 @@ private:
     GLint frame_start_angular_velocity_location_ = -1;
     GLint angular_acceleration_location_ = -1;
     GLint frame_inertia_scale_location_ = -1;
+    float dt_ = 0.0f;
+    float inverse_dt_ = 0.0f;
     float velocity_damping_ = 0.0f;
     float frame_inertia_scale_ = 0.0f;
     float reference_frame_max_acceleration_ = 0.0f;

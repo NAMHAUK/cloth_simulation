@@ -1,5 +1,6 @@
 #include "simulation/collision/GarmentPrefitSolver.h"
 
+#include "gpu/scene/SimulationGpuView.h"
 #include "simulation/SimulationParams.h"
 #include "utils/BufferUtils.h"
 #include "utils/ShaderUtils.h"
@@ -48,29 +49,28 @@ bool GarmentPrefitSolver::initialize(const std::filesystem::path& shader_path, Q
     return true;
 }
 
-bool GarmentPrefitSolver::can_solve(const ClothMotionBufferView& motion_view,
-                                    const ElementRange& vertex_range,
-                                    const TriangleGeometryResources& body_triangle_geometry,
-                                    const TriangleBvhResources& body_triangle_bvh) const
+bool GarmentPrefitSolver::can_solve(const SimulationGpuView& views, const ElementRange& vertex_range) const
 {
     return is_initialized() &&
-           is_valid_motion_view(motion_view) &&
+           is_valid_motion_view(views.cloth_motion) &&
            vertex_range.count != 0u &&
-           vertex_range.offset <= motion_view.vertex_count &&
-           vertex_range.count <= motion_view.vertex_count - vertex_range.offset &&
-           is_valid_triangle_geometry_resource(body_triangle_geometry) &&
-           is_valid_triangle_bvh_resource(body_triangle_bvh) &&
+           vertex_range.offset <= views.cloth_motion.vertex_count &&
+           vertex_range.count <= views.cloth_motion.vertex_count - vertex_range.offset &&
+           is_valid_triangle_geometry_resource(views.body_triangle_geometry) &&
+           is_valid_triangle_bvh_resource(views.body_triangle_bvh) &&
            search_radius_ > 0.0f &&
            pushout_margin_ > 0.0f;
 }
 
-void GarmentPrefitSolver::solve(const ClothMotionBufferView& motion_view,
+void GarmentPrefitSolver::solve(const SimulationGpuView& views,
                                 const ElementRange& vertex_range,
-                                const TriangleGeometryResources& body_triangle_geometry,
-                                const TriangleBvhResources& body_triangle_bvh,
                                 QOpenGLFunctions_4_5_Core& gl) const
 {
-    assert(can_solve(motion_view, vertex_range, body_triangle_geometry, body_triangle_bvh));
+    assert(can_solve(views, vertex_range));
+
+    const auto& motion_view = views.cloth_motion;
+    const auto& body_triangle_geometry = views.body_triangle_geometry;
+    const auto& body_triangle_bvh = views.body_triangle_bvh;
 
     gl.glUseProgram(program_);
     gl.glBindBufferBase(GL_SHADER_STORAGE_BUFFER,

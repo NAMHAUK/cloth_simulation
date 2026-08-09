@@ -233,20 +233,8 @@ bool SceneGpuState::build_garment_attachment_targets(SceneState& scene,
         return true;
     }
 
-    const ClothMotionBufferView motion_view = cloth_gpu_state_.motion_buffer_view();
-    const AttachmentConstraintBufferView attachment_view =
-        cloth_gpu_state_.attachment_constraint_buffer_view();
-    const TriangleGeometryResources body_triangle_geometry =
-        character_gpu_state_.character_triangle_geometry_resources();
-    const TriangleBvhResources body_triangle_bvh = character_gpu_state_.body_triangle_bvh_resources();
-
-    if (!attachment_target_builder_.build(motion_view,
-                                          attachment_view,
-                                          target_range,
-                                          body_triangle_geometry,
-                                          body_triangle_bvh,
-                                          surface_offset,
-                                          gl)) {
+    const auto views = simulation_view();
+    if (!attachment_target_builder_.build(views, target_range, surface_offset, gl)) {
         std::cerr << "Cannot build garment attachment targets because required GPU buffers are missing.\n";
         return false;
     }

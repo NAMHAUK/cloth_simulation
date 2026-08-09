@@ -1,13 +1,10 @@
 #pragma once
 
-#include "gpu/cloth/ClothBvhResources.h"
-#include "gpu/cloth/ClothGpuDataTypes.h"
-
-#include <array>
 #include <filesystem>
-#include <vector>
 
 #include <QOpenGLFunctions_4_5_Core>
+
+struct SimulationGpuView;
 
 class ClothBvhBoundsUpdater final
 {
@@ -17,18 +14,11 @@ public:
     ClothBvhBoundsUpdater& operator=(const ClothBvhBoundsUpdater&) = delete;
 
     bool initialize(const std::filesystem::path& shader_path, QOpenGLFunctions_4_5_Core& gl);
-    void update(const ClothMotionBufferView& motion_view,
-                const ClothBvhBufferView& bvh_view,
-                const std::array<ElementRange, 2>& garment_vertex_ranges,
-                float bounds_margin,
-                QOpenGLFunctions_4_5_Core& gl) const;
+    void update(const SimulationGpuView& views, float bounds_margin, QOpenGLFunctions_4_5_Core& gl) const;
     void release(QOpenGLFunctions_4_5_Core& gl);
 
 private:
-    bool can_update(const ClothMotionBufferView& motion_view,
-                    const ClothBvhBufferView& bvh_view,
-                    const std::array<ElementRange, 2>& garment_vertex_ranges,
-                    float bounds_margin) const;
+    bool can_update(const SimulationGpuView& views, float bounds_margin) const;
 
     GLuint program_ = 0;
     GLint vertex_offset_location_ = -1;
