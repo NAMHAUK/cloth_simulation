@@ -58,26 +58,25 @@ bool ClothBodyCollisionDetector::is_initialized() const
     return has_programs();
 }
 
-bool ClothBodyCollisionDetector::initialize(
-    const std::filesystem::path& cloth_vertex_body_face_detect_shader_path,
-    const std::filesystem::path& cloth_edge_body_edge_detect_shader_path,
-    const std::filesystem::path& cloth_face_body_vertex_detect_shader_path,
-    const std::filesystem::path& dispatch_size_shader_path,
-    QOpenGLFunctions_4_5_Core& gl)
+bool ClothBodyCollisionDetector::initialize(const std::filesystem::path& shader_dir,
+                                            QOpenGLFunctions_4_5_Core& gl)
 {
-    cloth_vertex_body_face_.program =
-        load_compute_program(cloth_vertex_body_face_detect_shader_path,
-                             "Cloth vertex/body face collision candidate detection",
-                             gl);
-    cloth_edge_body_edge_.program = load_compute_program(cloth_edge_body_edge_detect_shader_path,
-                                                         "Cloth edge/body edge collision candidate detection",
-                                                         gl);
-    cloth_face_body_vertex_.program =
-        load_compute_program(cloth_face_body_vertex_detect_shader_path,
-                             "Cloth face/body vertex collision candidate detection",
-                             gl);
-    dispatch_size_.program =
-        load_compute_program(dispatch_size_shader_path, "Collision candidate dispatch size", gl);
+    const std::filesystem::path collision_shader_dir = shader_dir / "collision";
+    cloth_vertex_body_face_.program = load_compute_program(
+        collision_shader_dir / "cloth_vertex_body_face_detect.comp",
+        "Cloth vertex/body face collision candidate detection",
+        gl);
+    cloth_edge_body_edge_.program = load_compute_program(
+        collision_shader_dir / "cloth_edge_body_edge_detect.comp",
+        "Cloth edge/body edge collision candidate detection",
+        gl);
+    cloth_face_body_vertex_.program = load_compute_program(
+        collision_shader_dir / "body_vertex_cloth_face_detect.comp",
+        "Cloth face/body vertex collision candidate detection",
+        gl);
+    dispatch_size_.program = load_compute_program(collision_shader_dir / "collision_dispatch_size.comp",
+                                                  "Collision candidate dispatch size",
+                                                  gl);
     if (!has_programs()) {
         release(gl);
         return false;

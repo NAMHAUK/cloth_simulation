@@ -11,11 +11,10 @@
 #include "gpu/scene/SimulationGpuView.h"
 #include "scene/SceneState.h"
 
+#include <filesystem>
 #include <optional>
 
 #include <QOpenGLFunctions_4_5_Core>
-
-struct ShaderPaths;
 
 class SceneGpuState final
 {
@@ -25,7 +24,7 @@ public:
     SceneGpuState& operator=(const SceneGpuState&) = delete;
 
     bool is_initialized() const;
-    bool initialize(const ShaderPaths& shader_paths, QOpenGLFunctions_4_5_Core& gl);
+    bool initialize(const std::filesystem::path& shader_dir, QOpenGLFunctions_4_5_Core& gl);
     void release(QOpenGLFunctions_4_5_Core& gl);
     void update_character_pose(const SceneState& scene,
                                float frame_alpha,

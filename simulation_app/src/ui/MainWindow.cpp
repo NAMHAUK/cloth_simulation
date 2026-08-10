@@ -108,7 +108,7 @@ bool MainWindow::initialize_scene(QOpenGLFunctions_4_5_Core& gl)
         return false;
     }
 
-    return simulation_controller_->initialize(project_paths_.shaders,
+    return simulation_controller_->initialize(project_paths_.shader_dir,
                                               std::move(character_mesh),
                                               triangle_part_labels,
                                               gl);

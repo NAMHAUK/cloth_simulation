@@ -40,16 +40,21 @@ bool NormalUpdater::is_initialized() const
     return triangle_program_ != 0 && vertex_program_ != 0;
 }
 
-bool NormalUpdater::initialize(const std::filesystem::path& triangle_normal_shader_path,
-                               const std::filesystem::path& vertex_normal_shader_path,
-                               QOpenGLFunctions_4_5_Core& gl)
+bool NormalUpdater::initialize(const std::filesystem::path& shader_dir, QOpenGLFunctions_4_5_Core& gl)
 {
-    triangle_program_ = load_compute_program(triangle_normal_shader_path, "Triangle normal update", gl);
+    const std::filesystem::path mesh_shader_dir = shader_dir / "mesh";
+    triangle_program_ = load_compute_program(
+        mesh_shader_dir / "triangle_normal.comp",
+        "Triangle normal update",
+        gl);
     if (triangle_program_ == 0) {
         return false;
     }
 
-    vertex_program_ = load_compute_program(vertex_normal_shader_path, "Vertex normal update", gl);
+    vertex_program_ = load_compute_program(
+        mesh_shader_dir / "vertex_normal.comp",
+        "Vertex normal update",
+        gl);
     if (vertex_program_ == 0) {
         gl.glDeleteProgram(triangle_program_);
         triangle_program_ = 0;

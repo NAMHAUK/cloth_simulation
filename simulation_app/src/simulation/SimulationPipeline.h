@@ -15,6 +15,7 @@
 #include "simulation/forces/SimulationForceField.h"
 
 #include <cstdint>
+#include <filesystem>
 #include <vector>
 
 #include <QOpenGLFunctions_4_5_Core>
@@ -22,8 +23,6 @@
 
 class SceneGpuState;
 class SceneState;
-struct ShaderPaths;
-
 class SimulationPipeline final
 {
 public:
@@ -31,7 +30,7 @@ public:
     SimulationPipeline(const SimulationPipeline&) = delete;
     SimulationPipeline& operator=(const SimulationPipeline&) = delete;
 
-    bool initialize(const ShaderPaths& shader_paths, QOpenGLFunctions_4_5_Core& gl);
+    bool initialize(const std::filesystem::path& shader_dir, QOpenGLFunctions_4_5_Core& gl);
     void release(QOpenGLFunctions_4_5_Core& gl);
     void prefit_garments(SceneGpuState& gpu_state,
                          const std::vector<GarmentLayer>& unconfirmed_layers,

@@ -25,10 +25,12 @@ bool BendingConstraintSolver::is_initialized() const
     return program_ != 0;
 }
 
-bool BendingConstraintSolver::initialize(const std::filesystem::path& shader_path,
+bool BendingConstraintSolver::initialize(const std::filesystem::path& shader_dir,
                                          QOpenGLFunctions_4_5_Core& gl)
 {
-    program_ = load_compute_program(shader_path, "Bending constraint", gl);
+    program_ = load_compute_program(shader_dir / "cloth" / "constraints" / "cloth_bending_constraint.comp",
+                                    "Bending constraint",
+                                    gl);
     if (program_ == 0) {
         return false;
     }

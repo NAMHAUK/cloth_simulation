@@ -16,7 +16,7 @@ public:
     GarmentPrefitSolver& operator=(const GarmentPrefitSolver&) = delete;
 
     bool is_initialized() const;
-    bool initialize(const std::filesystem::path& shader_path, QOpenGLFunctions_4_5_Core& gl);
+    bool initialize(const std::filesystem::path& shader_dir, QOpenGLFunctions_4_5_Core& gl);
     bool can_solve(const SimulationGpuView& views, const ElementRange& vertex_range) const;
     void solve(const SimulationGpuView& views,
                const ElementRange& vertex_range,

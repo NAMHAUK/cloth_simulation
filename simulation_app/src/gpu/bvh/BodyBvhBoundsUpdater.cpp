@@ -75,9 +75,11 @@ bool BodyBvhBoundsUpdater::can_update(const CharacterMeshTopologyResources& topo
            collision_thickness > 0.0f;
 }
 
-bool BodyBvhBoundsUpdater::initialize(const std::filesystem::path& shader_path, QOpenGLFunctions_4_5_Core& gl)
+bool BodyBvhBoundsUpdater::initialize(const std::filesystem::path& shader_dir, QOpenGLFunctions_4_5_Core& gl)
 {
-    program_ = load_compute_program(shader_path, "Body BVH bounds update", gl);
+    program_ = load_compute_program(shader_dir / "body" / "body_bvh_bounds_update.comp",
+                                    "Body BVH bounds update",
+                                    gl);
     if (program_ == 0) {
         return false;
     }

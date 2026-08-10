@@ -1,6 +1,5 @@
 #include "gpu/scene/SceneGpuState.h"
 
-#include "app/ProjectPaths.h"
 #include "scene/SceneState.h"
 
 #include <iostream>
@@ -15,25 +14,21 @@ bool SceneGpuState::is_initialized() const
     return initialized_;
 }
 
-bool SceneGpuState::initialize(const ShaderPaths& shader_paths, QOpenGLFunctions_4_5_Core& gl)
+bool SceneGpuState::initialize(const std::filesystem::path& shader_dir, QOpenGLFunctions_4_5_Core& gl)
 {
-    if (!normal_updater_.initialize(shader_paths.triangle_normal_compute,
-                                    shader_paths.vertex_normal_compute,
-                                    gl)) {
+    if (!normal_updater_.initialize(shader_dir, gl)) {
         return false;
     }
-    if (!bvh_bounds_updater_.initialize(shader_paths.body_bvh_bounds_update_compute, gl)) {
+    if (!bvh_bounds_updater_.initialize(shader_dir, gl)) {
         normal_updater_.release(gl);
         return false;
     }
-    if (!character_gpu_state_updater_.initialize(shader_paths.character_vertex_position_update_compute,
-                                                 shader_paths.character_triangle_geometry_update_compute,
-                                                 gl)) {
+    if (!character_gpu_state_updater_.initialize(shader_dir, gl)) {
         bvh_bounds_updater_.release(gl);
         normal_updater_.release(gl);
         return false;
     }
-    if (!attachment_target_builder_.initialize(shader_paths.garment_attachment_target_build_compute, gl)) {
+    if (!attachment_target_builder_.initialize(shader_dir, gl)) {
         character_gpu_state_updater_.release(gl);
         bvh_bounds_updater_.release(gl);
         normal_updater_.release(gl);

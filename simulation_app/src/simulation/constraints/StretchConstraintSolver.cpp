@@ -24,10 +24,12 @@ bool StretchConstraintSolver::is_initialized() const
     return program_ != 0;
 }
 
-bool StretchConstraintSolver::initialize(const std::filesystem::path& shader_path,
+bool StretchConstraintSolver::initialize(const std::filesystem::path& shader_dir,
                                          QOpenGLFunctions_4_5_Core& gl)
 {
-    program_ = load_compute_program(shader_path, "Stretch constraint", gl);
+    program_ = load_compute_program(shader_dir / "cloth" / "constraints" / "cloth_stretch_constraint.comp",
+                                    "Stretch constraint",
+                                    gl);
     if (program_ == 0) {
         return false;
     }

@@ -10,10 +10,11 @@ bool BackgroundGradient::is_initialized() const
     return program_ != 0 && vao_ != 0 && vertex_buffer_ != 0;
 }
 
-bool BackgroundGradient::initialize(const std::filesystem::path& vertex_shader_path,
-                                    const std::filesystem::path& fragment_shader_path,
-                                    QOpenGLFunctions_4_5_Core& gl)
+bool BackgroundGradient::initialize(const std::filesystem::path& shader_dir, QOpenGLFunctions_4_5_Core& gl)
 {
+    const std::filesystem::path rendering_shader_dir = shader_dir / "rendering";
+    const std::filesystem::path vertex_shader_path = rendering_shader_dir / "background.vert";
+    const std::filesystem::path fragment_shader_path = rendering_shader_dir / "background.frag";
     program_ = load_program(vertex_shader_path, fragment_shader_path, gl);
     if (program_ == 0) {
         return false;

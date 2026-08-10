@@ -15,11 +15,7 @@ public:
     ClothClothCollisionSolver& operator=(const ClothClothCollisionSolver&) = delete;
 
     bool is_initialized() const;
-    bool initialize(const std::filesystem::path& accumulate_shader_path,
-                    const std::filesystem::path& initial_accumulate_shader_path,
-                    const std::filesystem::path& body_triangle_id_build_shader_path,
-                    const std::filesystem::path& apply_shader_path,
-                    QOpenGLFunctions_4_5_Core& gl);
+    bool initialize(const std::filesystem::path& shader_dir, QOpenGLFunctions_4_5_Core& gl);
     bool can_solve(const SimulationGpuView& views) const;
     bool can_solve_initial(const SimulationGpuView& views) const;
     bool can_update_body_surface_mapping(const SimulationGpuView& views) const;

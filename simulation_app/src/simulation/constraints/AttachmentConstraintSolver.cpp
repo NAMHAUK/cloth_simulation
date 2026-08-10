@@ -39,10 +39,12 @@ bool AttachmentConstraintSolver::is_initialized() const
     return program_ != 0;
 }
 
-bool AttachmentConstraintSolver::initialize(const std::filesystem::path& shader_path,
+bool AttachmentConstraintSolver::initialize(const std::filesystem::path& shader_dir,
                                             QOpenGLFunctions_4_5_Core& gl)
 {
-    program_ = load_compute_program(shader_path, "Attachment constraint", gl);
+    program_ = load_compute_program(shader_dir / "cloth" / "constraints" / "cloth_attachment_constraint.comp",
+                                    "Attachment constraint",
+                                    gl);
     if (program_ == 0) {
         return false;
     }

@@ -79,15 +79,17 @@ bool ClothClothCollisionDetector::is_initialized() const
     return candidate_detect_.program != 0 && dispatch_size_.program != 0;
 }
 
-bool ClothClothCollisionDetector::initialize(const std::filesystem::path& bounds_update_shader_path,
-                                             const std::filesystem::path& candidate_detect_shader_path,
-                                             const std::filesystem::path& dispatch_size_shader_path,
+bool ClothClothCollisionDetector::initialize(const std::filesystem::path& shader_dir,
                                              QOpenGLFunctions_4_5_Core& gl)
 {
-    candidate_detect_.program =
-        load_compute_program(candidate_detect_shader_path, "Cloth-cloth vertex-face candidate detection", gl);
-    dispatch_size_.program =
-        load_compute_program(dispatch_size_shader_path, "Cloth-cloth candidate dispatch size", gl);
+    const std::filesystem::path collision_shader_dir = shader_dir / "collision";
+    candidate_detect_.program = load_compute_program(
+        collision_shader_dir / "cloth_cloth_vertex_face_detect.comp",
+        "Cloth-cloth vertex-face candidate detection",
+        gl);
+    dispatch_size_.program = load_compute_program(collision_shader_dir / "collision_dispatch_size.comp",
+                                                  "Cloth-cloth candidate dispatch size",
+                                                  gl);
     if (!is_initialized()) {
         release(gl);
         return false;
@@ -130,7 +132,7 @@ bool ClothClothCollisionDetector::initialize(const std::filesystem::path& bounds
         return false;
     }
 
-    if (!bounds_updater_.initialize(bounds_update_shader_path, gl)) {
+    if (!bounds_updater_.initialize(shader_dir, gl)) {
         release(gl);
         return false;
     }

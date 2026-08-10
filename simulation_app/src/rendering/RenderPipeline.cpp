@@ -1,6 +1,5 @@
 #include "rendering/RenderPipeline.h"
 
-#include "app/ProjectPaths.h"
 #include "gpu/scene/SceneGpuState.h"
 #include "scene/SceneState.h"
 
@@ -24,15 +23,13 @@ bool RenderPipeline::is_initialized() const
     return viewer_shader_.is_initialized();
 }
 
-bool RenderPipeline::initialize(const ShaderPaths& shader_paths, QOpenGLFunctions_4_5_Core& gl)
+bool RenderPipeline::initialize(const std::filesystem::path& shader_dir, QOpenGLFunctions_4_5_Core& gl)
 {
-    if (!viewer_shader_.load(shader_paths.viewer_vertex, shader_paths.viewer_fragment, gl)) {
+    if (!viewer_shader_.load(shader_dir, gl)) {
         std::cerr << "Failed to create viewer shader program.\n";
         return false;
     }
-    if (!background_gradient_.initialize(shader_paths.background_vertex,
-                                         shader_paths.background_fragment,
-                                         gl)) {
+    if (!background_gradient_.initialize(shader_dir, gl)) {
         std::cerr << "Failed to create background gradient.\n";
         return false;
     }

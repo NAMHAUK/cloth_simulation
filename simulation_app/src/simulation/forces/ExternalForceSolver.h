@@ -22,7 +22,7 @@ public:
     ExternalForceSolver& operator=(const ExternalForceSolver&) = delete;
 
     bool is_initialized() const;
-    bool initialize(const std::filesystem::path& shader_path, float dt, QOpenGLFunctions_4_5_Core& gl);
+    bool initialize(const std::filesystem::path& shader_dir, float dt, QOpenGLFunctions_4_5_Core& gl);
     void solve(const SimulationGpuView& views,
                const ElementRange& vertex_range,
                const glm::vec3& external_acceleration,

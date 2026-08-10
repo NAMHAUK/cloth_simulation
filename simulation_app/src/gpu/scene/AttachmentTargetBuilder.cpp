@@ -31,10 +31,12 @@ bool AttachmentTargetBuilder::is_initialized() const
     return program_ != 0;
 }
 
-bool AttachmentTargetBuilder::initialize(const std::filesystem::path& shader_path,
+bool AttachmentTargetBuilder::initialize(const std::filesystem::path& shader_dir,
                                          QOpenGLFunctions_4_5_Core& gl)
 {
-    program_ = load_compute_program(shader_path, "Attachment target build", gl);
+    program_ = load_compute_program(shader_dir / "cloth" / "setup" / "garment_attachment_target_build.comp",
+                                    "Attachment target build",
+                                    gl);
     if (program_ == 0) {
         return false;
     }

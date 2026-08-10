@@ -85,23 +85,25 @@ bool ClothBodyCollisionSolver::is_initialized() const
            apply_.program != 0;
 }
 
-bool ClothBodyCollisionSolver::initialize(
-    const std::filesystem::path& cloth_vertex_body_face_accumulate_shader_path,
-    const std::filesystem::path& cloth_edge_body_edge_accumulate_shader_path,
-    const std::filesystem::path& body_vertex_cloth_face_accumulate_shader_path,
-    const std::filesystem::path& apply_shader_path,
-    QOpenGLFunctions_4_5_Core& gl)
+bool ClothBodyCollisionSolver::initialize(const std::filesystem::path& shader_dir,
+                                          QOpenGLFunctions_4_5_Core& gl)
 {
-    vf_accumulate_.program = load_compute_program(cloth_vertex_body_face_accumulate_shader_path,
-                                                  "Cloth vertex/body face candidate accumulation",
-                                                  gl);
-    ee_accumulate_.program = load_compute_program(cloth_edge_body_edge_accumulate_shader_path,
-                                                  "Cloth edge/body edge candidate accumulation",
-                                                  gl);
-    bf_accumulate_.program = load_compute_program(body_vertex_cloth_face_accumulate_shader_path,
-                                                  "Body vertex/cloth face candidate accumulation",
-                                                  gl);
-    apply_.program = load_compute_program(apply_shader_path, "Cloth-body collision combined apply", gl);
+    const std::filesystem::path collision_shader_dir = shader_dir / "collision";
+    vf_accumulate_.program = load_compute_program(
+        collision_shader_dir / "cloth_vertex_body_face_accumulate.comp",
+        "Cloth vertex/body face candidate accumulation",
+        gl);
+    ee_accumulate_.program = load_compute_program(
+        collision_shader_dir / "cloth_edge_body_edge_accumulate.comp",
+        "Cloth edge/body edge candidate accumulation",
+        gl);
+    bf_accumulate_.program = load_compute_program(
+        collision_shader_dir / "body_vertex_cloth_face_accumulate.comp",
+        "Body vertex/cloth face candidate accumulation",
+        gl);
+    apply_.program = load_compute_program(collision_shader_dir / "cloth_body_collision_apply.comp",
+                                          "Cloth-body collision combined apply",
+                                          gl);
     if (!is_initialized()) {
         release(gl);
         return false;

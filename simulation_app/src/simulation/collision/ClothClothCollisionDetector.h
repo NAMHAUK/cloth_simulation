@@ -17,10 +17,7 @@ public:
     ClothClothCollisionDetector& operator=(const ClothClothCollisionDetector&) = delete;
 
     bool is_initialized() const;
-    bool initialize(const std::filesystem::path& bounds_update_shader_path,
-                    const std::filesystem::path& candidate_detect_shader_path,
-                    const std::filesystem::path& dispatch_size_shader_path,
-                    QOpenGLFunctions_4_5_Core& gl);
+    bool initialize(const std::filesystem::path& shader_dir, QOpenGLFunctions_4_5_Core& gl);
     bool can_detect(const SimulationGpuView& views) const;
     void detect(const SimulationGpuView& views, QOpenGLFunctions_4_5_Core& gl) const;
     void detect_initial(const SimulationGpuView& views, QOpenGLFunctions_4_5_Core& gl) const;

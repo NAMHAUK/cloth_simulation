@@ -16,7 +16,7 @@ public:
     BodyBvhBoundsUpdater& operator=(const BodyBvhBoundsUpdater&) = delete;
 
     bool is_initialized() const;
-    bool initialize(const std::filesystem::path& shader_path, QOpenGLFunctions_4_5_Core& gl);
+    bool initialize(const std::filesystem::path& shader_dir, QOpenGLFunctions_4_5_Core& gl);
     void update(const CharacterMeshTopologyResources& topology,
                 const CharacterVertexBufferView& vertex_view,
                 const TriangleGeometryResources& body_triangle_geometry,

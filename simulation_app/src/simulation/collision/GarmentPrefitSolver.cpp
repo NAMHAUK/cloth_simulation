@@ -25,9 +25,12 @@ bool GarmentPrefitSolver::is_initialized() const
     return program_ != 0;
 }
 
-bool GarmentPrefitSolver::initialize(const std::filesystem::path& shader_path, QOpenGLFunctions_4_5_Core& gl)
+bool GarmentPrefitSolver::initialize(const std::filesystem::path& shader_dir, QOpenGLFunctions_4_5_Core& gl)
 {
-    program_ = load_compute_program(shader_path, "Garment pre-fit", gl);
+    program_ = load_compute_program(
+        shader_dir / "cloth" / "setup" / "garment_prefit.comp",
+        "Garment pre-fit",
+        gl);
     if (program_ == 0) {
         return false;
     }

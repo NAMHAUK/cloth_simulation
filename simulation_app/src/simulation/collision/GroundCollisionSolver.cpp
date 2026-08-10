@@ -28,10 +28,11 @@ bool GroundCollisionSolver::is_initialized() const
     return program_ != 0;
 }
 
-bool GroundCollisionSolver::initialize(const std::filesystem::path& shader_path,
-                                       QOpenGLFunctions_4_5_Core& gl)
+bool GroundCollisionSolver::initialize(const std::filesystem::path& shader_dir, QOpenGLFunctions_4_5_Core& gl)
 {
-    program_ = load_compute_program(shader_path, "Ground collision", gl);
+    program_ = load_compute_program(shader_dir / "collision" / "cloth_ground_collision.comp",
+                                    "Ground collision",
+                                    gl);
     if (program_ == 0) {
         return false;
     }

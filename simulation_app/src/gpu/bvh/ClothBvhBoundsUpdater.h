@@ -13,7 +13,7 @@ public:
     ClothBvhBoundsUpdater(const ClothBvhBoundsUpdater&) = delete;
     ClothBvhBoundsUpdater& operator=(const ClothBvhBoundsUpdater&) = delete;
 
-    bool initialize(const std::filesystem::path& shader_path, QOpenGLFunctions_4_5_Core& gl);
+    bool initialize(const std::filesystem::path& shader_dir, QOpenGLFunctions_4_5_Core& gl);
     void update(const SimulationGpuView& views, float bounds_margin, QOpenGLFunctions_4_5_Core& gl) const;
     void release(QOpenGLFunctions_4_5_Core& gl);
 

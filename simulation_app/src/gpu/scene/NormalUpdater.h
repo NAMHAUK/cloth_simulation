@@ -18,9 +18,7 @@ public:
     NormalUpdater& operator=(const NormalUpdater&) = delete;
 
     bool is_initialized() const;
-    bool initialize(const std::filesystem::path& triangle_normal_shader_path,
-                    const std::filesystem::path& vertex_normal_shader_path,
-                    QOpenGLFunctions_4_5_Core& gl);
+    bool initialize(const std::filesystem::path& shader_dir, QOpenGLFunctions_4_5_Core& gl);
     void release(QOpenGLFunctions_4_5_Core& gl);
 
     void update_cloth_normals(const ClothMeshTopologyResources& topology,

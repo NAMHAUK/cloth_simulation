@@ -1,6 +1,5 @@
 #include "simulation/SimulationController.h"
 
-#include "app/ProjectPaths.h"
 #include "gpu/bvh/MeshBvhBuilder.h"
 #include "simulation/SimulationParams.h"
 
@@ -30,25 +29,26 @@ void SimulationController::set_run_with_gl_context(std::function<void(GlContextT
     run_with_gl_context_ = std::move(run_with_gl_context);
 }
 
-bool SimulationController::initialize(const ShaderPaths& shader_paths,
+bool SimulationController::initialize(const std::filesystem::path& shader_dir,
                                       CharacterMesh character_mesh,
                                       const std::vector<std::uint8_t>& triangle_part_labels,
                                       QOpenGLFunctions_4_5_Core& gl)
 {
-    return initialize_gpu(shader_paths, gl) &&
+    return initialize_gpu(shader_dir, gl) &&
            load_default_character(std::move(character_mesh), triangle_part_labels, gl);
 }
 
-bool SimulationController::initialize_gpu(const ShaderPaths& shader_paths, QOpenGLFunctions_4_5_Core& gl)
+bool SimulationController::initialize_gpu(const std::filesystem::path& shader_dir,
+                                          QOpenGLFunctions_4_5_Core& gl)
 {
     assert(!is_gpu_initialized());
     if (is_gpu_initialized()) {
         return false;
     }
 
-    if (!gpu_state_.initialize(shader_paths, gl) ||
-        !simulation_pipeline_.initialize(shader_paths, gl) ||
-        !render_pipeline_.initialize(shader_paths, gl)) {
+    if (!gpu_state_.initialize(shader_dir, gl) ||
+        !simulation_pipeline_.initialize(shader_dir, gl) ||
+        !render_pipeline_.initialize(shader_dir, gl)) {
 
         render_pipeline_.release(gl);
         simulation_pipeline_.release(gl);

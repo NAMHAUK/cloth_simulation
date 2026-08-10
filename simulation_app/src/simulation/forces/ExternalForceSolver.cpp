@@ -41,7 +41,7 @@ bool ExternalForceSolver::is_initialized() const
     return program_ != 0;
 }
 
-bool ExternalForceSolver::initialize(const std::filesystem::path& shader_path,
+bool ExternalForceSolver::initialize(const std::filesystem::path& shader_dir,
                                      float dt,
                                      QOpenGLFunctions_4_5_Core& gl)
 {
@@ -49,7 +49,10 @@ bool ExternalForceSolver::initialize(const std::filesystem::path& shader_path,
         return false;
     }
 
-    program_ = load_compute_program(shader_path, "Cloth external force", gl);
+    program_ = load_compute_program(
+        shader_dir / "cloth" / "cloth_external_force.comp",
+        "Cloth external force",
+        gl);
     if (program_ == 0) {
         return false;
     }

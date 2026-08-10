@@ -14,9 +14,7 @@ public:
     BackgroundGradient& operator=(const BackgroundGradient&) = delete;
 
     bool is_initialized() const;
-    bool initialize(const std::filesystem::path& vertex_shader_path,
-                    const std::filesystem::path& fragment_shader_path,
-                    QOpenGLFunctions_4_5_Core& gl);
+    bool initialize(const std::filesystem::path& shader_dir, QOpenGLFunctions_4_5_Core& gl);
     void draw(QOpenGLFunctions_4_5_Core& gl) const;
     void release(QOpenGLFunctions_4_5_Core& gl);
 

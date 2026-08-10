@@ -4,14 +4,14 @@
 #include "rendering/GroundGridMesh.h"
 #include "rendering/SceneRenderShader.h"
 
+#include <filesystem>
+
 #include <glm/mat4x4.hpp>
 
 #include <QOpenGLFunctions_4_5_Core>
 
 class SceneGpuState;
 class SceneState;
-struct ShaderPaths;
-
 class RenderPipeline final
 {
 public:
@@ -21,7 +21,7 @@ public:
 
     bool is_initialized() const;
 
-    bool initialize(const ShaderPaths& shader_paths, QOpenGLFunctions_4_5_Core& gl);
+    bool initialize(const std::filesystem::path& shader_dir, QOpenGLFunctions_4_5_Core& gl);
     void draw(const SceneState& scene,
               const SceneGpuState& gpu_state,
               const glm::mat4& mvp,

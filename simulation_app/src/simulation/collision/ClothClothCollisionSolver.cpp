@@ -86,20 +86,25 @@ bool ClothClothCollisionSolver::is_initialized() const
            apply_.program != 0;
 }
 
-bool ClothClothCollisionSolver::initialize(const std::filesystem::path& accumulate_shader_path,
-                                           const std::filesystem::path& initial_accumulate_shader_path,
-                                           const std::filesystem::path& body_triangle_id_build_shader_path,
-                                           const std::filesystem::path& apply_shader_path,
+bool ClothClothCollisionSolver::initialize(const std::filesystem::path& shader_dir,
                                            QOpenGLFunctions_4_5_Core& gl)
 {
-    accumulate_.program =
-        load_compute_program(accumulate_shader_path, "Cloth-cloth vertex-face candidate accumulation", gl);
-    initial_accumulate_.program = load_compute_program(initial_accumulate_shader_path,
-                                                       "Initial cloth-cloth layer candidate accumulation",
-                                                       gl);
-    body_triangle_id_build_.program =
-        load_compute_program(body_triangle_id_build_shader_path, "Cloth body triangle id build", gl);
-    apply_.program = load_compute_program(apply_shader_path, "Cloth-cloth collision apply", gl);
+    const std::filesystem::path collision_shader_dir = shader_dir / "collision";
+    accumulate_.program = load_compute_program(
+        collision_shader_dir / "cloth_cloth_vertex_face_accumulate.comp",
+        "Cloth-cloth vertex-face candidate accumulation",
+        gl);
+    initial_accumulate_.program = load_compute_program(
+        collision_shader_dir / "cloth_cloth_initial_layer_accumulate.comp",
+        "Initial cloth-cloth layer candidate accumulation",
+        gl);
+    body_triangle_id_build_.program = load_compute_program(
+        shader_dir / "cloth" / "setup" / "cloth_body_triangle_id_build.comp",
+        "Cloth body triangle id build",
+        gl);
+    apply_.program = load_compute_program(collision_shader_dir / "cloth_cloth_collision_apply.comp",
+                                          "Cloth-cloth collision apply",
+                                          gl);
     if (!is_initialized()) {
         release(gl);
         return false;

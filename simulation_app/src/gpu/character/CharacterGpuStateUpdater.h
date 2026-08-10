@@ -25,9 +25,7 @@ public:
     CharacterGpuStateUpdater& operator=(const CharacterGpuStateUpdater&) = delete;
 
     bool is_initialized() const;
-    bool initialize(const std::filesystem::path& position_shader_path,
-                    const std::filesystem::path& triangle_geometry_shader_path,
-                    QOpenGLFunctions_4_5_Core& gl);
+    bool initialize(const std::filesystem::path& shader_dir, QOpenGLFunctions_4_5_Core& gl);
     void release(QOpenGLFunctions_4_5_Core& gl);
 
     void initialize_character_pose_state(float frame_alpha,

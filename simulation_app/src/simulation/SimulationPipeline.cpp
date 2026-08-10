@@ -1,6 +1,5 @@
 #include "simulation/SimulationPipeline.h"
 
-#include "app/ProjectPaths.h"
 #include "gpu/scene/SceneGpuState.h"
 #include "scene/SceneState.h"
 
@@ -28,7 +27,7 @@ SimulationPipeline::SimulationPipeline(SimulationParams params)
 {}
 
 // Initialization and Cleanup
-bool SimulationPipeline::initialize(const ShaderPaths& shader_paths, QOpenGLFunctions_4_5_Core& gl)
+bool SimulationPipeline::initialize(const std::filesystem::path& shader_dir, QOpenGLFunctions_4_5_Core& gl)
 {
     if (!is_valid_simulation_params(params_)) {
         std::cerr << "Cannot initialize simulation pipeline with invalid parameters.\n";
@@ -37,32 +36,16 @@ bool SimulationPipeline::initialize(const ShaderPaths& shader_paths, QOpenGLFunc
 
     substep_dt_ = params_.step.dt() / static_cast<float>(params_.step.substep_count);
 
-    const bool solvers_initialized =
-        external_force_solver_.initialize(shader_paths.cloth_external_force_compute, substep_dt_, gl) &&
-        stretch_constraint_solver_.initialize(shader_paths.cloth_stretch_constraint_compute, gl) &&
-        bending_constraint_solver_.initialize(shader_paths.cloth_bending_constraint_compute, gl) &&
-        attachment_constraint_solver_.initialize(shader_paths.cloth_attachment_constraint_compute, gl) &&
-        ground_collision_solver_.initialize(shader_paths.cloth_ground_collision_compute, gl) &&
-        cloth_body_collision_detector_.initialize(shader_paths.cloth_vertex_body_face_detect_compute,
-                                                  shader_paths.cloth_edge_body_edge_detect_compute,
-                                                  shader_paths.body_vertex_cloth_face_detect_compute,
-                                                  shader_paths.collision_dispatch_size_compute,
-                                                  gl) &&
-        cloth_body_collision_solver_.initialize(shader_paths.cloth_vertex_body_face_accumulate_compute,
-                                                shader_paths.cloth_edge_body_edge_accumulate_compute,
-                                                shader_paths.body_vertex_cloth_face_accumulate_compute,
-                                                shader_paths.cloth_body_collision_apply_compute,
-                                                gl) &&
-        cloth_cloth_collision_detector_.initialize(shader_paths.cloth_bvh_bounds_update_compute,
-                                                   shader_paths.cloth_cloth_vertex_face_detect_compute,
-                                                   shader_paths.collision_dispatch_size_compute,
-                                                   gl) &&
-        cloth_cloth_collision_solver_.initialize(shader_paths.cloth_cloth_vertex_face_accumulate_compute,
-                                                 shader_paths.cloth_cloth_initial_layer_accumulate_compute,
-                                                 shader_paths.cloth_body_triangle_id_build_compute,
-                                                 shader_paths.cloth_cloth_collision_apply_compute,
-                                                 gl) &&
-        garment_prefit_solver_.initialize(shader_paths.garment_prefit_compute, gl);
+    const bool solvers_initialized = external_force_solver_.initialize(shader_dir, substep_dt_, gl) &&
+                                     stretch_constraint_solver_.initialize(shader_dir, gl) &&
+                                     bending_constraint_solver_.initialize(shader_dir, gl) &&
+                                     attachment_constraint_solver_.initialize(shader_dir, gl) &&
+                                     ground_collision_solver_.initialize(shader_dir, gl) &&
+                                     cloth_body_collision_detector_.initialize(shader_dir, gl) &&
+                                     cloth_body_collision_solver_.initialize(shader_dir, gl) &&
+                                     cloth_cloth_collision_detector_.initialize(shader_dir, gl) &&
+                                     cloth_cloth_collision_solver_.initialize(shader_dir, gl) &&
+                                     garment_prefit_solver_.initialize(shader_dir, gl);
 
     if (!solvers_initialized) {
         release(gl);

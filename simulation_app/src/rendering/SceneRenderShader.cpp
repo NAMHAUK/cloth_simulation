@@ -11,10 +11,11 @@ bool SceneRenderShader::is_initialized() const
     return program_ != 0;
 }
 
-bool SceneRenderShader::load(const std::filesystem::path& vertex_shader_path,
-                             const std::filesystem::path& fragment_shader_path,
-                             QOpenGLFunctions_4_5_Core& gl)
+bool SceneRenderShader::load(const std::filesystem::path& shader_dir, QOpenGLFunctions_4_5_Core& gl)
 {
+    const std::filesystem::path rendering_shader_dir = shader_dir / "rendering";
+    const std::filesystem::path vertex_shader_path = rendering_shader_dir / "viewer.vert";
+    const std::filesystem::path fragment_shader_path = rendering_shader_dir / "viewer.frag";
     const auto vertex_shader_source = read_text_file(vertex_shader_path);
     const auto fragment_shader_source = read_text_file(fragment_shader_path);
     if (!vertex_shader_source || !fragment_shader_source) {
