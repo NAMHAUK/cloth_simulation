@@ -2,6 +2,7 @@
 
 #include "gpu/cloth/ClothGpuDataTypes.h"
 
+#include <array>
 #include <cstdint>
 #include <optional>
 #include <vector>
@@ -36,7 +37,7 @@ public:
     bool save_base_positions(QOpenGLFunctions_4_5_Core& gl);
     bool restore_base_positions(QOpenGLFunctions_4_5_Core& gl) const;
     void clear_base_positions(QOpenGLFunctions_4_5_Core& gl);
-    const std::vector<GarmentBufferRanges>& garment_buffer_ranges() const;
+    std::array<ElementRange, 2> garment_vertex_ranges() const;
     ClothMotionBufferView motion_buffer_view() const;
     ClothCollisionPushoutBufferView collision_pushout_buffer_view() const;
     ClothContactMotionBufferView contact_motion_buffer_view() const;
@@ -56,7 +57,7 @@ private:
                          std::optional<GarmentLayer> reset_layer,
                          QOpenGLFunctions_4_5_Core& gl);
     void replace_with_rebuild_buffers(ClothBufferSet rebuild_buffer_set,
-                                      std::vector<GarmentBufferRanges> rebuild_ranges,
+                                      std::array<GarmentBufferRanges, 2> rebuild_ranges,
                                       std::vector<ElementRange> rebuild_stretch_color_ranges,
                                       std::vector<ElementRange> rebuild_bending_color_ranges,
                                       std::vector<ElementRange> rebuild_attachment_ranges,
@@ -70,12 +71,11 @@ private:
     void configure_vao(QOpenGLFunctions_4_5_Core& gl);
     static void delete_buffer_set(ClothBufferSet& buffers, QOpenGLFunctions_4_5_Core& gl);
     void delete_gpu_objects(QOpenGLFunctions_4_5_Core& gl);
-    const GarmentBufferRanges* find_garment_buffer_ranges(GarmentLayer layer) const;
     void reset_resources() noexcept;
 
     ClothBufferSet buffers_;
     GLuint base_positions_ = 0;
-    std::vector<GarmentBufferRanges> garments_;
+    std::array<GarmentBufferRanges, 2> garments_;
     std::vector<ElementRange> stretch_color_ranges_;
     std::vector<ElementRange> bending_color_ranges_;
     std::vector<ElementRange> attachment_ranges_;

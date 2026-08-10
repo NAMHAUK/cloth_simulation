@@ -49,6 +49,10 @@ constexpr GLuint dispatch_size = 1;
 }
 }
 
+ClothBodyCollisionDetector::ClothBodyCollisionDetector(float collision_thickness)
+    : collision_thickness_(collision_thickness)
+{}
+
 bool ClothBodyCollisionDetector::is_initialized() const
 {
     return has_programs();
@@ -59,7 +63,6 @@ bool ClothBodyCollisionDetector::initialize(
     const std::filesystem::path& cloth_edge_body_edge_detect_shader_path,
     const std::filesystem::path& cloth_face_body_vertex_detect_shader_path,
     const std::filesystem::path& dispatch_size_shader_path,
-    float collision_thickness,
     QOpenGLFunctions_4_5_Core& gl)
 {
     cloth_vertex_body_face_.program =
@@ -110,11 +113,10 @@ bool ClothBodyCollisionDetector::initialize(
         return false;
     }
 
-    collision_thickness_ = collision_thickness;
     return true;
 }
 
-bool ClothBodyCollisionDetector::can_detect(const SimulationGpuViews& views) const
+bool ClothBodyCollisionDetector::can_detect(const SimulationGpuView& views) const
 {
     return is_initialized() &&
            is_valid_motion_view(views.cloth_motion) &&
@@ -138,7 +140,7 @@ bool ClothBodyCollisionDetector::can_detect(const SimulationGpuViews& views) con
            collision_thickness_ > 0.0f;
 }
 
-void ClothBodyCollisionDetector::detect(const SimulationGpuViews& views, QOpenGLFunctions_4_5_Core& gl) const
+void ClothBodyCollisionDetector::detect(const SimulationGpuView& views, QOpenGLFunctions_4_5_Core& gl) const
 {
     assert(can_detect(views));
 
@@ -173,7 +175,6 @@ void ClothBodyCollisionDetector::release(QOpenGLFunctions_4_5_Core& gl)
     cloth_edge_body_edge_ = {};
     cloth_face_body_vertex_ = {};
     dispatch_size_ = {};
-    collision_thickness_ = 0.0f;
 }
 
 void ClothBodyCollisionDetector::detect_cloth_vertex_body_face_collision_candidates(

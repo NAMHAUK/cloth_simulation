@@ -1,15 +1,17 @@
 #pragma once
 
-#include "simulation/SimulationGpuViews.h"
+#include "gpu/scene/SimulationGpuView.h"
 
 #include <filesystem>
 
 #include <QOpenGLFunctions_4_5_Core>
 
+struct BodyCollisionParams;
+
 class ClothBodyCollisionSolver final
 {
 public:
-    ClothBodyCollisionSolver() = default;
+    explicit ClothBodyCollisionSolver(const BodyCollisionParams& params);
     ClothBodyCollisionSolver(const ClothBodyCollisionSolver&) = delete;
     ClothBodyCollisionSolver& operator=(const ClothBodyCollisionSolver&) = delete;
 
@@ -18,13 +20,9 @@ public:
                     const std::filesystem::path& cloth_edge_body_edge_accumulate_shader_path,
                     const std::filesystem::path& body_vertex_cloth_face_accumulate_shader_path,
                     const std::filesystem::path& apply_shader_path,
-                    float collision_thickness,
-                    float max_correction_length,
-                    float static_friction,
-                    float dynamic_friction,
                     QOpenGLFunctions_4_5_Core& gl);
-    bool can_solve(const SimulationGpuViews& views) const;
-    void solve(const SimulationGpuViews& views, QOpenGLFunctions_4_5_Core& gl) const;
+    bool can_solve(const SimulationGpuView& views) const;
+    void solve(const SimulationGpuView& views, QOpenGLFunctions_4_5_Core& gl) const;
     void release(QOpenGLFunctions_4_5_Core& gl);
 
 private:
@@ -44,11 +42,11 @@ private:
         GLint dynamic_friction = -1;
     };
 
-    void clear_correction_sums(const SimulationGpuViews& views, QOpenGLFunctions_4_5_Core& gl) const;
-    void vf_accumulate(const SimulationGpuViews& views, QOpenGLFunctions_4_5_Core& gl) const;
-    void ee_accumulate(const SimulationGpuViews& views, QOpenGLFunctions_4_5_Core& gl) const;
-    void bf_accumulate(const SimulationGpuViews& views, QOpenGLFunctions_4_5_Core& gl) const;
-    void apply_combined_corrections(const SimulationGpuViews& views, QOpenGLFunctions_4_5_Core& gl) const;
+    void clear_correction_sums(const SimulationGpuView& views, QOpenGLFunctions_4_5_Core& gl) const;
+    void vf_accumulate(const SimulationGpuView& views, QOpenGLFunctions_4_5_Core& gl) const;
+    void ee_accumulate(const SimulationGpuView& views, QOpenGLFunctions_4_5_Core& gl) const;
+    void bf_accumulate(const SimulationGpuView& views, QOpenGLFunctions_4_5_Core& gl) const;
+    void apply_combined_corrections(const SimulationGpuView& views, QOpenGLFunctions_4_5_Core& gl) const;
 
     AccumulateStage vf_accumulate_;
     AccumulateStage ee_accumulate_;

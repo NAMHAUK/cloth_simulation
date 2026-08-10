@@ -8,6 +8,7 @@
 #include "gpu/scene/AttachmentTargetBuilder.h"
 #include "gpu/scene/CollisionCandidateBuffers.h"
 #include "gpu/scene/NormalUpdater.h"
+#include "gpu/scene/SimulationGpuView.h"
 #include "scene/SceneState.h"
 
 #include <optional>
@@ -26,13 +27,17 @@ public:
     bool is_initialized() const;
     bool initialize(const ShaderPaths& shader_paths, QOpenGLFunctions_4_5_Core& gl);
     void release(QOpenGLFunctions_4_5_Core& gl);
-    void update_character_frame_interpolation(const SceneState& scene,
-                                              const CharacterFrameInterpolation& interpolation,
-                                              QOpenGLFunctions_4_5_Core& gl);
+    void update_character_pose(const SceneState& scene,
+                               float frame_alpha,
+                               float body_collision_thickness,
+                               QOpenGLFunctions_4_5_Core& gl);
     void update_mesh_normals(QOpenGLFunctions_4_5_Core& gl);
+    SimulationGpuView simulation_view() const;
 
     const CharacterGpuResources& character_gpu_state() const;
-    void set_character_mesh(const SceneState& scene, QOpenGLFunctions_4_5_Core& gl);
+    void set_character_mesh(const SceneState& scene,
+                            float body_collision_thickness,
+                            QOpenGLFunctions_4_5_Core& gl);
 
     const ClothGpuResources& cloth_gpu_state() const;
     ClothBvhBufferView cloth_bvh_buffer_view() const;

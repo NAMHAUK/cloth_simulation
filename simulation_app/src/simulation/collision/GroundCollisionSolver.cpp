@@ -1,5 +1,7 @@
 #include "simulation/collision/GroundCollisionSolver.h"
 
+#include "gpu/scene/SimulationGpuView.h"
+#include "simulation/SimulationParams.h"
 #include "utils/BufferUtils.h"
 #include "utils/ShaderUtils.h"
 
@@ -15,15 +17,18 @@ constexpr GLuint contact_motion_deltas_binding = 4;
 constexpr std::uint32_t ground_collision_local_size = 128;
 }
 
+GroundCollisionSolver::GroundCollisionSolver(const GroundCollisionParams& params)
+    : floor_height_(params.height),
+      static_friction_(params.static_friction),
+      dynamic_friction_(params.dynamic_friction)
+{}
+
 bool GroundCollisionSolver::is_initialized() const
 {
     return program_ != 0;
 }
 
 bool GroundCollisionSolver::initialize(const std::filesystem::path& shader_path,
-                                       float floor_height,
-                                       float static_friction,
-                                       float dynamic_friction,
                                        QOpenGLFunctions_4_5_Core& gl)
 {
     program_ = load_compute_program(shader_path, "Ground collision", gl);
@@ -45,32 +50,28 @@ bool GroundCollisionSolver::initialize(const std::filesystem::path& shader_path,
         return false;
     }
 
-    floor_height_ = floor_height;
-    static_friction_ = static_friction;
-    dynamic_friction_ = dynamic_friction;
     return true;
 }
 
-bool GroundCollisionSolver::can_solve(const ClothMotionBufferView& motion_view,
-                                      const ClothCollisionPushoutBufferView& collision_pushout_view,
-                                      const ClothContactMotionBufferView& contact_motion_view) const
+bool GroundCollisionSolver::can_solve(const SimulationGpuView& views) const
 {
     return is_initialized() &&
-           is_valid_motion_view(motion_view) &&
-           is_valid_collision_pushout_view(collision_pushout_view) &&
-           is_valid_contact_motion_view(contact_motion_view) &&
-           motion_view.vertex_count == collision_pushout_view.vertex_count &&
-           motion_view.vertex_count == contact_motion_view.vertex_count &&
+           is_valid_motion_view(views.cloth_motion) &&
+           is_valid_collision_pushout_view(views.cloth_collision_pushout) &&
+           is_valid_contact_motion_view(views.cloth_contact_motion) &&
+           views.cloth_motion.vertex_count == views.cloth_collision_pushout.vertex_count &&
+           views.cloth_motion.vertex_count == views.cloth_contact_motion.vertex_count &&
            dynamic_friction_ >= 0.0f &&
            static_friction_ >= dynamic_friction_;
 }
 
-void GroundCollisionSolver::solve(const ClothMotionBufferView& motion_view,
-                                  const ClothCollisionPushoutBufferView& collision_pushout_view,
-                                  const ClothContactMotionBufferView& contact_motion_view,
-                                  QOpenGLFunctions_4_5_Core& gl) const
+void GroundCollisionSolver::solve(const SimulationGpuView& views, QOpenGLFunctions_4_5_Core& gl) const
 {
-    assert(can_solve(motion_view, collision_pushout_view, contact_motion_view));
+    assert(can_solve(views));
+
+    const auto& motion_view = views.cloth_motion;
+    const auto& collision_pushout_view = views.cloth_collision_pushout;
+    const auto& contact_motion_view = views.cloth_contact_motion;
 
     // shader & GPU 연결
     gl.glUseProgram(program_);
@@ -110,7 +111,4 @@ void GroundCollisionSolver::release(QOpenGLFunctions_4_5_Core& gl)
     floor_height_location_ = -1;
     static_friction_location_ = -1;
     dynamic_friction_location_ = -1;
-    floor_height_ = 0.0f;
-    static_friction_ = 0.0f;
-    dynamic_friction_ = 0.0f;
 }

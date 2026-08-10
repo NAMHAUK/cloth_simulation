@@ -1,11 +1,11 @@
 #pragma once
 
-#include "gpu/character/CharacterGpuDataTypes.h"
-#include "gpu/cloth/ClothGpuDataTypes.h"
-
 #include <filesystem>
 
 #include <QOpenGLFunctions_4_5_Core>
+
+struct ElementRange;
+struct SimulationGpuView;
 
 class AttachmentTargetBuilder final
 {
@@ -16,21 +16,14 @@ public:
 
     bool is_initialized() const;
     bool initialize(const std::filesystem::path& shader_path, QOpenGLFunctions_4_5_Core& gl);
-    bool build(const ClothMotionBufferView& motion_view,
-               const AttachmentConstraintBufferView& attachment_view,
+    bool build(const SimulationGpuView& views,
                const ElementRange& target_range,
-               const TriangleGeometryResources& body_triangle_geometry,
-               const TriangleBvhResources& body_triangle_bvh,
                float surface_offset,
                QOpenGLFunctions_4_5_Core& gl) const;
     void release(QOpenGLFunctions_4_5_Core& gl);
 
 private:
-    bool can_build(const ClothMotionBufferView& motion_view,
-                   const AttachmentConstraintBufferView& attachment_view,
-                   const ElementRange& target_range,
-                   const TriangleGeometryResources& body_triangle_geometry,
-                   const TriangleBvhResources& body_triangle_bvh) const;
+    bool can_build(const SimulationGpuView& views, const ElementRange& target_range) const;
 
     GLuint program_ = 0;
     GLint constraint_offset_location_ = -1;

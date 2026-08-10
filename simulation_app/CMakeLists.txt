@@ -25,10 +25,12 @@ add_executable(simulation_app
     src/app/ProjectPaths.h
     src/simulation/SimulationController.cpp
     src/simulation/SimulationController.h
+    src/scene/Kinematics.cpp
+    src/scene/Kinematics.h
     src/simulation/forces/SimulationForceField.cpp
     src/simulation/forces/SimulationForceField.h
-    src/simulation/SimulationGpuViews.h
-    src/simulation/SimulationSettings.h
+    src/gpu/scene/SimulationGpuView.h
+    src/simulation/SimulationParams.h
     src/simulation/forces/ExternalForceSolver.cpp
     src/simulation/forces/ExternalForceSolver.h
     src/simulation/constraints/StretchConstraintSolver.cpp

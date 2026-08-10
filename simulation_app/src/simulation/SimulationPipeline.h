@@ -1,8 +1,7 @@
 #pragma once
 
-#include "gpu/bvh/ClothBvhBoundsUpdater.h"
-#include "simulation/SimulationGpuViews.h"
-#include "simulation/SimulationSettings.h"
+#include "gpu/scene/SimulationGpuView.h"
+#include "simulation/SimulationParams.h"
 #include "simulation/collision/ClothBodyCollisionDetector.h"
 #include "simulation/collision/ClothBodyCollisionSolver.h"
 #include "simulation/collision/ClothClothCollisionDetector.h"
@@ -19,6 +18,7 @@
 #include <vector>
 
 #include <QOpenGLFunctions_4_5_Core>
+#include <glm/vec3.hpp>
 
 class SceneGpuState;
 class SceneState;
@@ -27,30 +27,35 @@ struct ShaderPaths;
 class SimulationPipeline final
 {
 public:
-    SimulationPipeline() = default;
+    explicit SimulationPipeline(SimulationParams params = default_simulation_params);
     SimulationPipeline(const SimulationPipeline&) = delete;
     SimulationPipeline& operator=(const SimulationPipeline&) = delete;
 
-    bool is_initialized() const;
     bool initialize(const ShaderPaths& shader_paths, QOpenGLFunctions_4_5_Core& gl);
-    bool prefit_garments(const SceneState& scene,
-                         SceneGpuState& gpu_state,
-                         const std::vector<GarmentLayer>& layers,
+    void release(QOpenGLFunctions_4_5_Core& gl);
+    void prefit_garments(SceneGpuState& gpu_state,
+                         const std::vector<GarmentLayer>& unconfirmed_layers,
                          QOpenGLFunctions_4_5_Core& gl);
-    bool step(SceneState& scene,
+    void step(SceneState& scene,
               SceneGpuState& gpu_state,
               std::uint64_t motion_step_index,
               QOpenGLFunctions_4_5_Core& gl);
-    void release(QOpenGLFunctions_4_5_Core& gl);
+    void step_character_only(const SceneState& scene,
+                             SceneGpuState& gpu_state,
+                             std::uint64_t motion_step_index,
+                             QOpenGLFunctions_4_5_Core& gl) const;
 
 private:
-    static SimulationGpuViews collect_gpu_views(const SceneGpuState& gpu_state);
-    bool update_cloth_bvh_bounds(const SimulationGpuViews& views,
-                                 float bounds_margin,
-                                 QOpenGLFunctions_4_5_Core& gl) const;
-    bool can_solve_constraint_iteration(const SimulationGpuViews& views) const;
+    void solve_external_forces(const SceneState& scene,
+                               const SimulationGpuView& views,
+                               const glm::vec3& external_acceleration,
+                               QOpenGLFunctions_4_5_Core& gl) const;
 
-    ClothBvhBoundsUpdater cloth_bvh_bounds_updater_;
+public:
+    bool is_initialized() const;
+
+private:
+    SimulationParams params_;
     SimulationForceField force_field_;
     ExternalForceSolver external_force_solver_;
     StretchConstraintSolver stretch_constraint_solver_;
@@ -63,6 +68,5 @@ private:
     ClothClothCollisionSolver cloth_cloth_collision_solver_;
     GarmentPrefitSolver garment_prefit_solver_;
     float substep_dt_ = 0.0f;
-    float inverse_substep_dt_ = 0.0f;
     bool initialized_ = false;
 };

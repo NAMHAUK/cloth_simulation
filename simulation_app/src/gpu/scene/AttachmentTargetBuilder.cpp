@@ -1,5 +1,6 @@
 #include "gpu/scene/AttachmentTargetBuilder.h"
 
+#include "gpu/scene/SimulationGpuView.h"
 #include "utils/BufferUtils.h"
 #include "utils/ShaderUtils.h"
 
@@ -51,31 +52,29 @@ bool AttachmentTargetBuilder::initialize(const std::filesystem::path& shader_pat
     return true;
 }
 
-bool AttachmentTargetBuilder::can_build(const ClothMotionBufferView& motion_view,
-                                        const AttachmentConstraintBufferView& attachment_view,
-                                        const ElementRange& target_range,
-                                        const TriangleGeometryResources& body_triangle_geometry,
-                                        const TriangleBvhResources& body_triangle_bvh) const
+bool AttachmentTargetBuilder::can_build(const SimulationGpuView& views,
+                                        const ElementRange& target_range) const
 {
     return is_initialized() &&
-           is_valid_motion_view(motion_view) &&
-           is_valid_attachment_target_range(attachment_view, target_range) &&
-           is_valid_triangle_geometry_resource(body_triangle_geometry) &&
-           is_valid_triangle_bvh_resource(body_triangle_bvh);
+           is_valid_motion_view(views.cloth_motion) &&
+           is_valid_attachment_target_range(views.attachment_constraints, target_range) &&
+           is_valid_triangle_geometry_resource(views.body_triangle_geometry) &&
+           is_valid_triangle_bvh_resource(views.body_triangle_bvh);
 }
 
-bool AttachmentTargetBuilder::build(const ClothMotionBufferView& motion_view,
-                                    const AttachmentConstraintBufferView& attachment_view,
+bool AttachmentTargetBuilder::build(const SimulationGpuView& views,
                                     const ElementRange& target_range,
-                                    const TriangleGeometryResources& body_triangle_geometry,
-                                    const TriangleBvhResources& body_triangle_bvh,
                                     float surface_offset,
                                     QOpenGLFunctions_4_5_Core& gl) const
 {
-    if (!can_build(motion_view, attachment_view, target_range, body_triangle_geometry, body_triangle_bvh)) {
+    if (!can_build(views, target_range)) {
         return false;
     }
 
+    const auto& motion_view = views.cloth_motion;
+    const auto& attachment_view = views.attachment_constraints;
+    const auto& body_triangle_geometry = views.body_triangle_geometry;
+    const auto& body_triangle_bvh = views.body_triangle_bvh;
     gl.glUseProgram(program_);
     gl.glBindBufferBase(GL_SHADER_STORAGE_BUFFER,
                         current_positions_binding,

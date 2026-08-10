@@ -2,17 +2,9 @@
 
 #include "app/ProjectPaths.h"
 #include "scene/SceneState.h"
-#include "simulation/SimulationSettings.h"
 
 #include <iostream>
 #include <limits>
-
-namespace {
-CharacterFrameInterpolation make_single_frame_interpolation(std::uint32_t frame_index)
-{
-    return {frame_index, frame_index, 0.0f};
-}
-}
 
 SceneGpuState::SceneGpuState()
     : character_gpu_state_updater_(character_gpu_state_, bvh_bounds_updater_, normal_updater_)
@@ -66,6 +58,29 @@ void SceneGpuState::update_mesh_normals(QOpenGLFunctions_4_5_Core& gl)
                                          gl);
 }
 
+SimulationGpuView SceneGpuState::simulation_view() const
+{
+    SimulationGpuView views;
+    views.cloth_motion = cloth_gpu_state_.motion_buffer_view();
+    views.cloth_collision_pushout = cloth_gpu_state_.collision_pushout_buffer_view();
+    views.cloth_contact_motion = cloth_gpu_state_.contact_motion_buffer_view();
+    views.cloth_body_triangle_ids = cloth_gpu_state_.body_triangle_id_buffer_view();
+    views.cloth_topology = cloth_gpu_state_.mesh_topology_resources();
+    views.cloth_bvh = cloth_bvh_resources_.buffer_view();
+    views.garment_vertex_ranges = cloth_gpu_state_.garment_vertex_ranges();
+    views.stretch_constraints = cloth_gpu_state_.stretch_constraint_buffer_view();
+    views.bending_constraints = cloth_gpu_state_.bending_constraint_buffer_view();
+    views.attachment_constraints = cloth_gpu_state_.attachment_constraint_buffer_view();
+    views.body_topology = character_gpu_state_.mesh_topology_resources();
+    views.body_vertices = character_gpu_state_.character_vertex_buffer_view();
+    views.body_triangle_geometry = character_gpu_state_.character_triangle_geometry_resources();
+    views.body_triangle_bvh = character_gpu_state_.body_triangle_bvh_resources();
+    views.body_vertex_bvh = character_gpu_state_.body_vertex_bvh_resources();
+    views.body_edge_bvh = character_gpu_state_.body_edge_bvh_resources();
+    views.collision_candidates = collision_candidate_buffers_.view();
+    return views;
+}
+
 void SceneGpuState::release(QOpenGLFunctions_4_5_Core& gl)
 {
     collision_candidate_buffers_.release(gl);
@@ -86,7 +101,9 @@ const CharacterGpuResources& SceneGpuState::character_gpu_state() const
     return character_gpu_state_;
 }
 
-void SceneGpuState::set_character_mesh(const SceneState& scene, QOpenGLFunctions_4_5_Core& gl)
+void SceneGpuState::set_character_mesh(const SceneState& scene,
+                                       float body_collision_thickness,
+                                       QOpenGLFunctions_4_5_Core& gl)
 {
     // 새 character mesh가 들어오면 전체 frame character mesh를 GPU에 올리고 frame 상태 설정
     const CharacterMesh& character_mesh = scene.character_mesh();
@@ -97,28 +114,30 @@ void SceneGpuState::set_character_mesh(const SceneState& scene, QOpenGLFunctions
                                      gl);
     character_gpu_state_.set_current_frame(0);
     character_gpu_state_updater_.initialize_character_pose_state(
-        make_single_frame_interpolation(0),
+        0.0f,
         scene.default_body_triangle_bvh_data().node_ranges_by_level,
         scene.default_body_vertex_bvh_data().node_ranges_by_level,
         scene.default_body_edge_bvh_data().node_ranges_by_level,
-        simulation_settings::body_collision_thickness,
+        body_collision_thickness,
         gl);
 }
 
-void SceneGpuState::update_character_frame_interpolation(const SceneState& scene,
-                                                         const CharacterFrameInterpolation& interpolation,
-                                                         QOpenGLFunctions_4_5_Core& gl)
+void SceneGpuState::update_character_pose(const SceneState& scene,
+                                          float frame_alpha,
+                                          float body_collision_thickness,
+                                          QOpenGLFunctions_4_5_Core& gl)
 {
     if (!is_initialized() || !character_gpu_state_.is_initialized()) {
         return;
     }
 
+    character_gpu_state_.set_current_frame(scene.current_character_frame());
     character_gpu_state_updater_.update_character_pose_state(
-        interpolation,
+        frame_alpha,
         scene.default_body_triangle_bvh_data().node_ranges_by_level,
         scene.default_body_vertex_bvh_data().node_ranges_by_level,
         scene.default_body_edge_bvh_data().node_ranges_by_level,
-        simulation_settings::body_collision_thickness,
+        body_collision_thickness,
         gl);
 }
 
@@ -214,20 +233,8 @@ bool SceneGpuState::build_garment_attachment_targets(SceneState& scene,
         return true;
     }
 
-    const ClothMotionBufferView motion_view = cloth_gpu_state_.motion_buffer_view();
-    const AttachmentConstraintBufferView attachment_view =
-        cloth_gpu_state_.attachment_constraint_buffer_view();
-    const TriangleGeometryResources body_triangle_geometry =
-        character_gpu_state_.character_triangle_geometry_resources();
-    const TriangleBvhResources body_triangle_bvh = character_gpu_state_.body_triangle_bvh_resources();
-
-    if (!attachment_target_builder_.build(motion_view,
-                                          attachment_view,
-                                          target_range,
-                                          body_triangle_geometry,
-                                          body_triangle_bvh,
-                                          surface_offset,
-                                          gl)) {
+    const auto views = simulation_view();
+    if (!attachment_target_builder_.build(views, target_range, surface_offset, gl)) {
         std::cerr << "Cannot build garment attachment targets because required GPU buffers are missing.\n";
         return false;
     }

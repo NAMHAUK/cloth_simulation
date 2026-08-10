@@ -68,6 +68,11 @@ void SceneState::set_character_mesh(CharacterMesh mesh)
 {
     character_mesh_ = std::move(mesh);
     current_character_frame_ = 0;
+
+    const auto pelvis = interpolated_character_reference_frame(0.0f, GarmentCategory::Bottom);
+    const auto torso = interpolated_character_reference_frame(0.0f, GarmentCategory::Top);
+    pelvis_kinematics_.reset(pelvis);
+    torso_kinematics_.reset(torso);
 }
 
 void SceneState::set_default_body_triangle_bvh_data(TriangleBvhData default_body_triangle_bvh_data)
@@ -269,44 +274,56 @@ void SceneState::update_character_frame(std::uint64_t simulation_step_count,
         static_cast<std::uint32_t>(std::min<std::uint64_t>(frame_index, last_frame_index));
 }
 
-CharacterFrameInterpolation SceneState::character_frame_interpolation(float character_frame_time) const
+void SceneState::update_reference_kinematics(float frame_alpha, float dt)
+{
+    const auto pelvis = interpolated_character_reference_frame(frame_alpha, GarmentCategory::Bottom);
+    const auto torso = interpolated_character_reference_frame(frame_alpha, GarmentCategory::Top);
+    pelvis_kinematics_.update(pelvis, dt);
+    torso_kinematics_.update(torso, dt);
+}
+
+const Kinematics& SceneState::reference_kinematics(GarmentCategory garment_category) const
+{
+    return garment_category == GarmentCategory::Top ? torso_kinematics_ : pelvis_kinematics_;
+}
+
+float SceneState::character_frame_alpha(float character_frame_time) const
 {
     if (character_mesh_.frame_count == 0) {
-        return {};
+        return 0.0f;
     }
 
     // motion이 종료된 경우 값 고정
     const std::uint32_t last_frame_index = character_mesh_.frame_count - 1u;
-    if (character_frame_time >= last_frame_index) {
-        return {last_frame_index, last_frame_index, 0.0f};
+    if (current_character_frame_ >= last_frame_index) {
+        return 0.0f;
     }
 
-    const std::uint32_t current_frame_index = static_cast<std::uint32_t>(character_frame_time);
-    const std::uint32_t next_frame_index = current_frame_index + 1u;
-    const float frame_alpha = character_frame_time - current_frame_index;
-    return {current_frame_index, next_frame_index, frame_alpha};
+    return std::clamp(character_frame_time - static_cast<float>(current_character_frame_), 0.0f, 1.0f);
 }
 
 CharacterReferenceFrame SceneState::interpolated_character_reference_frame(
-    float character_frame_time,
+    float frame_alpha,
     GarmentCategory garment_category) const
 {
-    const CharacterFrameInterpolation interpolation = character_frame_interpolation(character_frame_time);
     const bool uses_torso = garment_category == GarmentCategory::Top;
     const std::vector<float>& positions =
         uses_torso ? character_mesh_.torso_positions : character_mesh_.root_positions;
     const std::vector<float>& orientations =
         uses_torso ? character_mesh_.torso_orientations : character_mesh_.pelvis_orientations;
-    const glm::vec3 current_position = frame_position(positions, interpolation.current_frame_index);
-    const glm::vec3 next_position = frame_position(positions, interpolation.next_frame_index);
-    const glm::quat current_orientation = frame_orientation(orientations, interpolation.current_frame_index);
-    glm::quat next_orientation = frame_orientation(orientations, interpolation.next_frame_index);
+    const std::uint32_t last_frame_index =
+        character_mesh_.frame_count > 0 ? character_mesh_.frame_count - 1u : 0u;
+    const std::uint32_t next_frame_index = std::min(current_character_frame_ + 1u, last_frame_index);
+    const glm::vec3 current_position = frame_position(positions, current_character_frame_);
+    const glm::vec3 next_position = frame_position(positions, next_frame_index);
+    const glm::quat current_orientation = frame_orientation(orientations, current_character_frame_);
+    glm::quat next_orientation = frame_orientation(orientations, next_frame_index);
     if (glm::dot(current_orientation, next_orientation) < 0.0f) {
         next_orientation = -next_orientation;
     }
 
-    return {current_position + (next_position - current_position) * interpolation.frame_alpha,
-            glm::normalize(glm::slerp(current_orientation, next_orientation, interpolation.frame_alpha))};
+    return {current_position + (next_position - current_position) * frame_alpha,
+            glm::normalize(glm::slerp(current_orientation, next_orientation, frame_alpha))};
 }
 
 std::uint32_t SceneState::current_character_frame() const

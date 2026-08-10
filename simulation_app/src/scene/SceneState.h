@@ -2,6 +2,7 @@
 
 #include "asset/AssetDataTypes.h"
 #include "gpu/bvh/BvhDataTypes.h"
+#include "scene/Kinematics.h"
 
 #include <cstddef>
 #include <cstdint>
@@ -18,13 +19,6 @@ struct GarmentObject
     GarmentMesh mesh;
     bool visible = true;
     std::optional<TriangleBvhData> garment_triangle_bvh;
-};
-
-struct CharacterFrameInterpolation final
-{
-    std::uint32_t current_frame_index = 0;
-    std::uint32_t next_frame_index = 0;
-    float frame_alpha = 0.0f;
 };
 
 struct CharacterReferenceFrame final
@@ -62,8 +56,10 @@ public:
 
     // Playback
     void update_character_frame(std::uint64_t simulation_step_count, std::uint32_t character_frame_stride);
-    CharacterFrameInterpolation character_frame_interpolation(float character_frame_time) const;
-    CharacterReferenceFrame interpolated_character_reference_frame(float character_frame_time,
+    void update_reference_kinematics(float frame_alpha, float dt);
+    const Kinematics& reference_kinematics(GarmentCategory garment_category) const;
+    float character_frame_alpha(float character_frame_time) const;
+    CharacterReferenceFrame interpolated_character_reference_frame(float frame_alpha,
                                                                    GarmentCategory garment_category) const;
     std::uint32_t current_character_frame() const;
     glm::vec3 character_root_position(std::uint32_t frame_index) const;
@@ -80,4 +76,6 @@ private:
 
     // Playback
     std::uint32_t current_character_frame_ = 0;
+    Kinematics pelvis_kinematics_;
+    Kinematics torso_kinematics_;
 };

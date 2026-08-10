@@ -1,14 +1,16 @@
 #pragma once
 
-#include "simulation/SimulationGpuViews.h"
+#include "gpu/scene/SimulationGpuView.h"
 #include <filesystem>
 
 #include <QOpenGLFunctions_4_5_Core>
 
+struct ClothCollisionParams;
+
 class ClothClothCollisionSolver final
 {
 public:
-    ClothClothCollisionSolver() = default;
+    explicit ClothClothCollisionSolver(const ClothCollisionParams& params);
     ClothClothCollisionSolver(const ClothClothCollisionSolver&) = delete;
     ClothClothCollisionSolver& operator=(const ClothClothCollisionSolver&) = delete;
 
@@ -17,17 +19,13 @@ public:
                     const std::filesystem::path& initial_accumulate_shader_path,
                     const std::filesystem::path& body_triangle_id_build_shader_path,
                     const std::filesystem::path& apply_shader_path,
-                    float collision_thickness,
-                    float collision_stiffness,
-                    float max_correction_length,
-                    float surface_search_radius,
                     QOpenGLFunctions_4_5_Core& gl);
-    bool can_solve(const SimulationGpuViews& views) const;
-    bool can_solve_initial(const SimulationGpuViews& views) const;
-    bool can_build_body_triangle_ids(const SimulationGpuViews& views) const;
-    bool build_body_triangle_ids(const SimulationGpuViews& views, QOpenGLFunctions_4_5_Core& gl) const;
-    void solve(const SimulationGpuViews& views, QOpenGLFunctions_4_5_Core& gl) const;
-    void solve_initial(const SimulationGpuViews& views, QOpenGLFunctions_4_5_Core& gl) const;
+    bool can_solve(const SimulationGpuView& views) const;
+    bool can_solve_initial(const SimulationGpuView& views) const;
+    bool can_update_body_surface_mapping(const SimulationGpuView& views) const;
+    void update_body_surface_mapping(const SimulationGpuView& views, QOpenGLFunctions_4_5_Core& gl) const;
+    void solve(const SimulationGpuView& views, QOpenGLFunctions_4_5_Core& gl) const;
+    void solve_initial(const SimulationGpuView& views, QOpenGLFunctions_4_5_Core& gl) const;
     void release(QOpenGLFunctions_4_5_Core& gl);
 
 private:
@@ -72,5 +70,5 @@ private:
     float max_correction_length_ = 0.0f;
     float surface_search_radius_ = 0.0f;
 
-    void apply_corrections(const SimulationGpuViews& views, QOpenGLFunctions_4_5_Core& gl) const;
+    void apply_corrections(const SimulationGpuView& views, QOpenGLFunctions_4_5_Core& gl) const;
 };

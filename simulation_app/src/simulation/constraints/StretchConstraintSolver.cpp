@@ -1,6 +1,7 @@
 #include "simulation/constraints/StretchConstraintSolver.h"
 
 #include "gpu/cloth/ClothGpuResources.h"
+#include "gpu/scene/SimulationGpuView.h"
 #include "utils/BufferUtils.h"
 #include "utils/ShaderUtils.h"
 
@@ -15,13 +16,15 @@ constexpr GLuint rest_lengths_binding = 2;
 constexpr std::uint32_t stretch_constraint_local_size = 128;
 }
 
+StretchConstraintSolver::StretchConstraintSolver(float stiffness) : stiffness_(stiffness)
+{}
+
 bool StretchConstraintSolver::is_initialized() const
 {
     return program_ != 0;
 }
 
 bool StretchConstraintSolver::initialize(const std::filesystem::path& shader_path,
-                                         float stiffness,
                                          QOpenGLFunctions_4_5_Core& gl)
 {
     program_ = load_compute_program(shader_path, "Stretch constraint", gl);
@@ -39,24 +42,23 @@ bool StretchConstraintSolver::initialize(const std::filesystem::path& shader_pat
         return false;
     }
 
-    stiffness_ = stiffness;
     return true;
 }
 
-bool StretchConstraintSolver::can_solve(const ClothMotionBufferView& motion_view,
-                                        const DistanceConstraintBufferView& constraint_view) const
+bool StretchConstraintSolver::can_solve(const SimulationGpuView& views) const
 {
     return is_initialized() &&
-           is_valid_motion_view(motion_view) &&
-           is_valid_distance_constraint_view(constraint_view) &&
+           is_valid_motion_view(views.cloth_motion) &&
+           is_valid_distance_constraint_view(views.stretch_constraints) &&
            stiffness_ > 0.0f;
 }
 
-void StretchConstraintSolver::solve(const ClothMotionBufferView& motion_view,
-                                    const DistanceConstraintBufferView& constraint_view,
-                                    QOpenGLFunctions_4_5_Core& gl) const
+void StretchConstraintSolver::solve(const SimulationGpuView& views, QOpenGLFunctions_4_5_Core& gl) const
 {
-    assert(can_solve(motion_view, constraint_view));
+    assert(can_solve(views));
+
+    const auto& motion_view = views.cloth_motion;
+    const auto& constraint_view = views.stretch_constraints;
 
     gl.glUseProgram(program_);
     gl.glBindBufferBase(GL_SHADER_STORAGE_BUFFER,
@@ -86,5 +88,4 @@ void StretchConstraintSolver::release(QOpenGLFunctions_4_5_Core& gl)
     constraint_offset_location_ = -1;
     constraint_count_location_ = -1;
     stiffness_location_ = -1;
-    stiffness_ = 0.0f;
 }
