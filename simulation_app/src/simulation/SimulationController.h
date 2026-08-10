@@ -105,7 +105,6 @@ private:
     bool has_garment_placement_update() const;
     void set_current_garment_placement(QOpenGLFunctions_4_5_Core& gl);
     bool build_garment_triangle_bvh(GarmentLayer layer);
-    std::vector<GarmentLayer> garment_placement_layers() const;
     void restore_garment_placements(const std::vector<GarmentLayer>& layers, QOpenGLFunctions_4_5_Core& gl);
     void clear_garment_placements();
 

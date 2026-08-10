@@ -18,6 +18,7 @@
 #include <vector>
 
 #include <QOpenGLFunctions_4_5_Core>
+#include <glm/vec3.hpp>
 
 class SceneGpuState;
 class SceneState;
@@ -30,17 +31,28 @@ public:
     SimulationPipeline(const SimulationPipeline&) = delete;
     SimulationPipeline& operator=(const SimulationPipeline&) = delete;
 
-    bool is_initialized() const;
     bool initialize(const ShaderPaths& shader_paths, QOpenGLFunctions_4_5_Core& gl);
-    bool prefit_garments(const SceneState& scene,
-                         SceneGpuState& gpu_state,
-                         const std::vector<GarmentLayer>& layers,
+    void release(QOpenGLFunctions_4_5_Core& gl);
+    void prefit_garments(SceneGpuState& gpu_state,
+                         const std::vector<GarmentLayer>& unconfirmed_layers,
                          QOpenGLFunctions_4_5_Core& gl);
     void step(SceneState& scene,
               SceneGpuState& gpu_state,
               std::uint64_t motion_step_index,
               QOpenGLFunctions_4_5_Core& gl);
-    void release(QOpenGLFunctions_4_5_Core& gl);
+    void step_character_only(const SceneState& scene,
+                             SceneGpuState& gpu_state,
+                             std::uint64_t motion_step_index,
+                             QOpenGLFunctions_4_5_Core& gl) const;
+
+private:
+    void solve_external_forces(const SceneState& scene,
+                               const SimulationGpuView& views,
+                               const glm::vec3& external_acceleration,
+                               QOpenGLFunctions_4_5_Core& gl) const;
+
+public:
+    bool is_initialized() const;
 
 private:
     SimulationParams params_;

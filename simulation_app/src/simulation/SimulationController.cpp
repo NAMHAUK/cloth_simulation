@@ -78,7 +78,11 @@ void SimulationController::tick_frame()
             set_current_garment_placement(gl);
 
             if (simulation_running_) {
-                simulation_pipeline_.step(scene_, gpu_state_, motion_step_index_, gl);
+                if (scene_.garments().empty()) {
+                    simulation_pipeline_.step_character_only(scene_, gpu_state_, motion_step_index_, gl);
+                } else {
+                    simulation_pipeline_.step(scene_, gpu_state_, motion_step_index_, gl);
+                }
                 ++motion_step_index_;
                 scene_.update_character_frame(motion_step_index_, params_.step.motion_stride());
             }
@@ -277,18 +281,6 @@ bool SimulationController::build_garment_triangle_bvh(GarmentLayer layer)
     return true;
 }
 
-std::vector<GarmentLayer> SimulationController::garment_placement_layers() const
-{
-    std::vector<GarmentLayer> layers;
-    layers.reserve(garment_placements_.size());
-    for (std::size_t index = 0; index < garment_placements_.size(); ++index) {
-        if (garment_placements_[index].is_active) {
-            layers.push_back(static_cast<GarmentLayer>(index));
-        }
-    }
-    return layers;
-}
-
 void SimulationController::restore_garment_placements(const std::vector<GarmentLayer>& layers,
                                                       QOpenGLFunctions_4_5_Core& gl)
 {
@@ -430,20 +422,21 @@ bool SimulationController::confirm_garment_placement()
     bool placement_confirmed = false;
     run_with_gl_context_([this, &placement_confirmed](QOpenGLFunctions_4_5_Core& gl) {
         set_current_garment_placement(gl);
-        const std::vector<GarmentLayer> layers = garment_placement_layers();
-        if (!simulation_pipeline_.prefit_garments(scene_, gpu_state_, layers, gl)) {
-            std::cerr << "Cannot confirm garment placement because garment pre-fit failed.\n";
-            restore_garment_placements(layers, gl);
-            return;
+        std::vector<GarmentLayer> unconfirmed_layers;
+        for (GarmentLayer layer : {GarmentLayer::Lower, GarmentLayer::Upper}) {
+            if (garment_placements_[layer].is_active) {
+                unconfirmed_layers.push_back(layer);
+            }
         }
+        simulation_pipeline_.prefit_garments(gpu_state_, unconfirmed_layers, gl);
 
-        for (GarmentLayer layer : layers) {
+        for (GarmentLayer layer : unconfirmed_layers) {
             if (!gpu_state_.build_garment_attachment_targets(scene_,
                                                              layer,
                                                              params_.constraints.attachment_surface_offset,
                                                              gl)) {
                 std::cerr << "Cannot confirm garment placement because attachment target creation failed.\n";
-                restore_garment_placements(layers, gl);
+                restore_garment_placements(unconfirmed_layers, gl);
                 return;
             }
         }
