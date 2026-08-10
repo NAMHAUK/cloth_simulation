@@ -1,6 +1,5 @@
 #pragma once
 
-#include "gpu/bvh/ClothBvhBoundsUpdater.h"
 #include "gpu/scene/SimulationGpuView.h"
 #include "simulation/SimulationParams.h"
 #include "simulation/collision/ClothBodyCollisionDetector.h"
@@ -45,7 +44,6 @@ public:
 
 private:
     SimulationParams params_;
-    ClothBvhBoundsUpdater cloth_bvh_bounds_updater_;
     SimulationForceField force_field_;
     ExternalForceSolver external_force_solver_;
     StretchConstraintSolver stretch_constraint_solver_;

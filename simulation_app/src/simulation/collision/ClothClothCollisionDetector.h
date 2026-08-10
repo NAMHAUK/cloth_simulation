@@ -1,24 +1,29 @@
 #pragma once
 
+#include "gpu/bvh/ClothBvhBoundsUpdater.h"
 #include "gpu/scene/SimulationGpuView.h"
 #include <cstdint>
 #include <filesystem>
 
 #include <QOpenGLFunctions_4_5_Core>
 
+struct ClothCollisionParams;
+
 class ClothClothCollisionDetector final
 {
 public:
-    ClothClothCollisionDetector() = default;
+    explicit ClothClothCollisionDetector(const ClothCollisionParams& params);
     ClothClothCollisionDetector(const ClothClothCollisionDetector&) = delete;
     ClothClothCollisionDetector& operator=(const ClothClothCollisionDetector&) = delete;
 
     bool is_initialized() const;
-    bool initialize(const std::filesystem::path& candidate_detect_shader_path,
+    bool initialize(const std::filesystem::path& bounds_update_shader_path,
+                    const std::filesystem::path& candidate_detect_shader_path,
                     const std::filesystem::path& dispatch_size_shader_path,
                     QOpenGLFunctions_4_5_Core& gl);
     bool can_detect(const SimulationGpuView& views) const;
     void detect(const SimulationGpuView& views, QOpenGLFunctions_4_5_Core& gl) const;
+    void detect_initial(const SimulationGpuView& views, QOpenGLFunctions_4_5_Core& gl) const;
     void release(QOpenGLFunctions_4_5_Core& gl);
 
 private:
@@ -43,6 +48,7 @@ private:
         GLint local_size = -1;
     };
 
+    void detect(const SimulationGpuView& views, float bounds_margin, QOpenGLFunctions_4_5_Core& gl) const;
     void detect_pair(const ElementRange& upper_vertex_range,
                      const GarmentBvhLayout& upper_layout,
                      const ElementRange& lower_vertex_range,
@@ -52,6 +58,9 @@ private:
     void build_dispatch_size(const CollisionCandidateBuffer& collision_candidates,
                              QOpenGLFunctions_4_5_Core& gl) const;
 
+    ClothBvhBoundsUpdater bounds_updater_;
     CandidateDetectionProgram candidate_detect_;
     DispatchSizeProgram dispatch_size_;
+    float initial_detection_distance_ = 0.0f;
+    float detection_distance_ = 0.0f;
 };

@@ -1,6 +1,7 @@
 #include "simulation/collision/ClothClothCollisionDetector.h"
 
 #include "gpu/scene/CollisionCandidateBuffers.h"
+#include "simulation/SimulationParams.h"
 #include "utils/BufferUtils.h"
 #include "utils/ShaderUtils.h"
 
@@ -68,12 +69,18 @@ bool has_valid_garment_layouts(const SimulationGpuView& views)
 }
 }
 
+ClothClothCollisionDetector::ClothClothCollisionDetector(const ClothCollisionParams& params)
+    : initial_detection_distance_(params.initial_detection_distance),
+      detection_distance_(params.detection_distance())
+{}
+
 bool ClothClothCollisionDetector::is_initialized() const
 {
     return candidate_detect_.program != 0 && dispatch_size_.program != 0;
 }
 
-bool ClothClothCollisionDetector::initialize(const std::filesystem::path& candidate_detect_shader_path,
+bool ClothClothCollisionDetector::initialize(const std::filesystem::path& bounds_update_shader_path,
+                                             const std::filesystem::path& candidate_detect_shader_path,
                                              const std::filesystem::path& dispatch_size_shader_path,
                                              QOpenGLFunctions_4_5_Core& gl)
 {
@@ -123,6 +130,11 @@ bool ClothClothCollisionDetector::initialize(const std::filesystem::path& candid
         return false;
     }
 
+    if (!bounds_updater_.initialize(bounds_update_shader_path, gl)) {
+        release(gl);
+        return false;
+    }
+
     return true;
 }
 
@@ -149,6 +161,19 @@ bool ClothClothCollisionDetector::can_detect(const SimulationGpuView& views) con
 
 void ClothClothCollisionDetector::detect(const SimulationGpuView& views, QOpenGLFunctions_4_5_Core& gl) const
 {
+    detect(views, detection_distance_, gl);
+}
+
+void ClothClothCollisionDetector::detect_initial(const SimulationGpuView& views,
+                                                 QOpenGLFunctions_4_5_Core& gl) const
+{
+    detect(views, initial_detection_distance_, gl);
+}
+
+void ClothClothCollisionDetector::detect(const SimulationGpuView& views,
+                                         float bounds_margin,
+                                         QOpenGLFunctions_4_5_Core& gl) const
+{
     assert(can_detect(views));
 
     const CollisionCandidateBuffer& collision_candidates = views.collision_candidates.cloth_cloth_vertex_face;
@@ -160,6 +185,7 @@ void ClothClothCollisionDetector::detect(const SimulationGpuView& views, QOpenGL
         return;
     }
 
+    bounds_updater_.update(views, bounds_margin, gl);
     views.collision_candidates.clear_cloth_cloth_candidate_counts(gl);
 
     gl.glUseProgram(candidate_detect_.program);
@@ -217,6 +243,7 @@ void ClothClothCollisionDetector::detect(const SimulationGpuView& views, QOpenGL
 
 void ClothClothCollisionDetector::release(QOpenGLFunctions_4_5_Core& gl)
 {
+    bounds_updater_.release(gl);
     gl.glDeleteProgram(dispatch_size_.program);
     gl.glDeleteProgram(candidate_detect_.program);
     candidate_detect_ = {};

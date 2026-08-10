@@ -22,6 +22,7 @@ SimulationPipeline::SimulationPipeline(SimulationParams params)
       ground_collision_solver_(params.collisions.ground),
       cloth_body_collision_detector_(params.collisions.body.thickness),
       cloth_body_collision_solver_(params.collisions.body),
+      cloth_cloth_collision_detector_(params.collisions.cloth),
       cloth_cloth_collision_solver_(params.collisions.cloth),
       garment_prefit_solver_(params.prefit)
 {}
@@ -41,7 +42,6 @@ bool SimulationPipeline::initialize(const ShaderPaths& shader_paths, QOpenGLFunc
     substep_dt_ = params_.step.dt() / static_cast<float>(params_.step.substep_count);
 
     const bool solvers_initialized =
-        cloth_bvh_bounds_updater_.initialize(shader_paths.cloth_bvh_bounds_update_compute, gl) &&
         external_force_solver_.initialize(shader_paths.cloth_external_force_compute, substep_dt_, gl) &&
         stretch_constraint_solver_.initialize(shader_paths.cloth_stretch_constraint_compute, gl) &&
         bending_constraint_solver_.initialize(shader_paths.cloth_bending_constraint_compute, gl) &&
@@ -57,7 +57,8 @@ bool SimulationPipeline::initialize(const ShaderPaths& shader_paths, QOpenGLFunc
                                                 shader_paths.body_vertex_cloth_face_accumulate_compute,
                                                 shader_paths.cloth_body_collision_apply_compute,
                                                 gl) &&
-        cloth_cloth_collision_detector_.initialize(shader_paths.cloth_cloth_vertex_face_detect_compute,
+        cloth_cloth_collision_detector_.initialize(shader_paths.cloth_bvh_bounds_update_compute,
+                                                   shader_paths.cloth_cloth_vertex_face_detect_compute,
                                                    shader_paths.collision_dispatch_size_compute,
                                                    gl) &&
         cloth_cloth_collision_solver_.initialize(shader_paths.cloth_cloth_vertex_face_accumulate_compute,
@@ -102,7 +103,7 @@ bool SimulationPipeline::prefit_garments(const SceneState& scene,
     const bool has_multiple_garments = scene.has_multiple_garments();
     if (has_multiple_garments && (!cloth_cloth_collision_detector_.can_detect(views) ||
                                   !cloth_cloth_collision_solver_.can_solve_initial(views) ||
-                                  !cloth_cloth_collision_solver_.can_build_body_triangle_ids(views))) {
+                                  !cloth_cloth_collision_solver_.can_update_body_surface_mapping(views))) {
         std::cerr << "Cannot initialize cloth-cloth contacts because required GPU resources are invalid.\n";
         return false;
     }
@@ -117,15 +118,11 @@ bool SimulationPipeline::prefit_garments(const SceneState& scene,
 
     if (has_multiple_garments) {
         for (std::uint32_t iteration = 0; iteration < params_.step.iteration_count; ++iteration) {
-            cloth_bvh_bounds_updater_.update(views, params_.collisions.cloth.initial_detection_distance, gl);
-            cloth_cloth_collision_detector_.detect(views, gl);
+            cloth_cloth_collision_detector_.detect_initial(views, gl);
             cloth_cloth_collision_solver_.solve_initial(views, gl);
             gpu_state.cloth_gpu_state().copy_current_positions_to_previous(gl);
         }
-    }
-
-    if (has_multiple_garments) {
-        cloth_cloth_collision_solver_.build_body_triangle_ids(views, gl);
+        cloth_cloth_collision_solver_.update_body_surface_mapping(views, gl);
     }
 
     gpu_state.update_mesh_normals(gl);
@@ -145,11 +142,7 @@ void SimulationPipeline::step(SceneState& scene,
     }
 
     const auto views = gpu_state.simulation_view();
-    const bool has_multiple_garments = scene.has_multiple_garments();
-
-    if (has_multiple_garments) {
-        cloth_cloth_collision_solver_.build_body_triangle_ids(views, gl);
-    }
+    cloth_cloth_collision_solver_.update_body_surface_mapping(views, gl);
 
     const glm::vec3 external_acceleration = force_field_.external_acceleration();
     for (std::uint32_t substep = 0; substep < params_.step.substep_count; ++substep) {
@@ -173,20 +166,14 @@ void SimulationPipeline::step(SceneState& scene,
         }
 
         cloth_body_collision_detector_.detect(views, gl);
-
-        if (has_multiple_garments) {
-            cloth_bvh_bounds_updater_.update(views, params_.collisions.cloth.detection_distance(), gl);
-            cloth_cloth_collision_detector_.detect(views, gl);
-        }
+        cloth_cloth_collision_detector_.detect(views, gl);
 
         for (std::uint32_t iteration = 0; iteration < params_.step.iteration_count; ++iteration) {
             stretch_constraint_solver_.solve(views, gl);
             bending_constraint_solver_.solve(views, gl);
             attachment_constraint_solver_.solve(views, gl);
             cloth_body_collision_solver_.solve(views, gl);
-            if (has_multiple_garments) {
-                cloth_cloth_collision_solver_.solve(views, gl);
-            }
+            cloth_cloth_collision_solver_.solve(views, gl);
             ground_collision_solver_.solve(views, gl);
         }
     }
@@ -206,7 +193,6 @@ void SimulationPipeline::release(QOpenGLFunctions_4_5_Core& gl)
     bending_constraint_solver_.release(gl);
     stretch_constraint_solver_.release(gl);
     external_force_solver_.release(gl);
-    cloth_bvh_bounds_updater_.release(gl);
     substep_dt_ = 0.0f;
     initialized_ = false;
 }
