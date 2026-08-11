@@ -75,19 +75,11 @@ void SceneState::set_character_mesh(CharacterMesh mesh)
     torso_kinematics_.reset(torso);
 }
 
-void SceneState::set_default_body_triangle_bvh_data(TriangleBvhData default_body_triangle_bvh_data)
+void SceneState::set_body_bvhs(TriangleBvhData triangle_bvh, VertexBvhData vertex_bvh, EdgeBvhData edge_bvh)
 {
-    default_body_triangle_bvh_data_ = std::move(default_body_triangle_bvh_data);
-}
-
-void SceneState::set_default_body_vertex_bvh_data(VertexBvhData default_body_vertex_bvh_data)
-{
-    default_body_vertex_bvh_data_ = std::move(default_body_vertex_bvh_data);
-}
-
-void SceneState::set_default_body_edge_bvh_data(EdgeBvhData default_body_edge_bvh_data)
-{
-    default_body_edge_bvh_data_ = std::move(default_body_edge_bvh_data);
+    default_body_triangle_bvh_data_ = std::move(triangle_bvh);
+    default_body_vertex_bvh_data_ = std::move(vertex_bvh);
+    default_body_edge_bvh_data_ = std::move(edge_bvh);
 }
 
 const CharacterMesh& SceneState::character_mesh() const

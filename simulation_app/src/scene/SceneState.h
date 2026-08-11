@@ -32,9 +32,7 @@ class SceneState final
 public:
     // Character
     void set_character_mesh(CharacterMesh mesh);
-    void set_default_body_triangle_bvh_data(TriangleBvhData default_body_triangle_bvh_data);
-    void set_default_body_vertex_bvh_data(VertexBvhData default_body_vertex_bvh_data);
-    void set_default_body_edge_bvh_data(EdgeBvhData default_body_edge_bvh_data);
+    void set_body_bvhs(TriangleBvhData triangle_bvh, VertexBvhData vertex_bvh, EdgeBvhData edge_bvh);
     const CharacterMesh& character_mesh() const;
     const TriangleBvhData& default_body_triangle_bvh_data() const;
     const VertexBvhData& default_body_vertex_bvh_data() const;
