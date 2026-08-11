@@ -24,7 +24,7 @@ public:
     bool is_initialized() const;
 
     bool update_garment_buffers(const std::vector<GarmentObject>& garments,
-                                std::optional<GarmentLayer> reset_layer,
+                                std::optional<GarmentLayer> updated_layer,
                                 QOpenGLFunctions_4_5_Core& gl);
     bool update_garment_placement(const GarmentObject& garment,
                                   bool update_rest_lengths,
@@ -54,7 +54,7 @@ public:
 
 private:
     bool rebuild_buffers(const std::vector<GarmentObject>& garments,
-                         std::optional<GarmentLayer> reset_layer,
+                         std::optional<GarmentLayer> updated_layer,
                          QOpenGLFunctions_4_5_Core& gl);
     void replace_with_rebuild_buffers(ClothBufferSet rebuild_buffer_set,
                                       std::array<GarmentBufferRanges, 2> rebuild_ranges,

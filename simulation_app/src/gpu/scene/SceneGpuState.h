@@ -41,9 +41,9 @@ public:
     const ClothGpuResources& cloth_gpu_state() const;
     ClothBvhBufferView cloth_bvh_buffer_view() const;
     CollisionCandidateBufferView collision_candidate_buffer_view() const;
-    bool update_garment_meshes(const SceneState& scene,
+    void update_garment_meshes(const SceneState& scene,
                                QOpenGLFunctions_4_5_Core& gl,
-                               std::optional<GarmentLayer> reset_layer = std::nullopt);
+                               std::optional<GarmentLayer> updated_layer = std::nullopt);
     bool update_garment_placement(const GarmentObject& garment,
                                   bool update_rest_lengths,
                                   QOpenGLFunctions_4_5_Core& gl);

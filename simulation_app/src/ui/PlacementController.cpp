@@ -121,12 +121,7 @@ void PlacementController::load_garment(const std::filesystem::path& asset_path, 
 
     const GarmentLayer layer = target_layer();
 
-    if (!simulation_controller_.set_garment_mesh(layer, std::move(mesh))) {
-        QMessageBox::warning(placement_panel_.window(),
-                             "Load Failed",
-                             "Failed to apply garment:\n" + QString::fromStdWString(asset_path.wstring()));
-        return;
-    }
+    simulation_controller_.set_garment_mesh(layer, std::move(mesh));
 
     const QString garment_name = QString::fromStdWString(asset_path.stem().wstring());
     cards_panel_.set_card(layer, garment_name);

@@ -39,8 +39,7 @@ public:
     const EdgeBvhData& default_body_edge_bvh_data() const;
 
     // Garments
-    bool add_garment_mesh(GarmentLayer layer, GarmentMesh mesh);
-    bool replace_garment_mesh(GarmentLayer layer, GarmentMesh mesh);
+    void set_garment(GarmentObject garment);
     bool remove_garment(GarmentLayer layer);
     GarmentObject* update_garment_placement(GarmentLayer layer,
                                             const glm::vec3& position_offset,

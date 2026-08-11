@@ -931,20 +931,26 @@ bool rebuild_buffer_data(const std::vector<BufferRebuildGarmentData>& rebuild_ga
                          const ClothBufferSet& old_buffer_set,
                          const ClothBufferSet& rebuild_buffer_set,
                          BufferRebuildUploadData& rebuild_upload_data,
-                         std::optional<GarmentLayer> reset_layer,
-    QOpenGLFunctions_4_5_Core& gl)
+                         std::optional<GarmentLayer> updated_layer,
+                         QOpenGLFunctions_4_5_Core& gl)
 {
     for (const BufferRebuildGarmentData& rebuild_garment : rebuild_garments) {
         const GarmentBufferRanges& buffer_ranges = rebuild_garment.buffer_ranges;
         const GarmentLayer layer = rebuild_garment.garment->layer;
         const GarmentBufferRanges& old_data = old_garments[layer];
-        const bool reset_garment = reset_layer == layer;
+        const bool reset_garment = updated_layer == layer;
 
         if (reset_garment) {
-            upload_position_data(rebuild_buffer_set, rebuild_garment.garment->mesh.vertices, buffer_ranges, gl);
+            upload_position_data(rebuild_buffer_set,
+                                 rebuild_garment.garment->mesh.vertices,
+                                 buffer_ranges,
+                                 gl);
         } else {
-            if (!old_data.is_loaded() ||
-                !copy_dynamic_state_buffers(old_data, buffer_ranges, old_buffer_set, rebuild_buffer_set, gl)) {
+            if (!old_data.is_loaded() || !copy_dynamic_state_buffers(old_data,
+                                                                     buffer_ranges,
+                                                                     old_buffer_set,
+                                                                     rebuild_buffer_set,
+                                                                     gl)) {
                 std::cerr << "Cannot rebuild cloth position data for garment layer " << layer << ".\n";
                 return false;
             }
@@ -1021,7 +1027,7 @@ void ClothGpuResources::reset_resources() noexcept
 
 // garment buffer updates //
 bool ClothGpuResources::update_garment_buffers(const std::vector<GarmentObject>& garments,
-                                               std::optional<GarmentLayer> reset_layer,
+                                               std::optional<GarmentLayer> updated_layer,
                                                QOpenGLFunctions_4_5_Core& gl)
 {
     if (garments.empty()) {
@@ -1029,8 +1035,8 @@ bool ClothGpuResources::update_garment_buffers(const std::vector<GarmentObject>&
         return true;
     }
 
-    if (reset_layer.has_value()) {
-        return rebuild_buffers(garments, reset_layer, gl);
+    if (updated_layer.has_value()) {
+        return rebuild_buffers(garments, updated_layer, gl);
     }
 
     // 1. GPU에만 있는 garment 발견 (scene에서 삭제된 것) -> buffer rebuild 필요
@@ -1191,7 +1197,7 @@ void ClothGpuResources::clear_base_positions(QOpenGLFunctions_4_5_Core& gl)
 }
 
 bool ClothGpuResources::rebuild_buffers(const std::vector<GarmentObject>& garments,
-                                        std::optional<GarmentLayer> reset_layer,
+                                        std::optional<GarmentLayer> updated_layer,
                                         QOpenGLFunctions_4_5_Core& gl)
 {
     std::vector<BufferRebuildGarmentData> rebuild_garments;
@@ -1217,7 +1223,7 @@ bool ClothGpuResources::rebuild_buffers(const std::vector<GarmentObject>& garmen
                              old_buffer_set,
                              rebuild_buffer_set,
                              rebuild_upload_data,
-                             reset_layer,
+                             updated_layer,
                              gl)) {
         delete_buffer_set(rebuild_buffer_set, gl);
         return false;

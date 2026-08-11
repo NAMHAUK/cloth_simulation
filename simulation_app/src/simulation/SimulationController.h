@@ -47,7 +47,7 @@ public:
     void reset_scene_to_default();
     void return_to_default_pose();
 
-    bool set_garment_mesh(GarmentLayer layer, GarmentMesh mesh);
+    void set_garment_mesh(GarmentLayer layer, GarmentMesh mesh);
     bool remove_garment_placement(GarmentLayer layer);
     void set_garment_placement(GarmentLayer layer, const glm::vec3& position_offset, float scale);
     void apply_garment_placement_changes(QOpenGLFunctions_4_5_Core& gl);
@@ -82,28 +82,25 @@ private:
         bool position_changed = false;
         bool scale_changed = false;
 
-        void clear()
+        void reset()
         {
             position_offset = glm::vec3{0.0f};
             scale = 1.0f;
             is_active = false;
-            clear_update();
+            clear_updates();
         }
 
         bool has_update() const { return is_active && (position_changed || scale_changed); }
 
-        void clear_update()
+        void clear_updates()
         {
             position_changed = false;
             scale_changed = false;
         }
     };
 
-    bool add_garment(GarmentLayer layer, GarmentMesh mesh, QOpenGLFunctions_4_5_Core& gl);
-    bool replace_garment(GarmentLayer layer, GarmentMesh mesh, QOpenGLFunctions_4_5_Core& gl);
-    void build_garment_triangle_bvh(GarmentLayer layer);
     void restore_garment_placements(const std::vector<GarmentLayer>& layers, QOpenGLFunctions_4_5_Core& gl);
-    void clear_garment_placements();
+    void reset_garment_placements();
     void release_gpu();
     void release_gpu(QOpenGLFunctions_4_5_Core& gl);
 

@@ -11,6 +11,18 @@
 
 #include <QObject>
 
+namespace {
+GarmentObject build_garment(GarmentLayer layer, GarmentMesh mesh)
+{
+    GarmentObject garment;
+    garment.layer = layer;
+    garment.source_mesh = mesh;
+    garment.mesh = std::move(mesh);
+    garment.garment_triangle_bvh = MeshBvhBuilder(garment.mesh).build_triangle_bvh();
+    return garment;
+}
+}
+
 SimulationController::SimulationController(SimulationParams params)
     : params_(params),
       simulation_pipeline_(params)
@@ -127,7 +139,7 @@ void SimulationController::reset_scene_to_default()
 
     run_with_gl_context_([this](QOpenGLFunctions_4_5_Core& gl) {
         simulation_running_ = false;
-        clear_garment_placements();
+        reset_garment_placements();
 
         scene_.clear_garments();
         gpu_state_.update_garment_meshes(scene_, gl);
@@ -153,7 +165,7 @@ void SimulationController::return_to_default_pose()
             return;
         }
 
-        clear_garment_placements();
+        reset_garment_placements();
         set_character_mesh_state(default_character_mesh_, gl);
         is_default_pose_ = true;
     });
@@ -170,23 +182,22 @@ void SimulationController::set_character_mesh_state(CharacterMesh mesh, QOpenGLF
 }
 
 // Garment placement
-bool SimulationController::set_garment_mesh(GarmentLayer layer, GarmentMesh mesh)
+void SimulationController::set_garment_mesh(GarmentLayer layer, GarmentMesh mesh)
 {
     assert(is_gpu_initialized() && !is_simulation_running() && is_default_pose_);
 
-    GarmentPlacementState& placement = garment_placements_[layer];
-    bool garment_set = false;
-    run_with_gl_context_([this, layer, &placement, &mesh, &garment_set](QOpenGLFunctions_4_5_Core& gl) {
-        garment_set = placement.is_active ? replace_garment(layer, std::move(mesh), gl)
-                                          : add_garment(layer, std::move(mesh), gl);
-        if (!garment_set) {
-            return;
-        }
+    GarmentObject garment = build_garment(layer, std::move(mesh));
+
+    run_with_gl_context_([this, layer, &garment](QOpenGLFunctions_4_5_Core& gl) {
+        scene_.set_garment(std::move(garment));
+        gpu_state_.update_garment_meshes(scene_, gl, layer);
+
+        garment_placements_[layer].reset();
+        garment_placements_[layer].is_active = true;
         gpu_state_.clear_base_positions(gl);
     });
 
     Q_EMIT viewport_update_requested();
-    return garment_set;
 }
 
 bool SimulationController::remove_garment_placement(GarmentLayer layer)
@@ -201,7 +212,7 @@ bool SimulationController::remove_garment_placement(GarmentLayer layer)
         if (garment_removed) {
             gpu_state_.update_garment_meshes(scene_, gl);
         }
-        placement.clear();
+        placement.reset();
         gpu_state_.clear_base_positions(gl);
     });
 
@@ -258,7 +269,7 @@ bool SimulationController::confirm_garment_placement()
             }
         }
 
-        clear_garment_placements();
+        reset_garment_placements();
         gpu_state_.clear_base_positions(gl);
         placement_confirmed = true;
     });
@@ -278,7 +289,7 @@ void SimulationController::cancel_garment_placement()
             if (placement.is_active && scene_.remove_garment(static_cast<GarmentLayer>(index))) {
                 garment_removed = true;
             }
-            placement.clear();
+            placement.reset();
         }
         if (garment_removed) {
             gpu_state_.update_garment_meshes(scene_, gl);
@@ -288,57 +299,6 @@ void SimulationController::cancel_garment_placement()
     });
 
     Q_EMIT viewport_update_requested();
-}
-
-bool SimulationController::add_garment(GarmentLayer layer, GarmentMesh mesh, QOpenGLFunctions_4_5_Core& gl)
-{
-    // 새 garment 추가
-    GarmentPlacementState& placement = garment_placements_[layer];
-    placement.clear();
-    if (!scene_.add_garment_mesh(layer, std::move(mesh))) {
-        std::cerr << "Failed to add garment mesh.\n";
-        return false;
-    }
-
-    placement.is_active = true;
-    build_garment_triangle_bvh(layer);
-    if (!gpu_state_.update_garment_meshes(scene_, gl)) {
-        scene_.remove_garment(layer);
-        placement.clear();
-        if (!gpu_state_.update_garment_meshes(scene_, gl)) {
-            std::cerr << "Failed to restore garment GPU resources after addition failure.\n";
-        }
-        return false;
-    }
-    return true;
-}
-
-bool SimulationController::replace_garment(GarmentLayer layer,
-                                           GarmentMesh mesh,
-                                           QOpenGLFunctions_4_5_Core& gl)
-{
-    GarmentObject& existing_garment = *scene_.find_garment(layer);
-    GarmentObject previous_garment = existing_garment;
-    if (!scene_.replace_garment_mesh(layer, std::move(mesh))) {
-        existing_garment = std::move(previous_garment);
-        std::cerr << "Failed to replace garment mesh.\n";
-        return false;
-    }
-    build_garment_triangle_bvh(layer);
-
-    if (!gpu_state_.update_garment_meshes(scene_, gl, layer)) {
-        existing_garment = std::move(previous_garment);
-        if (!gpu_state_.update_garment_meshes(scene_, gl, layer)) {
-            std::cerr << "Failed to restore garment GPU resources after replacement failure.\n";
-        }
-        return false;
-    }
-
-    GarmentPlacementState& placement = garment_placements_[layer];
-    placement.position_offset = glm::vec3{0.0f};
-    placement.scale = 1.0f;
-    placement.clear_update();
-    return true;
 }
 
 void SimulationController::apply_garment_placement_changes(QOpenGLFunctions_4_5_Core& gl)
@@ -356,19 +316,8 @@ void SimulationController::apply_garment_placement_changes(QOpenGLFunctions_4_5_
         if (garment != nullptr) {
             gpu_state_.update_garment_placement(*garment, update_rest_lengths, gl);
         }
-        placement.clear_update();
+        placement.clear_updates();
     }
-}
-
-void SimulationController::build_garment_triangle_bvh(GarmentLayer layer)
-{
-    GarmentObject* garment = scene_.find_garment(layer);
-    assert(garment != nullptr);
-
-    const GarmentMesh& mesh = garment->mesh;
-    MeshBvhBuilder bvh_builder(mesh);
-    TriangleBvhData garment_triangle_bvh = bvh_builder.build_triangle_bvh();
-    garment->garment_triangle_bvh = std::move(garment_triangle_bvh);
 }
 
 void SimulationController::restore_garment_placements(const std::vector<GarmentLayer>& layers,
@@ -382,10 +331,10 @@ void SimulationController::restore_garment_placements(const std::vector<GarmentL
     }
 }
 
-void SimulationController::clear_garment_placements()
+void SimulationController::reset_garment_placements()
 {
     for (GarmentPlacementState& placement : garment_placements_) {
-        placement.clear();
+        placement.reset();
     }
 }
 

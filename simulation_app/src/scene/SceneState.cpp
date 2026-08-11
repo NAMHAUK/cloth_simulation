@@ -1,12 +1,9 @@
 #include "scene/SceneState.h"
 
-#include "asset/MeshGeometryUtils.h"
-
 #include <glm/gtc/quaternion.hpp>
 #include <glm/vec3.hpp>
 
 #include <algorithm>
-#include <iostream>
 #include <utility>
 
 namespace {
@@ -34,32 +31,6 @@ glm::quat frame_orientation(const std::vector<float>& orientations, std::uint32_
                                           orientations[base + 2u]));
 }
 
-bool prepare_garment_mesh(GarmentMesh& mesh)
-{
-    const std::uint32_t vertex_count = static_cast<std::uint32_t>(mesh.vertices.size() / 3u);
-    std::uint32_t flipped_triangle_count = 0u;
-    if (!orient_triangle_winding_outward(vertex_count,
-                                         mesh.vertices,
-                                         mesh.bounds_center,
-                                         mesh.triangle_vertex_indices,
-                                         flipped_triangle_count)) {
-        std::cerr << "Cannot prepare garment mesh with inconsistent triangle winding.\n";
-        return false;
-    }
-    if (flipped_triangle_count > 0u) {
-        std::cerr << "Oriented garment triangle winding: flipped " << flipped_triangle_count
-                  << " triangles.\n";
-    }
-
-    if (!mesh.adjacency.is_valid(vertex_count) &&
-        !build_vertex_face_adjacency(vertex_count, mesh.triangle_vertex_indices, mesh.adjacency)) {
-        std::cerr << "Cannot prepare garment mesh with invalid topology.\n";
-        return false;
-    }
-
-    mesh.color = glm::vec3{1.0f};
-    return true;
-}
 }
 
 // Character //
@@ -104,40 +75,18 @@ const EdgeBvhData& SceneState::default_body_edge_bvh_data() const
 
 // Garments //
 
-bool SceneState::add_garment_mesh(GarmentLayer layer, GarmentMesh mesh)
+void SceneState::set_garment(GarmentObject garment)
 {
-    if (find_garment(layer) != nullptr || !prepare_garment_mesh(mesh)) {
-        return false;
+    GarmentObject* existing_garment = find_garment(garment.layer);
+    if (existing_garment != nullptr) {
+        *existing_garment = std::move(garment);
+        return;
     }
 
-    GarmentMesh source_mesh = mesh;
-    garments_.push_back({
-        layer,
-        std::move(source_mesh),
-        std::move(mesh),
-        true,
-    });
+    garments_.push_back(std::move(garment));
     std::sort(garments_.begin(), garments_.end(), [](const GarmentObject& lhs, const GarmentObject& rhs) {
         return lhs.layer < rhs.layer;
     });
-    return true;
-}
-
-bool SceneState::replace_garment_mesh(GarmentLayer layer, GarmentMesh mesh)
-{
-    GarmentObject* garment = find_garment(layer);
-    if (garment == nullptr) {
-        return false;
-    }
-
-    if (!prepare_garment_mesh(mesh)) {
-        return false;
-    }
-    GarmentMesh source_mesh = mesh;
-    garment->source_mesh = std::move(source_mesh);
-    garment->mesh = std::move(mesh);
-    garment->garment_triangle_bvh.reset();
-    return true;
 }
 
 GarmentObject* SceneState::update_garment_placement(GarmentLayer layer,

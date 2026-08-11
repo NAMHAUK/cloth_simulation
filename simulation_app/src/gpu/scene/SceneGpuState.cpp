@@ -4,6 +4,7 @@
 
 #include <iostream>
 #include <limits>
+#include <stdexcept>
 
 SceneGpuState::SceneGpuState()
     : character_gpu_state_updater_(character_gpu_state_, bvh_bounds_updater_, normal_updater_)
@@ -138,24 +139,21 @@ CollisionCandidateBufferView SceneGpuState::collision_candidate_buffer_view() co
     return collision_candidate_buffers_.view();
 }
 
-bool SceneGpuState::update_garment_meshes(const SceneState& scene,
+void SceneGpuState::update_garment_meshes(const SceneState& scene,
                                           QOpenGLFunctions_4_5_Core& gl,
-                                          std::optional<GarmentLayer> reset_layer)
+                                          std::optional<GarmentLayer> updated_layer)
 {
-    if (!cloth_gpu_state_.update_garment_buffers(scene.garments(), reset_layer, gl)) {
-        std::cerr << "Failed to update garment GPU buffers.\n";
-        return false;
+    if (!cloth_gpu_state_.update_garment_buffers(scene.garments(), updated_layer, gl)) {
+        throw std::runtime_error("Failed to update garment GPU buffers.");
     }
     if (!cloth_bvh_resources_.rebuild(scene.garments(), gl)) {
-        std::cerr << "Failed to rebuild cloth BVH resources.\n";
-        return false;
+        throw std::runtime_error("Failed to rebuild cloth BVH resources.");
     }
     if (cloth_gpu_state_.is_initialized()) {
         if (scene.garments().size() > std::numeric_limits<std::uint32_t>::max()) {
-            std::cerr << "Cannot prepare collision candidate buffers because the garment count exceeds the "
-                         "supported range.\n";
             collision_candidate_buffers_.release(gl);
-            return false;
+            throw std::runtime_error("Cannot prepare collision candidate buffers because the garment count "
+                                     "exceeds the supported range.");
         }
 
         const ClothMotionBufferView motion_view = cloth_gpu_state_.motion_buffer_view();
@@ -167,8 +165,7 @@ bool SceneGpuState::update_garment_meshes(const SceneState& scene,
                                                           stretch_constraints.constraint_count,
                                                           static_cast<std::uint32_t>(scene.garments().size()),
                                                           gl)) {
-            std::cerr << "Failed to prepare collision candidate buffers.\n";
-            return false;
+            throw std::runtime_error("Failed to prepare collision candidate buffers.");
         }
     } else {
         collision_candidate_buffers_.release(gl);
@@ -176,7 +173,6 @@ bool SceneGpuState::update_garment_meshes(const SceneState& scene,
     normal_updater_.update_cloth_normals(cloth_gpu_state_.mesh_topology_resources(),
                                          cloth_gpu_state_.mesh_normal_resources(),
                                          gl);
-    return true;
 }
 
 bool SceneGpuState::update_garment_placement(const GarmentObject& garment,
