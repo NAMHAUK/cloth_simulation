@@ -56,11 +56,9 @@ public:
     void start_simulation();
     void stop_simulation();
     bool is_simulation_running() const;
-    bool is_default_pose() const;
     std::size_t garment_count() const;
     bool can_start_garment_placement() const;
     void draw(const glm::mat4& mvp, float character_opacity, QOpenGLFunctions_4_5_Core& gl);
-    void release_gpu();
 
 Q_SIGNALS:
     void viewport_update_requested();
@@ -101,11 +99,15 @@ private:
 
     void tick_frame();
     void set_character_mesh_state(CharacterMesh mesh, QOpenGLFunctions_4_5_Core& gl);
+    bool add_garment(GarmentLayer layer, GarmentMesh mesh, QOpenGLFunctions_4_5_Core& gl);
+    bool replace_garment(GarmentLayer layer, GarmentMesh mesh, QOpenGLFunctions_4_5_Core& gl);
     bool has_garment_placement_update() const;
     void set_current_garment_placement(QOpenGLFunctions_4_5_Core& gl);
     bool build_garment_triangle_bvh(GarmentLayer layer);
     void restore_garment_placements(const std::vector<GarmentLayer>& layers, QOpenGLFunctions_4_5_Core& gl);
     void clear_garment_placements();
+    void release_gpu();
+    void release_gpu(QOpenGLFunctions_4_5_Core& gl);
 
     // Simulation configuration //
     SimulationParams params_;
@@ -127,7 +129,6 @@ private:
     std::array<GarmentPlacementState, 2> garment_placements_{};
     bool simulation_running_ = false;
     bool is_default_pose_ = false;
-    bool has_base_positions_ = false;
     QTimer frame_timer_;
 
     std::function<void(GlContextTask)> run_with_gl_context_;

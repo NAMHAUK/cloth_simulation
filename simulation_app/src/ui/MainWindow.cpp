@@ -52,7 +52,6 @@ MainWindow::~MainWindow()
     asset_browser_panel.set_motion_loaded_callback({});
     asset_browser_panel.set_garment_loaded_callback({});
     placement_controller_.reset();
-    simulation_controller_->release_gpu();
     viewport_->set_initialize_callback({});
     viewport_->set_scene_render_callback({});
 }

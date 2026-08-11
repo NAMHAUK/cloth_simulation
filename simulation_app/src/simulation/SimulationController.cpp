@@ -15,8 +15,7 @@ SimulationController::SimulationController(SimulationParams params)
     : params_(params),
       simulation_pipeline_(params)
 {
-    // tick마다 frame update 함수 설정
-    QObject::connect(&frame_timer_, &QTimer::timeout, &frame_timer_, [this]() { tick_frame(); });
+    QObject::connect(&frame_timer_, &QTimer::timeout, this, &SimulationController::tick_frame);
 }
 
 SimulationController::~SimulationController()
@@ -131,17 +130,12 @@ void SimulationController::set_character_mesh(CharacterMesh mesh)
     }
 
     run_with_gl_context_([this, &mesh](QOpenGLFunctions_4_5_Core& gl) {
-        if (!scene_.garments().empty()) {
-            if (!has_base_positions_) {
-                has_base_positions_ = gpu_state_.save_base_positions(gl);
-            }
-
-            if (has_base_positions_) {
-                gpu_state_.restore_base_positions(gl);
-            }
+        if (!scene_.garments().empty() && !gpu_state_.restore_base_positions(gl)) {
+            gpu_state_.save_base_positions(gl);
         }
 
         set_character_mesh_state(std::move(mesh), gl);
+        is_default_pose_ = false;
     });
 
     Q_EMIT viewport_update_requested();
@@ -152,7 +146,6 @@ void SimulationController::set_character_mesh_state(CharacterMesh mesh, QOpenGLF
     scene_.set_character_mesh(std::move(mesh));
     gpu_state_.set_character_mesh(scene_, params_.collisions.body.thickness, gl);
     motion_step_index_ = 0;
-    is_default_pose_ = false;
     Q_EMIT camera_reset_requested(scene_.character_root_position(0));
 }
 
@@ -175,60 +168,75 @@ bool SimulationController::set_garment_mesh(GarmentLayer layer, GarmentMesh mesh
 
     bool garment_set = false;
     run_with_gl_context_([this, layer, &placement, &mesh, &garment_set](QOpenGLFunctions_4_5_Core& gl) {
-        if (placement.is_active) {
-            GarmentObject* existing_garment = scene_.find_garment(layer);
-            if (existing_garment == nullptr) {
-                return;
-            }
-
-            GarmentObject previous_garment = *existing_garment;
-            if (!scene_.replace_garment_mesh(layer, std::move(mesh)) || !build_garment_triangle_bvh(layer)) {
-                *existing_garment = std::move(previous_garment);
-                std::cerr << "Failed to replace garment mesh.\n";
-                return;
-            }
-
-            if (!gpu_state_.update_garment_meshes(scene_, gl, layer)) {
-                *existing_garment = std::move(previous_garment);
-                if (!gpu_state_.update_garment_meshes(scene_, gl, layer)) {
-                    std::cerr << "Failed to restore garment GPU resources after replacement failure.\n";
-                }
-                return;
-            }
-            placement.position_offset = glm::vec3{0.0f};
-            placement.scale = 1.0f;
-            placement.clear_update();
-        } else {
-            // 새 garment 추가
-            placement.clear();
-            if (!scene_.add_garment_mesh(layer, std::move(mesh))) {
-                std::cerr << "Failed to add garment mesh.\n";
-                return;
-            }
-            placement.is_active = true;
-            if (!build_garment_triangle_bvh(layer)) {
-                scene_.remove_garment(layer);
-                std::cerr << "Failed to build garment triangle BVH.\n";
-                placement.clear();
-                return;
-            }
-            if (!gpu_state_.update_garment_meshes(scene_, gl)) {
-                scene_.remove_garment(layer);
-                placement.clear();
-                if (!gpu_state_.update_garment_meshes(scene_, gl)) {
-                    std::cerr << "Failed to restore garment GPU resources after addition failure.\n";
-                }
-                return;
-            }
+        garment_set = placement.is_active ? replace_garment(layer, std::move(mesh), gl)
+                                          : add_garment(layer, std::move(mesh), gl);
+        if (!garment_set) {
+            return;
         }
-
         gpu_state_.clear_base_positions(gl);
-        has_base_positions_ = false;
-        garment_set = true;
     });
 
     Q_EMIT viewport_update_requested();
     return garment_set;
+}
+
+bool SimulationController::add_garment(GarmentLayer layer, GarmentMesh mesh, QOpenGLFunctions_4_5_Core& gl)
+{
+    // 새 garment 추가
+    GarmentPlacementState& placement = garment_placements_[layer];
+    placement.clear();
+    if (!scene_.add_garment_mesh(layer, std::move(mesh))) {
+        std::cerr << "Failed to add garment mesh.\n";
+        return false;
+    }
+
+    placement.is_active = true;
+    if (!build_garment_triangle_bvh(layer)) {
+        scene_.remove_garment(layer);
+        std::cerr << "Failed to build garment triangle BVH.\n";
+        placement.clear();
+        return false;
+    }
+    if (!gpu_state_.update_garment_meshes(scene_, gl)) {
+        scene_.remove_garment(layer);
+        placement.clear();
+        if (!gpu_state_.update_garment_meshes(scene_, gl)) {
+            std::cerr << "Failed to restore garment GPU resources after addition failure.\n";
+        }
+        return false;
+    }
+    return true;
+}
+
+bool SimulationController::replace_garment(GarmentLayer layer,
+                                           GarmentMesh mesh,
+                                           QOpenGLFunctions_4_5_Core& gl)
+{
+    GarmentObject* existing_garment = scene_.find_garment(layer);
+    if (existing_garment == nullptr) {
+        return false;
+    }
+
+    GarmentObject previous_garment = *existing_garment;
+    if (!scene_.replace_garment_mesh(layer, std::move(mesh)) || !build_garment_triangle_bvh(layer)) {
+        *existing_garment = std::move(previous_garment);
+        std::cerr << "Failed to replace garment mesh.\n";
+        return false;
+    }
+
+    if (!gpu_state_.update_garment_meshes(scene_, gl, layer)) {
+        *existing_garment = std::move(previous_garment);
+        if (!gpu_state_.update_garment_meshes(scene_, gl, layer)) {
+            std::cerr << "Failed to restore garment GPU resources after replacement failure.\n";
+        }
+        return false;
+    }
+
+    GarmentPlacementState& placement = garment_placements_[layer];
+    placement.position_offset = glm::vec3{0.0f};
+    placement.scale = 1.0f;
+    placement.clear_update();
+    return true;
 }
 
 void SimulationController::set_current_garment_placement(QOpenGLFunctions_4_5_Core& gl)
@@ -298,13 +306,11 @@ void SimulationController::reset_scene_to_default()
 
     run_with_gl_context_([this](QOpenGLFunctions_4_5_Core& gl) {
         simulation_running_ = false;
-        motion_step_index_ = 0;
         clear_garment_placements();
 
         scene_.clear_garments();
         gpu_state_.update_garment_meshes(scene_, gl);
         gpu_state_.clear_base_positions(gl);
-        has_base_positions_ = false;
         set_character_mesh_state(default_character_mesh_, gl);
         is_default_pose_ = true;
     });
@@ -325,13 +331,10 @@ void SimulationController::return_to_default_pose()
     }
 
     run_with_gl_context_([this](QOpenGLFunctions_4_5_Core& gl) {
-        if (!scene_.garments().empty()) {
-            if (!has_base_positions_ || !gpu_state_.restore_base_positions(gl)) {
-                return;
-            }
+        if (!scene_.garments().empty() && !gpu_state_.restore_base_positions(gl)) {
+            return;
         }
 
-        motion_step_index_ = 0;
         clear_garment_placements();
         set_character_mesh_state(default_character_mesh_, gl);
         is_default_pose_ = true;
@@ -360,7 +363,6 @@ bool SimulationController::remove_garment_placement(GarmentLayer layer)
         }
         placement.clear();
         gpu_state_.clear_base_positions(gl);
-        has_base_positions_ = false;
     });
 
     Q_EMIT viewport_update_requested();
@@ -432,7 +434,6 @@ bool SimulationController::confirm_garment_placement()
 
         clear_garment_placements();
         gpu_state_.clear_base_positions(gl);
-        has_base_positions_ = false;
         placement_confirmed = true;
     });
 
@@ -461,7 +462,6 @@ void SimulationController::cancel_garment_placement()
         }
 
         gpu_state_.clear_base_positions(gl);
-        has_base_positions_ = false;
     });
 
     Q_EMIT viewport_update_requested();
@@ -477,11 +477,6 @@ bool SimulationController::is_gpu_initialized() const
 bool SimulationController::is_simulation_running() const
 {
     return simulation_running_;
-}
-
-bool SimulationController::is_default_pose() const
-{
-    return is_default_pose_;
 }
 
 std::size_t SimulationController::garment_count() const
@@ -522,9 +517,12 @@ void SimulationController::release_gpu()
         return;
     }
 
-    run_with_gl_context_([this](QOpenGLFunctions_4_5_Core& gl) {
-        render_pipeline_.release(gl);
-        simulation_pipeline_.release(gl);
-        gpu_state_.release(gl);
-    });
+    run_with_gl_context_([this](QOpenGLFunctions_4_5_Core& gl) { release_gpu(gl); });
+}
+
+void SimulationController::release_gpu(QOpenGLFunctions_4_5_Core& gl)
+{
+    render_pipeline_.release(gl);
+    simulation_pipeline_.release(gl);
+    gpu_state_.release(gl);
 }
