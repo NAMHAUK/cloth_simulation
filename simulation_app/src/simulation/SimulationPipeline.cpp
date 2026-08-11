@@ -26,7 +26,7 @@ SimulationPipeline::SimulationPipeline(SimulationParams params)
       garment_prefit_solver_(params.prefit)
 {}
 
-// Initialization and Cleanup
+// Initialization
 void SimulationPipeline::initialize(const std::filesystem::path& shader_dir, QOpenGLFunctions_4_5_Core& gl)
 {
     if (!is_valid_simulation_params(params_)) {
@@ -47,22 +47,6 @@ void SimulationPipeline::initialize(const std::filesystem::path& shader_dir, QOp
     garment_prefit_solver_.initialize(shader_dir, gl);
 
     initialized_ = true;
-}
-
-void SimulationPipeline::release(QOpenGLFunctions_4_5_Core& gl)
-{
-    garment_prefit_solver_.release(gl);
-    cloth_cloth_collision_solver_.release(gl);
-    cloth_cloth_collision_detector_.release(gl);
-    cloth_body_collision_solver_.release(gl);
-    cloth_body_collision_detector_.release(gl);
-    ground_collision_solver_.release(gl);
-    attachment_constraint_solver_.release(gl);
-    bending_constraint_solver_.release(gl);
-    stretch_constraint_solver_.release(gl);
-    external_force_solver_.release(gl);
-    substep_dt_ = 0.0f;
-    initialized_ = false;
 }
 
 // Simulation
@@ -159,4 +143,21 @@ void SimulationPipeline::solve_external_forces(const SceneState& scene,
 bool SimulationPipeline::is_initialized() const
 {
     return initialized_;
+}
+
+// Release
+void SimulationPipeline::release(QOpenGLFunctions_4_5_Core& gl)
+{
+    garment_prefit_solver_.release(gl);
+    cloth_cloth_collision_solver_.release(gl);
+    cloth_cloth_collision_detector_.release(gl);
+    cloth_body_collision_solver_.release(gl);
+    cloth_body_collision_detector_.release(gl);
+    ground_collision_solver_.release(gl);
+    attachment_constraint_solver_.release(gl);
+    bending_constraint_solver_.release(gl);
+    stretch_constraint_solver_.release(gl);
+    external_force_solver_.release(gl);
+    substep_dt_ = 0.0f;
+    initialized_ = false;
 }
