@@ -94,7 +94,7 @@ void SimulationController::tick_frame()
                 simulation_pipeline_.step(scene_, gpu_state_, motion_step_index_, gl);
             }
             ++motion_step_index_;
-            scene_.update_character_frame(motion_step_index_, params_.step.motion_stride());
+            scene_.update_character_frame(motion_step_index_ / params_.step.motion_stride());
         });
     }
 

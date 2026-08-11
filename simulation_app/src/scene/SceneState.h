@@ -53,7 +53,7 @@ public:
     bool has_multiple_garments() const;
 
     // Playback
-    void update_character_frame(std::uint64_t simulation_step_count, std::uint32_t character_frame_stride);
+    void update_character_frame(std::uint64_t frame_index);
     void update_reference_kinematics(float frame_alpha, float dt);
     const Kinematics& reference_kinematics(GarmentCategory garment_category) const;
     float character_frame_alpha(float character_frame_time) const;

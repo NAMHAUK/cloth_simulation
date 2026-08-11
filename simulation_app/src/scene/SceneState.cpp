@@ -252,14 +252,12 @@ bool SceneState::has_multiple_garments() const
 }
 
 // Playback //
-void SceneState::update_character_frame(std::uint64_t simulation_step_count,
-                                        std::uint32_t character_frame_stride)
+void SceneState::update_character_frame(std::uint64_t frame_index)
 {
-    if (character_mesh_.frame_count == 0 || character_frame_stride == 0) {
+    if (character_mesh_.frame_count == 0) {
         return;
     }
 
-    const std::uint64_t frame_index = simulation_step_count / character_frame_stride;
     const std::uint32_t last_frame_index = character_mesh_.frame_count - 1u;
 
     current_character_frame_ =
