@@ -125,6 +125,7 @@ void MainWindow::setup_viewport_render_callbacks()
             return;
         }
 
+        simulation_controller_->apply_garment_placement_changes(gl);
         const float character_opacity =
             placement_controller_->is_active() ? placement_character_opacity : 1.0f;
         simulation_controller_->draw(mvp, character_opacity, gl);

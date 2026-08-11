@@ -84,23 +84,17 @@ void SimulationController::draw(const glm::mat4& mvp, float character_opacity, Q
 
 void SimulationController::tick_frame()
 {
-    if (!is_gpu_initialized()) {
-        return;
-    }
+    assert(is_gpu_initialized());
 
-    if (simulation_running_ || has_garment_placement_update()) {
+    if (simulation_running_) {
         run_with_gl_context_([this](QOpenGLFunctions_4_5_Core& gl) {
-            set_current_garment_placement(gl);
-
-            if (simulation_running_) {
-                if (scene_.garments().empty()) {
-                    simulation_pipeline_.step_character_only(scene_, gpu_state_, motion_step_index_, gl);
-                } else {
-                    simulation_pipeline_.step(scene_, gpu_state_, motion_step_index_, gl);
-                }
-                ++motion_step_index_;
-                scene_.update_character_frame(motion_step_index_, params_.step.motion_stride());
+            if (scene_.garments().empty()) {
+                simulation_pipeline_.step_character_only(scene_, gpu_state_, motion_step_index_, gl);
+            } else {
+                simulation_pipeline_.step(scene_, gpu_state_, motion_step_index_, gl);
             }
+            ++motion_step_index_;
+            scene_.update_character_frame(motion_step_index_, params_.step.motion_stride());
         });
     }
 
@@ -254,6 +248,9 @@ void SimulationController::set_garment_placement(GarmentLayer layer,
     if (!placement.is_active) {
         return;
     }
+    if (placement.position_offset == position_offset && placement.scale == scale) {
+        return;
+    }
 
     if (placement.position_offset != position_offset) {
         placement.position_offset = position_offset;
@@ -263,6 +260,8 @@ void SimulationController::set_garment_placement(GarmentLayer layer,
         placement.scale = scale;
         placement.scale_changed = true;
     }
+
+    Q_EMIT viewport_update_requested();
 }
 
 void SimulationController::set_garment_color(GarmentLayer layer, const glm::vec3& color)
@@ -285,7 +284,7 @@ bool SimulationController::confirm_garment_placement()
 
     bool placement_confirmed = false;
     run_with_gl_context_([this, &placement_confirmed](QOpenGLFunctions_4_5_Core& gl) {
-        set_current_garment_placement(gl);
+        apply_garment_placement_changes(gl);
         std::vector<GarmentLayer> unconfirmed_layers;
         for (GarmentLayer layer : {GarmentLayer::Lower, GarmentLayer::Upper}) {
             if (garment_placements_[layer].is_active) {
@@ -399,7 +398,7 @@ bool SimulationController::replace_garment(GarmentLayer layer,
     return true;
 }
 
-void SimulationController::set_current_garment_placement(QOpenGLFunctions_4_5_Core& gl)
+void SimulationController::apply_garment_placement_changes(QOpenGLFunctions_4_5_Core& gl)
 {
     for (std::size_t index = 0; index < garment_placements_.size(); ++index) {
         GarmentPlacementState& placement = garment_placements_[index];
@@ -449,13 +448,6 @@ void SimulationController::clear_garment_placements()
     for (GarmentPlacementState& placement : garment_placements_) {
         placement.clear();
     }
-}
-
-bool SimulationController::has_garment_placement_update() const
-{
-    return std::any_of(garment_placements_.begin(),
-                       garment_placements_.end(),
-                       [](const GarmentPlacementState& placement) { return placement.has_update(); });
 }
 
 // State
