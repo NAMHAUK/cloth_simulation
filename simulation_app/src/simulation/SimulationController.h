@@ -49,11 +49,11 @@ public:
     void return_to_default_pose();
 
     void set_garment_mesh(GarmentLayer layer, GarmentMesh mesh);
-    bool remove_garment_placement(GarmentLayer layer);
     void set_garment_placement(GarmentLayer layer, const glm::vec3& position_offset, float scale);
     void set_garment_color(GarmentLayer layer, const glm::vec3& color);
     void confirm_garment_placement();
-    void cancel_garment_placement();
+    void discard_garment_placement(GarmentLayer layer);
+    void cancel_placement_session();
 
     bool is_gpu_initialized() const;
     bool is_simulation_running() const;

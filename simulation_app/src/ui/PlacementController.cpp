@@ -53,7 +53,7 @@ void PlacementController::connect_placement_panel()
         if (color_edit_layer_ == GarmentLayer::Upper) {
             color_panel_.close_panel();
         }
-        simulation_controller_.remove_garment_placement(GarmentLayer::Upper);
+        simulation_controller_.discard_garment_placement(GarmentLayer::Upper);
         cards_panel_.clear_card(GarmentLayer::Upper);
 
         placement_panel_.hide_upper_section();
@@ -78,7 +78,7 @@ void PlacementController::connect_placement_panel()
 
     connect(&placement_panel_, &PlacementPanel::cancel_requested, this, [this]() {
         color_panel_.close_panel();
-        simulation_controller_.cancel_garment_placement();
+        simulation_controller_.cancel_placement_session();
         cards_panel_.clear_unconfirmed_cards();
         end_session();
     });

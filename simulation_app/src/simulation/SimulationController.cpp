@@ -22,6 +22,15 @@ GarmentObject build_garment(GarmentLayer layer, GarmentMesh mesh)
     garment.garment_triangle_bvh = MeshBvhBuilder(garment.mesh).build_triangle_bvh();
     return garment;
 }
+
+glm::mat4 make_placement_matrix(const glm::vec3& center, const glm::vec3& position_offset, float scale)
+{
+    glm::mat4 matrix = glm::translate(glm::mat4{1.0f}, position_offset);
+    matrix = glm::translate(matrix, center);
+    matrix = glm::scale(matrix, glm::vec3{scale});
+    matrix = glm::translate(matrix, -center);
+    return matrix;
+}
 }
 
 SimulationController::SimulationController(SimulationParams params)
@@ -37,11 +46,6 @@ SimulationController::~SimulationController()
 }
 
 // Initialization
-void SimulationController::set_run_with_gl_context(std::function<void(GlContextTask)> run_with_gl_context)
-{
-    run_with_gl_context_ = std::move(run_with_gl_context);
-}
-
 void SimulationController::initialize(const std::filesystem::path& shader_dir,
                                       CharacterMesh character_mesh,
                                       const std::vector<std::uint8_t>& triangle_part_labels,
@@ -76,6 +80,11 @@ void SimulationController::load_default_character(CharacterMesh mesh,
     default_character_mesh_ = std::move(mesh);
     set_character_mesh_state(default_character_mesh_, gl);
     is_default_pose_ = true;
+}
+
+void SimulationController::set_run_with_gl_context(std::function<void(GlContextTask)> run_with_gl_context)
+{
+    run_with_gl_context_ = std::move(run_with_gl_context);
 }
 
 // Simulation and rendering
@@ -197,25 +206,6 @@ void SimulationController::set_garment_mesh(GarmentLayer layer, GarmentMesh mesh
     Q_EMIT viewport_update_requested();
 }
 
-bool SimulationController::remove_garment_placement(GarmentLayer layer)
-{
-    assert(is_gpu_initialized());
-
-    std::optional<GarmentPlacementState>& placement = garment_placement_states_[layer];
-
-    bool garment_removed = false;
-    run_with_gl_context_([this, layer, &placement, &garment_removed](QOpenGLFunctions_4_5_Core& gl) {
-        garment_removed = scene_.remove_garment(layer);
-        if (garment_removed) {
-            gpu_state_.update_garment_meshes(scene_, gl);
-        }
-        placement.reset();
-    });
-
-    Q_EMIT viewport_update_requested();
-    return garment_removed;
-}
-
 void SimulationController::set_garment_placement(GarmentLayer layer,
                                                  const glm::vec3& position_offset,
                                                  float scale)
@@ -238,19 +228,15 @@ void SimulationController::confirm_garment_placement()
 
     run_with_gl_context_([this](QOpenGLFunctions_4_5_Core& gl) {
         std::vector<GarmentLayer> placement_layers;
-        for (GarmentLayer layer : {GarmentLayer::Lower, GarmentLayer::Upper}) {
-            if (garment_placement_states_[layer].has_value()) {
-                placement_layers.push_back(layer);
-            }
-        }
-        if (placement_layers.empty()) {
-            throw std::runtime_error("Cannot confirm garment placement because no placement is active.");
-        }
 
-        for (GarmentLayer layer : placement_layers) {
-            const GarmentPlacementState& placement = *garment_placement_states_[layer];
-            const GarmentObject& garment =
-                scene_.apply_garment_placement(layer, placement.position_offset, placement.scale);
+        for (GarmentLayer layer : {GarmentLayer::Lower, GarmentLayer::Upper}) {
+            const auto& placement = garment_placement_states_[layer];
+            if (!placement) {
+                continue;
+            }
+
+            placement_layers.push_back(layer);
+            const auto& garment = scene_.apply_garment_placement(layer, placement->position_offset, placement->scale);
             gpu_state_.update_garment_placement(garment, gl);
         }
 
@@ -266,23 +252,33 @@ void SimulationController::confirm_garment_placement()
     Q_EMIT viewport_update_requested();
 }
 
-void SimulationController::cancel_garment_placement()
+void SimulationController::discard_garment_placement(GarmentLayer layer)
+{
+    assert(is_gpu_initialized());
+
+    run_with_gl_context_([this, layer](QOpenGLFunctions_4_5_Core& gl) {
+        if (scene_.remove_garment(layer)) {
+            gpu_state_.update_garment_meshes(scene_, gl);
+        }
+        garment_placement_states_[layer].reset();
+    });
+
+    Q_EMIT viewport_update_requested();
+}
+
+void SimulationController::cancel_placement_session()
 {
     assert(is_gpu_initialized());
 
     run_with_gl_context_([this](QOpenGLFunctions_4_5_Core& gl) {
-        bool garment_removed = false;
-        for (std::size_t index = 0; index < garment_placement_states_.size(); ++index) {
-            std::optional<GarmentPlacementState>& placement = garment_placement_states_[index];
-            if (placement.has_value() && scene_.remove_garment(static_cast<GarmentLayer>(index))) {
-                garment_removed = true;
+        for (GarmentLayer layer : {GarmentLayer::Lower, GarmentLayer::Upper}) {
+            if (garment_placement_states_[layer].has_value()) {
+                scene_.remove_garment(layer);
             }
-            placement.reset();
-        }
-        if (garment_removed) {
-            gpu_state_.update_garment_meshes(scene_, gl);
         }
 
+        reset_garment_placements();
+        gpu_state_.update_garment_meshes(scene_, gl);
     });
 
     Q_EMIT viewport_update_requested();
@@ -291,24 +287,21 @@ void SimulationController::cancel_garment_placement()
 std::array<glm::mat4, 2> SimulationController::make_placement_matrices() const
 {
     std::array<glm::mat4, 2> placement_matrices{glm::mat4{1.0f}, glm::mat4{1.0f}};
-    for (std::size_t index = 0; index < garment_placement_states_.size(); ++index) {
-        const std::optional<GarmentPlacementState>& placement = garment_placement_states_[index];
-        if (!placement.has_value()) {
+
+    for (GarmentLayer layer : {GarmentLayer::Lower, GarmentLayer::Upper}) {
+        const std::optional<GarmentPlacementState>& placement = garment_placement_states_[layer];
+        if (!placement) {
             continue;
         }
 
-        const auto layer = static_cast<GarmentLayer>(index);
         const GarmentObject* garment = scene_.find_garment(layer);
-        if (garment == nullptr) {
+        if (!garment) {
             continue;
         }
 
-        const glm::vec3 scale_center = garment->source_mesh.bounds_center;
-        const glm::mat4 translation_matrix = glm::translate(glm::mat4{1.0f}, placement->position_offset);
-        const glm::mat4 center_matrix = glm::translate(glm::mat4{1.0f}, scale_center);
-        const glm::mat4 scale_matrix = glm::scale(glm::mat4{1.0f}, glm::vec3{placement->scale});
-        const glm::mat4 inverse_center_matrix = glm::translate(glm::mat4{1.0f}, -scale_center);
-        placement_matrices[index] = translation_matrix * center_matrix * scale_matrix * inverse_center_matrix;
+        placement_matrices[layer] = make_placement_matrix(garment->source_mesh.bounds_center,
+                                                          placement->position_offset,
+                                                          placement->scale);
     }
     return placement_matrices;
 }
