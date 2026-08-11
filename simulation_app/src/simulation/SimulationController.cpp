@@ -6,6 +6,7 @@
 #include <algorithm>
 #include <cassert>
 #include <iostream>
+#include <stdexcept>
 #include <utility>
 
 #include <QObject>
@@ -29,35 +30,27 @@ void SimulationController::set_run_with_gl_context(std::function<void(GlContextT
     run_with_gl_context_ = std::move(run_with_gl_context);
 }
 
-bool SimulationController::initialize(const std::filesystem::path& shader_dir,
+void SimulationController::initialize(const std::filesystem::path& shader_dir,
                                       CharacterMesh character_mesh,
                                       const std::vector<std::uint8_t>& triangle_part_labels,
                                       QOpenGLFunctions_4_5_Core& gl)
 {
-    return initialize_gpu(shader_dir, gl) &&
-           load_default_character(std::move(character_mesh), triangle_part_labels, gl);
+    initialize_gpu(shader_dir, gl);
+    load_default_character(std::move(character_mesh), triangle_part_labels, gl);
+    frame_timer_.start(params_.step.tick_ms());
 }
 
-bool SimulationController::initialize_gpu(const std::filesystem::path& shader_dir,
+void SimulationController::initialize_gpu(const std::filesystem::path& shader_dir,
                                           QOpenGLFunctions_4_5_Core& gl)
 {
     assert(!is_gpu_initialized());
     if (is_gpu_initialized()) {
-        return false;
+        throw std::runtime_error("Simulation GPU state is already initialized.");
     }
 
-    if (!gpu_state_.initialize(shader_dir, gl) ||
-        !simulation_pipeline_.initialize(shader_dir, gl) ||
-        !render_pipeline_.initialize(shader_dir, gl)) {
-
-        render_pipeline_.release(gl);
-        simulation_pipeline_.release(gl);
-        gpu_state_.release(gl);
-        return false;
-    }
-
-    frame_timer_.start(params_.step.tick_ms());
-    return true;
+    gpu_state_.initialize(shader_dir, gl);
+    simulation_pipeline_.initialize(shader_dir, gl);
+    render_pipeline_.initialize(shader_dir, gl);
 }
 
 // Rendering //
@@ -98,7 +91,7 @@ void SimulationController::tick_frame()
 
 // Object //
 
-bool SimulationController::load_default_character(CharacterMesh mesh,
+void SimulationController::load_default_character(CharacterMesh mesh,
                                                   const std::vector<std::uint8_t>& triangle_part_labels,
                                                   QOpenGLFunctions_4_5_Core& gl)
 {
@@ -109,20 +102,17 @@ bool SimulationController::load_default_character(CharacterMesh mesh,
                                body_bvh_excluded_part_mask);
     TriangleBvhData default_body_triangle_bvh_data = bvh_builder.build_triangle_bvh();
     if (!default_body_triangle_bvh_data.is_valid(mesh.triangle_count)) {
-        std::cerr << "Failed to build default body triangle BVH.\n";
-        return false;
+        throw std::runtime_error("Failed to build default body triangle BVH.");
     }
 
     VertexBvhData default_body_vertex_bvh_data = bvh_builder.build_vertex_bvh();
     if (!default_body_vertex_bvh_data.is_valid(mesh.vertex_count)) {
-        std::cerr << "Failed to build default body vertex BVH.\n";
-        return false;
+        throw std::runtime_error("Failed to build default body vertex BVH.");
     }
 
     EdgeBvhData default_body_edge_bvh_data = bvh_builder.build_edge_bvh();
     if (!default_body_edge_bvh_data.is_valid()) {
-        std::cerr << "Failed to build default body edge BVH.\n";
-        return false;
+        throw std::runtime_error("Failed to build default body edge BVH.");
     }
 
     scene_.set_default_body_triangle_bvh_data(std::move(default_body_triangle_bvh_data));
@@ -131,7 +121,6 @@ bool SimulationController::load_default_character(CharacterMesh mesh,
     default_character_mesh_ = std::move(mesh);
     set_character_mesh_state(default_character_mesh_, gl);
     is_default_pose_ = true;
-    return true;
 }
 
 void SimulationController::set_character_mesh(CharacterMesh mesh)

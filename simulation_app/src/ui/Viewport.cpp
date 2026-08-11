@@ -8,6 +8,7 @@
 
 #include <algorithm>
 #include <cmath>
+#include <exception>
 #include <iostream>
 #include <utility>
 
@@ -26,6 +27,7 @@
 #include <QTimer>
 #include <QVBoxLayout>
 #include <QWheelEvent>
+#include <QtLogging>
 
 #include <glm/ext/matrix_clip_space.hpp>
 #include <glm/ext/matrix_transform.hpp>
@@ -238,12 +240,13 @@ void Viewport::initializeGL()
     std::cout << "Renderer: " << glGetString(GL_RENDERER) << '\n';
 
     if (!initialize_callback_) {
-        std::cerr << "Scene initialize callback is not set before OpenGL initialization.\n";
-        return;
+        qFatal("Scene initialize callback is not set before OpenGL initialization.");
     }
 
-    if (!initialize_callback_(gl_functions())) {
-        return;
+    try {
+        initialize_callback_(gl_functions());
+    } catch (const std::exception& error) {
+        qFatal("Application initialization failed: %s", error.what());
     }
 
     glEnable(GL_DEPTH_TEST);

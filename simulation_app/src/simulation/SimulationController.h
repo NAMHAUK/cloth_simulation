@@ -35,7 +35,7 @@ public:
 
     // Initialization //
     void set_run_with_gl_context(std::function<void(GlContextTask)> run_with_gl_context);
-    bool initialize(const std::filesystem::path& shader_dir,
+    void initialize(const std::filesystem::path& shader_dir,
                     CharacterMesh character_mesh,
                     const std::vector<std::uint8_t>& triangle_part_labels,
                     QOpenGLFunctions_4_5_Core& gl);
@@ -69,8 +69,8 @@ Q_SIGNALS:
 
 private:
     // Initialization //
-    bool initialize_gpu(const std::filesystem::path& shader_dir, QOpenGLFunctions_4_5_Core& gl);
-    bool load_default_character(CharacterMesh mesh,
+    void initialize_gpu(const std::filesystem::path& shader_dir, QOpenGLFunctions_4_5_Core& gl);
+    void load_default_character(CharacterMesh mesh,
                                 const std::vector<std::uint8_t>& triangle_part_labels,
                                 QOpenGLFunctions_4_5_Core& gl);
 

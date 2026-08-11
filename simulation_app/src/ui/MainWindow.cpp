@@ -9,6 +9,7 @@
 
 #include <cstdint>
 #include <memory>
+#include <stdexcept>
 #include <utility>
 #include <vector>
 
@@ -98,27 +99,26 @@ void MainWindow::setup_placement_controller()
             &Viewport::update_layout);
 }
 
-bool MainWindow::initialize_scene(QOpenGLFunctions_4_5_Core& gl)
+void MainWindow::initialize_scene(QOpenGLFunctions_4_5_Core& gl)
 {
     CharacterMesh character_mesh;
     std::vector<std::uint8_t> triangle_part_labels;
     if (!asset_io::read_default_character(project_paths_.default_character_path,
                                           character_mesh,
                                           triangle_part_labels)) {
-        return false;
+        throw std::runtime_error("Failed to load the default character asset.");
     }
 
-    return simulation_controller_->initialize(project_paths_.shader_dir,
-                                              std::move(character_mesh),
-                                              triangle_part_labels,
-                                              gl);
+    simulation_controller_->initialize(project_paths_.shader_dir,
+                                       std::move(character_mesh),
+                                       triangle_part_labels,
+                                       gl);
 }
 
 void MainWindow::setup_viewport_render_callbacks()
 {
     // Scene initialization
-    viewport_->set_initialize_callback(
-        [this](QOpenGLFunctions_4_5_Core& gl) { return initialize_scene(gl); });
+    viewport_->set_initialize_callback([this](QOpenGLFunctions_4_5_Core& gl) { initialize_scene(gl); });
 
     // Scene rendering
     viewport_->set_scene_render_callback([this](const glm::mat4& mvp, QOpenGLFunctions_4_5_Core& gl) {

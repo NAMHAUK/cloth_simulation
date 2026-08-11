@@ -6,7 +6,7 @@
 #include "utils/ShaderUtils.h"
 
 #include <cassert>
-#include <iostream>
+#include <stdexcept>
 
 namespace {
 constexpr GLuint current_positions_binding = 0;
@@ -28,15 +28,11 @@ bool GroundCollisionSolver::is_initialized() const
     return program_ != 0;
 }
 
-bool GroundCollisionSolver::initialize(const std::filesystem::path& shader_dir, QOpenGLFunctions_4_5_Core& gl)
+void GroundCollisionSolver::initialize(const std::filesystem::path& shader_dir, QOpenGLFunctions_4_5_Core& gl)
 {
     program_ = load_compute_program(shader_dir / "collision" / "cloth_ground_collision.comp",
                                     "Ground collision",
                                     gl);
-    if (program_ == 0) {
-        return false;
-    }
-
     vertex_count_location_ = gl.glGetUniformLocation(program_, "uVertexCount");
     floor_height_location_ = gl.glGetUniformLocation(program_, "uFloorHeight");
     static_friction_location_ = gl.glGetUniformLocation(program_, "uStaticFriction");
@@ -46,12 +42,8 @@ bool GroundCollisionSolver::initialize(const std::filesystem::path& shader_dir, 
         floor_height_location_ < 0 ||
         static_friction_location_ < 0 ||
         dynamic_friction_location_ < 0) {
-        std::cerr << "Ground collision compute shader missing required uniforms.\n";
-        release(gl);
-        return false;
+        throw std::runtime_error("Ground collision compute shader missing required uniforms.");
     }
-
-    return true;
 }
 
 bool GroundCollisionSolver::can_solve(const SimulationGpuView& views) const

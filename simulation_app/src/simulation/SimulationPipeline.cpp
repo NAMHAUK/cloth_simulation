@@ -4,7 +4,7 @@
 #include "scene/SceneState.h"
 
 #include <cassert>
-#include <iostream>
+#include <stdexcept>
 
 #include <glm/vec3.hpp>
 
@@ -27,33 +27,26 @@ SimulationPipeline::SimulationPipeline(SimulationParams params)
 {}
 
 // Initialization and Cleanup
-bool SimulationPipeline::initialize(const std::filesystem::path& shader_dir, QOpenGLFunctions_4_5_Core& gl)
+void SimulationPipeline::initialize(const std::filesystem::path& shader_dir, QOpenGLFunctions_4_5_Core& gl)
 {
     if (!is_valid_simulation_params(params_)) {
-        std::cerr << "Cannot initialize simulation pipeline with invalid parameters.\n";
-        return false;
+        throw std::runtime_error("Cannot initialize simulation pipeline with invalid parameters.");
     }
 
     substep_dt_ = params_.step.dt() / static_cast<float>(params_.step.substep_count);
 
-    const bool solvers_initialized = external_force_solver_.initialize(shader_dir, substep_dt_, gl) &&
-                                     stretch_constraint_solver_.initialize(shader_dir, gl) &&
-                                     bending_constraint_solver_.initialize(shader_dir, gl) &&
-                                     attachment_constraint_solver_.initialize(shader_dir, gl) &&
-                                     ground_collision_solver_.initialize(shader_dir, gl) &&
-                                     cloth_body_collision_detector_.initialize(shader_dir, gl) &&
-                                     cloth_body_collision_solver_.initialize(shader_dir, gl) &&
-                                     cloth_cloth_collision_detector_.initialize(shader_dir, gl) &&
-                                     cloth_cloth_collision_solver_.initialize(shader_dir, gl) &&
-                                     garment_prefit_solver_.initialize(shader_dir, gl);
-
-    if (!solvers_initialized) {
-        release(gl);
-        return false;
-    }
+    external_force_solver_.initialize(shader_dir, substep_dt_, gl);
+    stretch_constraint_solver_.initialize(shader_dir, gl);
+    bending_constraint_solver_.initialize(shader_dir, gl);
+    attachment_constraint_solver_.initialize(shader_dir, gl);
+    ground_collision_solver_.initialize(shader_dir, gl);
+    cloth_body_collision_detector_.initialize(shader_dir, gl);
+    cloth_body_collision_solver_.initialize(shader_dir, gl);
+    cloth_cloth_collision_detector_.initialize(shader_dir, gl);
+    cloth_cloth_collision_solver_.initialize(shader_dir, gl);
+    garment_prefit_solver_.initialize(shader_dir, gl);
 
     initialized_ = true;
-    return true;
 }
 
 void SimulationPipeline::release(QOpenGLFunctions_4_5_Core& gl)
@@ -81,7 +74,7 @@ void SimulationPipeline::prefit_garments(SceneGpuState& gpu_state,
     assert(!unconfirmed_layers.empty());
 
     const auto views = gpu_state.simulation_view();
-    
+
     // Garment pre-fit
     for (GarmentLayer layer : unconfirmed_layers) {
         const ElementRange& vertex_range = views.garment_vertex_ranges[layer];

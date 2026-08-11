@@ -17,7 +17,7 @@ public:
 
     bool is_initialized() const;
 
-    bool load(const std::filesystem::path& shader_dir, QOpenGLFunctions_4_5_Core& gl);
+    void load(const std::filesystem::path& shader_dir, QOpenGLFunctions_4_5_Core& gl);
     void bind(QOpenGLFunctions_4_5_Core& gl) const;
     void set_mvp(const glm::mat4& mvp, QOpenGLFunctions_4_5_Core& gl) const;
     void set_attribute_position_mode(QOpenGLFunctions_4_5_Core& gl) const;

@@ -4,21 +4,19 @@
 
 #include <array>
 #include <iostream>
+#include <stdexcept>
 
 bool BackgroundGradient::is_initialized() const
 {
     return program_ != 0 && vao_ != 0 && vertex_buffer_ != 0;
 }
 
-bool BackgroundGradient::initialize(const std::filesystem::path& shader_dir, QOpenGLFunctions_4_5_Core& gl)
+void BackgroundGradient::initialize(const std::filesystem::path& shader_dir, QOpenGLFunctions_4_5_Core& gl)
 {
     const std::filesystem::path rendering_shader_dir = shader_dir / "rendering";
     const std::filesystem::path vertex_shader_path = rendering_shader_dir / "background.vert";
     const std::filesystem::path fragment_shader_path = rendering_shader_dir / "background.frag";
     program_ = load_program(vertex_shader_path, fragment_shader_path, gl);
-    if (program_ == 0) {
-        return false;
-    }
 
     constexpr std::array<float, 12> vertices{
         -1.0f,
@@ -75,7 +73,6 @@ bool BackgroundGradient::initialize(const std::filesystem::path& shader_dir, QOp
     gl.glEnableVertexArrayAttrib(vao_, uv_attribute_location);
     gl.glVertexArrayAttribFormat(vao_, uv_attribute_location, 2, GL_FLOAT, GL_FALSE, uv_relative_offset);
     gl.glVertexArrayAttribBinding(vao_, uv_attribute_location, vertex_binding_index);
-    return true;
 }
 
 void BackgroundGradient::draw(QOpenGLFunctions_4_5_Core& gl) const
@@ -109,18 +106,18 @@ GLuint BackgroundGradient::load_program(const std::filesystem::path& vertex_shad
     const auto vertex_shader_source = read_text_file(vertex_shader_path);
     const auto fragment_shader_source = read_text_file(fragment_shader_path);
     if (!vertex_shader_source || !fragment_shader_source) {
-        return 0;
+        throw std::runtime_error("Failed to load background shader source.");
     }
 
     const GLuint vertex_shader = compile_shader(GL_VERTEX_SHADER, vertex_shader_source->c_str(), gl);
     if (vertex_shader == 0) {
-        return 0;
+        throw std::runtime_error("Failed to compile background vertex shader.");
     }
 
     const GLuint fragment_shader = compile_shader(GL_FRAGMENT_SHADER, fragment_shader_source->c_str(), gl);
     if (fragment_shader == 0) {
         gl.glDeleteShader(vertex_shader);
-        return 0;
+        throw std::runtime_error("Failed to compile background fragment shader.");
     }
 
     const GLuint next_program = gl.glCreateProgram();
@@ -133,11 +130,10 @@ GLuint BackgroundGradient::load_program(const std::filesystem::path& vertex_shad
     if (!success) {
         char log[1024] = {};
         gl.glGetProgramInfoLog(next_program, sizeof(log), nullptr, log);
-        std::cerr << "Background program link failed: " << log << '\n';
         gl.glDeleteShader(vertex_shader);
         gl.glDeleteShader(fragment_shader);
         gl.glDeleteProgram(next_program);
-        return 0;
+        throw std::runtime_error(std::string("Background program link failed: ") + log);
     }
 
     gl.glDeleteShader(vertex_shader);

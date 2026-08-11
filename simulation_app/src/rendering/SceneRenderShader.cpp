@@ -3,6 +3,7 @@
 #include "utils/FileUtils.h"
 
 #include <iostream>
+#include <stdexcept>
 
 #include <glm/gtc/type_ptr.hpp>
 
@@ -11,7 +12,7 @@ bool SceneRenderShader::is_initialized() const
     return program_ != 0;
 }
 
-bool SceneRenderShader::load(const std::filesystem::path& shader_dir, QOpenGLFunctions_4_5_Core& gl)
+void SceneRenderShader::load(const std::filesystem::path& shader_dir, QOpenGLFunctions_4_5_Core& gl)
 {
     const std::filesystem::path rendering_shader_dir = shader_dir / "rendering";
     const std::filesystem::path vertex_shader_path = rendering_shader_dir / "viewer.vert";
@@ -19,18 +20,18 @@ bool SceneRenderShader::load(const std::filesystem::path& shader_dir, QOpenGLFun
     const auto vertex_shader_source = read_text_file(vertex_shader_path);
     const auto fragment_shader_source = read_text_file(fragment_shader_path);
     if (!vertex_shader_source || !fragment_shader_source) {
-        return false;
+        throw std::runtime_error("Failed to load scene rendering shader source.");
     }
 
     const GLuint vertex_shader = compile_shader(GL_VERTEX_SHADER, vertex_shader_source->c_str(), gl);
     if (vertex_shader == 0) {
-        return false;
+        throw std::runtime_error("Failed to compile scene rendering vertex shader.");
     }
 
     const GLuint fragment_shader = compile_shader(GL_FRAGMENT_SHADER, fragment_shader_source->c_str(), gl);
     if (fragment_shader == 0) {
         gl.glDeleteShader(vertex_shader);
-        return false;
+        throw std::runtime_error("Failed to compile scene rendering fragment shader.");
     }
 
     program_ = gl.glCreateProgram();
@@ -43,12 +44,11 @@ bool SceneRenderShader::load(const std::filesystem::path& shader_dir, QOpenGLFun
     if (!success) {
         char log[1024] = {};
         gl.glGetProgramInfoLog(program_, sizeof(log), nullptr, log);
-        std::cerr << "Program link failed: " << log << '\n';
         gl.glDeleteShader(vertex_shader);
         gl.glDeleteShader(fragment_shader);
         gl.glDeleteProgram(program_);
         program_ = 0;
-        return false;
+        throw std::runtime_error(std::string("Scene rendering program link failed: ") + log);
     }
 
     gl.glDeleteShader(vertex_shader);
@@ -65,7 +65,6 @@ bool SceneRenderShader::load(const std::filesystem::path& shader_dir, QOpenGLFun
     ambient_strength_location_ = gl.glGetUniformLocation(program_, "uAmbientStrength");
     diffuse_strength_location_ = gl.glGetUniformLocation(program_, "uDiffuseStrength");
     fill_diffuse_strength_location_ = gl.glGetUniformLocation(program_, "uFillDiffuseStrength");
-    return true;
 }
 
 void SceneRenderShader::bind(QOpenGLFunctions_4_5_Core& gl) const

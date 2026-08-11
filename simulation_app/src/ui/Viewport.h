@@ -41,7 +41,7 @@ class Viewport final : public QOpenGLWidget, protected QOpenGLFunctions_4_5_Core
     Q_OBJECT
 
 public:
-    using InitializeCallback = std::function<bool(QOpenGLFunctions_4_5_Core&)>;
+    using InitializeCallback = std::function<void(QOpenGLFunctions_4_5_Core&)>;
     using SceneRenderCallback = std::function<void(const glm::mat4&, QOpenGLFunctions_4_5_Core&)>;
 
     explicit Viewport(const ProjectPaths& project_paths, QWidget* parent = nullptr);

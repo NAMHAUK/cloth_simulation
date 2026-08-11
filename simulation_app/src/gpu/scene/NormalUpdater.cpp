@@ -40,34 +40,19 @@ bool NormalUpdater::is_initialized() const
     return triangle_program_ != 0 && vertex_program_ != 0;
 }
 
-bool NormalUpdater::initialize(const std::filesystem::path& shader_dir, QOpenGLFunctions_4_5_Core& gl)
+void NormalUpdater::initialize(const std::filesystem::path& shader_dir, QOpenGLFunctions_4_5_Core& gl)
 {
     const std::filesystem::path mesh_shader_dir = shader_dir / "mesh";
-    triangle_program_ = load_compute_program(
-        mesh_shader_dir / "triangle_normal.comp",
-        "Triangle normal update",
-        gl);
-    if (triangle_program_ == 0) {
-        return false;
-    }
-
-    vertex_program_ = load_compute_program(
-        mesh_shader_dir / "vertex_normal.comp",
-        "Vertex normal update",
-        gl);
-    if (vertex_program_ == 0) {
-        gl.glDeleteProgram(triangle_program_);
-        triangle_program_ = 0;
-        return false;
-    }
-
+    triangle_program_ =
+        load_compute_program(mesh_shader_dir / "triangle_normal.comp", "Triangle normal update", gl);
+    vertex_program_ =
+        load_compute_program(mesh_shader_dir / "vertex_normal.comp", "Vertex normal update", gl);
     triangle_count_location_ = gl.glGetUniformLocation(triangle_program_, "uTriangleCount");
     position_component_offset_location_ =
         gl.glGetUniformLocation(triangle_program_, "uPositionComponentOffset");
     vertex_count_location_ = gl.glGetUniformLocation(vertex_program_, "uVertexCount");
     triangle_normal_stride_location_ = gl.glGetUniformLocation(vertex_program_, "uTriangleNormalStride");
     triangle_normal_offset_location_ = gl.glGetUniformLocation(vertex_program_, "uTriangleNormalOffset");
-    return true;
 }
 
 void NormalUpdater::release(QOpenGLFunctions_4_5_Core& gl)

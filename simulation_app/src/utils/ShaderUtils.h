@@ -8,6 +8,7 @@
 #include <iostream>
 #include <optional>
 #include <sstream>
+#include <stdexcept>
 #include <string>
 #include <vector>
 
@@ -28,9 +29,8 @@ inline GLuint compile_compute_shader(const char* source,
     if (!success) {
         char log[1024] = {};
         gl.glGetShaderInfoLog(shader, sizeof(log), nullptr, log);
-        std::cerr << error_context << " compute shader compile failed: " << log << '\n';
         gl.glDeleteShader(shader);
-        return 0;
+        throw std::runtime_error(std::string(error_context) + " compute shader compile failed: " + log);
     }
 
     return shader;
@@ -105,14 +105,10 @@ inline GLuint load_compute_program(const std::filesystem::path& shader_path,
 {
     const auto shader_source = load_shader_source(shader_path, {});
     if (!shader_source) {
-        return 0;
+        throw std::runtime_error("Failed to load compute shader source: " + shader_path.string());
     }
 
     const GLuint shader = compile_compute_shader(shader_source->c_str(), error_context, gl);
-    if (shader == 0) {
-        return 0;
-    }
-
     const GLuint program = gl.glCreateProgram();
     gl.glAttachShader(program, shader);
     gl.glLinkProgram(program);
@@ -122,10 +118,9 @@ inline GLuint load_compute_program(const std::filesystem::path& shader_path,
     if (!success) {
         char log[1024] = {};
         gl.glGetProgramInfoLog(program, sizeof(log), nullptr, log);
-        std::cerr << error_context << " compute program link failed: " << log << '\n';
         gl.glDeleteShader(shader);
         gl.glDeleteProgram(program);
-        return 0;
+        throw std::runtime_error(std::string(error_context) + " compute program link failed: " + log);
     }
 
     gl.glDeleteShader(shader);

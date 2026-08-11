@@ -4,7 +4,7 @@
 #include "utils/ShaderUtils.h"
 
 #include <algorithm>
-#include <iostream>
+#include <stdexcept>
 
 namespace {
 constexpr GLuint body_triangle_geometry_binding = 0;
@@ -75,15 +75,11 @@ bool BodyBvhBoundsUpdater::can_update(const CharacterMeshTopologyResources& topo
            collision_thickness > 0.0f;
 }
 
-bool BodyBvhBoundsUpdater::initialize(const std::filesystem::path& shader_dir, QOpenGLFunctions_4_5_Core& gl)
+void BodyBvhBoundsUpdater::initialize(const std::filesystem::path& shader_dir, QOpenGLFunctions_4_5_Core& gl)
 {
     program_ = load_compute_program(shader_dir / "body" / "body_bvh_bounds_update.comp",
                                     "Body BVH bounds update",
                                     gl);
-    if (program_ == 0) {
-        return false;
-    }
-
     triangle_first_node_location_ = gl.glGetUniformLocation(program_, "uTriangleFirstNode");
     triangle_node_count_location_ = gl.glGetUniformLocation(program_, "uTriangleNodeCount");
     vertex_first_node_location_ = gl.glGetUniformLocation(program_, "uVertexFirstNode");
@@ -99,12 +95,8 @@ bool BodyBvhBoundsUpdater::initialize(const std::filesystem::path& shader_dir, Q
         edge_first_node_location_ < 0 ||
         edge_node_count_location_ < 0 ||
         collision_thickness_location_ < 0) {
-        std::cerr << "Body BVH bounds update compute shader missing required uniforms.\n";
-        release(gl);
-        return false;
+        throw std::runtime_error("Body BVH bounds update compute shader missing required uniforms.");
     }
-
-    return true;
 }
 
 void BodyBvhBoundsUpdater::update(const CharacterMeshTopologyResources& topology,

@@ -8,7 +8,7 @@
 #include "utils/ShaderUtils.h"
 
 #include <cstddef>
-#include <iostream>
+#include <stdexcept>
 
 namespace {
 constexpr GLuint animation_positions_binding = 0;
@@ -68,26 +68,17 @@ bool CharacterGpuStateUpdater::is_initialized() const
     return position_program_ != 0 && triangle_geometry_program_ != 0;
 }
 
-bool CharacterGpuStateUpdater::initialize(const std::filesystem::path& shader_dir,
+void CharacterGpuStateUpdater::initialize(const std::filesystem::path& shader_dir,
                                           QOpenGLFunctions_4_5_Core& gl)
 {
     const std::filesystem::path character_shader_dir = shader_dir / "character";
     position_program_ = load_compute_program(character_shader_dir / "character_vertex_position_update.comp",
                                              "Character vertex position update",
                                              gl);
-    if (position_program_ == 0) {
-        return false;
-    }
-
     triangle_geometry_program_ =
         load_compute_program(character_shader_dir / "character_triangle_geometry_update.comp",
                              "Character triangle geometry update",
                              gl);
-    if (triangle_geometry_program_ == 0) {
-        release(gl);
-        return false;
-    }
-
     position_current_frame_base_location_ = gl.glGetUniformLocation(position_program_, "uCurrentFrameBase");
     position_next_frame_base_location_ = gl.glGetUniformLocation(position_program_, "uNextFrameBase");
     position_frame_alpha_location_ = gl.glGetUniformLocation(position_program_, "uFrameAlpha");
@@ -99,12 +90,8 @@ bool CharacterGpuStateUpdater::initialize(const std::filesystem::path& shader_di
         position_frame_alpha_location_ < 0 ||
         position_vertex_count_location_ < 0 ||
         triangle_count_location_ < 0) {
-        std::cerr << "Character GPU state update compute shader missing required uniforms.\n";
-        release(gl);
-        return false;
+        throw std::runtime_error("Character GPU state update compute shader missing required uniforms.");
     }
-
-    return true;
 }
 
 void CharacterGpuStateUpdater::initialize_character_pose_state(

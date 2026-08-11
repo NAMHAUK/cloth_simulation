@@ -8,7 +8,7 @@
 #include <glm/geometric.hpp>
 #include <glm/gtc/type_ptr.hpp>
 
-#include <iostream>
+#include <stdexcept>
 
 namespace {
 constexpr GLuint current_positions_binding = 0;
@@ -41,22 +41,16 @@ bool ExternalForceSolver::is_initialized() const
     return program_ != 0;
 }
 
-bool ExternalForceSolver::initialize(const std::filesystem::path& shader_dir,
+void ExternalForceSolver::initialize(const std::filesystem::path& shader_dir,
                                      float dt,
                                      QOpenGLFunctions_4_5_Core& gl)
 {
     if (dt <= 0.0f) {
-        return false;
+        throw std::runtime_error("Cannot initialize external force solver with a non-positive time step.");
     }
 
-    program_ = load_compute_program(
-        shader_dir / "cloth" / "cloth_external_force.comp",
-        "Cloth external force",
-        gl);
-    if (program_ == 0) {
-        return false;
-    }
-
+    program_ =
+        load_compute_program(shader_dir / "cloth" / "cloth_external_force.comp", "Cloth external force", gl);
     // shader program 안의 uniform 변수들 위치 저장
     vertex_offset_location_ = gl.glGetUniformLocation(program_, "uVertexOffset");
     vertex_count_location_ = gl.glGetUniformLocation(program_, "uVertexCount");
@@ -87,14 +81,11 @@ bool ExternalForceSolver::initialize(const std::filesystem::path& shader_dir,
         frame_start_angular_velocity_location_ < 0 ||
         angular_acceleration_location_ < 0 ||
         frame_inertia_scale_location_ < 0) {
-        std::cerr << "Cloth external force compute shader missing required uniforms.\n";
-        release(gl);
-        return false;
+        throw std::runtime_error("Cloth external force compute shader missing required uniforms.");
     }
 
     dt_ = dt;
     inverse_dt_ = 1.0f / dt_;
-    return true;
 }
 
 // 외부 힘 계산 -> 힘에 따른 위치 변화 GPU에서 갱신

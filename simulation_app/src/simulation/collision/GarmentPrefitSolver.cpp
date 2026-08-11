@@ -6,7 +6,7 @@
 #include "utils/ShaderUtils.h"
 
 #include <cassert>
-#include <iostream>
+#include <stdexcept>
 
 namespace {
 constexpr GLuint current_positions_binding = 0;
@@ -25,16 +25,10 @@ bool GarmentPrefitSolver::is_initialized() const
     return program_ != 0;
 }
 
-bool GarmentPrefitSolver::initialize(const std::filesystem::path& shader_dir, QOpenGLFunctions_4_5_Core& gl)
+void GarmentPrefitSolver::initialize(const std::filesystem::path& shader_dir, QOpenGLFunctions_4_5_Core& gl)
 {
-    program_ = load_compute_program(
-        shader_dir / "cloth" / "setup" / "garment_prefit.comp",
-        "Garment pre-fit",
-        gl);
-    if (program_ == 0) {
-        return false;
-    }
-
+    program_ =
+        load_compute_program(shader_dir / "cloth" / "setup" / "garment_prefit.comp", "Garment pre-fit", gl);
     vertex_offset_location_ = gl.glGetUniformLocation(program_, "uVertexOffset");
     vertex_count_location_ = gl.glGetUniformLocation(program_, "uVertexCount");
     search_radius_squared_location_ = gl.glGetUniformLocation(program_, "uSearchRadiusSquared");
@@ -44,12 +38,8 @@ bool GarmentPrefitSolver::initialize(const std::filesystem::path& shader_dir, QO
         vertex_count_location_ < 0 ||
         search_radius_squared_location_ < 0 ||
         pushout_margin_location_ < 0) {
-        std::cerr << "Garment pre-fit compute shader missing required uniforms.\n";
-        release(gl);
-        return false;
+        throw std::runtime_error("Garment pre-fit compute shader missing required uniforms.");
     }
-
-    return true;
 }
 
 bool GarmentPrefitSolver::can_solve(const SimulationGpuView& views, const ElementRange& vertex_range) const

@@ -21,7 +21,7 @@ public:
 
     bool is_initialized() const;
 
-    bool initialize(const std::filesystem::path& shader_dir, QOpenGLFunctions_4_5_Core& gl);
+    void initialize(const std::filesystem::path& shader_dir, QOpenGLFunctions_4_5_Core& gl);
     void draw(const SceneState& scene,
               const SceneGpuState& gpu_state,
               const glm::mat4& mvp,

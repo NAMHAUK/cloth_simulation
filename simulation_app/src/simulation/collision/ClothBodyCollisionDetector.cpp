@@ -4,7 +4,7 @@
 #include "utils/ShaderUtils.h"
 
 #include <cassert>
-#include <iostream>
+#include <stdexcept>
 
 namespace {
 constexpr std::uint32_t collision_candidate_detect_local_size = 128;
@@ -58,30 +58,25 @@ bool ClothBodyCollisionDetector::is_initialized() const
     return has_programs();
 }
 
-bool ClothBodyCollisionDetector::initialize(const std::filesystem::path& shader_dir,
+void ClothBodyCollisionDetector::initialize(const std::filesystem::path& shader_dir,
                                             QOpenGLFunctions_4_5_Core& gl)
 {
     const std::filesystem::path collision_shader_dir = shader_dir / "collision";
-    cloth_vertex_body_face_.program = load_compute_program(
-        collision_shader_dir / "cloth_vertex_body_face_detect.comp",
-        "Cloth vertex/body face collision candidate detection",
-        gl);
-    cloth_edge_body_edge_.program = load_compute_program(
-        collision_shader_dir / "cloth_edge_body_edge_detect.comp",
-        "Cloth edge/body edge collision candidate detection",
-        gl);
-    cloth_face_body_vertex_.program = load_compute_program(
-        collision_shader_dir / "body_vertex_cloth_face_detect.comp",
-        "Cloth face/body vertex collision candidate detection",
-        gl);
+    cloth_vertex_body_face_.program =
+        load_compute_program(collision_shader_dir / "cloth_vertex_body_face_detect.comp",
+                             "Cloth vertex/body face collision candidate detection",
+                             gl);
+    cloth_edge_body_edge_.program =
+        load_compute_program(collision_shader_dir / "cloth_edge_body_edge_detect.comp",
+                             "Cloth edge/body edge collision candidate detection",
+                             gl);
+    cloth_face_body_vertex_.program =
+        load_compute_program(collision_shader_dir / "body_vertex_cloth_face_detect.comp",
+                             "Cloth face/body vertex collision candidate detection",
+                             gl);
     dispatch_size_.program = load_compute_program(collision_shader_dir / "collision_dispatch_size.comp",
                                                   "Collision candidate dispatch size",
                                                   gl);
-    if (!has_programs()) {
-        release(gl);
-        return false;
-    }
-
     cloth_vertex_body_face_.item_count =
         gl.glGetUniformLocation(cloth_vertex_body_face_.program, "uClothVertexCount");
     cloth_vertex_body_face_.max_candidates =
@@ -107,12 +102,9 @@ bool ClothBodyCollisionDetector::initialize(const std::filesystem::path& shader_
         cloth_face_body_vertex_.max_candidates < 0 ||
         dispatch_size_.max_candidates < 0 ||
         dispatch_size_.local_size < 0) {
-        std::cerr << "Cloth-body collision candidate detection compute shader missing required uniforms.\n";
-        release(gl);
-        return false;
+        throw std::runtime_error(
+            "Cloth-body collision candidate detection compute shader missing required uniforms.");
     }
-
-    return true;
 }
 
 bool ClothBodyCollisionDetector::can_detect(const SimulationGpuView& views) const

@@ -30,7 +30,7 @@ public:
     SimulationPipeline(const SimulationPipeline&) = delete;
     SimulationPipeline& operator=(const SimulationPipeline&) = delete;
 
-    bool initialize(const std::filesystem::path& shader_dir, QOpenGLFunctions_4_5_Core& gl);
+    void initialize(const std::filesystem::path& shader_dir, QOpenGLFunctions_4_5_Core& gl);
     void release(QOpenGLFunctions_4_5_Core& gl);
     void prefit_garments(SceneGpuState& gpu_state,
                          const std::vector<GarmentLayer>& unconfirmed_layers,

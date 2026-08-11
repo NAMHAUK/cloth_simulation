@@ -14,29 +14,14 @@ bool SceneGpuState::is_initialized() const
     return initialized_;
 }
 
-bool SceneGpuState::initialize(const std::filesystem::path& shader_dir, QOpenGLFunctions_4_5_Core& gl)
+void SceneGpuState::initialize(const std::filesystem::path& shader_dir, QOpenGLFunctions_4_5_Core& gl)
 {
-    if (!normal_updater_.initialize(shader_dir, gl)) {
-        return false;
-    }
-    if (!bvh_bounds_updater_.initialize(shader_dir, gl)) {
-        normal_updater_.release(gl);
-        return false;
-    }
-    if (!character_gpu_state_updater_.initialize(shader_dir, gl)) {
-        bvh_bounds_updater_.release(gl);
-        normal_updater_.release(gl);
-        return false;
-    }
-    if (!attachment_target_builder_.initialize(shader_dir, gl)) {
-        character_gpu_state_updater_.release(gl);
-        bvh_bounds_updater_.release(gl);
-        normal_updater_.release(gl);
-        return false;
-    }
+    normal_updater_.initialize(shader_dir, gl);
+    bvh_bounds_updater_.initialize(shader_dir, gl);
+    character_gpu_state_updater_.initialize(shader_dir, gl);
+    attachment_target_builder_.initialize(shader_dir, gl);
 
     initialized_ = true;
-    return true;
 }
 
 void SceneGpuState::update_mesh_normals(QOpenGLFunctions_4_5_Core& gl)

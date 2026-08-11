@@ -3,8 +3,6 @@
 #include "gpu/scene/SceneGpuState.h"
 #include "scene/SceneState.h"
 
-#include <iostream>
-
 #include <glm/geometric.hpp>
 
 namespace {
@@ -23,19 +21,12 @@ bool RenderPipeline::is_initialized() const
     return viewer_shader_.is_initialized();
 }
 
-bool RenderPipeline::initialize(const std::filesystem::path& shader_dir, QOpenGLFunctions_4_5_Core& gl)
+void RenderPipeline::initialize(const std::filesystem::path& shader_dir, QOpenGLFunctions_4_5_Core& gl)
 {
-    if (!viewer_shader_.load(shader_dir, gl)) {
-        std::cerr << "Failed to create viewer shader program.\n";
-        return false;
-    }
-    if (!background_gradient_.initialize(shader_dir, gl)) {
-        std::cerr << "Failed to create background gradient.\n";
-        return false;
-    }
+    viewer_shader_.load(shader_dir, gl);
+    background_gradient_.initialize(shader_dir, gl);
 
     ground_grid_.upload(gl);
-    return true;
 }
 
 void RenderPipeline::draw(const SceneState& scene,

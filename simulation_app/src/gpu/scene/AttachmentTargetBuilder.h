@@ -15,7 +15,7 @@ public:
     AttachmentTargetBuilder& operator=(const AttachmentTargetBuilder&) = delete;
 
     bool is_initialized() const;
-    bool initialize(const std::filesystem::path& shader_dir, QOpenGLFunctions_4_5_Core& gl);
+    void initialize(const std::filesystem::path& shader_dir, QOpenGLFunctions_4_5_Core& gl);
     bool build(const SimulationGpuView& views,
                const ElementRange& target_range,
                float surface_offset,

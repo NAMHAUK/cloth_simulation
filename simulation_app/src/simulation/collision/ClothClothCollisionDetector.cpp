@@ -7,7 +7,7 @@
 
 #include <algorithm>
 #include <cassert>
-#include <iostream>
+#include <stdexcept>
 #include <unordered_set>
 
 namespace {
@@ -79,22 +79,17 @@ bool ClothClothCollisionDetector::is_initialized() const
     return candidate_detect_.program != 0 && dispatch_size_.program != 0;
 }
 
-bool ClothClothCollisionDetector::initialize(const std::filesystem::path& shader_dir,
+void ClothClothCollisionDetector::initialize(const std::filesystem::path& shader_dir,
                                              QOpenGLFunctions_4_5_Core& gl)
 {
     const std::filesystem::path collision_shader_dir = shader_dir / "collision";
-    candidate_detect_.program = load_compute_program(
-        collision_shader_dir / "cloth_cloth_vertex_face_detect.comp",
-        "Cloth-cloth vertex-face candidate detection",
-        gl);
+    candidate_detect_.program =
+        load_compute_program(collision_shader_dir / "cloth_cloth_vertex_face_detect.comp",
+                             "Cloth-cloth vertex-face candidate detection",
+                             gl);
     dispatch_size_.program = load_compute_program(collision_shader_dir / "collision_dispatch_size.comp",
                                                   "Cloth-cloth candidate dispatch size",
                                                   gl);
-    if (!is_initialized()) {
-        release(gl);
-        return false;
-    }
-
     candidate_detect_.upper_vertex_offset =
         gl.glGetUniformLocation(candidate_detect_.program, "uUpperVertexOffset");
     candidate_detect_.upper_vertex_count =
@@ -127,17 +122,10 @@ bool ClothClothCollisionDetector::initialize(const std::filesystem::path& shader
         candidate_detect_.max_candidates < 0 ||
         dispatch_size_.max_candidates < 0 ||
         dispatch_size_.local_size < 0) {
-        std::cerr << "Cloth-cloth candidate detection compute shader missing required uniforms.\n";
-        release(gl);
-        return false;
+        throw std::runtime_error("Cloth-cloth candidate detection compute shader missing required uniforms.");
     }
 
-    if (!bounds_updater_.initialize(shader_dir, gl)) {
-        release(gl);
-        return false;
-    }
-
-    return true;
+    bounds_updater_.initialize(shader_dir, gl);
 }
 
 bool ClothClothCollisionDetector::can_detect(const SimulationGpuView& views) const

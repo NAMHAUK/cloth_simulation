@@ -6,7 +6,7 @@
 
 #include <algorithm>
 #include <cassert>
-#include <iostream>
+#include <stdexcept>
 
 namespace {
 constexpr std::uint32_t apply_local_size = 128u;
@@ -86,30 +86,25 @@ bool ClothClothCollisionSolver::is_initialized() const
            apply_.program != 0;
 }
 
-bool ClothClothCollisionSolver::initialize(const std::filesystem::path& shader_dir,
+void ClothClothCollisionSolver::initialize(const std::filesystem::path& shader_dir,
                                            QOpenGLFunctions_4_5_Core& gl)
 {
     const std::filesystem::path collision_shader_dir = shader_dir / "collision";
-    accumulate_.program = load_compute_program(
-        collision_shader_dir / "cloth_cloth_vertex_face_accumulate.comp",
-        "Cloth-cloth vertex-face candidate accumulation",
-        gl);
-    initial_accumulate_.program = load_compute_program(
-        collision_shader_dir / "cloth_cloth_initial_layer_accumulate.comp",
-        "Initial cloth-cloth layer candidate accumulation",
-        gl);
-    body_triangle_id_build_.program = load_compute_program(
-        shader_dir / "cloth" / "setup" / "cloth_body_triangle_id_build.comp",
-        "Cloth body triangle id build",
-        gl);
+    accumulate_.program =
+        load_compute_program(collision_shader_dir / "cloth_cloth_vertex_face_accumulate.comp",
+                             "Cloth-cloth vertex-face candidate accumulation",
+                             gl);
+    initial_accumulate_.program =
+        load_compute_program(collision_shader_dir / "cloth_cloth_initial_layer_accumulate.comp",
+                             "Initial cloth-cloth layer candidate accumulation",
+                             gl);
+    body_triangle_id_build_.program =
+        load_compute_program(shader_dir / "cloth" / "setup" / "cloth_body_triangle_id_build.comp",
+                             "Cloth body triangle id build",
+                             gl);
     apply_.program = load_compute_program(collision_shader_dir / "cloth_cloth_collision_apply.comp",
                                           "Cloth-cloth collision apply",
                                           gl);
-    if (!is_initialized()) {
-        release(gl);
-        return false;
-    }
-
     accumulate_.max_candidates = gl.glGetUniformLocation(accumulate_.program, "uMaxCandidateCount");
     accumulate_.collision_thickness = gl.glGetUniformLocation(accumulate_.program, "uCollisionThickness");
     accumulate_.collision_stiffness = gl.glGetUniformLocation(accumulate_.program, "uCollisionStiffness");
@@ -146,12 +141,8 @@ bool ClothClothCollisionSolver::initialize(const std::filesystem::path& shader_d
                                      body_triangle_id_build_.search_radius_squared,
                                      apply_.vertex_count,
                                      apply_.max_correction)) {
-        std::cerr << "Cloth-cloth collision compute shader missing required uniforms.\n";
-        release(gl);
-        return false;
+        throw std::runtime_error("Cloth-cloth collision compute shader missing required uniforms.");
     }
-
-    return true;
 }
 
 bool ClothClothCollisionSolver::can_solve(const SimulationGpuView& views) const

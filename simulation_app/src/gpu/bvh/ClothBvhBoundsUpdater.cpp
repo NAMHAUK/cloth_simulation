@@ -8,7 +8,7 @@
 #include <cassert>
 #include <cmath>
 #include <cstdint>
-#include <iostream>
+#include <stdexcept>
 
 namespace {
 constexpr GLuint cloth_current_positions_binding = 0;
@@ -44,15 +44,11 @@ bool has_valid_node_level_ranges(const GarmentBvhLayout& layout)
 
 }
 
-bool ClothBvhBoundsUpdater::initialize(const std::filesystem::path& shader_dir, QOpenGLFunctions_4_5_Core& gl)
+void ClothBvhBoundsUpdater::initialize(const std::filesystem::path& shader_dir, QOpenGLFunctions_4_5_Core& gl)
 {
     program_ = load_compute_program(shader_dir / "cloth" / "cloth_bvh_bounds_update.comp",
                                     "Cloth BVH bounds update",
                                     gl);
-    if (program_ == 0) {
-        return false;
-    }
-
     vertex_offset_location_ = gl.glGetUniformLocation(program_, "uVertexOffset");
     collision_triangle_offset_location_ = gl.glGetUniformLocation(program_, "uCollisionTriangleOffset");
     bvh_node_offset_location_ = gl.glGetUniformLocation(program_, "uBvhNodeOffset");
@@ -66,12 +62,8 @@ bool ClothBvhBoundsUpdater::initialize(const std::filesystem::path& shader_dir, 
                   level_first_node_location_,
                   level_node_count_location_,
                   bounds_margin_location_}) < 0) {
-        std::cerr << "Cloth BVH bounds update compute shader missing required uniforms.\n";
-        release(gl);
-        return false;
+        throw std::runtime_error("Cloth BVH bounds update compute shader missing required uniforms.");
     }
-
-    return true;
 }
 
 bool ClothBvhBoundsUpdater::can_update(const SimulationGpuView& views, float bounds_margin) const

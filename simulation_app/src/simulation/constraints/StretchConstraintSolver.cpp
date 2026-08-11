@@ -7,7 +7,7 @@
 
 #include <algorithm>
 #include <cassert>
-#include <iostream>
+#include <stdexcept>
 
 namespace {
 constexpr GLuint current_positions_binding = 0;
@@ -24,27 +24,19 @@ bool StretchConstraintSolver::is_initialized() const
     return program_ != 0;
 }
 
-bool StretchConstraintSolver::initialize(const std::filesystem::path& shader_dir,
+void StretchConstraintSolver::initialize(const std::filesystem::path& shader_dir,
                                          QOpenGLFunctions_4_5_Core& gl)
 {
     program_ = load_compute_program(shader_dir / "cloth" / "constraints" / "cloth_stretch_constraint.comp",
                                     "Stretch constraint",
                                     gl);
-    if (program_ == 0) {
-        return false;
-    }
-
     constraint_offset_location_ = gl.glGetUniformLocation(program_, "uConstraintOffset");
     constraint_count_location_ = gl.glGetUniformLocation(program_, "uConstraintCount");
     stiffness_location_ = gl.glGetUniformLocation(program_, "uStiffness");
 
     if (constraint_offset_location_ < 0 || constraint_count_location_ < 0 || stiffness_location_ < 0) {
-        std::cerr << "Stretch constraint compute shader missing required uniforms.\n";
-        release(gl);
-        return false;
+        throw std::runtime_error("Stretch constraint compute shader missing required uniforms.");
     }
-
-    return true;
 }
 
 bool StretchConstraintSolver::can_solve(const SimulationGpuView& views) const

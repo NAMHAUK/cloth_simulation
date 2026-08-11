@@ -5,7 +5,7 @@
 #include "utils/ShaderUtils.h"
 
 #include <cstdint>
-#include <iostream>
+#include <stdexcept>
 
 namespace {
 constexpr GLuint current_positions_binding = 0;
@@ -31,27 +31,19 @@ bool AttachmentTargetBuilder::is_initialized() const
     return program_ != 0;
 }
 
-bool AttachmentTargetBuilder::initialize(const std::filesystem::path& shader_dir,
+void AttachmentTargetBuilder::initialize(const std::filesystem::path& shader_dir,
                                          QOpenGLFunctions_4_5_Core& gl)
 {
     program_ = load_compute_program(shader_dir / "cloth" / "setup" / "garment_attachment_target_build.comp",
                                     "Attachment target build",
                                     gl);
-    if (program_ == 0) {
-        return false;
-    }
-
     constraint_offset_location_ = gl.glGetUniformLocation(program_, "uConstraintOffset");
     constraint_count_location_ = gl.glGetUniformLocation(program_, "uConstraintCount");
     surface_offset_location_ = gl.glGetUniformLocation(program_, "uSurfaceOffset");
 
     if (constraint_offset_location_ < 0 || constraint_count_location_ < 0 || surface_offset_location_ < 0) {
-        std::cerr << "Attachment target build compute shader missing required uniforms.\n";
-        release(gl);
-        return false;
+        throw std::runtime_error("Attachment target build compute shader missing required uniforms.");
     }
-
-    return true;
 }
 
 bool AttachmentTargetBuilder::can_build(const SimulationGpuView& views,

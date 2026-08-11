@@ -24,7 +24,7 @@ public:
     SceneGpuState& operator=(const SceneGpuState&) = delete;
 
     bool is_initialized() const;
-    bool initialize(const std::filesystem::path& shader_dir, QOpenGLFunctions_4_5_Core& gl);
+    void initialize(const std::filesystem::path& shader_dir, QOpenGLFunctions_4_5_Core& gl);
     void release(QOpenGLFunctions_4_5_Core& gl);
     void update_character_pose(const SceneState& scene,
                                float frame_alpha,
