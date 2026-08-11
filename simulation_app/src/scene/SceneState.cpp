@@ -189,16 +189,11 @@ GarmentObject* SceneState::update_garment_placement(GarmentLayer layer,
     return nullptr;
 }
 
-bool SceneState::update_garment_color(GarmentLayer layer, const glm::vec3& color)
+void SceneState::update_garment_color(GarmentLayer layer, const glm::vec3& color)
 {
-    GarmentObject* garment = find_garment(layer);
-    if (garment == nullptr) {
-        return false;
-    }
-
-    garment->source_mesh.color = color;
-    garment->mesh.color = color;
-    return true;
+    GarmentObject& garment = *find_garment(layer);
+    garment.source_mesh.color = color;
+    garment.mesh.color = color;
 }
 
 bool SceneState::remove_garment(GarmentLayer layer)

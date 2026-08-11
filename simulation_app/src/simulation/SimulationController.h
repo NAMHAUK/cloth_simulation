@@ -101,7 +101,7 @@ private:
 
     bool add_garment(GarmentLayer layer, GarmentMesh mesh, QOpenGLFunctions_4_5_Core& gl);
     bool replace_garment(GarmentLayer layer, GarmentMesh mesh, QOpenGLFunctions_4_5_Core& gl);
-    bool build_garment_triangle_bvh(GarmentLayer layer);
+    void build_garment_triangle_bvh(GarmentLayer layer);
     void restore_garment_placements(const std::vector<GarmentLayer>& layers, QOpenGLFunctions_4_5_Core& gl);
     void clear_garment_placements();
     void release_gpu();
