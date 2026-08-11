@@ -1,6 +1,7 @@
 #pragma once
 
 #include <cstddef>
+#include <exception>
 #include <filesystem>
 #include <optional>
 
@@ -41,6 +42,7 @@ private:
     void connect_color_panels();
 
     GarmentLayer target_layer() const;
+    void handle_placement_failure(const std::exception& error);
     void end_session();
     void reset_session();
 

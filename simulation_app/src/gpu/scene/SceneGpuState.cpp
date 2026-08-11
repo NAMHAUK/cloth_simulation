@@ -175,18 +175,15 @@ void SceneGpuState::update_garment_meshes(const SceneState& scene,
                                          gl);
 }
 
-bool SceneGpuState::update_garment_placement(const GarmentObject& garment,
-                                             bool update_rest_lengths,
-                                             QOpenGLFunctions_4_5_Core& gl)
+void SceneGpuState::update_garment_placement(const GarmentObject& garment, QOpenGLFunctions_4_5_Core& gl)
 {
-    if (!cloth_gpu_state_.update_garment_placement(garment, update_rest_lengths, gl)) {
-        return false;
+    if (!cloth_gpu_state_.update_garment_placement(garment, gl)) {
+        throw std::runtime_error("Failed to update garment GPU placement.");
     }
 
     normal_updater_.update_cloth_normals(cloth_gpu_state_.mesh_topology_resources(),
                                          cloth_gpu_state_.mesh_normal_resources(),
                                          gl);
-    return true;
 }
 
 bool SceneGpuState::build_garment_attachment_targets(SceneState& scene,
@@ -220,11 +217,6 @@ bool SceneGpuState::build_garment_attachment_targets(SceneState& scene,
         return false;
     }
     return true;
-}
-
-void SceneGpuState::deactivate_garment_attachment_targets(GarmentLayer layer)
-{
-    cloth_gpu_state_.deactivate_attachment_targets(layer);
 }
 
 bool SceneGpuState::save_base_positions(QOpenGLFunctions_4_5_Core& gl)

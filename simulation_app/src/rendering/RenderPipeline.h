@@ -4,6 +4,7 @@
 #include "rendering/GroundGridMesh.h"
 #include "rendering/SceneRenderShader.h"
 
+#include <array>
 #include <filesystem>
 
 #include <glm/mat4x4.hpp>
@@ -24,6 +25,7 @@ public:
     void initialize(const std::filesystem::path& shader_dir, QOpenGLFunctions_4_5_Core& gl);
     void draw(const SceneState& scene,
               const SceneGpuState& gpu_state,
+              const std::array<glm::mat4, 2>& placement_matrices,
               const glm::mat4& mvp,
               float character_opacity,
               QOpenGLFunctions_4_5_Core& gl);

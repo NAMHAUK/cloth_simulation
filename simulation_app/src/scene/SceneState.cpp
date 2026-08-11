@@ -4,6 +4,7 @@
 #include <glm/vec3.hpp>
 
 #include <algorithm>
+#include <stdexcept>
 #include <utility>
 
 namespace {
@@ -89,53 +90,46 @@ void SceneState::set_garment(GarmentObject garment)
     });
 }
 
-GarmentObject* SceneState::update_garment_placement(GarmentLayer layer,
-                                                    const glm::vec3& position_offset,
-                                                    float scale)
+GarmentObject& SceneState::apply_garment_placement(GarmentLayer layer,
+                                                   const glm::vec3& position_offset,
+                                                   float scale)
 {
-    if (scale <= 0.0f) {
-        return nullptr;
+    GarmentObject* garment = find_garment(layer);
+    if (garment == nullptr || scale <= 0.0f) {
+        throw std::runtime_error("Cannot apply garment placement.");
     }
 
-    for (GarmentObject& garment : garments_) {
-        if (garment.layer != layer) {
-            continue;
-        }
+    const GarmentMesh& source_mesh = garment->source_mesh;
+    GarmentMesh next_mesh = source_mesh;
+    const glm::vec3 scale_center = source_mesh.bounds_center;
 
-        const GarmentMesh& source_mesh = garment.source_mesh;
-        GarmentMesh next_mesh = source_mesh;
-        const glm::vec3 scale_center = source_mesh.bounds_center;
-
-        for (std::size_t index = 0; index < next_mesh.vertices.size(); index += 3u) {
-            const glm::vec3 source_position{
-                source_mesh.vertices[index],
-                source_mesh.vertices[index + 1u],
-                source_mesh.vertices[index + 2u],
-            };
-            const glm::vec3 next_position =
-                scale_center + (source_position - scale_center) * scale + position_offset;
-            next_mesh.vertices[index] = next_position.x;
-            next_mesh.vertices[index + 1u] = next_position.y;
-            next_mesh.vertices[index + 2u] = next_position.z;
-        }
-
-        next_mesh.bounds_center = source_mesh.bounds_center + position_offset;
-        next_mesh.bounds_radius = source_mesh.bounds_radius * scale;
-
-        for (std::size_t index = 0; index < next_mesh.stretch_constraints.rest_lengths.size(); ++index) {
-            next_mesh.stretch_constraints.rest_lengths[index] =
-                source_mesh.stretch_constraints.rest_lengths[index] * scale;
-        }
-        for (std::size_t index = 0; index < next_mesh.bending_constraints.rest_lengths.size(); ++index) {
-            next_mesh.bending_constraints.rest_lengths[index] =
-                source_mesh.bending_constraints.rest_lengths[index] * scale;
-        }
-
-        garment.mesh = std::move(next_mesh);
-        return &garment;
+    for (std::size_t index = 0; index < next_mesh.vertices.size(); index += 3u) {
+        const glm::vec3 source_position{
+            source_mesh.vertices[index],
+            source_mesh.vertices[index + 1u],
+            source_mesh.vertices[index + 2u],
+        };
+        const glm::vec3 next_position =
+            scale_center + (source_position - scale_center) * scale + position_offset;
+        next_mesh.vertices[index] = next_position.x;
+        next_mesh.vertices[index + 1u] = next_position.y;
+        next_mesh.vertices[index + 2u] = next_position.z;
     }
 
-    return nullptr;
+    next_mesh.bounds_center = source_mesh.bounds_center + position_offset;
+    next_mesh.bounds_radius = source_mesh.bounds_radius * scale;
+
+    for (std::size_t index = 0; index < next_mesh.stretch_constraints.rest_lengths.size(); ++index) {
+        next_mesh.stretch_constraints.rest_lengths[index] =
+            source_mesh.stretch_constraints.rest_lengths[index] * scale;
+    }
+    for (std::size_t index = 0; index < next_mesh.bending_constraints.rest_lengths.size(); ++index) {
+        next_mesh.bending_constraints.rest_lengths[index] =
+            source_mesh.bending_constraints.rest_lengths[index] * scale;
+    }
+
+    garment->mesh = std::move(next_mesh);
+    return *garment;
 }
 
 void SceneState::update_garment_color(GarmentLayer layer, const glm::vec3& color)

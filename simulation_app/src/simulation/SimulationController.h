@@ -11,6 +11,7 @@
 #include <cstdint>
 #include <filesystem>
 #include <functional>
+#include <optional>
 #include <vector>
 
 #include <glm/mat4x4.hpp>
@@ -50,9 +51,8 @@ public:
     void set_garment_mesh(GarmentLayer layer, GarmentMesh mesh);
     bool remove_garment_placement(GarmentLayer layer);
     void set_garment_placement(GarmentLayer layer, const glm::vec3& position_offset, float scale);
-    void apply_garment_placement_changes(QOpenGLFunctions_4_5_Core& gl);
     void set_garment_color(GarmentLayer layer, const glm::vec3& color);
-    bool confirm_garment_placement();
+    void confirm_garment_placement();
     void cancel_garment_placement();
 
     bool is_gpu_initialized() const;
@@ -78,28 +78,9 @@ private:
     {
         glm::vec3 position_offset{0.0f};
         float scale = 1.0f;
-        bool is_active = false;
-        bool position_changed = false;
-        bool scale_changed = false;
-
-        void reset()
-        {
-            position_offset = glm::vec3{0.0f};
-            scale = 1.0f;
-            is_active = false;
-            clear_updates();
-        }
-
-        bool has_update() const { return is_active && (position_changed || scale_changed); }
-
-        void clear_updates()
-        {
-            position_changed = false;
-            scale_changed = false;
-        }
     };
 
-    void restore_garment_placements(const std::vector<GarmentLayer>& layers, QOpenGLFunctions_4_5_Core& gl);
+    std::array<glm::mat4, 2> make_placement_matrices() const;
     void reset_garment_placements();
     void release_gpu();
     void release_gpu(QOpenGLFunctions_4_5_Core& gl);
@@ -112,7 +93,7 @@ private:
     RenderPipeline render_pipeline_;
 
     std::uint64_t motion_step_index_ = 0;
-    std::array<GarmentPlacementState, 2> garment_placements_{};
+    std::array<std::optional<GarmentPlacementState>, 2> garment_placement_states_{};
     bool simulation_running_ = false;
     bool is_default_pose_ = false;
     QTimer frame_timer_;

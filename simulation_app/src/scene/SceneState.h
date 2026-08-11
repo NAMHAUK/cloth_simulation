@@ -41,9 +41,7 @@ public:
     // Garments
     void set_garment(GarmentObject garment);
     bool remove_garment(GarmentLayer layer);
-    GarmentObject* update_garment_placement(GarmentLayer layer,
-                                            const glm::vec3& position_offset,
-                                            float scale);
+    GarmentObject& apply_garment_placement(GarmentLayer layer, const glm::vec3& position_offset, float scale);
     void update_garment_color(GarmentLayer layer, const glm::vec3& color);
     GarmentObject* find_garment(GarmentLayer layer);
     const GarmentObject* find_garment(GarmentLayer layer) const;
