@@ -152,7 +152,7 @@ GarmentLayer PlacementController::target_layer() const
 
 void PlacementController::handle_placement_failure(const std::exception& error)
 {
-    simulation_controller_.reset_scene_to_default();
+    simulation_controller_.reset_scene();
     reset();
     Q_EMIT active_changed();
     QMessageBox::critical(placement_panel_.window(),

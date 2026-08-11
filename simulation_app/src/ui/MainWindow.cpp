@@ -173,7 +173,7 @@ void MainWindow::connect_simulation_controls()
 
     connect(viewport_, &Viewport::reset_requested, this, [this]() {
         placement_controller_->reset();
-        simulation_controller_->reset_scene_to_default();
+        simulation_controller_->reset_scene();
         update_simulation_button_state();
         update_asset_button_state();
     });

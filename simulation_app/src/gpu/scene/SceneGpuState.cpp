@@ -150,7 +150,7 @@ void SceneGpuState::update_garment_meshes(const SceneState& scene,
     if (!cloth_bvh_resources_.rebuild(scene.garments(), gl)) {
         throw std::runtime_error("Failed to rebuild cloth BVH resources.");
     }
-    if (cloth_gpu_state_.is_initialized()) {
+    if (has_garment_resources()) {
         if (scene.garments().size() > std::numeric_limits<std::uint32_t>::max()) {
             collision_candidate_buffers_.release(gl);
             throw std::runtime_error("Cannot prepare collision candidate buffers because the garment count "
@@ -215,24 +215,36 @@ void SceneGpuState::build_garment_attachment_targets(SceneState& scene,
     }
 }
 
-bool SceneGpuState::save_base_positions(QOpenGLFunctions_4_5_Core& gl)
+void SceneGpuState::capture_garment_base_positions(QOpenGLFunctions_4_5_Core& gl)
 {
-    return cloth_gpu_state_.save_base_positions(gl);
+    if (!has_garment_resources()) {
+        return;
+    }
+    if (!cloth_gpu_state_.capture_base_positions(gl)) {
+        throw std::runtime_error("Failed to capture garment base positions.");
+    }
 }
 
-bool SceneGpuState::restore_base_positions(QOpenGLFunctions_4_5_Core& gl)
+void SceneGpuState::restore_garment_base_positions(QOpenGLFunctions_4_5_Core& gl)
 {
+    if (!has_garment_resources()) {
+        return;
+    }
     if (!cloth_gpu_state_.restore_base_positions(gl)) {
-        return false;
+        throw std::runtime_error("Failed to restore garment base positions.");
     }
 
     normal_updater_.update_cloth_normals(cloth_gpu_state_.mesh_topology_resources(),
                                          cloth_gpu_state_.mesh_normal_resources(),
                                          gl);
-    return true;
 }
 
 void SceneGpuState::clear_base_positions(QOpenGLFunctions_4_5_Core& gl)
 {
     cloth_gpu_state_.clear_base_positions(gl);
+}
+
+bool SceneGpuState::has_garment_resources() const
+{
+    return cloth_gpu_state_.is_initialized();
 }

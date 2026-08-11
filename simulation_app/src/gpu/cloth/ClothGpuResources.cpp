@@ -1128,7 +1128,7 @@ bool ClothGpuResources::activate_attachment_targets(const ElementRange& target_r
     return true;
 }
 
-bool ClothGpuResources::save_base_positions(QOpenGLFunctions_4_5_Core& gl)
+bool ClothGpuResources::capture_base_positions(QOpenGLFunctions_4_5_Core& gl)
 {
     if (buffers_.current_position == 0 || used_elements_.vertex == 0) {
         return false;

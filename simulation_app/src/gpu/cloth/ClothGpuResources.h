@@ -31,7 +31,7 @@ public:
                                             ElementRange& target_range,
                                             QOpenGLFunctions_4_5_Core& gl);
     bool activate_attachment_targets(const ElementRange& target_range);
-    bool save_base_positions(QOpenGLFunctions_4_5_Core& gl);
+    bool capture_base_positions(QOpenGLFunctions_4_5_Core& gl);
     bool restore_base_positions(QOpenGLFunctions_4_5_Core& gl) const;
     void clear_base_positions(QOpenGLFunctions_4_5_Core& gl);
     std::array<ElementRange, 2> garment_vertex_ranges() const;

@@ -50,11 +50,13 @@ public:
     void build_garment_attachment_targets(SceneState& scene,
                                           GarmentLayer layer,
                                           QOpenGLFunctions_4_5_Core& gl);
-    bool save_base_positions(QOpenGLFunctions_4_5_Core& gl);
-    bool restore_base_positions(QOpenGLFunctions_4_5_Core& gl);
+    void capture_garment_base_positions(QOpenGLFunctions_4_5_Core& gl);
+    void restore_garment_base_positions(QOpenGLFunctions_4_5_Core& gl);
     void clear_base_positions(QOpenGLFunctions_4_5_Core& gl);
 
 private:
+    bool has_garment_resources() const;
+
     CharacterGpuResources character_gpu_state_;
     BodyBvhBoundsUpdater bvh_bounds_updater_;
     NormalUpdater normal_updater_;

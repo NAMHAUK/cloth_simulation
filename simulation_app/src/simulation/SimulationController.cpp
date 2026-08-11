@@ -121,10 +121,11 @@ void SimulationController::set_character_mesh(CharacterMesh mesh)
     assert(is_gpu_initialized());
 
     run_with_gl_context_([this, &mesh](QOpenGLFunctions_4_5_Core& gl) {
-        if (!scene_.garments().empty() && !gpu_state_.restore_base_positions(gl)) {
-            gpu_state_.save_base_positions(gl);
+        if (is_default_pose_) {
+            gpu_state_.capture_garment_base_positions(gl);
+        } else {
+            gpu_state_.restore_garment_base_positions(gl);
         }
-
         set_character_mesh_state(std::move(mesh), gl);
         is_default_pose_ = false;
     });
@@ -132,7 +133,7 @@ void SimulationController::set_character_mesh(CharacterMesh mesh)
     Q_EMIT viewport_update_requested();
 }
 
-void SimulationController::reset_scene_to_default()
+void SimulationController::reset_scene()
 {
     assert(is_gpu_initialized());
 
@@ -152,20 +153,19 @@ void SimulationController::reset_scene_to_default()
 
 void SimulationController::return_to_default_pose()
 {
+    assert(is_gpu_initialized());
+
     simulation_running_ = false;
     if (is_default_pose_) {
         return;
     }
 
-    assert(is_gpu_initialized());
-
     run_with_gl_context_([this](QOpenGLFunctions_4_5_Core& gl) {
-        if (!scene_.garments().empty() && !gpu_state_.restore_base_positions(gl)) {
-            return;
-        }
+        gpu_state_.restore_garment_base_positions(gl);
 
         reset_garment_placements();
         set_character_mesh_state(default_character_mesh_, gl);
+        gpu_state_.clear_base_positions(gl);
         is_default_pose_ = true;
     });
 
@@ -261,7 +261,6 @@ void SimulationController::confirm_garment_placement()
         }
 
         reset_garment_placements();
-        gpu_state_.clear_base_positions(gl);
     });
 
     Q_EMIT viewport_update_requested();
@@ -284,7 +283,6 @@ void SimulationController::cancel_garment_placement()
             gpu_state_.update_garment_meshes(scene_, gl);
         }
 
-        gpu_state_.clear_base_positions(gl);
     });
 
     Q_EMIT viewport_update_requested();

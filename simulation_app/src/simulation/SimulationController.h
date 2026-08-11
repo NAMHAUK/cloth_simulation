@@ -45,7 +45,7 @@ public:
     void draw(const glm::mat4& mvp, float character_opacity, QOpenGLFunctions_4_5_Core& gl);
 
     void set_character_mesh(CharacterMesh mesh);
-    void reset_scene_to_default();
+    void reset_scene();
     void return_to_default_pose();
 
     void set_garment_mesh(GarmentLayer layer, GarmentMesh mesh);
