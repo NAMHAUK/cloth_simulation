@@ -24,7 +24,9 @@ public:
     SceneGpuState& operator=(const SceneGpuState&) = delete;
 
     bool is_initialized() const;
-    void initialize(const std::filesystem::path& shader_dir, QOpenGLFunctions_4_5_Core& gl);
+    void initialize(const std::filesystem::path& shader_dir,
+                    float attachment_surface_offset,
+                    QOpenGLFunctions_4_5_Core& gl);
     void release(QOpenGLFunctions_4_5_Core& gl);
     void update_character_pose(const SceneState& scene,
                                float frame_alpha,
@@ -45,9 +47,8 @@ public:
                                QOpenGLFunctions_4_5_Core& gl,
                                std::optional<GarmentLayer> updated_layer = std::nullopt);
     void update_garment_placement(const GarmentObject& garment, QOpenGLFunctions_4_5_Core& gl);
-    bool build_garment_attachment_targets(SceneState& scene,
+    void build_garment_attachment_targets(SceneState& scene,
                                           GarmentLayer layer,
-                                          float surface_offset,
                                           QOpenGLFunctions_4_5_Core& gl);
     bool save_base_positions(QOpenGLFunctions_4_5_Core& gl);
     bool restore_base_positions(QOpenGLFunctions_4_5_Core& gl);

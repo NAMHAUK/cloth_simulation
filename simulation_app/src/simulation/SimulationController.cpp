@@ -59,7 +59,7 @@ void SimulationController::initialize_gpu(const std::filesystem::path& shader_di
         throw std::runtime_error("Simulation GPU state is already initialized.");
     }
 
-    gpu_state_.initialize(shader_dir, gl);
+    gpu_state_.initialize(shader_dir, params_.constraints.attachment_surface_offset, gl);
     simulation_pipeline_.initialize(shader_dir, gl);
     render_pipeline_.initialize(shader_dir, gl);
 }
@@ -257,12 +257,7 @@ void SimulationController::confirm_garment_placement()
         simulation_pipeline_.prefit_garments(gpu_state_, placement_layers, gl);
 
         for (GarmentLayer layer : placement_layers) {
-            if (!gpu_state_.build_garment_attachment_targets(scene_,
-                                                             layer,
-                                                             params_.constraints.attachment_surface_offset,
-                                                             gl)) {
-                throw std::runtime_error("Failed to build garment attachment targets.");
-            }
+            gpu_state_.build_garment_attachment_targets(scene_, layer, gl);
         }
 
         reset_garment_placements();
