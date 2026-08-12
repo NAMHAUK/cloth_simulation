@@ -31,9 +31,9 @@ class SceneState final
 {
 public:
     // Character
-    void set_character_mesh(CharacterMesh mesh);
+    void set_character_motion(CharacterMotion motion);
     void set_body_bvhs(TriangleBvhData triangle_bvh, VertexBvhData vertex_bvh, EdgeBvhData edge_bvh);
-    const CharacterMesh& character_mesh() const;
+    const CharacterMotion& character_motion() const;
     const TriangleBvhData& default_body_triangle_bvh_data() const;
     const VertexBvhData& default_body_vertex_bvh_data() const;
     const EdgeBvhData& default_body_edge_bvh_data() const;
@@ -59,7 +59,7 @@ public:
 
 private:
     // Character
-    CharacterMesh character_mesh_;
+    CharacterMotion character_motion_;
     TriangleBvhData default_body_triangle_bvh_data_;
     VertexBvhData default_body_vertex_bvh_data_;
     EdgeBvhData default_body_edge_bvh_data_;

@@ -308,8 +308,8 @@ void AssetBrowserPanel::setup_asset_loader()
 {
     asset_loader_ = new AssetLoader(this);
 
-    asset_loader_->set_motion_loaded_callback([this](CharacterMesh mesh) {
-        motion_loaded_callback_(std::move(mesh));
+    asset_loader_->set_motion_loaded_callback([this](CharacterMotion motion) {
+        motion_loaded_callback_(std::move(motion));
         Q_EMIT motion_loading_changed(false);
     });
 

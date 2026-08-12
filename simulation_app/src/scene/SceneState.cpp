@@ -36,9 +36,9 @@ glm::quat frame_orientation(const std::vector<float>& orientations, std::uint32_
 
 // Character //
 
-void SceneState::set_character_mesh(CharacterMesh mesh)
+void SceneState::set_character_motion(CharacterMotion motion)
 {
-    character_mesh_ = std::move(mesh);
+    character_motion_ = std::move(motion);
     current_character_frame_ = 0;
 
     const auto pelvis = interpolated_reference_frame(0.0f, GarmentCategory::Bottom);
@@ -54,9 +54,9 @@ void SceneState::set_body_bvhs(TriangleBvhData triangle_bvh, VertexBvhData verte
     default_body_edge_bvh_data_ = std::move(edge_bvh);
 }
 
-const CharacterMesh& SceneState::character_mesh() const
+const CharacterMotion& SceneState::character_motion() const
 {
-    return character_mesh_;
+    return character_motion_;
 }
 
 const TriangleBvhData& SceneState::default_body_triangle_bvh_data() const
@@ -192,11 +192,11 @@ bool SceneState::has_multiple_garments() const
 // Playback //
 void SceneState::update_character_frame(std::uint64_t frame_index)
 {
-    if (character_mesh_.frame_count == 0) {
+    if (character_motion_.frame_count == 0) {
         return;
     }
 
-    const std::uint32_t last_frame_index = character_mesh_.frame_count - 1u;
+    const std::uint32_t last_frame_index = character_motion_.frame_count - 1u;
 
     current_character_frame_ =
         static_cast<std::uint32_t>(std::min<std::uint64_t>(frame_index, last_frame_index));
@@ -217,12 +217,12 @@ const Kinematics& SceneState::reference_frame_kinematics(GarmentCategory garment
 
 float SceneState::character_frame_alpha(float character_frame_time) const
 {
-    if (character_mesh_.frame_count == 0) {
+    if (character_motion_.frame_count == 0) {
         return 0.0f;
     }
 
     // motion이 종료된 경우 값 고정
-    const std::uint32_t last_frame_index = character_mesh_.frame_count - 1u;
+    const std::uint32_t last_frame_index = character_motion_.frame_count - 1u;
     if (current_character_frame_ >= last_frame_index) {
         return 0.0f;
     }
@@ -234,7 +234,7 @@ CharacterReferenceFrame SceneState::interpolated_reference_frame(float character
                                                                  GarmentCategory garment_category) const
 {
     const std::uint32_t last_frame_index =
-        character_mesh_.frame_count > 0 ? character_mesh_.frame_count - 1u : 0u;
+        character_motion_.frame_count > 0 ? character_motion_.frame_count - 1u : 0u;
     const std::uint32_t next_frame_index = std::min(current_character_frame_ + 1u, last_frame_index);
     const auto current = reference_frame(current_character_frame_, garment_category);
     const auto next = reference_frame(next_frame_index, garment_category);
@@ -248,9 +248,9 @@ CharacterReferenceFrame SceneState::reference_frame(std::uint32_t character_fram
 {
     const bool uses_torso = garment_category == GarmentCategory::Top;
     const std::vector<float>& positions =
-        uses_torso ? character_mesh_.torso_positions : character_mesh_.pelvis_positions;
+        uses_torso ? character_motion_.torso_positions : character_motion_.pelvis_positions;
     const std::vector<float>& orientations =
-        uses_torso ? character_mesh_.torso_orientations : character_mesh_.pelvis_orientations;
+        uses_torso ? character_motion_.torso_orientations : character_motion_.pelvis_orientations;
 
     return {frame_position(positions, character_frame_index),
             frame_orientation(orientations, character_frame_index)};
@@ -263,15 +263,15 @@ std::uint32_t SceneState::current_character_frame() const
 
 glm::vec3 SceneState::character_root_position(std::uint32_t frame_index) const
 {
-    if (frame_index >= character_mesh_.frame_count ||
-        character_mesh_.pelvis_positions.size() < (static_cast<std::size_t>(frame_index) + 1u) * 3u) {
+    if (frame_index >= character_motion_.frame_count ||
+        character_motion_.pelvis_positions.size() < (static_cast<std::size_t>(frame_index) + 1u) * 3u) {
         return glm::vec3{0.0f};
     }
 
     const std::size_t root_base = static_cast<std::size_t>(frame_index) * 3u;
     return {
-        character_mesh_.pelvis_positions[root_base],
-        character_mesh_.pelvis_positions[root_base + 1u],
-        character_mesh_.pelvis_positions[root_base + 2u],
+        character_motion_.pelvis_positions[root_base],
+        character_motion_.pelvis_positions[root_base + 1u],
+        character_motion_.pelvis_positions[root_base + 2u],
     };
 }

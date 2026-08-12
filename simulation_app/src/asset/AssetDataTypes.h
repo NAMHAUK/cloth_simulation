@@ -37,7 +37,7 @@ struct ColorizedMeshEdges final
     std::vector<MeshElementRange> ranges;
 };
 
-struct CharacterMesh
+struct CharacterMotion
 {
     float fps = 0.0f;
     std::uint32_t frame_count = 0;

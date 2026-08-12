@@ -36,7 +36,7 @@ public:
 
     void set_run_with_gl_context(std::function<void(GlContextTask)> run_with_gl_context);
     void initialize(const std::filesystem::path& shader_dir,
-                    CharacterMesh character_mesh,
+                    CharacterMotion character_motion,
                     const std::vector<std::uint8_t>& triangle_part_labels,
                     QOpenGLFunctions_4_5_Core& gl);
 
@@ -44,7 +44,7 @@ public:
     void stop_simulation();
     void draw(const glm::mat4& mvp, float character_opacity, QOpenGLFunctions_4_5_Core& gl);
 
-    void set_character_mesh(CharacterMesh mesh);
+    void set_character_motion(CharacterMotion motion);
     void reset_scene();
     void return_to_default_pose();
 
@@ -67,12 +67,12 @@ Q_SIGNALS:
 
 private:
     void initialize_gpu(const std::filesystem::path& shader_dir, QOpenGLFunctions_4_5_Core& gl);
-    void load_default_character(CharacterMesh mesh,
+    void load_default_character(CharacterMotion motion,
                                 const std::vector<std::uint8_t>& triangle_part_labels,
                                 QOpenGLFunctions_4_5_Core& gl);
 
     void tick_frame();
-    void set_character_mesh_state(CharacterMesh mesh, QOpenGLFunctions_4_5_Core& gl);
+    void set_character_motion_state(CharacterMotion motion, QOpenGLFunctions_4_5_Core& gl);
 
     struct GarmentPlacementState final
     {
@@ -87,7 +87,7 @@ private:
 
     SimulationParams params_;
     SceneState scene_;
-    CharacterMesh default_character_mesh_;
+    CharacterMotion default_character_motion_;
     SceneGpuState gpu_state_;
     SimulationPipeline simulation_pipeline_;
     RenderPipeline render_pipeline_;

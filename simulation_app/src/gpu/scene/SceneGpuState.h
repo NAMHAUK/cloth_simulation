@@ -36,9 +36,9 @@ public:
     SimulationGpuView simulation_view() const;
 
     const CharacterGpuResources& character_gpu_state() const;
-    void set_character_mesh(const SceneState& scene,
-                            float body_collision_thickness,
-                            QOpenGLFunctions_4_5_Core& gl);
+    void set_character_motion(const SceneState& scene,
+                              float body_collision_thickness,
+                              QOpenGLFunctions_4_5_Core& gl);
 
     const ClothGpuResources& cloth_gpu_state() const;
     ClothBvhBufferView cloth_bvh_buffer_view() const;

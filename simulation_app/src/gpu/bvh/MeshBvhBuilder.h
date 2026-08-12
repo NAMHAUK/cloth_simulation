@@ -10,7 +10,7 @@
 class MeshBvhBuilder final
 {
 public:
-    MeshBvhBuilder(const CharacterMesh& mesh, const std::vector<std::uint8_t>& triangle_part_labels);
+    MeshBvhBuilder(const CharacterMotion& motion, const std::vector<std::uint8_t>& triangle_part_labels);
     explicit MeshBvhBuilder(const GarmentMesh& mesh);
 
     TriangleBvhData build_triangle_bvh() const;

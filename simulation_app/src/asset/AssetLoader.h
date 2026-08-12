@@ -11,7 +11,7 @@
 class AssetLoader final : public QObject
 {
 public:
-    using MotionLoadedCallback = std::function<void(CharacterMesh)>;
+    using MotionLoadedCallback = std::function<void(CharacterMotion)>;
     using MotionLoadFailedCallback = std::function<void(const std::filesystem::path&)>;
 
     explicit AssetLoader(QObject* parent = nullptr);
@@ -30,7 +30,7 @@ private:
     {
         std::filesystem::path source_path;
         bool is_loaded = false;
-        CharacterMesh mesh;
+        CharacterMotion motion;
     };
 
     void call_motion_load_callbacks();

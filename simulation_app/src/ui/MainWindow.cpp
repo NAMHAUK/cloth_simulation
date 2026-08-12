@@ -100,16 +100,16 @@ void MainWindow::setup_placement_controller()
 
 void MainWindow::initialize_scene(QOpenGLFunctions_4_5_Core& gl)
 {
-    CharacterMesh character_mesh;
+    CharacterMotion character_motion;
     std::vector<std::uint8_t> triangle_part_labels;
     if (!asset_io::read_default_character(project_paths_.default_character_path,
-                                          character_mesh,
+                                          character_motion,
                                           triangle_part_labels)) {
         throw std::runtime_error("Failed to load the default character asset.");
     }
 
     simulation_controller_->initialize(project_paths_.shader_dir,
-                                       std::move(character_mesh),
+                                       std::move(character_motion),
                                        triangle_part_labels,
                                        gl);
 }
@@ -143,8 +143,8 @@ void MainWindow::setup_asset_browser_callbacks()
             update_simulation_button_state();
         }
     });
-    asset_browser_panel.set_motion_loaded_callback([this](CharacterMesh mesh) {
-        simulation_controller_->set_character_mesh(std::move(mesh));
+    asset_browser_panel.set_motion_loaded_callback([this](CharacterMotion motion) {
+        simulation_controller_->set_character_motion(std::move(motion));
         simulation_controller_->start_simulation();
     });
     asset_browser_panel.set_garment_loaded_callback(

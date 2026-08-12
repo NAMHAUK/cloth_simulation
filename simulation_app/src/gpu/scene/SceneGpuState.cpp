@@ -83,17 +83,17 @@ const CharacterGpuResources& SceneGpuState::character_gpu_state() const
     return character_gpu_state_;
 }
 
-void SceneGpuState::set_character_mesh(const SceneState& scene,
-                                       float body_collision_thickness,
-                                       QOpenGLFunctions_4_5_Core& gl)
+void SceneGpuState::set_character_motion(const SceneState& scene,
+                                         float body_collision_thickness,
+                                         QOpenGLFunctions_4_5_Core& gl)
 {
     // 새 character mesh가 들어오면 전체 frame character mesh를 GPU에 올리고 frame 상태 설정
-    const CharacterMesh& character_mesh = scene.character_mesh();
-    character_gpu_state_.upload_mesh(character_mesh,
-                                     scene.default_body_triangle_bvh_data(),
-                                     scene.default_body_vertex_bvh_data(),
-                                     scene.default_body_edge_bvh_data(),
-                                     gl);
+    const CharacterMotion& character_motion = scene.character_motion();
+    character_gpu_state_.upload_motion(character_motion,
+                                       scene.default_body_triangle_bvh_data(),
+                                       scene.default_body_vertex_bvh_data(),
+                                       scene.default_body_edge_bvh_data(),
+                                       gl);
     character_gpu_state_.set_current_frame(0);
     character_gpu_state_updater_.initialize_character_pose_state(
         0.0f,
