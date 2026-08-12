@@ -32,7 +32,7 @@ glm::quat frame_orientation(const std::vector<float>& orientations, std::uint32_
 void SceneState::set_character_motion(CharacterMotion motion)
 {
     character_motion_ = std::move(motion);
-    current_character_frame_ = 0;
+    motion_frame_index_ = 0;
 
     const auto pelvis = reference_frame(0u, GarmentCategory::Bottom);
     const auto torso = reference_frame(0u, GarmentCategory::Top);
@@ -162,18 +162,18 @@ const std::vector<GarmentObject>& SceneState::garments() const
 }
 
 // Playback //
-void SceneState::update_character_frame(std::uint64_t frame_index)
+void SceneState::set_motion_frame_index(std::uint64_t motion_frame_index)
 {
     const std::uint32_t last_frame_index = character_motion_.frame_count - 1u;
 
-    current_character_frame_ =
-        static_cast<std::uint32_t>(std::min<std::uint64_t>(frame_index, last_frame_index));
+    motion_frame_index_ =
+        static_cast<std::uint32_t>(std::min<std::uint64_t>(motion_frame_index, last_frame_index));
 }
 
-void SceneState::update_reference_frame_kinematics(float character_frame_alpha, float dt)
+void SceneState::update_reference_frame_kinematics(float motion_frame_alpha, float dt)
 {
-    const auto pelvis = interpolated_reference_frame(character_frame_alpha, GarmentCategory::Bottom);
-    const auto torso = interpolated_reference_frame(character_frame_alpha, GarmentCategory::Top);
+    const auto pelvis = interpolated_reference_frame(motion_frame_alpha, GarmentCategory::Bottom);
+    const auto torso = interpolated_reference_frame(motion_frame_alpha, GarmentCategory::Top);
     pelvis_kinematics_.update(pelvis, dt);
     torso_kinematics_.update(torso, dt);
 }
@@ -192,49 +192,49 @@ const Kinematics& SceneState::reference_frame_kinematics(GarmentCategory categor
     throw std::runtime_error("Unsupported garment category.");
 }
 
-float SceneState::character_frame_alpha(float character_frame_time) const
+float SceneState::motion_frame_alpha(float motion_frame_position) const
 {
-    return std::clamp(character_frame_time - static_cast<float>(current_character_frame_), 0.0f, 1.0f);
+    return std::clamp(motion_frame_position - static_cast<float>(motion_frame_index_), 0.0f, 1.0f);
 }
 
-CharacterReferenceFrame SceneState::interpolated_reference_frame(float character_frame_alpha,
+CharacterReferenceFrame SceneState::interpolated_reference_frame(float motion_frame_alpha,
                                                                  GarmentCategory category) const
 {
-    const auto next_frame_index = std::min(current_character_frame_ + 1u, character_motion_.frame_count - 1u);
-    const auto current = reference_frame(current_character_frame_, category);
+    const auto next_frame_index = std::min(motion_frame_index_ + 1u, character_motion_.frame_count - 1u);
+    const auto current = reference_frame(motion_frame_index_, category);
     const auto next = reference_frame(next_frame_index, category);
 
-    return {glm::mix(current.position, next.position, character_frame_alpha),
-            glm::normalize(glm::slerp(current.orientation, next.orientation, character_frame_alpha))};
+    return {glm::mix(current.position, next.position, motion_frame_alpha),
+            glm::normalize(glm::slerp(current.orientation, next.orientation, motion_frame_alpha))};
 }
 
-CharacterReferenceFrame SceneState::reference_frame(std::uint32_t character_frame_index,
+CharacterReferenceFrame SceneState::reference_frame(std::uint32_t motion_frame_index,
                                                     GarmentCategory category) const
 {
     switch (category) {
     case GarmentCategory::Top:
-        return {frame_position(character_motion_.torso_positions, character_frame_index),
-                frame_orientation(character_motion_.torso_orientations, character_frame_index)};
+        return {frame_position(character_motion_.torso_positions, motion_frame_index),
+                frame_orientation(character_motion_.torso_orientations, motion_frame_index)};
 
     case GarmentCategory::Bottom:
     case GarmentCategory::FullBody:
-        return {frame_position(character_motion_.pelvis_positions, character_frame_index),
-                frame_orientation(character_motion_.pelvis_orientations, character_frame_index)};
+        return {frame_position(character_motion_.pelvis_positions, motion_frame_index),
+                frame_orientation(character_motion_.pelvis_orientations, motion_frame_index)};
     }
 
     throw std::runtime_error("Unsupported garment category.");
 }
 
-std::uint32_t SceneState::current_character_frame() const
+std::uint32_t SceneState::motion_frame_index() const
 {
-    return current_character_frame_;
+    return motion_frame_index_;
 }
 
-glm::vec3 SceneState::character_root_position(std::uint32_t frame_index) const
+glm::vec3 SceneState::character_root_position(std::uint32_t motion_frame_index) const
 {
-    if (frame_index >= character_motion_.frame_count) {
+    if (motion_frame_index >= character_motion_.frame_count) {
         return glm::vec3{0.0f};
     }
 
-    return frame_position(character_motion_.pelvis_positions, frame_index);
+    return frame_position(character_motion_.pelvis_positions, motion_frame_index);
 }

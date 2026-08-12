@@ -115,10 +115,10 @@ void SimulationController::tick_frame()
                 simulation_pipeline_.step(scene_, gpu_state_, motion_step_index_, gl);
             }
             ++motion_step_index_;
-            scene_.update_character_frame(motion_step_index_ / params_.step.motion_stride());
+            scene_.set_motion_frame_index(motion_step_index_ / params_.step.motion_stride());
         });
 
-        Q_EMIT camera_target_changed(scene_.character_root_position(scene_.current_character_frame()));
+        Q_EMIT camera_target_changed(scene_.character_root_position(scene_.motion_frame_index()));
     }
 
     Q_EMIT viewport_update_requested();

@@ -92,10 +92,11 @@ void SimulationPipeline::step(SceneState& scene,
 
     const glm::vec3 external_acceleration = force_field_.external_acceleration();
     for (std::uint32_t substep = 0; substep < params_.step.substep_count; ++substep) {
-        const float frame_time = params_.step.character_frame_time(motion_step_index, substep + 1u);
-        const float character_frame_alpha = scene.character_frame_alpha(frame_time);
-        scene.update_reference_frame_kinematics(character_frame_alpha, substep_dt_);
-        gpu_state.update_character_pose(scene, character_frame_alpha, params_.collisions.body.thickness, gl);
+        const float motion_frame_position =
+            params_.step.motion_frame_position(motion_step_index, substep + 1u);
+        const float frame_alpha = scene.motion_frame_alpha(motion_frame_position);
+        scene.update_reference_frame_kinematics(frame_alpha, substep_dt_);
+        gpu_state.update_character_pose(scene, frame_alpha, params_.collisions.body.thickness, gl);
 
         solve_external_forces(scene, views, external_acceleration, gl);
 
@@ -120,9 +121,9 @@ void SimulationPipeline::step_character_only(const SceneState& scene,
                                              std::uint64_t motion_step_index,
                                              QOpenGLFunctions_4_5_Core& gl) const
 {
-    const float frame_time = params_.step.character_frame_time(motion_step_index + 1u, 0);
-    const float character_frame_alpha = scene.character_frame_alpha(frame_time);
-    gpu_state.update_character_pose(scene, character_frame_alpha, params_.collisions.body.thickness, gl);
+    const float motion_frame_position = params_.step.motion_frame_position(motion_step_index + 1u, 0);
+    const float frame_alpha = scene.motion_frame_alpha(motion_frame_position);
+    gpu_state.update_character_pose(scene, frame_alpha, params_.collisions.body.thickness, gl);
 }
 
 void SimulationPipeline::solve_external_forces(const SceneState& scene,

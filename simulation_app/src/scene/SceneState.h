@@ -39,12 +39,12 @@ public:
     void clear_garments();
     const std::vector<GarmentObject>& garments() const;
     // Playback
-    void update_character_frame(std::uint64_t frame_index);
-    void update_reference_frame_kinematics(float character_frame_alpha, float dt);
+    void set_motion_frame_index(std::uint64_t motion_frame_index);
+    void update_reference_frame_kinematics(float motion_frame_alpha, float dt);
     const Kinematics& reference_frame_kinematics(GarmentCategory category) const;
-    float character_frame_alpha(float character_frame_time) const;
-    std::uint32_t current_character_frame() const;
-    glm::vec3 character_root_position(std::uint32_t frame_index) const;
+    float motion_frame_alpha(float motion_frame_position) const;
+    std::uint32_t motion_frame_index() const;
+    glm::vec3 character_root_position(std::uint32_t motion_frame_index) const;
 
 private:
     // Character
@@ -57,9 +57,9 @@ private:
     std::vector<GarmentObject> garments_;
 
     // Playback
-    CharacterReferenceFrame interpolated_reference_frame(float character_frame_alpha, GarmentCategory category) const;
-    CharacterReferenceFrame reference_frame(std::uint32_t character_frame_index, GarmentCategory category) const;
-    std::uint32_t current_character_frame_ = 0;
+    CharacterReferenceFrame interpolated_reference_frame(float motion_frame_alpha, GarmentCategory category) const;
+    CharacterReferenceFrame reference_frame(std::uint32_t motion_frame_index, GarmentCategory category) const;
+    std::uint32_t motion_frame_index_ = 0;
     Kinematics pelvis_kinematics_;
     Kinematics torso_kinematics_;
 };
