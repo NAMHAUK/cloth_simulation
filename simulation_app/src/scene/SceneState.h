@@ -31,9 +31,9 @@ class SceneState final
 {
 public:
     // Character
-    void set_character_mesh(CharacterMesh mesh);
+    void set_character_motion(CharacterMotion motion);
     void set_body_bvhs(TriangleBvhData triangle_bvh, VertexBvhData vertex_bvh, EdgeBvhData edge_bvh);
-    const CharacterMesh& character_mesh() const;
+    const CharacterMotion& character_motion() const;
     const TriangleBvhData& default_body_triangle_bvh_data() const;
     const VertexBvhData& default_body_vertex_bvh_data() const;
     const EdgeBvhData& default_body_edge_bvh_data() const;
@@ -51,17 +51,15 @@ public:
 
     // Playback
     void update_character_frame(std::uint64_t frame_index);
-    void update_reference_kinematics(float frame_alpha, float dt);
-    const Kinematics& reference_kinematics(GarmentCategory garment_category) const;
+    void update_reference_frame_kinematics(float character_frame_alpha, float dt);
+    const Kinematics& reference_frame_kinematics(GarmentCategory garment_category) const;
     float character_frame_alpha(float character_frame_time) const;
-    CharacterReferenceFrame interpolated_character_reference_frame(float frame_alpha,
-                                                                   GarmentCategory garment_category) const;
     std::uint32_t current_character_frame() const;
     glm::vec3 character_root_position(std::uint32_t frame_index) const;
 
 private:
     // Character
-    CharacterMesh character_mesh_;
+    CharacterMotion character_motion_;
     TriangleBvhData default_body_triangle_bvh_data_;
     VertexBvhData default_body_vertex_bvh_data_;
     EdgeBvhData default_body_edge_bvh_data_;
@@ -70,6 +68,10 @@ private:
     std::vector<GarmentObject> garments_;
 
     // Playback
+    CharacterReferenceFrame interpolated_reference_frame(float character_frame_alpha,
+                                                         GarmentCategory garment_category) const;
+    CharacterReferenceFrame reference_frame(std::uint32_t character_frame_index,
+                                            GarmentCategory garment_category) const;
     std::uint32_t current_character_frame_ = 0;
     Kinematics pelvis_kinematics_;
     Kinematics torso_kinematics_;

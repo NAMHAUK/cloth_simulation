@@ -47,12 +47,12 @@ SimulationController::~SimulationController()
 
 // Initialization
 void SimulationController::initialize(const std::filesystem::path& shader_dir,
-                                      CharacterMesh character_mesh,
+                                      CharacterMotion character_motion,
                                       const std::vector<std::uint8_t>& triangle_part_labels,
                                       QOpenGLFunctions_4_5_Core& gl)
 {
     initialize_gpu(shader_dir, gl);
-    load_default_character(std::move(character_mesh), triangle_part_labels, gl);
+    load_default_character(std::move(character_motion), triangle_part_labels, gl);
     frame_timer_.start(params_.step.tick_ms());
 }
 
@@ -68,17 +68,17 @@ void SimulationController::initialize_gpu(const std::filesystem::path& shader_di
     render_pipeline_.initialize(shader_dir, gl);
 }
 
-void SimulationController::load_default_character(CharacterMesh mesh,
+void SimulationController::load_default_character(CharacterMotion motion,
                                                   const std::vector<std::uint8_t>& triangle_part_labels,
                                                   QOpenGLFunctions_4_5_Core& gl)
 {
-    MeshBvhBuilder bvh_builder(mesh, triangle_part_labels);
+    MeshBvhBuilder bvh_builder(motion, triangle_part_labels);
     scene_.set_body_bvhs(bvh_builder.build_triangle_bvh(),
                          bvh_builder.build_vertex_bvh(),
                          bvh_builder.build_edge_bvh());
 
-    default_character_mesh_ = std::move(mesh);
-    set_character_mesh_state(default_character_mesh_, gl);
+    default_character_motion_ = std::move(motion);
+    set_character_motion_state(default_character_motion_, gl);
     is_default_pose_ = true;
 }
 
@@ -117,7 +117,7 @@ void SimulationController::tick_frame()
             ++motion_step_index_;
             scene_.update_character_frame(motion_step_index_ / params_.step.motion_stride());
         });
-        
+
         Q_EMIT camera_target_changed(scene_.character_root_position(scene_.current_character_frame()));
     }
 
@@ -125,17 +125,17 @@ void SimulationController::tick_frame()
 }
 
 // Character
-void SimulationController::set_character_mesh(CharacterMesh mesh)
+void SimulationController::set_character_motion(CharacterMotion motion)
 {
     assert(is_gpu_initialized());
 
-    run_with_gl_context_([this, &mesh](QOpenGLFunctions_4_5_Core& gl) {
+    run_with_gl_context_([this, &motion](QOpenGLFunctions_4_5_Core& gl) {
         if (is_default_pose_) {
             gpu_state_.capture_garment_base_positions(gl);
         } else {
             gpu_state_.restore_garment_base_positions(gl);
         }
-        set_character_mesh_state(std::move(mesh), gl);
+        set_character_motion_state(std::move(motion), gl);
         is_default_pose_ = false;
     });
 
@@ -153,7 +153,7 @@ void SimulationController::reset_scene()
         scene_.clear_garments();
         gpu_state_.update_garment_meshes(scene_, gl);
         gpu_state_.clear_base_positions(gl);
-        set_character_mesh_state(default_character_mesh_, gl);
+        set_character_motion_state(default_character_motion_, gl);
         is_default_pose_ = true;
     });
 
@@ -173,7 +173,7 @@ void SimulationController::return_to_default_pose()
         gpu_state_.restore_garment_base_positions(gl);
 
         reset_garment_placements();
-        set_character_mesh_state(default_character_mesh_, gl);
+        set_character_motion_state(default_character_motion_, gl);
         gpu_state_.clear_base_positions(gl);
         is_default_pose_ = true;
     });
@@ -181,10 +181,10 @@ void SimulationController::return_to_default_pose()
     Q_EMIT viewport_update_requested();
 }
 
-void SimulationController::set_character_mesh_state(CharacterMesh mesh, QOpenGLFunctions_4_5_Core& gl)
+void SimulationController::set_character_motion_state(CharacterMotion motion, QOpenGLFunctions_4_5_Core& gl)
 {
-    scene_.set_character_mesh(std::move(mesh));
-    gpu_state_.set_character_mesh(scene_, params_.collisions.body.thickness, gl);
+    scene_.set_character_motion(std::move(motion));
+    gpu_state_.set_character_motion(scene_, params_.collisions.body.thickness, gl);
     motion_step_index_ = 0;
     Q_EMIT camera_reset_requested(scene_.character_root_position(0));
 }
@@ -236,7 +236,8 @@ void SimulationController::confirm_garment_placement()
             }
 
             placement_layers.push_back(layer);
-            const auto& garment = scene_.apply_garment_placement(layer, placement->position_offset, placement->scale);
+            const auto& garment =
+                scene_.apply_garment_placement(layer, placement->position_offset, placement->scale);
             gpu_state_.update_garment_placement(garment, gl);
         }
 

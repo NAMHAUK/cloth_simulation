@@ -38,7 +38,7 @@ uniform mat3 uFrameRotationDelta;
 uniform vec3 uFrameStartVelocity;
 uniform vec3 uFrameAcceleration;
 uniform vec3 uFrameStartAngularVelocity;
-uniform vec3 uAngularAcceleration;
+uniform vec3 uFrameAngularAcceleration;
 uniform float uFrameInertiaScale;
 
 const float pushout_normal_epsilon = 1.0e-20;
@@ -85,7 +85,7 @@ void main()
     vec3 frame_velocity = uFrameStartVelocity + cross(uFrameStartAngularVelocity, frame_offset);
     vec3 relative_velocity = solved_velocity - frame_velocity;
     vec3 rotational_acceleration =
-        cross(uAngularAcceleration, frame_offset) +
+        cross(uFrameAngularAcceleration, frame_offset) +
         cross(uFrameStartAngularVelocity, cross(uFrameStartAngularVelocity, frame_offset)) +
         2.0 * cross(uFrameStartAngularVelocity, relative_velocity);
     vec3 relative_acceleration =

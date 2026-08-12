@@ -27,11 +27,11 @@ glm::vec3 clamp_vector_length(const glm::vec3& value, float maximum_length)
 }
 
 ExternalForceSolver::ExternalForceSolver(float velocity_damping,
-                                         float frame_inertia_scale,
+                                         float reference_frame_inertia_scale,
                                          float reference_frame_max_acceleration,
                                          float reference_frame_max_angular_acceleration)
     : velocity_damping_(velocity_damping),
-      frame_inertia_scale_(frame_inertia_scale),
+      reference_frame_inertia_scale_(reference_frame_inertia_scale),
       reference_frame_max_acceleration_(reference_frame_max_acceleration),
       reference_frame_max_angular_acceleration_(reference_frame_max_angular_acceleration)
 {}
@@ -64,7 +64,7 @@ void ExternalForceSolver::initialize(const std::filesystem::path& shader_dir,
     frame_start_velocity_location_ = gl.glGetUniformLocation(program_, "uFrameStartVelocity");
     frame_acceleration_location_ = gl.glGetUniformLocation(program_, "uFrameAcceleration");
     frame_start_angular_velocity_location_ = gl.glGetUniformLocation(program_, "uFrameStartAngularVelocity");
-    angular_acceleration_location_ = gl.glGetUniformLocation(program_, "uAngularAcceleration");
+    frame_angular_acceleration_location_ = gl.glGetUniformLocation(program_, "uFrameAngularAcceleration");
     frame_inertia_scale_location_ = gl.glGetUniformLocation(program_, "uFrameInertiaScale");
 
     if (vertex_offset_location_ < 0 ||
@@ -79,7 +79,7 @@ void ExternalForceSolver::initialize(const std::filesystem::path& shader_dir,
         frame_start_velocity_location_ < 0 ||
         frame_acceleration_location_ < 0 ||
         frame_start_angular_velocity_location_ < 0 ||
-        angular_acceleration_location_ < 0 ||
+        frame_angular_acceleration_location_ < 0 ||
         frame_inertia_scale_location_ < 0) {
         throw std::runtime_error("Cloth external force compute shader missing required uniforms.");
     }
@@ -92,7 +92,7 @@ void ExternalForceSolver::initialize(const std::filesystem::path& shader_dir,
 void ExternalForceSolver::solve(const SimulationGpuView& views,
                                 const ElementRange& vertex_range,
                                 const glm::vec3& external_acceleration,
-                                const Kinematics& kinematics,
+                                const Kinematics& reference_frame_kinematics,
                                 QOpenGLFunctions_4_5_Core& gl) const
 {
     const auto& motion_view = views.cloth_motion;
@@ -113,10 +113,12 @@ void ExternalForceSolver::solve(const SimulationGpuView& views,
         return;
     }
 
-    const glm::vec3 frame_acceleration =
-        clamp_vector_length(kinematics.acceleration, reference_frame_max_acceleration_);
-    const glm::vec3 frame_angular_acceleration =
-        clamp_vector_length(kinematics.angular_acceleration, reference_frame_max_angular_acceleration_);
+    const glm::vec3 frame_acceleration = clamp_vector_length(
+        reference_frame_kinematics.acceleration,
+        reference_frame_max_acceleration_);
+    const glm::vec3 frame_angular_acceleration = clamp_vector_length(
+        reference_frame_kinematics.angular_acceleration,
+        reference_frame_max_angular_acceleration_);
 
     // shader & GPU 연결
     gl.glUseProgram(program_);
@@ -150,24 +152,24 @@ void ExternalForceSolver::solve(const SimulationGpuView& views,
     gl.glProgramUniform1f(program_, velocity_damping_location_, velocity_damping_);
     gl.glProgramUniform3f(program_,
                           frame_start_position_location_,
-                          kinematics.start_position.x,
-                          kinematics.start_position.y,
-                          kinematics.start_position.z);
+                          reference_frame_kinematics.start_position.x,
+                          reference_frame_kinematics.start_position.y,
+                          reference_frame_kinematics.start_position.z);
     gl.glProgramUniform3f(program_,
                           frame_end_position_location_,
-                          kinematics.end_position.x,
-                          kinematics.end_position.y,
-                          kinematics.end_position.z);
+                          reference_frame_kinematics.end_position.x,
+                          reference_frame_kinematics.end_position.y,
+                          reference_frame_kinematics.end_position.z);
     gl.glProgramUniformMatrix3fv(program_,
                                  frame_rotation_delta_location_,
                                  1,
                                  GL_FALSE,
-                                 glm::value_ptr(kinematics.rotation_delta));
+                                 glm::value_ptr(reference_frame_kinematics.rotation_delta));
     gl.glProgramUniform3f(program_,
                           frame_start_velocity_location_,
-                          kinematics.start_velocity.x,
-                          kinematics.start_velocity.y,
-                          kinematics.start_velocity.z);
+                          reference_frame_kinematics.start_velocity.x,
+                          reference_frame_kinematics.start_velocity.y,
+                          reference_frame_kinematics.start_velocity.z);
     gl.glProgramUniform3f(program_,
                           frame_acceleration_location_,
                           frame_acceleration.x,
@@ -175,15 +177,15 @@ void ExternalForceSolver::solve(const SimulationGpuView& views,
                           frame_acceleration.z);
     gl.glProgramUniform3f(program_,
                           frame_start_angular_velocity_location_,
-                          kinematics.start_angular_velocity.x,
-                          kinematics.start_angular_velocity.y,
-                          kinematics.start_angular_velocity.z);
+                          reference_frame_kinematics.start_angular_velocity.x,
+                          reference_frame_kinematics.start_angular_velocity.y,
+                          reference_frame_kinematics.start_angular_velocity.z);
     gl.glProgramUniform3f(program_,
-                          angular_acceleration_location_,
+                          frame_angular_acceleration_location_,
                           frame_angular_acceleration.x,
                           frame_angular_acceleration.y,
                           frame_angular_acceleration.z);
-    gl.glProgramUniform1f(program_, frame_inertia_scale_location_, frame_inertia_scale_);
+    gl.glProgramUniform1f(program_, frame_inertia_scale_location_, reference_frame_inertia_scale_);
 
     // shader가 외부 가속도에 따른 위치 변화량 계산 (GPU에서 바로 업데이트)
     gl.glDispatchCompute(compute_group_count(vertex_range.count, external_force_local_size), 1, 1);
@@ -207,7 +209,7 @@ void ExternalForceSolver::release(QOpenGLFunctions_4_5_Core& gl)
     frame_start_velocity_location_ = -1;
     frame_acceleration_location_ = -1;
     frame_start_angular_velocity_location_ = -1;
-    angular_acceleration_location_ = -1;
+    frame_angular_acceleration_location_ = -1;
     frame_inertia_scale_location_ = -1;
     dt_ = 0.0f;
     inverse_dt_ = 0.0f;

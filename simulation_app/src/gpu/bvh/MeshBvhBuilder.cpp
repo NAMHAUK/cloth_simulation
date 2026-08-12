@@ -35,11 +35,11 @@ std::uint64_t edge_key(MeshEdge edge)
 }
 }
 
-MeshBvhBuilder::MeshBvhBuilder(const CharacterMesh& mesh,
+MeshBvhBuilder::MeshBvhBuilder(const CharacterMotion& motion,
                                const std::vector<std::uint8_t>& triangle_part_labels)
-    : vertex_count_(mesh.vertex_count),
-      source_triangle_indices_(mesh.triangle_vertex_indices),
-      vertices_(mesh.vertices),
+    : vertex_count_(motion.vertex_count),
+      source_triangle_indices_(motion.triangle_vertex_indices),
+      vertices_(motion.vertices),
       triangle_part_labels_(&triangle_part_labels)
 {}
 

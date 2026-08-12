@@ -9,10 +9,10 @@ constexpr std::size_t vertex_position_components = 3;
 constexpr std::size_t endpoint_position_components = 4;
 constexpr std::size_t character_triangle_geometry_components = 16;
 
-std::size_t frame_position_component_count(const CharacterMesh& character_mesh)
+std::size_t frame_position_component_count(const CharacterMotion& character_motion)
 {
-    return static_cast<std::size_t>(character_mesh.frame_count) *
-           static_cast<std::size_t>(character_mesh.vertex_count) *
+    return static_cast<std::size_t>(character_motion.frame_count) *
+           static_cast<std::size_t>(character_motion.vertex_count) *
            vertex_position_components;
 }
 
@@ -21,14 +21,14 @@ std::size_t vertex_position_component_count(std::uint32_t vertex_count)
     return static_cast<std::size_t>(vertex_count) * endpoint_position_components;
 }
 
-bool is_uploadable_mesh(const CharacterMesh& character_mesh)
+bool is_uploadable_motion(const CharacterMotion& character_motion)
 {
-    return character_mesh.frame_count > 0 &&
-           character_mesh.vertex_count > 0 &&
-           character_mesh.triangle_count > 0 &&
-           character_mesh.triangle_vertex_indices.size() ==
-               static_cast<std::size_t>(character_mesh.triangle_count) * 3u &&
-           character_mesh.vertices.size() >= frame_position_component_count(character_mesh);
+    return character_motion.frame_count > 0 &&
+           character_motion.vertex_count > 0 &&
+           character_motion.triangle_count > 0 &&
+           character_motion.triangle_vertex_indices.size() ==
+               static_cast<std::size_t>(character_motion.triangle_count) * 3u &&
+           character_motion.vertices.size() >= frame_position_component_count(character_motion);
 }
 }
 
@@ -76,17 +76,17 @@ void CharacterGpuResources::initialize_gpu_resources(QOpenGLFunctions_4_5_Core& 
     gl.glVertexArrayElementBuffer(vao_, buffers_.triangle_index);
 }
 
-void CharacterGpuResources::upload_mesh(const CharacterMesh& character_mesh,
-                                        const TriangleBvhData& default_body_triangle_bvh_data,
-                                        const VertexBvhData& default_body_vertex_bvh_data,
-                                        const EdgeBvhData& default_body_edge_bvh_data,
-                                        QOpenGLFunctions_4_5_Core& gl)
+void CharacterGpuResources::upload_motion(const CharacterMotion& character_motion,
+                                          const TriangleBvhData& default_body_triangle_bvh_data,
+                                          const VertexBvhData& default_body_vertex_bvh_data,
+                                          const EdgeBvhData& default_body_edge_bvh_data,
+                                          QOpenGLFunctions_4_5_Core& gl)
 {
-    if (!is_uploadable_mesh(character_mesh)) {
+    if (!is_uploadable_motion(character_motion)) {
         release(gl);
         return;
     }
-    if (!default_body_vertex_bvh_data.is_valid(character_mesh.vertex_count)) {
+    if (!default_body_vertex_bvh_data.is_valid(character_motion.vertex_count)) {
         std::cerr << "Invalid default body vertex BVH.\n";
         release(gl);
         return;
@@ -98,14 +98,14 @@ void CharacterGpuResources::upload_mesh(const CharacterMesh& character_mesh,
     }
 
     // 각 vertex에 인접한 triangle 정보 생성
-    if (!default_body_triangle_bvh_data.is_valid(character_mesh.triangle_count)) {
+    if (!default_body_triangle_bvh_data.is_valid(character_motion.triangle_count)) {
         std::cerr << "Invalid default body triangle BVH.\n";
         release(gl);
         return;
     }
 
     VertexFaceAdjacency adjacency;
-    if (!build_vertex_face_adjacency(character_mesh.vertex_count,
+    if (!build_vertex_face_adjacency(character_motion.vertex_count,
                                      default_body_triangle_bvh_data.triangle_indices,
                                      adjacency)) {
         release(gl);
@@ -116,9 +116,9 @@ void CharacterGpuResources::upload_mesh(const CharacterMesh& character_mesh,
 
     // GPU buffer 공간 생성 & 초기값 설정
     const GLsizeiptr position_bytes =
-        static_cast<GLsizeiptr>(frame_position_component_count(character_mesh) * sizeof(float));
-    const GLsizeiptr endpoint_position_bytes =
-        static_cast<GLsizeiptr>(vertex_position_component_count(character_mesh.vertex_count) * sizeof(float));
+        static_cast<GLsizeiptr>(frame_position_component_count(character_motion) * sizeof(float));
+    const GLsizeiptr endpoint_position_bytes = static_cast<GLsizeiptr>(
+        vertex_position_component_count(character_motion.vertex_count) * sizeof(float));
     const GLsizeiptr triangle_index_bytes = static_cast<GLsizeiptr>(
         default_body_triangle_bvh_data.triangle_indices.size() * sizeof(std::uint32_t));
     const GLsizeiptr bvh_node_bytes =
@@ -130,7 +130,7 @@ void CharacterGpuResources::upload_mesh(const CharacterMesh& character_mesh,
     const GLsizeiptr body_vertex_bvh_vertex_id_bytes =
         static_cast<GLsizeiptr>(default_body_vertex_bvh_data.vertex_ids.size() * sizeof(std::uint32_t));
     const GLsizeiptr body_vertex_bounds_bytes =
-        static_cast<GLsizeiptr>(static_cast<std::size_t>(character_mesh.vertex_count) * sizeof(Aabb));
+        static_cast<GLsizeiptr>(static_cast<std::size_t>(character_motion.vertex_count) * sizeof(Aabb));
     const GLsizeiptr body_edge_bvh_node_bytes =
         static_cast<GLsizeiptr>(default_body_edge_bvh_data.nodes.size() * sizeof(BvhNode));
     const GLsizeiptr body_edge_index_bytes = static_cast<GLsizeiptr>(
@@ -146,11 +146,11 @@ void CharacterGpuResources::upload_mesh(const CharacterMesh& character_mesh,
                                 character_triangle_geometry_components *
                                 sizeof(float));
     const GLsizeiptr vertex_normals_bytes =
-        static_cast<GLsizeiptr>(character_mesh.vertex_count * 4u * sizeof(float));
+        static_cast<GLsizeiptr>(character_motion.vertex_count * 4u * sizeof(float));
 
     gl.glNamedBufferData(buffers_.all_frame_position,
                          position_bytes,
-                         character_mesh.vertices.data(),
+                         character_motion.vertices.data(),
                          GL_STATIC_DRAW);
     gl.glNamedBufferData(buffers_.previous_position, endpoint_position_bytes, nullptr, GL_DYNAMIC_DRAW);
     gl.glNamedBufferData(buffers_.current_position, endpoint_position_bytes, nullptr, GL_DYNAMIC_DRAW);
@@ -193,8 +193,8 @@ void CharacterGpuResources::upload_mesh(const CharacterMesh& character_mesh,
     gl.glNamedBufferData(buffers_.vertex_normal, vertex_normals_bytes, nullptr, GL_DYNAMIC_DRAW);
 
     // 캐릭터 mesh GPU 초기값 설정
-    frame_count_ = character_mesh.frame_count;
-    vertex_count_ = character_mesh.vertex_count;
+    frame_count_ = character_motion.frame_count;
+    vertex_count_ = character_motion.vertex_count;
     triangle_count_ = adjacency.face_count;
     body_collision_triangle_count_ = default_body_triangle_bvh_data.collision_triangle_count;
     body_triangle_bvh_node_count_ = static_cast<std::uint32_t>(default_body_triangle_bvh_data.nodes.size());

@@ -19,11 +19,11 @@ public:
     bool is_initialized() const;
 
     // Mesh upload and playback
-    void upload_mesh(const CharacterMesh& character_mesh,
-                     const TriangleBvhData& default_body_triangle_bvh_data,
-                     const VertexBvhData& default_body_vertex_bvh_data,
-                     const EdgeBvhData& default_body_edge_bvh_data,
-                     QOpenGLFunctions_4_5_Core& gl);
+    void upload_motion(const CharacterMotion& character_motion,
+                       const TriangleBvhData& default_body_triangle_bvh_data,
+                       const VertexBvhData& default_body_vertex_bvh_data,
+                       const EdgeBvhData& default_body_edge_bvh_data,
+                       QOpenGLFunctions_4_5_Core& gl);
     void set_current_frame(std::uint32_t frame_index);
     std::uint32_t current_frame_index() const;
     std::uint32_t next_frame_index() const;

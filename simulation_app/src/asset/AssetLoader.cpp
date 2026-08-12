@@ -33,7 +33,7 @@ void AssetLoader::load_motion(std::filesystem::path motion_asset_path)
         QtConcurrent::run([motion_asset_path = std::move(motion_asset_path)]() mutable {
             MotionLoadResult result;
             result.source_path = std::move(motion_asset_path);
-            result.is_loaded = asset_io::read_character_mesh(result.source_path, result.mesh);
+            result.is_loaded = asset_io::read_character_motion(result.source_path, result.motion);
             return result;
         }));
 }
@@ -46,7 +46,7 @@ void AssetLoader::call_motion_load_callbacks()
             motion_load_failed_callback_(result.source_path);
         }
     } else if (motion_loaded_callback_) {
-        motion_loaded_callback_(std::move(result.mesh));
+        motion_loaded_callback_(std::move(result.motion));
     }
 }
 
