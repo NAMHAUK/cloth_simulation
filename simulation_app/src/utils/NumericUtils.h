@@ -3,7 +3,18 @@
 #include <cmath>
 #include <vector>
 
+#include <glm/gtc/quaternion.hpp>
 #include <glm/vec3.hpp>
+
+inline glm::quat quat_xyzw(float x, float y, float z, float w)
+{
+    glm::quat value{};
+    value.x = x;
+    value.y = y;
+    value.z = z;
+    value.w = w;
+    return value;
+}
 
 inline bool is_finite_vec3(const glm::vec3& value)
 {

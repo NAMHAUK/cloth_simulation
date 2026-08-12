@@ -1,4 +1,5 @@
 #include "scene/SceneState.h"
+#include "utils/NumericUtils.h"
 
 #include <glm/gtc/quaternion.hpp>
 #include <glm/vec3.hpp>
@@ -20,10 +21,10 @@ glm::vec3 frame_position(const std::vector<float>& positions, std::uint32_t fram
 glm::quat frame_orientation(const std::vector<float>& orientations, std::uint32_t frame_index)
 {
     const std::size_t base = static_cast<std::size_t>(frame_index) * quaternion_components;
-    return glm::normalize(glm::quat::wxyz(orientations[base + 3u],
-                                          orientations[base],
-                                          orientations[base + 1u],
-                                          orientations[base + 2u]));
+    return glm::normalize(quat_xyzw(orientations[base],
+                                    orientations[base + 1u],
+                                    orientations[base + 2u],
+                                    orientations[base + 3u]));
 }
 }
 
