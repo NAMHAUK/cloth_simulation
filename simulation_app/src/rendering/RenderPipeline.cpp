@@ -31,6 +31,7 @@ void RenderPipeline::initialize(const std::filesystem::path& shader_dir, QOpenGL
 
 void RenderPipeline::draw(const SceneState& scene,
                           const SceneGpuState& gpu_state,
+                          const std::array<glm::mat4, 2>& placement_matrices,
                           const glm::mat4& mvp,
                           float character_opacity,
                           QOpenGLFunctions_4_5_Core& gl)
@@ -83,12 +84,14 @@ void RenderPipeline::draw(const SceneState& scene,
         }
 
         viewer_shader_.set_solid_color(garment.mesh.color, gl);
+        viewer_shader_.set_mvp(mvp * placement_matrices[garment.layer], gl);
         cloth_gpu_state.draw_garment(garment.layer, gl);
     }
 
     // character
     const CharacterGpuResources& character_gpu_state = gpu_state.character_gpu_state();
     if (character_gpu_state.is_initialized()) {
+        viewer_shader_.set_mvp(mvp, gl);
         const bool character_transparent = character_opacity < 1.0f;
         if (character_transparent) {
             gl.glEnable(GL_BLEND);

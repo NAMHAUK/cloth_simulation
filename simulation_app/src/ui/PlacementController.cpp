@@ -53,7 +53,7 @@ void PlacementController::connect_placement_panel()
         if (color_edit_layer_ == GarmentLayer::Upper) {
             color_panel_.close_panel();
         }
-        simulation_controller_.remove_garment_placement(GarmentLayer::Upper);
+        simulation_controller_.discard_garment_placement(GarmentLayer::Upper);
         cards_panel_.clear_card(GarmentLayer::Upper);
 
         placement_panel_.hide_upper_section();
@@ -64,10 +64,10 @@ void PlacementController::connect_placement_panel()
     connect(&placement_panel_, &PlacementPanel::confirm_requested, this, [this]() {
         color_panel_.close_panel();
 
-        if (!simulation_controller_.confirm_garment_placement()) {
-            QMessageBox::warning(placement_panel_.window(),
-                                 "Placement Failed",
-                                 "Failed to initialize garment placement.");
+        try {
+            simulation_controller_.confirm_garment_placement();
+        } catch (const std::exception& error) {
+            handle_placement_failure(error);
             return;
         }
 
@@ -78,7 +78,7 @@ void PlacementController::connect_placement_panel()
 
     connect(&placement_panel_, &PlacementPanel::cancel_requested, this, [this]() {
         color_panel_.close_panel();
-        simulation_controller_.cancel_garment_placement();
+        simulation_controller_.cancel_placement_session();
         cards_panel_.clear_unconfirmed_cards();
         end_session();
     });
@@ -121,10 +121,10 @@ void PlacementController::load_garment(const std::filesystem::path& asset_path, 
 
     const GarmentLayer layer = target_layer();
 
-    if (!simulation_controller_.set_garment_mesh(layer, std::move(mesh))) {
-        QMessageBox::warning(placement_panel_.window(),
-                             "Load Failed",
-                             "Failed to apply garment:\n" + QString::fromStdWString(asset_path.wstring()));
+    try {
+        simulation_controller_.set_garment_mesh(layer, std::move(mesh));
+    } catch (const std::exception& error) {
+        handle_placement_failure(error);
         return;
     }
 
@@ -148,6 +148,17 @@ GarmentLayer PlacementController::target_layer() const
         return GarmentLayer::Lower;
     }
     return GarmentLayer::Upper;
+}
+
+void PlacementController::handle_placement_failure(const std::exception& error)
+{
+    simulation_controller_.reset_scene();
+    reset();
+    Q_EMIT active_changed();
+    QMessageBox::critical(placement_panel_.window(),
+                          "Placement Failed",
+                          QStringLiteral("Garment placement failed due to an internal error:\n") +
+                              QString::fromUtf8(error.what()));
 }
 
 void PlacementController::end_session()

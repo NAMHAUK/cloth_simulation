@@ -24,17 +24,14 @@ public:
     bool is_initialized() const;
 
     bool update_garment_buffers(const std::vector<GarmentObject>& garments,
-                                std::optional<GarmentLayer> reset_layer,
+                                std::optional<GarmentLayer> updated_layer,
                                 QOpenGLFunctions_4_5_Core& gl);
-    bool update_garment_placement(const GarmentObject& garment,
-                                  bool update_rest_lengths,
-                                  QOpenGLFunctions_4_5_Core& gl);
+    bool update_garment_placement(const GarmentObject& garment, QOpenGLFunctions_4_5_Core& gl);
     bool upload_garment_attachment_vertices(const GarmentObject& garment,
                                             ElementRange& target_range,
                                             QOpenGLFunctions_4_5_Core& gl);
     bool activate_attachment_targets(const ElementRange& target_range);
-    bool deactivate_attachment_targets(GarmentLayer layer);
-    bool save_base_positions(QOpenGLFunctions_4_5_Core& gl);
+    bool capture_base_positions(QOpenGLFunctions_4_5_Core& gl);
     bool restore_base_positions(QOpenGLFunctions_4_5_Core& gl) const;
     void clear_base_positions(QOpenGLFunctions_4_5_Core& gl);
     std::array<ElementRange, 2> garment_vertex_ranges() const;
@@ -54,7 +51,7 @@ public:
 
 private:
     bool rebuild_buffers(const std::vector<GarmentObject>& garments,
-                         std::optional<GarmentLayer> reset_layer,
+                         std::optional<GarmentLayer> updated_layer,
                          QOpenGLFunctions_4_5_Core& gl);
     void replace_with_rebuild_buffers(ClothBufferSet rebuild_buffer_set,
                                       std::array<GarmentBufferRanges, 2> rebuild_ranges,

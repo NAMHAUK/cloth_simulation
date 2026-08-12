@@ -11,6 +11,7 @@
 #include <cstdint>
 #include <filesystem>
 #include <functional>
+#include <optional>
 #include <vector>
 
 #include <glm/mat4x4.hpp>
@@ -33,34 +34,31 @@ public:
     SimulationController(const SimulationController&) = delete;
     SimulationController& operator=(const SimulationController&) = delete;
 
-    // Initialization //
     void set_run_with_gl_context(std::function<void(GlContextTask)> run_with_gl_context);
     void initialize(const std::filesystem::path& shader_dir,
                     CharacterMesh character_mesh,
                     const std::vector<std::uint8_t>& triangle_part_labels,
                     QOpenGLFunctions_4_5_Core& gl);
 
-    // Scene editing //
-    void set_character_mesh(CharacterMesh mesh);
-    bool set_garment_mesh(GarmentLayer layer, GarmentMesh mesh);
-    bool remove_garment_placement(GarmentLayer layer);
-    void set_garment_placement(GarmentLayer layer, const glm::vec3& position_offset, float scale);
-    void set_garment_color(GarmentLayer layer, const glm::vec3& color);
-    bool confirm_garment_placement();
-    void cancel_garment_placement();
-    void reset_scene_to_default();
-    void return_to_default_pose();
-
-    // GPU / rendering //
-    bool is_gpu_initialized() const;
     void start_simulation();
     void stop_simulation();
+    void draw(const glm::mat4& mvp, float character_opacity, QOpenGLFunctions_4_5_Core& gl);
+
+    void set_character_mesh(CharacterMesh mesh);
+    void reset_scene();
+    void return_to_default_pose();
+
+    void set_garment_mesh(GarmentLayer layer, GarmentMesh mesh);
+    void set_garment_placement(GarmentLayer layer, const glm::vec3& position_offset, float scale);
+    void set_garment_color(GarmentLayer layer, const glm::vec3& color);
+    void confirm_garment_placement();
+    void discard_garment_placement(GarmentLayer layer);
+    void cancel_placement_session();
+
+    bool is_gpu_initialized() const;
     bool is_simulation_running() const;
-    bool is_default_pose() const;
     std::size_t garment_count() const;
     bool can_start_garment_placement() const;
-    void draw(const glm::mat4& mvp, float character_opacity, QOpenGLFunctions_4_5_Core& gl);
-    void release_gpu();
 
 Q_SIGNALS:
     void viewport_update_requested();
@@ -68,66 +66,36 @@ Q_SIGNALS:
     void camera_target_changed(const glm::vec3& root_position);
 
 private:
-    // Initialization //
     void initialize_gpu(const std::filesystem::path& shader_dir, QOpenGLFunctions_4_5_Core& gl);
     void load_default_character(CharacterMesh mesh,
                                 const std::vector<std::uint8_t>& triangle_part_labels,
                                 QOpenGLFunctions_4_5_Core& gl);
 
+    void tick_frame();
+    void set_character_mesh_state(CharacterMesh mesh, QOpenGLFunctions_4_5_Core& gl);
+
     struct GarmentPlacementState final
     {
         glm::vec3 position_offset{0.0f};
         float scale = 1.0f;
-        bool is_active = false;
-        bool position_changed = false;
-        bool scale_changed = false;
-
-        void clear()
-        {
-            position_offset = glm::vec3{0.0f};
-            scale = 1.0f;
-            is_active = false;
-            clear_update();
-        }
-
-        bool has_update() const { return is_active && (position_changed || scale_changed); }
-
-        void clear_update()
-        {
-            position_changed = false;
-            scale_changed = false;
-        }
     };
 
-    void tick_frame();
-    void set_character_mesh_state(CharacterMesh mesh, QOpenGLFunctions_4_5_Core& gl);
-    bool has_garment_placement_update() const;
-    void set_current_garment_placement(QOpenGLFunctions_4_5_Core& gl);
-    bool build_garment_triangle_bvh(GarmentLayer layer);
-    void restore_garment_placements(const std::vector<GarmentLayer>& layers, QOpenGLFunctions_4_5_Core& gl);
-    void clear_garment_placements();
+    std::array<glm::mat4, 2> make_placement_matrices() const;
+    void reset_garment_placements();
+    void release_gpu();
+    void release_gpu(QOpenGLFunctions_4_5_Core& gl);
 
-    // Simulation configuration //
     SimulationParams params_;
-
-    // CPU-side scene state //
     SceneState scene_;
     CharacterMesh default_character_mesh_;
-
-    // GPU-side dynamic simulation state //
     SceneGpuState gpu_state_;
-
-    // Simulation pass orchestration //
     SimulationPipeline simulation_pipeline_;
-
-    // Rendering orchestration //
     RenderPipeline render_pipeline_;
 
     std::uint64_t motion_step_index_ = 0;
-    std::array<GarmentPlacementState, 2> garment_placements_{};
+    std::array<std::optional<GarmentPlacementState>, 2> garment_placement_states_{};
     bool simulation_running_ = false;
     bool is_default_pose_ = false;
-    bool has_base_positions_ = false;
     QTimer frame_timer_;
 
     std::function<void(GlContextTask)> run_with_gl_context_;

@@ -7,19 +7,11 @@
 #include <cstdint>
 #include <vector>
 
-inline constexpr std::uint32_t body_bvh_excluded_part_mask = (1u << 6u) | (1u << 7u);
-
 class MeshBvhBuilder final
 {
 public:
-    MeshBvhBuilder(std::uint32_t vertex_count,
-                   const std::vector<std::uint32_t>& triangle_indices,
-                   const std::vector<float>& vertices);
-    MeshBvhBuilder(std::uint32_t vertex_count,
-                   const std::vector<std::uint32_t>& triangle_indices,
-                   const std::vector<float>& vertices,
-                   const std::vector<std::uint8_t>& triangle_part_labels,
-                   std::uint32_t excluded_part_mask);
+    MeshBvhBuilder(const CharacterMesh& mesh, const std::vector<std::uint8_t>& triangle_part_labels);
+    explicit MeshBvhBuilder(const GarmentMesh& mesh);
 
     TriangleBvhData build_triangle_bvh() const;
     VertexBvhData build_vertex_bvh() const;
@@ -51,5 +43,4 @@ private:
     const std::vector<std::uint32_t>& source_triangle_indices_;
     const std::vector<float>& vertices_;
     const std::vector<std::uint8_t>* triangle_part_labels_ = nullptr;
-    std::uint32_t excluded_part_mask_ = 0;
 };

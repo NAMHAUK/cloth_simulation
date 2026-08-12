@@ -1,12 +1,10 @@
 #include "scene/SceneState.h"
 
-#include "asset/MeshGeometryUtils.h"
-
 #include <glm/gtc/quaternion.hpp>
 #include <glm/vec3.hpp>
 
 #include <algorithm>
-#include <iostream>
+#include <stdexcept>
 #include <utility>
 
 namespace {
@@ -34,32 +32,6 @@ glm::quat frame_orientation(const std::vector<float>& orientations, std::uint32_
                                           orientations[base + 2u]));
 }
 
-bool prepare_garment_mesh(GarmentMesh& mesh)
-{
-    const std::uint32_t vertex_count = static_cast<std::uint32_t>(mesh.vertices.size() / 3u);
-    std::uint32_t flipped_triangle_count = 0u;
-    if (!orient_triangle_winding_outward(vertex_count,
-                                         mesh.vertices,
-                                         mesh.bounds_center,
-                                         mesh.triangle_vertex_indices,
-                                         flipped_triangle_count)) {
-        std::cerr << "Cannot prepare garment mesh with inconsistent triangle winding.\n";
-        return false;
-    }
-    if (flipped_triangle_count > 0u) {
-        std::cerr << "Oriented garment triangle winding: flipped " << flipped_triangle_count
-                  << " triangles.\n";
-    }
-
-    if (!mesh.adjacency.is_valid(vertex_count) &&
-        !build_vertex_face_adjacency(vertex_count, mesh.triangle_vertex_indices, mesh.adjacency)) {
-        std::cerr << "Cannot prepare garment mesh with invalid topology.\n";
-        return false;
-    }
-
-    mesh.color = glm::vec3{1.0f};
-    return true;
-}
 }
 
 // Character //
@@ -75,19 +47,11 @@ void SceneState::set_character_mesh(CharacterMesh mesh)
     torso_kinematics_.reset(torso);
 }
 
-void SceneState::set_default_body_triangle_bvh_data(TriangleBvhData default_body_triangle_bvh_data)
+void SceneState::set_body_bvhs(TriangleBvhData triangle_bvh, VertexBvhData vertex_bvh, EdgeBvhData edge_bvh)
 {
-    default_body_triangle_bvh_data_ = std::move(default_body_triangle_bvh_data);
-}
-
-void SceneState::set_default_body_vertex_bvh_data(VertexBvhData default_body_vertex_bvh_data)
-{
-    default_body_vertex_bvh_data_ = std::move(default_body_vertex_bvh_data);
-}
-
-void SceneState::set_default_body_edge_bvh_data(EdgeBvhData default_body_edge_bvh_data)
-{
-    default_body_edge_bvh_data_ = std::move(default_body_edge_bvh_data);
+    default_body_triangle_bvh_data_ = std::move(triangle_bvh);
+    default_body_vertex_bvh_data_ = std::move(vertex_bvh);
+    default_body_edge_bvh_data_ = std::move(edge_bvh);
 }
 
 const CharacterMesh& SceneState::character_mesh() const
@@ -112,101 +76,67 @@ const EdgeBvhData& SceneState::default_body_edge_bvh_data() const
 
 // Garments //
 
-bool SceneState::add_garment_mesh(GarmentLayer layer, GarmentMesh mesh)
+void SceneState::set_garment(GarmentObject garment)
 {
-    if (find_garment(layer) != nullptr || !prepare_garment_mesh(mesh)) {
-        return false;
+    GarmentObject* existing_garment = find_garment(garment.layer);
+    if (existing_garment != nullptr) {
+        *existing_garment = std::move(garment);
+        return;
     }
 
-    GarmentMesh source_mesh = mesh;
-    garments_.push_back({
-        layer,
-        std::move(source_mesh),
-        std::move(mesh),
-        true,
-    });
+    garments_.push_back(std::move(garment));
     std::sort(garments_.begin(), garments_.end(), [](const GarmentObject& lhs, const GarmentObject& rhs) {
         return lhs.layer < rhs.layer;
     });
-    return true;
 }
 
-bool SceneState::replace_garment_mesh(GarmentLayer layer, GarmentMesh mesh)
+GarmentObject& SceneState::apply_garment_placement(GarmentLayer layer,
+                                                   const glm::vec3& position_offset,
+                                                   float scale)
 {
     GarmentObject* garment = find_garment(layer);
-    if (garment == nullptr) {
-        return false;
+    if (garment == nullptr || scale <= 0.0f) {
+        throw std::runtime_error("Cannot apply garment placement.");
     }
 
-    if (!prepare_garment_mesh(mesh)) {
-        return false;
+    const GarmentMesh& source_mesh = garment->source_mesh;
+    GarmentMesh next_mesh = source_mesh;
+    const glm::vec3 scale_center = source_mesh.bounds_center;
+
+    for (std::size_t index = 0; index < next_mesh.vertices.size(); index += 3u) {
+        const glm::vec3 source_position{
+            source_mesh.vertices[index],
+            source_mesh.vertices[index + 1u],
+            source_mesh.vertices[index + 2u],
+        };
+        const glm::vec3 next_position =
+            scale_center + (source_position - scale_center) * scale + position_offset;
+        next_mesh.vertices[index] = next_position.x;
+        next_mesh.vertices[index + 1u] = next_position.y;
+        next_mesh.vertices[index + 2u] = next_position.z;
     }
-    GarmentMesh source_mesh = mesh;
-    garment->source_mesh = std::move(source_mesh);
-    garment->mesh = std::move(mesh);
-    garment->garment_triangle_bvh.reset();
-    return true;
+
+    next_mesh.bounds_center = source_mesh.bounds_center + position_offset;
+    next_mesh.bounds_radius = source_mesh.bounds_radius * scale;
+
+    for (std::size_t index = 0; index < next_mesh.stretch_constraints.rest_lengths.size(); ++index) {
+        next_mesh.stretch_constraints.rest_lengths[index] =
+            source_mesh.stretch_constraints.rest_lengths[index] * scale;
+    }
+    for (std::size_t index = 0; index < next_mesh.bending_constraints.rest_lengths.size(); ++index) {
+        next_mesh.bending_constraints.rest_lengths[index] =
+            source_mesh.bending_constraints.rest_lengths[index] * scale;
+    }
+
+    garment->mesh = std::move(next_mesh);
+    return *garment;
 }
 
-GarmentObject* SceneState::update_garment_placement(GarmentLayer layer,
-                                                    const glm::vec3& position_offset,
-                                                    float scale)
+void SceneState::update_garment_color(GarmentLayer layer, const glm::vec3& color)
 {
-    if (scale <= 0.0f) {
-        return nullptr;
-    }
-
-    for (GarmentObject& garment : garments_) {
-        if (garment.layer != layer) {
-            continue;
-        }
-
-        const GarmentMesh& source_mesh = garment.source_mesh;
-        GarmentMesh next_mesh = source_mesh;
-        const glm::vec3 scale_center = source_mesh.bounds_center;
-
-        for (std::size_t index = 0; index < next_mesh.vertices.size(); index += 3u) {
-            const glm::vec3 source_position{
-                source_mesh.vertices[index],
-                source_mesh.vertices[index + 1u],
-                source_mesh.vertices[index + 2u],
-            };
-            const glm::vec3 next_position =
-                scale_center + (source_position - scale_center) * scale + position_offset;
-            next_mesh.vertices[index] = next_position.x;
-            next_mesh.vertices[index + 1u] = next_position.y;
-            next_mesh.vertices[index + 2u] = next_position.z;
-        }
-
-        next_mesh.bounds_center = source_mesh.bounds_center + position_offset;
-        next_mesh.bounds_radius = source_mesh.bounds_radius * scale;
-
-        for (std::size_t index = 0; index < next_mesh.stretch_constraints.rest_lengths.size(); ++index) {
-            next_mesh.stretch_constraints.rest_lengths[index] =
-                source_mesh.stretch_constraints.rest_lengths[index] * scale;
-        }
-        for (std::size_t index = 0; index < next_mesh.bending_constraints.rest_lengths.size(); ++index) {
-            next_mesh.bending_constraints.rest_lengths[index] =
-                source_mesh.bending_constraints.rest_lengths[index] * scale;
-        }
-
-        garment.mesh = std::move(next_mesh);
-        return &garment;
-    }
-
-    return nullptr;
-}
-
-bool SceneState::update_garment_color(GarmentLayer layer, const glm::vec3& color)
-{
-    GarmentObject* garment = find_garment(layer);
-    if (garment == nullptr) {
-        return false;
-    }
-
-    garment->source_mesh.color = color;
-    garment->mesh.color = color;
-    return true;
+    GarmentObject& garment = *find_garment(layer);
+    garment.source_mesh.color = color;
+    garment.mesh.color = color;
 }
 
 bool SceneState::remove_garment(GarmentLayer layer)
@@ -260,14 +190,12 @@ bool SceneState::has_multiple_garments() const
 }
 
 // Playback //
-void SceneState::update_character_frame(std::uint64_t simulation_step_count,
-                                        std::uint32_t character_frame_stride)
+void SceneState::update_character_frame(std::uint64_t frame_index)
 {
-    if (character_mesh_.frame_count == 0 || character_frame_stride == 0) {
+    if (character_mesh_.frame_count == 0) {
         return;
     }
 
-    const std::uint64_t frame_index = simulation_step_count / character_frame_stride;
     const std::uint32_t last_frame_index = character_mesh_.frame_count - 1u;
 
     current_character_frame_ =

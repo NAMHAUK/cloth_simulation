@@ -127,6 +127,7 @@ void PlacementPanel::setup_garment_section(GarmentLayer layer)
     PlacementState& state = placement_states_[layer];
     state.frame = new QFrame(this);
     state.frame->setObjectName("placementGroup");
+    state.frame->setProperty("active", layer == active_layer_);
 
     auto* section_layout = new QVBoxLayout(state.frame);
     section_layout->setContentsMargins(8, 6, 8, 8);
@@ -319,7 +320,7 @@ void PlacementPanel::reset()
     placement_states_[GarmentLayer::Lower].frame->setVisible(false);
     placement_states_[GarmentLayer::Upper].frame->setVisible(false);
     upper_remove_button_->setVisible(false);
-    active_layer_ = GarmentLayer::Lower;
+    set_active_layer(GarmentLayer::Lower);
     set_add_button_enabled(false);
     set_confirm_button_enabled(false);
 }
@@ -400,6 +401,10 @@ void PlacementPanel::choose_garment_color(GarmentLayer layer)
 
 void PlacementPanel::set_active_layer(GarmentLayer selected_layer)
 {
+    if (active_layer_ == selected_layer) {
+        return;
+    }
+
     active_layer_ = selected_layer;
     for (GarmentLayer layer : {GarmentLayer::Lower, GarmentLayer::Upper}) {
         QFrame* frame = placement_states_[layer].frame;

@@ -2,8 +2,8 @@
 
 #include "scene/SceneState.h"
 
-#include <iostream>
 #include <limits>
+#include <stdexcept>
 
 SceneGpuState::SceneGpuState()
     : character_gpu_state_updater_(character_gpu_state_, bvh_bounds_updater_, normal_updater_)
@@ -14,12 +14,14 @@ bool SceneGpuState::is_initialized() const
     return initialized_;
 }
 
-void SceneGpuState::initialize(const std::filesystem::path& shader_dir, QOpenGLFunctions_4_5_Core& gl)
+void SceneGpuState::initialize(const std::filesystem::path& shader_dir,
+                               float attachment_surface_offset,
+                               QOpenGLFunctions_4_5_Core& gl)
 {
     normal_updater_.initialize(shader_dir, gl);
     bvh_bounds_updater_.initialize(shader_dir, gl);
     character_gpu_state_updater_.initialize(shader_dir, gl);
-    attachment_target_builder_.initialize(shader_dir, gl);
+    attachment_target_builder_.initialize(shader_dir, attachment_surface_offset, gl);
 
     initialized_ = true;
 }
@@ -138,24 +140,21 @@ CollisionCandidateBufferView SceneGpuState::collision_candidate_buffer_view() co
     return collision_candidate_buffers_.view();
 }
 
-bool SceneGpuState::update_garment_meshes(const SceneState& scene,
+void SceneGpuState::update_garment_meshes(const SceneState& scene,
                                           QOpenGLFunctions_4_5_Core& gl,
-                                          std::optional<GarmentLayer> reset_layer)
+                                          std::optional<GarmentLayer> updated_layer)
 {
-    if (!cloth_gpu_state_.update_garment_buffers(scene.garments(), reset_layer, gl)) {
-        std::cerr << "Failed to update garment GPU buffers.\n";
-        return false;
+    if (!cloth_gpu_state_.update_garment_buffers(scene.garments(), updated_layer, gl)) {
+        throw std::runtime_error("Failed to update garment GPU buffers.");
     }
     if (!cloth_bvh_resources_.rebuild(scene.garments(), gl)) {
-        std::cerr << "Failed to rebuild cloth BVH resources.\n";
-        return false;
+        throw std::runtime_error("Failed to rebuild cloth BVH resources.");
     }
-    if (cloth_gpu_state_.is_initialized()) {
+    if (has_garment_resources()) {
         if (scene.garments().size() > std::numeric_limits<std::uint32_t>::max()) {
-            std::cerr << "Cannot prepare collision candidate buffers because the garment count exceeds the "
-                         "supported range.\n";
             collision_candidate_buffers_.release(gl);
-            return false;
+            throw std::runtime_error("Cannot prepare collision candidate buffers because the garment count "
+                                     "exceeds the supported range.");
         }
 
         const ClothMotionBufferView motion_view = cloth_gpu_state_.motion_buffer_view();
@@ -167,8 +166,7 @@ bool SceneGpuState::update_garment_meshes(const SceneState& scene,
                                                           stretch_constraints.constraint_count,
                                                           static_cast<std::uint32_t>(scene.garments().size()),
                                                           gl)) {
-            std::cerr << "Failed to prepare collision candidate buffers.\n";
-            return false;
+            throw std::runtime_error("Failed to prepare collision candidate buffers.");
         }
     } else {
         collision_candidate_buffers_.release(gl);
@@ -176,79 +174,77 @@ bool SceneGpuState::update_garment_meshes(const SceneState& scene,
     normal_updater_.update_cloth_normals(cloth_gpu_state_.mesh_topology_resources(),
                                          cloth_gpu_state_.mesh_normal_resources(),
                                          gl);
-    return true;
 }
 
-bool SceneGpuState::update_garment_placement(const GarmentObject& garment,
-                                             bool update_rest_lengths,
-                                             QOpenGLFunctions_4_5_Core& gl)
+void SceneGpuState::update_garment_placement(const GarmentObject& garment, QOpenGLFunctions_4_5_Core& gl)
 {
-    if (!cloth_gpu_state_.update_garment_placement(garment, update_rest_lengths, gl)) {
-        return false;
+    if (!cloth_gpu_state_.update_garment_placement(garment, gl)) {
+        throw std::runtime_error("Failed to update garment GPU placement.");
     }
 
     normal_updater_.update_cloth_normals(cloth_gpu_state_.mesh_topology_resources(),
                                          cloth_gpu_state_.mesh_normal_resources(),
                                          gl);
-    return true;
 }
 
-bool SceneGpuState::build_garment_attachment_targets(SceneState& scene,
+void SceneGpuState::build_garment_attachment_targets(SceneState& scene,
                                                      GarmentLayer layer,
-                                                     float surface_offset,
                                                      QOpenGLFunctions_4_5_Core& gl)
 {
     GarmentObject* garment = scene.find_garment(layer);
     if (garment == nullptr) {
-        return false;
+        throw std::runtime_error("Cannot build garment attachment targets because garment is missing.");
     }
 
     ElementRange target_range;
     if (!cloth_gpu_state_.upload_garment_attachment_vertices(*garment, target_range, gl)) {
-        std::cerr << "Failed to upload garment attachment vertices.\n";
-        return false;
+        throw std::runtime_error("Failed to upload garment attachment vertices.");
     }
 
     if (target_range.count == 0u) {
-        return true;
+        return;
     }
 
     const auto views = simulation_view();
-    if (!attachment_target_builder_.build(views, target_range, surface_offset, gl)) {
-        std::cerr << "Cannot build garment attachment targets because required GPU buffers are missing.\n";
-        return false;
+    if (!attachment_target_builder_.build(views, target_range, gl)) {
+        throw std::runtime_error("Cannot build garment attachment targets because GPU buffers are missing.");
     }
 
     if (!cloth_gpu_state_.activate_attachment_targets(target_range)) {
-        std::cerr << "Failed to activate garment attachment targets.\n";
-        return false;
+        throw std::runtime_error("Failed to activate garment attachment targets.");
     }
-    return true;
 }
 
-void SceneGpuState::deactivate_garment_attachment_targets(GarmentLayer layer)
+void SceneGpuState::capture_garment_base_positions(QOpenGLFunctions_4_5_Core& gl)
 {
-    cloth_gpu_state_.deactivate_attachment_targets(layer);
+    if (!has_garment_resources()) {
+        return;
+    }
+    if (!cloth_gpu_state_.capture_base_positions(gl)) {
+        throw std::runtime_error("Failed to capture garment base positions.");
+    }
 }
 
-bool SceneGpuState::save_base_positions(QOpenGLFunctions_4_5_Core& gl)
+void SceneGpuState::restore_garment_base_positions(QOpenGLFunctions_4_5_Core& gl)
 {
-    return cloth_gpu_state_.save_base_positions(gl);
-}
-
-bool SceneGpuState::restore_base_positions(QOpenGLFunctions_4_5_Core& gl)
-{
+    if (!has_garment_resources()) {
+        return;
+    }
     if (!cloth_gpu_state_.restore_base_positions(gl)) {
-        return false;
+        throw std::runtime_error("Failed to restore garment base positions.");
     }
 
     normal_updater_.update_cloth_normals(cloth_gpu_state_.mesh_topology_resources(),
                                          cloth_gpu_state_.mesh_normal_resources(),
                                          gl);
-    return true;
 }
 
 void SceneGpuState::clear_base_positions(QOpenGLFunctions_4_5_Core& gl)
 {
     cloth_gpu_state_.clear_base_positions(gl);
+}
+
+bool SceneGpuState::has_garment_resources() const
+{
+    return cloth_gpu_state_.is_initialized();
 }

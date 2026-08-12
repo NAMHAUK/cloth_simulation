@@ -52,7 +52,6 @@ MainWindow::~MainWindow()
     asset_browser_panel.set_motion_loaded_callback({});
     asset_browser_panel.set_garment_loaded_callback({});
     placement_controller_.reset();
-    simulation_controller_->release_gpu();
     viewport_->set_initialize_callback({});
     viewport_->set_scene_render_callback({});
 }
@@ -174,7 +173,7 @@ void MainWindow::connect_simulation_controls()
 
     connect(viewport_, &Viewport::reset_requested, this, [this]() {
         placement_controller_->reset();
-        simulation_controller_->reset_scene_to_default();
+        simulation_controller_->reset_scene();
         update_simulation_button_state();
         update_asset_button_state();
     });

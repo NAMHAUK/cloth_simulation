@@ -24,7 +24,9 @@ public:
     SceneGpuState& operator=(const SceneGpuState&) = delete;
 
     bool is_initialized() const;
-    void initialize(const std::filesystem::path& shader_dir, QOpenGLFunctions_4_5_Core& gl);
+    void initialize(const std::filesystem::path& shader_dir,
+                    float attachment_surface_offset,
+                    QOpenGLFunctions_4_5_Core& gl);
     void release(QOpenGLFunctions_4_5_Core& gl);
     void update_character_pose(const SceneState& scene,
                                float frame_alpha,
@@ -41,22 +43,20 @@ public:
     const ClothGpuResources& cloth_gpu_state() const;
     ClothBvhBufferView cloth_bvh_buffer_view() const;
     CollisionCandidateBufferView collision_candidate_buffer_view() const;
-    bool update_garment_meshes(const SceneState& scene,
+    void update_garment_meshes(const SceneState& scene,
                                QOpenGLFunctions_4_5_Core& gl,
-                               std::optional<GarmentLayer> reset_layer = std::nullopt);
-    bool update_garment_placement(const GarmentObject& garment,
-                                  bool update_rest_lengths,
-                                  QOpenGLFunctions_4_5_Core& gl);
-    bool build_garment_attachment_targets(SceneState& scene,
+                               std::optional<GarmentLayer> updated_layer = std::nullopt);
+    void update_garment_placement(const GarmentObject& garment, QOpenGLFunctions_4_5_Core& gl);
+    void build_garment_attachment_targets(SceneState& scene,
                                           GarmentLayer layer,
-                                          float surface_offset,
                                           QOpenGLFunctions_4_5_Core& gl);
-    void deactivate_garment_attachment_targets(GarmentLayer layer);
-    bool save_base_positions(QOpenGLFunctions_4_5_Core& gl);
-    bool restore_base_positions(QOpenGLFunctions_4_5_Core& gl);
+    void capture_garment_base_positions(QOpenGLFunctions_4_5_Core& gl);
+    void restore_garment_base_positions(QOpenGLFunctions_4_5_Core& gl);
     void clear_base_positions(QOpenGLFunctions_4_5_Core& gl);
 
 private:
+    bool has_garment_resources() const;
+
     CharacterGpuResources character_gpu_state_;
     BodyBvhBoundsUpdater bvh_bounds_updater_;
     NormalUpdater normal_updater_;

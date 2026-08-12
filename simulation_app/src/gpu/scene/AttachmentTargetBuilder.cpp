@@ -32,6 +32,7 @@ bool AttachmentTargetBuilder::is_initialized() const
 }
 
 void AttachmentTargetBuilder::initialize(const std::filesystem::path& shader_dir,
+                                         float surface_offset,
                                          QOpenGLFunctions_4_5_Core& gl)
 {
     program_ = load_compute_program(shader_dir / "cloth" / "setup" / "garment_attachment_target_build.comp",
@@ -44,6 +45,8 @@ void AttachmentTargetBuilder::initialize(const std::filesystem::path& shader_dir
     if (constraint_offset_location_ < 0 || constraint_count_location_ < 0 || surface_offset_location_ < 0) {
         throw std::runtime_error("Attachment target build compute shader missing required uniforms.");
     }
+
+    gl.glProgramUniform1f(program_, surface_offset_location_, surface_offset);
 }
 
 bool AttachmentTargetBuilder::can_build(const SimulationGpuView& views,
@@ -58,7 +61,6 @@ bool AttachmentTargetBuilder::can_build(const SimulationGpuView& views,
 
 bool AttachmentTargetBuilder::build(const SimulationGpuView& views,
                                     const ElementRange& target_range,
-                                    float surface_offset,
                                     QOpenGLFunctions_4_5_Core& gl) const
 {
     if (!can_build(views, target_range)) {
@@ -88,7 +90,6 @@ bool AttachmentTargetBuilder::build(const SimulationGpuView& views,
 
     gl.glProgramUniform1ui(program_, constraint_offset_location_, target_range.offset);
     gl.glProgramUniform1ui(program_, constraint_count_location_, target_range.count);
-    gl.glProgramUniform1f(program_, surface_offset_location_, surface_offset);
 
     gl.glDispatchCompute(compute_group_count(target_range.count, attachment_target_local_size), 1, 1);
     gl.glMemoryBarrier(GL_SHADER_STORAGE_BARRIER_BIT);

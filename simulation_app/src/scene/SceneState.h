@@ -32,22 +32,17 @@ class SceneState final
 public:
     // Character
     void set_character_mesh(CharacterMesh mesh);
-    void set_default_body_triangle_bvh_data(TriangleBvhData default_body_triangle_bvh_data);
-    void set_default_body_vertex_bvh_data(VertexBvhData default_body_vertex_bvh_data);
-    void set_default_body_edge_bvh_data(EdgeBvhData default_body_edge_bvh_data);
+    void set_body_bvhs(TriangleBvhData triangle_bvh, VertexBvhData vertex_bvh, EdgeBvhData edge_bvh);
     const CharacterMesh& character_mesh() const;
     const TriangleBvhData& default_body_triangle_bvh_data() const;
     const VertexBvhData& default_body_vertex_bvh_data() const;
     const EdgeBvhData& default_body_edge_bvh_data() const;
 
     // Garments
-    bool add_garment_mesh(GarmentLayer layer, GarmentMesh mesh);
-    bool replace_garment_mesh(GarmentLayer layer, GarmentMesh mesh);
+    void set_garment(GarmentObject garment);
     bool remove_garment(GarmentLayer layer);
-    GarmentObject* update_garment_placement(GarmentLayer layer,
-                                            const glm::vec3& position_offset,
-                                            float scale);
-    bool update_garment_color(GarmentLayer layer, const glm::vec3& color);
+    GarmentObject& apply_garment_placement(GarmentLayer layer, const glm::vec3& position_offset, float scale);
+    void update_garment_color(GarmentLayer layer, const glm::vec3& color);
     GarmentObject* find_garment(GarmentLayer layer);
     const GarmentObject* find_garment(GarmentLayer layer) const;
     void clear_garments();
@@ -55,7 +50,7 @@ public:
     bool has_multiple_garments() const;
 
     // Playback
-    void update_character_frame(std::uint64_t simulation_step_count, std::uint32_t character_frame_stride);
+    void update_character_frame(std::uint64_t frame_index);
     void update_reference_kinematics(float frame_alpha, float dt);
     const Kinematics& reference_kinematics(GarmentCategory garment_category) const;
     float character_frame_alpha(float character_frame_time) const;
