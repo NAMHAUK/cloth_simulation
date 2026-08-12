@@ -31,15 +31,15 @@ PART_GROUPS = (
 TORSO_JOINT_INDEX = 9
 IDENTITY_QUATERNION_XYZW = np.array([0.0, 0.0, 0.0, 1.0], dtype=np.float32)
 
-def align_pose_to_ground(vertices, root_position, torso_position, ground_clearance):
+def align_pose_to_ground(vertices, pelvis_position, torso_position, ground_clearance):
     aligned_vertices = np.asarray(vertices, dtype=np.float32).copy()
-    aligned_root_position = np.asarray(root_position, dtype=np.float32).copy()
+    aligned_pelvis_position = np.asarray(pelvis_position, dtype=np.float32).copy()
     aligned_torso_position = np.asarray(torso_position, dtype=np.float32).copy()
     y_offset = ground_clearance - aligned_vertices[:, 1].min()
     aligned_vertices[:, 1] += y_offset
-    aligned_root_position[1] += y_offset
+    aligned_pelvis_position[1] += y_offset
     aligned_torso_position[1] += y_offset
-    return aligned_vertices, aligned_root_position, aligned_torso_position
+    return aligned_vertices, aligned_pelvis_position, aligned_torso_position
 
 
 def make_triangle_part_labels(faces, lbs_weights):
@@ -60,7 +60,7 @@ def write_default_pose_motion(output_path,
                               fps,
                               faces,
                               vertices,
-                              root_position,
+                              pelvis_position,
                               torso_position,
                               triangle_part_labels):
     if fps <= 0.0:
@@ -71,7 +71,7 @@ def write_default_pose_motion(output_path,
 
     output_path.parent.mkdir(parents=True, exist_ok=True)
 
-    root_position = np.asarray(root_position, dtype=np.float32).reshape(1, 3)
+    pelvis_position = np.asarray(pelvis_position, dtype=np.float32).reshape(1, 3)
     torso_position = np.asarray(torso_position, dtype=np.float32).reshape(1, 3)
     orientation = IDENTITY_QUATERNION_XYZW.reshape(1, 4)
 
@@ -79,7 +79,7 @@ def write_default_pose_motion(output_path,
     try:
         with temp_output_path.open("wb") as out_file:
             write_motion_header(out_file, fps, faces, 1, vertices.shape[0])
-            root_position.tofile(out_file)
+            pelvis_position.tofile(out_file)
             orientation.tofile(out_file)
             torso_position.tofile(out_file)
             orientation.tofile(out_file)
@@ -120,11 +120,11 @@ def main():
         )
 
     vertices = output.vertices[0].detach().cpu().numpy()
-    root_position = output.joints[0, 0].detach().cpu().numpy()
+    pelvis_position = output.joints[0, 0].detach().cpu().numpy()
     torso_position = output.joints[0, TORSO_JOINT_INDEX].detach().cpu().numpy()
-    vertices, root_position, torso_position = align_pose_to_ground(
+    vertices, pelvis_position, torso_position = align_pose_to_ground(
         vertices,
-        root_position,
+        pelvis_position,
         torso_position,
         args.ground_clearance,
     )
@@ -137,7 +137,7 @@ def main():
         args.fps,
         model.faces,
         vertices,
-        root_position,
+        pelvis_position,
         torso_position,
         triangle_part_labels,
     )

@@ -29,7 +29,7 @@ public:
                     QOpenGLFunctions_4_5_Core& gl);
     void release(QOpenGLFunctions_4_5_Core& gl);
     void update_character_pose(const SceneState& scene,
-                               float frame_alpha,
+                               float character_frame_alpha,
                                float body_collision_thickness,
                                QOpenGLFunctions_4_5_Core& gl);
     void update_mesh_normals(QOpenGLFunctions_4_5_Core& gl);

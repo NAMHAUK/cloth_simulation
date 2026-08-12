@@ -93,9 +93,9 @@ void SimulationPipeline::step(SceneState& scene,
     const glm::vec3 external_acceleration = force_field_.external_acceleration();
     for (std::uint32_t substep = 0; substep < params_.step.substep_count; ++substep) {
         const float frame_time = params_.step.character_frame_time(motion_step_index, substep + 1u);
-        const float frame_alpha = scene.character_frame_alpha(frame_time);
-        scene.update_reference_kinematics(frame_alpha, substep_dt_);
-        gpu_state.update_character_pose(scene, frame_alpha, params_.collisions.body.thickness, gl);
+        const float character_frame_alpha = scene.character_frame_alpha(frame_time);
+        scene.update_reference_frame_kinematics(character_frame_alpha, substep_dt_);
+        gpu_state.update_character_pose(scene, character_frame_alpha, params_.collisions.body.thickness, gl);
 
         solve_external_forces(scene, views, external_acceleration, gl);
 
@@ -121,8 +121,8 @@ void SimulationPipeline::step_character_only(const SceneState& scene,
                                              QOpenGLFunctions_4_5_Core& gl) const
 {
     const float frame_time = params_.step.character_frame_time(motion_step_index + 1u, 0);
-    const float frame_alpha = scene.character_frame_alpha(frame_time);
-    gpu_state.update_character_pose(scene, frame_alpha, params_.collisions.body.thickness, gl);
+    const float character_frame_alpha = scene.character_frame_alpha(frame_time);
+    gpu_state.update_character_pose(scene, character_frame_alpha, params_.collisions.body.thickness, gl);
 }
 
 void SimulationPipeline::solve_external_forces(const SceneState& scene,
@@ -134,8 +134,12 @@ void SimulationPipeline::solve_external_forces(const SceneState& scene,
         const ElementRange& vertex_range = views.garment_vertex_ranges[garment.layer];
         assert(vertex_range.count != 0u);
 
-        const Kinematics& reference_kinematics = scene.reference_kinematics(garment.mesh.garment_category);
-        external_force_solver_.solve(views, vertex_range, external_acceleration, reference_kinematics, gl);
+        const Kinematics& reference_frame_kinematics = scene.reference_frame_kinematics(garment.mesh.garment_category);
+        external_force_solver_.solve(views,
+                                     vertex_range,
+                                     external_acceleration,
+                                     reference_frame_kinematics,
+                                     gl);
     }
 }
 

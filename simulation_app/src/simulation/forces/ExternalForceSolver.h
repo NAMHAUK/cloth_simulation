@@ -15,7 +15,7 @@ class ExternalForceSolver final
 {
 public:
     ExternalForceSolver(float velocity_damping,
-                        float frame_inertia_scale,
+                        float reference_frame_inertia_scale,
                         float reference_frame_max_acceleration,
                         float reference_frame_max_angular_acceleration);
     ExternalForceSolver(const ExternalForceSolver&) = delete;
@@ -26,7 +26,7 @@ public:
     void solve(const SimulationGpuView& views,
                const ElementRange& vertex_range,
                const glm::vec3& external_acceleration,
-               const Kinematics& kinematics,
+               const Kinematics& reference_frame_kinematics,
                QOpenGLFunctions_4_5_Core& gl) const;
     void release(QOpenGLFunctions_4_5_Core& gl);
 
@@ -44,12 +44,12 @@ private:
     GLint frame_start_velocity_location_ = -1;
     GLint frame_acceleration_location_ = -1;
     GLint frame_start_angular_velocity_location_ = -1;
-    GLint angular_acceleration_location_ = -1;
+    GLint frame_angular_acceleration_location_ = -1;
     GLint frame_inertia_scale_location_ = -1;
     float dt_ = 0.0f;
     float inverse_dt_ = 0.0f;
     float velocity_damping_ = 0.0f;
-    float frame_inertia_scale_ = 0.0f;
+    float reference_frame_inertia_scale_ = 0.0f;
     float reference_frame_max_acceleration_ = 0.0f;
     float reference_frame_max_angular_acceleration_ = 0.0f;
 };

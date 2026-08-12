@@ -28,13 +28,13 @@ public:
     void initialize(const std::filesystem::path& shader_dir, QOpenGLFunctions_4_5_Core& gl);
     void release(QOpenGLFunctions_4_5_Core& gl);
 
-    void initialize_character_pose_state(float frame_alpha,
+    void initialize_character_pose_state(float character_frame_alpha,
                                          const std::vector<BvhNodeRange>& body_triangle_node_ranges_by_level,
                                          const std::vector<BvhNodeRange>& body_vertex_node_ranges_by_level,
                                          const std::vector<BvhNodeRange>& body_edge_node_ranges_by_level,
                                          float collision_thickness,
                                          QOpenGLFunctions_4_5_Core& gl) const;
-    void update_character_pose_state(float frame_alpha,
+    void update_character_pose_state(float character_frame_alpha,
                                      const std::vector<BvhNodeRange>& body_triangle_node_ranges_by_level,
                                      const std::vector<BvhNodeRange>& body_vertex_node_ranges_by_level,
                                      const std::vector<BvhNodeRange>& body_edge_node_ranges_by_level,
@@ -42,7 +42,7 @@ public:
                                      QOpenGLFunctions_4_5_Core& gl) const;
 
 private:
-    void write_current_position_buffer(float frame_alpha,
+    void write_current_position_buffer(float character_frame_alpha,
                                        const CharacterVertexBufferView& vertex_view,
                                        QOpenGLFunctions_4_5_Core& gl) const;
     void copy_current_position_to_previous(const CharacterVertexBufferView& vertex_view,

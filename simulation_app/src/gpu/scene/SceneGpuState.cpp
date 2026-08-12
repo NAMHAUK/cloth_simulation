@@ -105,7 +105,7 @@ void SceneGpuState::set_character_mesh(const SceneState& scene,
 }
 
 void SceneGpuState::update_character_pose(const SceneState& scene,
-                                          float frame_alpha,
+                                          float character_frame_alpha,
                                           float body_collision_thickness,
                                           QOpenGLFunctions_4_5_Core& gl)
 {
@@ -115,7 +115,7 @@ void SceneGpuState::update_character_pose(const SceneState& scene,
 
     character_gpu_state_.set_current_frame(scene.current_character_frame());
     character_gpu_state_updater_.update_character_pose_state(
-        frame_alpha,
+        character_frame_alpha,
         scene.default_body_triangle_bvh_data().node_ranges_by_level,
         scene.default_body_vertex_bvh_data().node_ranges_by_level,
         scene.default_body_edge_bvh_data().node_ranges_by_level,

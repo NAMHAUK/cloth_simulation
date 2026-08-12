@@ -171,25 +171,26 @@ bool read_motion_asset_file_sizes(const std::filesystem::path& motion_asset_path
                                   bool has_reference_transforms,
                                   bool is_default)
 {
-    const std::size_t root_position_count =
+    const std::size_t reference_position_count =
         static_cast<std::size_t>(character_mesh.frame_count) * vertex_position_components;
     const std::size_t orientation_count =
         static_cast<std::size_t>(character_mesh.frame_count) * quaternion_components;
-    const std::size_t vertex_position_count = root_position_count * character_mesh.vertex_count;
+    const std::size_t vertex_position_count = reference_position_count * character_mesh.vertex_count;
     const std::uintmax_t triangle_vertex_index_count =
         static_cast<std::uintmax_t>(character_mesh.triangle_count) * 3u;
 
-    const std::uintmax_t base_file_size = motion_asset_signature_v2.size() +
-                                          sizeof(float) +
-                                          sizeof(std::uint32_t) * 3u +
-                                          triangle_vertex_index_count * sizeof(std::uint32_t) +
-                                          static_cast<std::uintmax_t>(root_position_count) * sizeof(float) +
-                                          static_cast<std::uintmax_t>(vertex_position_count) * sizeof(float);
+    const std::uintmax_t base_file_size =
+        motion_asset_signature_v2.size() +
+        sizeof(float) +
+        sizeof(std::uint32_t) * 3u +
+        triangle_vertex_index_count * sizeof(std::uint32_t) +
+        static_cast<std::uintmax_t>(reference_position_count) * sizeof(float) +
+        static_cast<std::uintmax_t>(vertex_position_count) * sizeof(float);
 
     std::uintmax_t expected_file_size = base_file_size;
     if (has_reference_transforms) {
         expected_file_size += static_cast<std::uintmax_t>(orientation_count) * sizeof(float) * 2u;
-        expected_file_size += static_cast<std::uintmax_t>(root_position_count) * sizeof(float);
+        expected_file_size += static_cast<std::uintmax_t>(reference_position_count) * sizeof(float);
     }
     if (is_default) {
         expected_file_size += sizeof(std::uint32_t);
@@ -211,19 +212,19 @@ bool read_motion_asset_data(const std::filesystem::path& motion_asset_path,
                             bool has_reference_transforms,
                             std::ifstream& input)
 {
-    const std::size_t root_position_count =
+    const std::size_t reference_position_count =
         static_cast<std::size_t>(character_mesh.frame_count) * vertex_position_components;
     const std::size_t orientation_count =
         static_cast<std::size_t>(character_mesh.frame_count) * quaternion_components;
-    const std::size_t vertex_position_count = root_position_count * character_mesh.vertex_count;
+    const std::size_t vertex_position_count = reference_position_count * character_mesh.vertex_count;
     const std::size_t triangle_vertex_index_count =
         static_cast<std::size_t>(character_mesh.triangle_count) * 3u;
 
     if (!read_binary_values(input, character_mesh.triangle_vertex_indices, triangle_vertex_index_count) ||
-        !read_binary_values(input, character_mesh.root_positions, root_position_count) ||
+        !read_binary_values(input, character_mesh.pelvis_positions, reference_position_count) ||
         (has_reference_transforms &&
          (!read_binary_values(input, character_mesh.pelvis_orientations, orientation_count) ||
-          !read_binary_values(input, character_mesh.torso_positions, root_position_count) ||
+          !read_binary_values(input, character_mesh.torso_positions, reference_position_count) ||
           !read_binary_values(input, character_mesh.torso_orientations, orientation_count))) ||
         !read_binary_values(input, character_mesh.vertices, vertex_position_count)) {
         std::cerr << "Failed to read motion asset payload: " << motion_asset_path << '\n';
@@ -232,7 +233,7 @@ bool read_motion_asset_data(const std::filesystem::path& motion_asset_path,
 
     if (!has_reference_transforms) {
         character_mesh.pelvis_orientations.assign(orientation_count, 0.0f);
-        character_mesh.torso_positions = character_mesh.root_positions;
+        character_mesh.torso_positions = character_mesh.pelvis_positions;
         character_mesh.torso_orientations.assign(orientation_count, 0.0f);
         for (std::size_t index = 3u; index < orientation_count; index += quaternion_components) {
             character_mesh.pelvis_orientations[index] = 1.0f;
@@ -240,7 +241,7 @@ bool read_motion_asset_data(const std::filesystem::path& motion_asset_path,
         }
     }
 
-    if (!is_finite_values(character_mesh.root_positions) ||
+    if (!is_finite_values(character_mesh.pelvis_positions) ||
         !is_finite_values(character_mesh.pelvis_orientations) ||
         !is_finite_values(character_mesh.torso_positions) ||
         !is_finite_values(character_mesh.torso_orientations) ||
