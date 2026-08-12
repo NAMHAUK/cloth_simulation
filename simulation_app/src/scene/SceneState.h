@@ -6,10 +6,8 @@
 
 #include <cstddef>
 #include <cstdint>
-#include <optional>
 #include <vector>
 
-#include <glm/gtc/quaternion.hpp>
 #include <glm/vec3.hpp>
 
 struct GarmentObject
@@ -17,14 +15,7 @@ struct GarmentObject
     GarmentLayer layer = GarmentLayer::Lower;
     GarmentMesh source_mesh;
     GarmentMesh mesh;
-    bool visible = true;
-    std::optional<TriangleBvhData> garment_triangle_bvh;
-};
-
-struct CharacterReferenceFrame final
-{
-    glm::vec3 position{};
-    glm::quat orientation = glm::quat::wxyz(1.0f, 0.0f, 0.0f, 0.0f);
+    TriangleBvhData triangle_bvh;
 };
 
 class SceneState final
@@ -47,12 +38,10 @@ public:
     const GarmentObject* find_garment(GarmentLayer layer) const;
     void clear_garments();
     const std::vector<GarmentObject>& garments() const;
-    bool has_multiple_garments() const;
-
     // Playback
     void update_character_frame(std::uint64_t frame_index);
     void update_reference_frame_kinematics(float character_frame_alpha, float dt);
-    const Kinematics& reference_frame_kinematics(GarmentCategory garment_category) const;
+    const Kinematics& reference_frame_kinematics(GarmentCategory category) const;
     float character_frame_alpha(float character_frame_time) const;
     std::uint32_t current_character_frame() const;
     glm::vec3 character_root_position(std::uint32_t frame_index) const;
@@ -68,10 +57,8 @@ private:
     std::vector<GarmentObject> garments_;
 
     // Playback
-    CharacterReferenceFrame interpolated_reference_frame(float character_frame_alpha,
-                                                         GarmentCategory garment_category) const;
-    CharacterReferenceFrame reference_frame(std::uint32_t character_frame_index,
-                                            GarmentCategory garment_category) const;
+    CharacterReferenceFrame interpolated_reference_frame(float character_frame_alpha, GarmentCategory category) const;
+    CharacterReferenceFrame reference_frame(std::uint32_t character_frame_index, GarmentCategory category) const;
     std::uint32_t current_character_frame_ = 0;
     Kinematics pelvis_kinematics_;
     Kinematics torso_kinematics_;

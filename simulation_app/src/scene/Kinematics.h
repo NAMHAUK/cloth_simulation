@@ -4,7 +4,11 @@
 #include <glm/mat3x3.hpp>
 #include <glm/vec3.hpp>
 
-struct CharacterReferenceFrame;
+struct CharacterReferenceFrame final
+{
+    glm::vec3 position{};
+    glm::quat orientation = glm::quat::wxyz(1.0f, 0.0f, 0.0f, 0.0f);
+};
 
 struct Kinematics final
 {

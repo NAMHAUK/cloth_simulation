@@ -1,7 +1,5 @@
 #include "scene/Kinematics.h"
 
-#include "scene/SceneState.h"
-
 #include <algorithm>
 #include <cassert>
 #include <cmath>

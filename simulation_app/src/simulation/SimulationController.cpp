@@ -19,7 +19,7 @@ GarmentObject build_garment(GarmentLayer layer, GarmentMesh mesh)
     garment.layer = layer;
     garment.source_mesh = mesh;
     garment.mesh = std::move(mesh);
-    garment.garment_triangle_bvh = MeshBvhBuilder(garment.mesh).build_triangle_bvh();
+    garment.triangle_bvh = MeshBvhBuilder(garment.mesh).build_triangle_bvh();
     return garment;
 }
 
@@ -338,7 +338,7 @@ bool SimulationController::can_start_garment_placement() const
         garment_placement_states_.begin(),
         garment_placement_states_.end(),
         [](const std::optional<GarmentPlacementState>& placement) { return placement.has_value(); });
-    return has_active_placement || !scene_.has_multiple_garments();
+    return has_active_placement || scene_.garments().size() < 2u;
 }
 
 // Release
