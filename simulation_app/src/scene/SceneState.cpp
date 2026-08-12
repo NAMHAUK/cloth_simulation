@@ -85,39 +85,36 @@ GarmentObject& SceneState::apply_garment_placement(GarmentLayer layer,
                                                    float scale)
 {
     GarmentObject* garment = find_garment(layer);
-    GarmentMesh next_mesh = garment->source_mesh;
-    const glm::vec3 scale_center = next_mesh.bounds_center;
+    GarmentMesh& mesh = garment->mesh;
+    const glm::vec3 scale_center = mesh.bounds_center;
 
-    for (std::size_t index = 0; index < next_mesh.vertices.size(); index += 3u) {
+    for (std::size_t index = 0; index < mesh.vertices.size(); index += 3u) {
         glm::vec3 position{
-            next_mesh.vertices[index],
-            next_mesh.vertices[index + 1u],
-            next_mesh.vertices[index + 2u],
+            mesh.vertices[index],
+            mesh.vertices[index + 1u],
+            mesh.vertices[index + 2u],
         };
         position = scale_center + (position - scale_center) * scale + position_offset;
-        next_mesh.vertices[index] = position.x;
-        next_mesh.vertices[index + 1u] = position.y;
-        next_mesh.vertices[index + 2u] = position.z;
+        mesh.vertices[index] = position.x;
+        mesh.vertices[index + 1u] = position.y;
+        mesh.vertices[index + 2u] = position.z;
     }
 
-    next_mesh.bounds_center += position_offset;
-    next_mesh.bounds_radius *= scale;
+    mesh.bounds_center += position_offset;
+    mesh.bounds_radius *= scale;
 
-    for (GarmentDistanceConstraints* constraints :
-         {&next_mesh.stretch_constraints, &next_mesh.bending_constraints}) {
+    for (GarmentDistanceConstraints* constraints : {&mesh.stretch_constraints, &mesh.bending_constraints}) {
         for (float& rest_length : constraints->rest_lengths) {
             rest_length *= scale;
         }
     }
 
-    garment->mesh = std::move(next_mesh);
     return *garment;
 }
 
 void SceneState::update_garment_color(GarmentLayer layer, const glm::vec3& color)
 {
     GarmentObject& garment = *find_garment(layer);
-    garment.source_mesh.color = color;
     garment.mesh.color = color;
 }
 

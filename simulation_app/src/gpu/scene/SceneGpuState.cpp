@@ -181,10 +181,6 @@ void SceneGpuState::update_garment_placement(const GarmentObject& garment, QOpen
     if (!cloth_gpu_state_.update_garment_placement(garment, gl)) {
         throw std::runtime_error("Failed to update garment GPU placement.");
     }
-
-    normal_updater_.update_cloth_normals(cloth_gpu_state_.mesh_topology_resources(),
-                                         cloth_gpu_state_.mesh_normal_resources(),
-                                         gl);
 }
 
 void SceneGpuState::build_garment_attachment_targets(SceneState& scene,

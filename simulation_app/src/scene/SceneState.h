@@ -13,7 +13,6 @@
 struct GarmentObject
 {
     GarmentLayer layer = GarmentLayer::Lower;
-    GarmentMesh source_mesh;
     GarmentMesh mesh;
     TriangleBvhData triangle_bvh;
 };
