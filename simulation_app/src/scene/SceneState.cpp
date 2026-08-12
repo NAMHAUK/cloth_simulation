@@ -163,12 +163,9 @@ const std::vector<GarmentObject>& SceneState::garments() const
 }
 
 // Playback //
-void SceneState::set_motion_frame_index(std::uint64_t motion_frame_index)
+void SceneState::set_motion_frame_index(std::uint32_t motion_frame_index)
 {
-    const std::uint32_t last_frame_index = character_motion_.frame_count - 1u;
-
-    motion_frame_index_ =
-        static_cast<std::uint32_t>(std::min<std::uint64_t>(motion_frame_index, last_frame_index));
+    motion_frame_index_ = std::min(motion_frame_index, character_motion_.frame_count - 1u);
 }
 
 void SceneState::update_reference_frame_kinematics(float motion_frame_alpha, float dt)

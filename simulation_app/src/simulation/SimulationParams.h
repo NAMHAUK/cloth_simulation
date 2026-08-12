@@ -11,7 +11,7 @@ struct SimulationStepParams final
 
     constexpr std::uint32_t motion_stride() const { return fps / motion_fps; }
 
-    constexpr float motion_frame_position(std::uint64_t motion_step_index, std::uint32_t substep) const
+    constexpr float motion_frame_position(std::uint32_t motion_step_index, std::uint32_t substep) const
     {
         const float substep_fraction = static_cast<float>(substep) / substep_count;
         return (static_cast<float>(motion_step_index) + substep_fraction) / motion_stride();

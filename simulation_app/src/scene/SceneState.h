@@ -39,7 +39,7 @@ public:
     void clear_garments();
     const std::vector<GarmentObject>& garments() const;
     // Playback
-    void set_motion_frame_index(std::uint64_t motion_frame_index);
+    void set_motion_frame_index(std::uint32_t motion_frame_index);
     void update_reference_frame_kinematics(float motion_frame_alpha, float dt);
     const Kinematics& reference_frame_kinematics(GarmentCategory category) const;
     float motion_frame_alpha(float motion_frame_position) const;

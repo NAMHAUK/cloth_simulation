@@ -92,7 +92,7 @@ private:
     SimulationPipeline simulation_pipeline_;
     RenderPipeline render_pipeline_;
 
-    std::uint64_t motion_step_index_ = 0;
+    std::uint32_t motion_step_index_ = 0;
     std::array<std::optional<GarmentPlacementState>, 2> garment_placement_states_{};
     bool simulation_running_ = false;
     bool is_default_pose_ = false;

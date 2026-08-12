@@ -84,7 +84,7 @@ void SimulationPipeline::prefit_garments(SceneGpuState& gpu_state,
 
 void SimulationPipeline::step(SceneState& scene,
                               SceneGpuState& gpu_state,
-                              std::uint64_t motion_step_index,
+                              std::uint32_t motion_step_index,
                               QOpenGLFunctions_4_5_Core& gl)
 {
     const auto views = gpu_state.simulation_view();
@@ -118,7 +118,7 @@ void SimulationPipeline::step(SceneState& scene,
 
 void SimulationPipeline::step_character_only(const SceneState& scene,
                                              SceneGpuState& gpu_state,
-                                             std::uint64_t motion_step_index,
+                                             std::uint32_t motion_step_index,
                                              QOpenGLFunctions_4_5_Core& gl) const
 {
     const float motion_frame_position = params_.step.motion_frame_position(motion_step_index + 1u, 0);
