@@ -37,11 +37,11 @@ public:
                          QOpenGLFunctions_4_5_Core& gl);
     void step(SceneState& scene,
               SceneGpuState& gpu_state,
-              std::uint64_t motion_step_index,
+              std::uint32_t motion_step_index,
               QOpenGLFunctions_4_5_Core& gl);
     void step_character_only(const SceneState& scene,
                              SceneGpuState& gpu_state,
-                             std::uint64_t motion_step_index,
+                             std::uint32_t motion_step_index,
                              QOpenGLFunctions_4_5_Core& gl) const;
 
 private:

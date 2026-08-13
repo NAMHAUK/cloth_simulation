@@ -79,7 +79,7 @@ void RenderPipeline::draw(const SceneState& scene,
     }
     const std::vector<GarmentObject>& garments = scene.garments();
     for (const GarmentObject& garment : garments) {
-        if (!garment.visible || !cloth_gpu_state.is_initialized()) {
+        if (!cloth_gpu_state.is_initialized()) {
             continue;
         }
 

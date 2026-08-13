@@ -1,10 +1,16 @@
 #pragma once
 
+#include "utils/NumericUtils.h"
+
 #include <glm/gtc/quaternion.hpp>
 #include <glm/mat3x3.hpp>
 #include <glm/vec3.hpp>
 
-struct CharacterReferenceFrame;
+struct CharacterReferenceFrame final
+{
+    glm::vec3 position{};
+    glm::quat orientation = quat_xyzw(0.0f, 0.0f, 0.0f, 1.0f);
+};
 
 struct Kinematics final
 {
@@ -22,7 +28,7 @@ struct Kinematics final
 
 private:
     // History
-    glm::quat orientation_ = glm::quat::wxyz(1.0f, 0.0f, 0.0f, 0.0f);
+    glm::quat orientation_ = quat_xyzw(0.0f, 0.0f, 0.0f, 1.0f);
     glm::vec3 velocity_{};
     glm::vec3 angular_velocity_{};
 };
