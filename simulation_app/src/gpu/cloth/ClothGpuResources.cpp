@@ -12,18 +12,12 @@
 #include <glm/vec4.hpp>
 
 namespace {
-constexpr std::uint32_t normal_components = 4;
 constexpr std::uint32_t gpu_position_components = 4;
 
 // Buffer utilities
-GLsizeiptr float_byte_size(std::uint32_t count, std::uint32_t component_count)
+GLsizeiptr byte_size(std::uint32_t count, std::size_t element_size)
 {
-    return static_cast<GLsizeiptr>(std::size_t{count} * component_count * sizeof(float));
-}
-
-GLsizeiptr scalar_byte_size(std::uint32_t count, std::size_t component_size)
-{
-    return static_cast<GLsizeiptr>(std::size_t{count} * component_size);
+    return static_cast<GLsizeiptr>(std::size_t{count} * element_size);
 }
 
 void clear_dynamic_state_range(const ClothBufferSet& buffers,
@@ -37,22 +31,22 @@ void clear_dynamic_state_range(const ClothBufferSet& buffers,
 
     gl.glClearNamedBufferSubData(buffers.collision_pushout,
                                  GL_RGBA32F,
-                                 scalar_byte_size(vertex_offset, sizeof(glm::vec4)),
-                                 scalar_byte_size(vertex_count, sizeof(glm::vec4)),
+                                 byte_size(vertex_offset, sizeof(glm::vec4)),
+                                 byte_size(vertex_count, sizeof(glm::vec4)),
                                  GL_RGBA,
                                  GL_FLOAT,
                                  nullptr);
     gl.glClearNamedBufferSubData(buffers.cloth_cloth_pushout,
                                  GL_RGBA32F,
-                                 scalar_byte_size(vertex_offset, sizeof(glm::vec4)),
-                                 scalar_byte_size(vertex_count, sizeof(glm::vec4)),
+                                 byte_size(vertex_offset, sizeof(glm::vec4)),
+                                 byte_size(vertex_count, sizeof(glm::vec4)),
                                  GL_RGBA,
                                  GL_FLOAT,
                                  nullptr);
     gl.glClearNamedBufferSubData(buffers.contact_motion_delta,
                                  GL_RGBA32F,
-                                 scalar_byte_size(vertex_offset, sizeof(glm::vec4)),
-                                 scalar_byte_size(vertex_count, sizeof(glm::vec4)),
+                                 byte_size(vertex_offset, sizeof(glm::vec4)),
+                                 byte_size(vertex_count, sizeof(glm::vec4)),
                                  GL_RGBA,
                                  GL_FLOAT,
                                  nullptr);
@@ -240,27 +234,27 @@ ClothBufferSet create_buffer_set(const ClothBufferElementCounts& allocated_eleme
     gl.glCreateBuffers(1, &buffers.vertex_normal);
 
     gl.glNamedBufferData(buffers.current_position,
-                         float_byte_size(allocated_elements.vertex, gpu_position_components),
+                         byte_size(allocated_elements.vertex, sizeof(glm::vec4)),
                          nullptr,
                          GL_DYNAMIC_DRAW);
     gl.glNamedBufferData(buffers.previous_position,
-                         float_byte_size(allocated_elements.vertex, gpu_position_components),
+                         byte_size(allocated_elements.vertex, sizeof(glm::vec4)),
                          nullptr,
                          GL_DYNAMIC_DRAW);
     gl.glNamedBufferData(buffers.collision_pushout,
-                         scalar_byte_size(allocated_elements.vertex, sizeof(glm::vec4)),
+                         byte_size(allocated_elements.vertex, sizeof(glm::vec4)),
                          nullptr,
                          GL_DYNAMIC_DRAW);
     gl.glNamedBufferData(buffers.cloth_cloth_pushout,
-                         scalar_byte_size(allocated_elements.vertex, sizeof(glm::vec4)),
+                         byte_size(allocated_elements.vertex, sizeof(glm::vec4)),
                          nullptr,
                          GL_DYNAMIC_DRAW);
     gl.glNamedBufferData(buffers.contact_motion_delta,
-                         scalar_byte_size(allocated_elements.vertex, sizeof(glm::vec4)),
+                         byte_size(allocated_elements.vertex, sizeof(glm::vec4)),
                          nullptr,
                          GL_DYNAMIC_DRAW);
     gl.glNamedBufferData(buffers.body_triangle_id,
-                         scalar_byte_size(allocated_elements.vertex, sizeof(std::uint32_t)),
+                         byte_size(allocated_elements.vertex, sizeof(std::uint32_t)),
                          nullptr,
                          GL_DYNAMIC_DRAW);
     const std::uint32_t invalid_body_triangle_id = std::numeric_limits<std::uint32_t>::max();
@@ -270,47 +264,47 @@ ClothBufferSet create_buffer_set(const ClothBufferElementCounts& allocated_eleme
                               GL_UNSIGNED_INT,
                               &invalid_body_triangle_id);
     gl.glNamedBufferData(buffers.index,
-                         scalar_byte_size(allocated_elements.index, sizeof(std::uint32_t)),
+                         byte_size(allocated_elements.index, sizeof(std::uint32_t)),
                          nullptr,
                          GL_STATIC_DRAW);
     gl.glNamedBufferData(buffers.adjacent_triangle_offsets,
-                         scalar_byte_size(allocated_elements.vertex + 1u, sizeof(std::uint32_t)),
+                         byte_size(allocated_elements.vertex + 1u, sizeof(std::uint32_t)),
                          nullptr,
                          GL_STATIC_DRAW);
     gl.glNamedBufferData(buffers.adjacent_triangle_indices,
-                         scalar_byte_size(allocated_elements.adjacency_entry, sizeof(std::uint32_t)),
+                         byte_size(allocated_elements.adjacency_entry, sizeof(std::uint32_t)),
                          nullptr,
                          GL_STATIC_DRAW);
     gl.glNamedBufferData(buffers.stretch_edge_index,
-                         scalar_byte_size(allocated_elements.stretch_constraint * 2u, sizeof(std::uint32_t)),
+                         byte_size(allocated_elements.stretch_constraint * 2u, sizeof(std::uint32_t)),
                          nullptr,
                          GL_STATIC_DRAW);
     gl.glNamedBufferData(buffers.stretch_rest_length,
-                         scalar_byte_size(allocated_elements.stretch_constraint, sizeof(float)),
+                         byte_size(allocated_elements.stretch_constraint, sizeof(float)),
                          nullptr,
                          GL_STATIC_DRAW);
     gl.glNamedBufferData(buffers.bending_edge_index,
-                         scalar_byte_size(allocated_elements.bending_constraint * 2u, sizeof(std::uint32_t)),
+                         byte_size(allocated_elements.bending_constraint * 2u, sizeof(std::uint32_t)),
                          nullptr,
                          GL_STATIC_DRAW);
     gl.glNamedBufferData(buffers.bending_rest_length,
-                         scalar_byte_size(allocated_elements.bending_constraint, sizeof(float)),
+                         byte_size(allocated_elements.bending_constraint, sizeof(float)),
                          nullptr,
                          GL_STATIC_DRAW);
     gl.glNamedBufferData(buffers.attachment_indices,
-                         scalar_byte_size(allocated_attachment_constraints, sizeof(glm::uvec2)),
+                         byte_size(allocated_attachment_constraints, sizeof(glm::uvec2)),
                          nullptr,
                          GL_DYNAMIC_DRAW);
     gl.glNamedBufferData(buffers.attachment_barycentric_offset,
-                         scalar_byte_size(allocated_attachment_constraints, sizeof(glm::vec4)),
+                         byte_size(allocated_attachment_constraints, sizeof(glm::vec4)),
                          nullptr,
                          GL_DYNAMIC_DRAW);
     gl.glNamedBufferData(buffers.triangle_normal,
-                         float_byte_size(allocated_elements.triangle, normal_components),
+                         byte_size(allocated_elements.triangle, sizeof(glm::vec4)),
                          nullptr,
                          GL_DYNAMIC_DRAW);
     gl.glNamedBufferData(buffers.vertex_normal,
-                         float_byte_size(allocated_elements.vertex, normal_components),
+                         byte_size(allocated_elements.vertex, sizeof(glm::vec4)),
                          nullptr,
                          GL_DYNAMIC_DRAW);
 
@@ -367,20 +361,18 @@ void upload_topology_data(const ClothBufferSet& buffers,
 {
     gl.glNamedBufferSubData(
         buffers.index,
-        scalar_byte_size(offsets.index, sizeof(std::uint32_t)),
-        scalar_byte_size(static_cast<std::uint32_t>(data.vertex_indices.size()), sizeof(std::uint32_t)),
+        byte_size(offsets.index, sizeof(std::uint32_t)),
+        byte_size(static_cast<std::uint32_t>(data.vertex_indices.size()), sizeof(std::uint32_t)),
         data.vertex_indices.data());
     gl.glNamedBufferSubData(
         buffers.adjacent_triangle_offsets,
-        scalar_byte_size(offsets.adjacent_triangle_offsets, sizeof(std::uint32_t)),
-        scalar_byte_size(static_cast<std::uint32_t>(data.adjacent_triangle_offsets.size()),
-                         sizeof(std::uint32_t)),
+        byte_size(offsets.adjacent_triangle_offsets, sizeof(std::uint32_t)),
+        byte_size(static_cast<std::uint32_t>(data.adjacent_triangle_offsets.size()), sizeof(std::uint32_t)),
         data.adjacent_triangle_offsets.data());
     gl.glNamedBufferSubData(
         buffers.adjacent_triangle_indices,
-        scalar_byte_size(offsets.adjacent_triangle_indices, sizeof(std::uint32_t)),
-        scalar_byte_size(static_cast<std::uint32_t>(data.adjacent_triangle_indices.size()),
-                         sizeof(std::uint32_t)),
+        byte_size(offsets.adjacent_triangle_indices, sizeof(std::uint32_t)),
+        byte_size(static_cast<std::uint32_t>(data.adjacent_triangle_indices.size()), sizeof(std::uint32_t)),
         data.adjacent_triangle_indices.data());
 }
 
@@ -418,15 +410,14 @@ void upload_distance_constraint_data(GLuint edge_index_buffer,
 {
     gl.glNamedBufferSubData(
         edge_index_buffer,
-        scalar_byte_size(constraint_offset * 2u, sizeof(std::uint32_t)),
-        scalar_byte_size(static_cast<std::uint32_t>(data.edge_indices.size()), sizeof(std::uint32_t)),
+        byte_size(constraint_offset * 2u, sizeof(std::uint32_t)),
+        byte_size(static_cast<std::uint32_t>(data.edge_indices.size()), sizeof(std::uint32_t)),
         data.edge_indices.data());
 
-    gl.glNamedBufferSubData(
-        rest_length_buffer,
-        scalar_byte_size(constraint_offset, sizeof(float)),
-        scalar_byte_size(static_cast<std::uint32_t>(data.rest_lengths.size()), sizeof(float)),
-        data.rest_lengths.data());
+    gl.glNamedBufferSubData(rest_length_buffer,
+                            byte_size(constraint_offset, sizeof(float)),
+                            byte_size(static_cast<std::uint32_t>(data.rest_lengths.size()), sizeof(float)),
+                            data.rest_lengths.data());
 }
 
 void build_attachment_vertex_upload_data(const std::vector<std::uint32_t>& attachment_vertex_indices,
@@ -450,14 +441,14 @@ void upload_attachment_constraints_data(const ClothBufferSet& buffers,
 
     gl.glNamedBufferSubData(
         buffers.attachment_indices,
-        scalar_byte_size(constraint_offset, sizeof(glm::uvec2)),
-        scalar_byte_size(static_cast<std::uint32_t>(data.attachment_indices.size()), sizeof(glm::uvec2)),
+        byte_size(constraint_offset, sizeof(glm::uvec2)),
+        byte_size(static_cast<std::uint32_t>(data.attachment_indices.size()), sizeof(glm::uvec2)),
         data.attachment_indices.data());
 
     gl.glNamedBufferSubData(
         buffers.attachment_barycentric_offset,
-        scalar_byte_size(constraint_offset, sizeof(glm::vec4)),
-        scalar_byte_size(static_cast<std::uint32_t>(data.barycentric_offsets.size()), sizeof(glm::vec4)),
+        byte_size(constraint_offset, sizeof(glm::vec4)),
+        byte_size(static_cast<std::uint32_t>(data.barycentric_offsets.size()), sizeof(glm::vec4)),
         data.barycentric_offsets.data());
 }
 
@@ -548,10 +539,8 @@ void upload_position_data(const ClothBufferSet& buffers,
             glm::vec4(vertices[source_index], vertices[source_index + 1u], vertices[source_index + 2u], 0.0f);
     }
 
-    const GLsizeiptr position_offset_bytes =
-        float_byte_size(buffer_ranges.vertices.offset, gpu_position_components);
-    const GLsizeiptr position_size_bytes =
-        float_byte_size(buffer_ranges.vertices.count, gpu_position_components);
+    const GLsizeiptr position_offset_bytes = byte_size(buffer_ranges.vertices.offset, sizeof(glm::vec4));
+    const GLsizeiptr position_size_bytes = byte_size(buffer_ranges.vertices.count, sizeof(glm::vec4));
 
     gl.glNamedBufferSubData(buffers.current_position,
                             position_offset_bytes,
@@ -574,14 +563,14 @@ void upload_rest_length_data(const ClothBufferSet& buffers,
 
     gl.glNamedBufferSubData(
         buffers.stretch_rest_length,
-        scalar_byte_size(buffer_ranges.stretch_constraints.offset, sizeof(float)),
-        scalar_byte_size(static_cast<std::uint32_t>(stretch_constraints.rest_lengths.size()), sizeof(float)),
+        byte_size(buffer_ranges.stretch_constraints.offset, sizeof(float)),
+        byte_size(static_cast<std::uint32_t>(stretch_constraints.rest_lengths.size()), sizeof(float)),
         stretch_constraints.rest_lengths.data());
 
     gl.glNamedBufferSubData(
         buffers.bending_rest_length,
-        scalar_byte_size(buffer_ranges.bending_constraints.offset, sizeof(float)),
-        scalar_byte_size(static_cast<std::uint32_t>(bending_constraints.rest_lengths.size()), sizeof(float)),
+        byte_size(buffer_ranges.bending_constraints.offset, sizeof(float)),
+        byte_size(static_cast<std::uint32_t>(bending_constraints.rest_lengths.size()), sizeof(float)),
         bending_constraints.rest_lengths.data());
 }
 
@@ -641,26 +630,24 @@ void copy_used_buffer_data(const ClothBufferSet& old_buffers,
         return;
     }
 
-    const GLsizeiptr position_bytes = float_byte_size(used_elements.vertex, gpu_position_components);
-    const GLsizeiptr vertex_state_bytes = scalar_byte_size(used_elements.vertex, sizeof(glm::vec4));
-    const GLsizeiptr body_triangle_id_bytes = scalar_byte_size(used_elements.vertex, sizeof(std::uint32_t));
-    const GLsizeiptr index_bytes = scalar_byte_size(used_elements.index, sizeof(std::uint32_t));
+    const GLsizeiptr position_bytes = byte_size(used_elements.vertex, sizeof(glm::vec4));
+    const GLsizeiptr vertex_state_bytes = byte_size(used_elements.vertex, sizeof(glm::vec4));
+    const GLsizeiptr body_triangle_id_bytes = byte_size(used_elements.vertex, sizeof(std::uint32_t));
+    const GLsizeiptr index_bytes = byte_size(used_elements.index, sizeof(std::uint32_t));
     const GLsizeiptr adjacent_triangle_offsets_bytes =
-        scalar_byte_size(used_elements.vertex + 1u, sizeof(std::uint32_t));
+        byte_size(used_elements.vertex + 1u, sizeof(std::uint32_t));
     const GLsizeiptr adjacent_triangle_indices_bytes =
-        scalar_byte_size(used_elements.adjacency_entry, sizeof(std::uint32_t));
+        byte_size(used_elements.adjacency_entry, sizeof(std::uint32_t));
     const GLsizeiptr stretch_edge_index_bytes =
-        scalar_byte_size(used_elements.stretch_constraint * 2u, sizeof(std::uint32_t));
-    const GLsizeiptr stretch_rest_length_bytes =
-        scalar_byte_size(used_elements.stretch_constraint, sizeof(float));
+        byte_size(used_elements.stretch_constraint * 2u, sizeof(std::uint32_t));
+    const GLsizeiptr stretch_rest_length_bytes = byte_size(used_elements.stretch_constraint, sizeof(float));
     const GLsizeiptr bending_edge_index_bytes =
-        scalar_byte_size(used_elements.bending_constraint * 2u, sizeof(std::uint32_t));
-    const GLsizeiptr bending_rest_length_bytes =
-        scalar_byte_size(used_elements.bending_constraint, sizeof(float));
+        byte_size(used_elements.bending_constraint * 2u, sizeof(std::uint32_t));
+    const GLsizeiptr bending_rest_length_bytes = byte_size(used_elements.bending_constraint, sizeof(float));
     const GLsizeiptr attachment_index_bytes =
-        scalar_byte_size(used_elements.attachment_constraint, sizeof(glm::uvec2));
+        byte_size(used_elements.attachment_constraint, sizeof(glm::uvec2));
     const GLsizeiptr attachment_barycentric_offset_bytes =
-        scalar_byte_size(used_elements.attachment_constraint, sizeof(glm::vec4));
+        byte_size(used_elements.attachment_constraint, sizeof(glm::vec4));
 
     if (position_bytes > 0) {
         gl.glCopyNamedBufferSubData(old_buffers.current_position,
@@ -781,18 +768,17 @@ bool copy_dynamic_state_buffers(const GarmentBufferRanges& old_data,
         return false;
     }
 
-    const GLsizeiptr old_offset_bytes = float_byte_size(old_data.vertices.offset, gpu_position_components);
-    const GLsizeiptr next_offset_bytes = float_byte_size(next_data.vertices.offset, gpu_position_components);
-    const GLsizeiptr position_size_bytes = float_byte_size(next_data.vertices.count, gpu_position_components);
-    const GLsizeiptr old_vec4_offset_bytes = scalar_byte_size(old_data.vertices.offset, sizeof(glm::vec4));
-    const GLsizeiptr next_vec4_offset_bytes = scalar_byte_size(next_data.vertices.offset, sizeof(glm::vec4));
-    const GLsizeiptr vec4_size_bytes = scalar_byte_size(next_data.vertices.count, sizeof(glm::vec4));
+    const GLsizeiptr old_offset_bytes = byte_size(old_data.vertices.offset, sizeof(glm::vec4));
+    const GLsizeiptr next_offset_bytes = byte_size(next_data.vertices.offset, sizeof(glm::vec4));
+    const GLsizeiptr position_size_bytes = byte_size(next_data.vertices.count, sizeof(glm::vec4));
+    const GLsizeiptr old_vec4_offset_bytes = byte_size(old_data.vertices.offset, sizeof(glm::vec4));
+    const GLsizeiptr next_vec4_offset_bytes = byte_size(next_data.vertices.offset, sizeof(glm::vec4));
+    const GLsizeiptr vec4_size_bytes = byte_size(next_data.vertices.count, sizeof(glm::vec4));
     const GLsizeiptr old_body_triangle_id_offset_bytes =
-        scalar_byte_size(old_data.vertices.offset, sizeof(std::uint32_t));
+        byte_size(old_data.vertices.offset, sizeof(std::uint32_t));
     const GLsizeiptr next_body_triangle_id_offset_bytes =
-        scalar_byte_size(next_data.vertices.offset, sizeof(std::uint32_t));
-    const GLsizeiptr body_triangle_id_size_bytes =
-        scalar_byte_size(next_data.vertices.count, sizeof(std::uint32_t));
+        byte_size(next_data.vertices.offset, sizeof(std::uint32_t));
+    const GLsizeiptr body_triangle_id_size_bytes = byte_size(next_data.vertices.count, sizeof(std::uint32_t));
 
     gl.glCopyNamedBufferSubData(old_buffers.current_position,
                                 next_buffers.current_position,
@@ -857,10 +843,10 @@ bool copy_attachment_target_buffers(const GarmentBufferRanges& old_data,
     gl.glMemoryBarrier(GL_SHADER_STORAGE_BARRIER_BIT | GL_BUFFER_UPDATE_BARRIER_BIT);
 
     const GLsizeiptr old_index_offset_bytes =
-        scalar_byte_size(old_data.attachment_constraints.offset, sizeof(glm::uvec2));
+        byte_size(old_data.attachment_constraints.offset, sizeof(glm::uvec2));
     const GLsizeiptr next_index_offset_bytes =
-        scalar_byte_size(next_data.attachment_constraints.offset, sizeof(glm::uvec2));
-    const GLsizeiptr index_size_bytes = scalar_byte_size(range_iter->count, sizeof(glm::uvec2));
+        byte_size(next_data.attachment_constraints.offset, sizeof(glm::uvec2));
+    const GLsizeiptr index_size_bytes = byte_size(range_iter->count, sizeof(glm::uvec2));
     gl.glCopyNamedBufferSubData(old_buffers.attachment_indices,
                                 next_buffers.attachment_indices,
                                 old_index_offset_bytes,
@@ -868,10 +854,10 @@ bool copy_attachment_target_buffers(const GarmentBufferRanges& old_data,
                                 index_size_bytes);
 
     const GLsizeiptr old_barycentric_offset_bytes =
-        scalar_byte_size(old_data.attachment_constraints.offset, sizeof(glm::vec4));
+        byte_size(old_data.attachment_constraints.offset, sizeof(glm::vec4));
     const GLsizeiptr next_barycentric_offset_bytes =
-        scalar_byte_size(next_data.attachment_constraints.offset, sizeof(glm::vec4));
-    const GLsizeiptr barycentric_size_bytes = scalar_byte_size(range_iter->count, sizeof(glm::vec4));
+        byte_size(next_data.attachment_constraints.offset, sizeof(glm::vec4));
+    const GLsizeiptr barycentric_size_bytes = byte_size(range_iter->count, sizeof(glm::vec4));
     gl.glCopyNamedBufferSubData(old_buffers.attachment_barycentric_offset,
                                 next_buffers.attachment_barycentric_offset,
                                 old_barycentric_offset_bytes,
@@ -1270,7 +1256,7 @@ bool ClothGpuResources::capture_base_positions(QOpenGLFunctions_4_5_Core& gl)
 
     clear_base_positions(gl);
 
-    const GLsizeiptr position_bytes = float_byte_size(used_elements_.vertex, gpu_position_components);
+    const GLsizeiptr position_bytes = byte_size(used_elements_.vertex, sizeof(glm::vec4));
     gl.glCreateBuffers(1, &base_positions_);
     gl.glNamedBufferData(base_positions_, position_bytes, nullptr, GL_DYNAMIC_COPY);
 
@@ -1295,7 +1281,7 @@ bool ClothGpuResources::restore_base_positions(QOpenGLFunctions_4_5_Core& gl) co
         return false;
     }
 
-    const GLsizeiptr position_bytes = float_byte_size(used_elements_.vertex, gpu_position_components);
+    const GLsizeiptr position_bytes = byte_size(used_elements_.vertex, sizeof(glm::vec4));
 
     gl.glMemoryBarrier(GL_SHADER_STORAGE_BARRIER_BIT | GL_BUFFER_UPDATE_BARRIER_BIT);
     gl.glCopyNamedBufferSubData(base_positions_, buffers_.current_position, 0, 0, position_bytes);
@@ -1325,7 +1311,7 @@ void ClothGpuResources::copy_current_positions_to_previous(QOpenGLFunctions_4_5_
         return;
     }
 
-    const GLsizeiptr position_bytes = float_byte_size(used_elements_.vertex, gpu_position_components);
+    const GLsizeiptr position_bytes = byte_size(used_elements_.vertex, sizeof(glm::vec4));
 
     gl.glMemoryBarrier(GL_SHADER_STORAGE_BARRIER_BIT | GL_BUFFER_UPDATE_BARRIER_BIT);
     gl.glCopyNamedBufferSubData(buffers_.current_position, buffers_.previous_position, 0, 0, position_bytes);
