@@ -60,21 +60,18 @@ float SceneState::motion_frame_alpha(float motion_frame_position) const
     return std::clamp(motion_frame_position - static_cast<float>(motion_frame_index_), 0.0f, 1.0f);
 }
 
+glm::vec3 SceneState::character_root_position(std::uint32_t motion_frame_index) const
+{
+    return frame_position(character_motion_.pelvis_positions, motion_frame_index);
+}
+
 void SceneState::update_reference_frame_kinematics(float motion_frame_alpha, float dt)
 {
     const auto pelvis = interpolated_reference_frame(motion_frame_alpha, GarmentCategory::Bottom);
     const auto torso = interpolated_reference_frame(motion_frame_alpha, GarmentCategory::Top);
+
     pelvis_kinematics_.update(pelvis, dt);
     torso_kinematics_.update(torso, dt);
-}
-
-glm::vec3 SceneState::character_root_position(std::uint32_t motion_frame_index) const
-{
-    if (motion_frame_index >= character_motion_.frame_count) {
-        return glm::vec3{0.0f};
-    }
-
-    return frame_position(character_motion_.pelvis_positions, motion_frame_index);
 }
 
 CharacterReferenceFrame SceneState::interpolated_reference_frame(float motion_frame_alpha,
@@ -123,7 +120,6 @@ GarmentObject& SceneState::apply_garment_placement(GarmentLayer layer,
 {
     GarmentObject* garment = find_garment(layer);
     GarmentMesh& mesh = garment->mesh;
-    const glm::vec3 scale_center = mesh.bounds_center;
 
     for (std::size_t index = 0; index < mesh.vertices.size(); index += 3u) {
         glm::vec3 position{
@@ -131,7 +127,7 @@ GarmentObject& SceneState::apply_garment_placement(GarmentLayer layer,
             mesh.vertices[index + 1u],
             mesh.vertices[index + 2u],
         };
-        position = scale_center + (position - scale_center) * scale + position_offset;
+        position = mesh.bounds_center + (position - mesh.bounds_center) * scale + position_offset;
         mesh.vertices[index] = position.x;
         mesh.vertices[index + 1u] = position.y;
         mesh.vertices[index + 2u] = position.z;
@@ -140,7 +136,7 @@ GarmentObject& SceneState::apply_garment_placement(GarmentLayer layer,
     mesh.bounds_center += position_offset;
     mesh.bounds_radius *= scale;
 
-    for (GarmentDistanceConstraints* constraints : {&mesh.stretch_constraints, &mesh.bending_constraints}) {
+    for (auto* constraints : {&mesh.stretch_constraints, &mesh.bending_constraints}) {
         for (float& rest_length : constraints->rest_lengths) {
             rest_length *= scale;
         }
@@ -157,16 +153,13 @@ void SceneState::update_garment_color(GarmentLayer layer, const glm::vec3& color
 
 bool SceneState::remove_garment(GarmentLayer layer)
 {
-    const auto iter = std::find_if(garments_.begin(), garments_.end(), [layer](const GarmentObject& garment) {
-        return garment.layer == layer;
-    });
-
-    if (iter == garments_.end()) {
-        return false;
+    for (auto iter = garments_.begin(); iter != garments_.end(); ++iter) {
+        if (iter->layer == layer) {
+            garments_.erase(iter);
+            return true;
+        }
     }
-
-    garments_.erase(iter);
-    return true;
+    return false;
 }
 
 void SceneState::clear_garments()
@@ -176,19 +169,22 @@ void SceneState::clear_garments()
 
 GarmentObject* SceneState::find_garment(GarmentLayer layer)
 {
-    const auto iter = std::find_if(garments_.begin(), garments_.end(), [layer](const GarmentObject& garment) {
-        return garment.layer == layer;
-    });
-
-    return iter == garments_.end() ? nullptr : &(*iter);
+    for (GarmentObject& garment : garments_) {
+        if (garment.layer == layer) {
+            return &garment;
+        }
+    }
+    return nullptr;
 }
 
 const GarmentObject* SceneState::find_garment(GarmentLayer layer) const
 {
-    const auto iter = std::find_if(garments_.begin(), garments_.end(), [layer](const GarmentObject& garment) {
-        return garment.layer == layer;
-    });
-    return iter == garments_.end() ? nullptr : &(*iter);
+    for (const GarmentObject& garment : garments_) {
+        if (garment.layer == layer) {
+            return &garment;
+        }
+    }
+    return nullptr;
 }
 
 // Accessors
