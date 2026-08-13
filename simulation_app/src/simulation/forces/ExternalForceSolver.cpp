@@ -13,7 +13,6 @@
 namespace {
 constexpr GLuint current_positions_binding = 0;
 constexpr GLuint previous_positions_binding = 1;
-constexpr GLuint velocities_binding = 2;
 constexpr GLuint collision_pushouts_binding = 3;
 constexpr GLuint cloth_cloth_pushouts_binding = 4;
 constexpr GLuint contact_motion_deltas_binding = 5;
@@ -128,7 +127,6 @@ void ExternalForceSolver::solve(const SimulationGpuView& views,
     gl.glBindBufferBase(GL_SHADER_STORAGE_BUFFER,
                         previous_positions_binding,
                         motion_view.previous_position_buffer);
-    gl.glBindBufferBase(GL_SHADER_STORAGE_BUFFER, velocities_binding, motion_view.velocity_buffer);
     gl.glBindBufferBase(GL_SHADER_STORAGE_BUFFER,
                         collision_pushouts_binding,
                         collision_pushout_view.collision_pushout_buffer);

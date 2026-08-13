@@ -10,10 +10,6 @@ layout(std430, binding = 1) buffer PreviousPositions {
     vec4 previous_positions[];
 };
 
-layout(std430, binding = 2) buffer Velocities {
-    vec4 velocities[];
-};
-
 layout(std430, binding = 3) buffer CollisionPushouts {
     vec4 collision_pushouts[];
 };
@@ -80,7 +76,7 @@ void main()
     cloth_cloth_pushouts[vertex_index] = vec4(0.0);
     contact_motion_deltas[vertex_index] = vec4(0.0);
      
-    // update pos, vel
+    // update pos
     vec3 frame_offset = current - uFrameStartPosition;
     vec3 frame_velocity = uFrameStartVelocity + cross(uFrameStartAngularVelocity, frame_offset);
     vec3 relative_velocity = solved_velocity - frame_velocity;
@@ -94,9 +90,7 @@ void main()
     relative_velocity = relative_velocity * uVelocityDamping + relative_acceleration * uDeltaTime;
     vec3 predicted_position =
         uFrameEndPosition + uFrameRotationDelta * (frame_offset + relative_velocity * uDeltaTime);
-    vec3 velocity = (predicted_position - current) / uDeltaTime;
 
     previous_positions[vertex_index] = vec4(current, 0.0);
     current_positions[vertex_index] = vec4(predicted_position, 0.0);
-    velocities[vertex_index] = vec4(velocity, 0.0);
 }

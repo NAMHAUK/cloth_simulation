@@ -9,7 +9,6 @@ inline bool is_valid_motion_view(const ClothMotionBufferView& motion_view)
 {
     return motion_view.current_position_buffer != 0 &&
            motion_view.previous_position_buffer != 0 &&
-           motion_view.velocity_buffer != 0 &&
            motion_view.vertex_count != 0;
 }
 

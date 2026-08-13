@@ -13,7 +13,6 @@ struct ClothBufferSet final
     GLuint vao = 0;
     GLuint current_position = 0;
     GLuint previous_position = 0;
-    GLuint velocity = 0;
     GLuint collision_pushout = 0;
     GLuint cloth_cloth_pushout = 0;
     GLuint contact_motion_delta = 0;
@@ -52,7 +51,6 @@ struct ClothMotionBufferView final
 {
     GLuint current_position_buffer = 0;
     GLuint previous_position_buffer = 0;
-    GLuint velocity_buffer = 0;
     std::uint32_t vertex_count = 0;
 };
 
