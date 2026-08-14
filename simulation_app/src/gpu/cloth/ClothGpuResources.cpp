@@ -15,7 +15,7 @@ namespace {
 constexpr std::uint32_t normal_components = 4;
 constexpr std::uint32_t gpu_position_components = 4;
 
-// size / capacity //
+// Buffer utilities
 GLsizeiptr float_byte_size(std::uint32_t count, std::uint32_t component_count)
 {
     return static_cast<GLsizeiptr>(std::size_t{count} * component_count * sizeof(float));
@@ -58,33 +58,6 @@ void clear_dynamic_state_range(const ClothBufferSet& buffers,
                                  nullptr);
 }
 
-ClothBufferElementCounts make_expanded_capacity(const ClothBufferElementCounts& allocated_elements,
-                                                const ClothBufferElementCounts& required_elements)
-{
-    const auto expand_count = [](std::uint32_t current_capacity, std::uint32_t required_capacity) {
-        if (required_capacity <= current_capacity) {
-            return current_capacity;
-        }
-
-        const std::uint32_t doubled_capacity =
-            current_capacity > (std::numeric_limits<std::uint32_t>::max() / 2u)
-                ? std::numeric_limits<std::uint32_t>::max()
-                : current_capacity * 2u;
-        return std::max(required_capacity, doubled_capacity);
-    };
-
-    return ClothBufferElementCounts{
-        expand_count(allocated_elements.vertex, required_elements.vertex),
-        expand_count(allocated_elements.index, required_elements.index),
-        expand_count(allocated_elements.triangle, required_elements.triangle),
-        expand_count(allocated_elements.adjacency_entry, required_elements.adjacency_entry),
-        expand_count(allocated_elements.stretch_constraint, required_elements.stretch_constraint),
-        expand_count(allocated_elements.bending_constraint, required_elements.bending_constraint),
-        expand_count(allocated_elements.attachment_constraint, required_elements.attachment_constraint),
-    };
-}
-
-// state checks //
 bool is_uploadable_mesh(const GarmentMesh& garment_mesh)
 {
     const auto vertex_count =
@@ -109,7 +82,7 @@ bool has_valid_attachment_vertices(const GarmentObject& garment)
                        [vertex_count](std::uint32_t vertex_index) { return vertex_index < vertex_count; });
 }
 
-// garment buffer ranges //
+// Buffer layout
 struct BufferRebuildGarmentData final
 {
     const GarmentObject* garment = nullptr;
@@ -203,7 +176,148 @@ bool assign_buffer_rebuild_ranges(const std::vector<GarmentObject>& garments,
     return !rebuild_garments.empty();
 }
 
-// topology upload //
+std::array<GarmentBufferRanges, 2> make_buffer_rebuild_ranges(
+    const std::vector<BufferRebuildGarmentData>& rebuild_garments)
+{
+    std::array<GarmentBufferRanges, 2> rebuild_ranges;
+    for (const BufferRebuildGarmentData& rebuild_garment : rebuild_garments) {
+        rebuild_ranges[rebuild_garment.garment->layer] = rebuild_garment.buffer_ranges;
+    }
+    return rebuild_ranges;
+}
+
+// Buffer allocation
+ClothBufferElementCounts make_expanded_capacity(const ClothBufferElementCounts& allocated_elements,
+                                                const ClothBufferElementCounts& required_elements)
+{
+    const auto expand_count = [](std::uint32_t current_capacity, std::uint32_t required_capacity) {
+        if (required_capacity <= current_capacity) {
+            return current_capacity;
+        }
+
+        const std::uint32_t doubled_capacity =
+            current_capacity > (std::numeric_limits<std::uint32_t>::max() / 2u)
+                ? std::numeric_limits<std::uint32_t>::max()
+                : current_capacity * 2u;
+        return std::max(required_capacity, doubled_capacity);
+    };
+
+    return ClothBufferElementCounts{
+        expand_count(allocated_elements.vertex, required_elements.vertex),
+        expand_count(allocated_elements.index, required_elements.index),
+        expand_count(allocated_elements.triangle, required_elements.triangle),
+        expand_count(allocated_elements.adjacency_entry, required_elements.adjacency_entry),
+        expand_count(allocated_elements.stretch_constraint, required_elements.stretch_constraint),
+        expand_count(allocated_elements.bending_constraint, required_elements.bending_constraint),
+        expand_count(allocated_elements.attachment_constraint, required_elements.attachment_constraint),
+    };
+}
+
+ClothBufferSet create_buffer_set(const ClothBufferElementCounts& allocated_elements,
+                                 QOpenGLFunctions_4_5_Core& gl)
+{
+    ClothBufferSet buffers;
+    const std::uint32_t allocated_attachment_constraints =
+        std::max(allocated_elements.attachment_constraint, 1u);
+
+    gl.glCreateVertexArrays(1, &buffers.vao);
+    gl.glCreateBuffers(1, &buffers.current_position);
+    gl.glCreateBuffers(1, &buffers.previous_position);
+    gl.glCreateBuffers(1, &buffers.collision_pushout);
+    gl.glCreateBuffers(1, &buffers.cloth_cloth_pushout);
+    gl.glCreateBuffers(1, &buffers.contact_motion_delta);
+    gl.glCreateBuffers(1, &buffers.body_triangle_id);
+    gl.glCreateBuffers(1, &buffers.index);
+    gl.glCreateBuffers(1, &buffers.adjacent_triangle_offsets);
+    gl.glCreateBuffers(1, &buffers.adjacent_triangle_indices);
+    gl.glCreateBuffers(1, &buffers.stretch_edge_index);
+    gl.glCreateBuffers(1, &buffers.stretch_rest_length);
+    gl.glCreateBuffers(1, &buffers.bending_edge_index);
+    gl.glCreateBuffers(1, &buffers.bending_rest_length);
+    gl.glCreateBuffers(1, &buffers.attachment_indices);
+    gl.glCreateBuffers(1, &buffers.attachment_barycentric_offset);
+    gl.glCreateBuffers(1, &buffers.triangle_normal);
+    gl.glCreateBuffers(1, &buffers.vertex_normal);
+
+    gl.glNamedBufferData(buffers.current_position,
+                         float_byte_size(allocated_elements.vertex, gpu_position_components),
+                         nullptr,
+                         GL_DYNAMIC_DRAW);
+    gl.glNamedBufferData(buffers.previous_position,
+                         float_byte_size(allocated_elements.vertex, gpu_position_components),
+                         nullptr,
+                         GL_DYNAMIC_DRAW);
+    gl.glNamedBufferData(buffers.collision_pushout,
+                         scalar_byte_size(allocated_elements.vertex, sizeof(glm::vec4)),
+                         nullptr,
+                         GL_DYNAMIC_DRAW);
+    gl.glNamedBufferData(buffers.cloth_cloth_pushout,
+                         scalar_byte_size(allocated_elements.vertex, sizeof(glm::vec4)),
+                         nullptr,
+                         GL_DYNAMIC_DRAW);
+    gl.glNamedBufferData(buffers.contact_motion_delta,
+                         scalar_byte_size(allocated_elements.vertex, sizeof(glm::vec4)),
+                         nullptr,
+                         GL_DYNAMIC_DRAW);
+    gl.glNamedBufferData(buffers.body_triangle_id,
+                         scalar_byte_size(allocated_elements.vertex, sizeof(std::uint32_t)),
+                         nullptr,
+                         GL_DYNAMIC_DRAW);
+    const std::uint32_t invalid_body_triangle_id = std::numeric_limits<std::uint32_t>::max();
+    gl.glClearNamedBufferData(buffers.body_triangle_id,
+                              GL_R32UI,
+                              GL_RED_INTEGER,
+                              GL_UNSIGNED_INT,
+                              &invalid_body_triangle_id);
+    gl.glNamedBufferData(buffers.index,
+                         scalar_byte_size(allocated_elements.index, sizeof(std::uint32_t)),
+                         nullptr,
+                         GL_STATIC_DRAW);
+    gl.glNamedBufferData(buffers.adjacent_triangle_offsets,
+                         scalar_byte_size(allocated_elements.vertex + 1u, sizeof(std::uint32_t)),
+                         nullptr,
+                         GL_STATIC_DRAW);
+    gl.glNamedBufferData(buffers.adjacent_triangle_indices,
+                         scalar_byte_size(allocated_elements.adjacency_entry, sizeof(std::uint32_t)),
+                         nullptr,
+                         GL_STATIC_DRAW);
+    gl.glNamedBufferData(buffers.stretch_edge_index,
+                         scalar_byte_size(allocated_elements.stretch_constraint * 2u, sizeof(std::uint32_t)),
+                         nullptr,
+                         GL_STATIC_DRAW);
+    gl.glNamedBufferData(buffers.stretch_rest_length,
+                         scalar_byte_size(allocated_elements.stretch_constraint, sizeof(float)),
+                         nullptr,
+                         GL_STATIC_DRAW);
+    gl.glNamedBufferData(buffers.bending_edge_index,
+                         scalar_byte_size(allocated_elements.bending_constraint * 2u, sizeof(std::uint32_t)),
+                         nullptr,
+                         GL_STATIC_DRAW);
+    gl.glNamedBufferData(buffers.bending_rest_length,
+                         scalar_byte_size(allocated_elements.bending_constraint, sizeof(float)),
+                         nullptr,
+                         GL_STATIC_DRAW);
+    gl.glNamedBufferData(buffers.attachment_indices,
+                         scalar_byte_size(allocated_attachment_constraints, sizeof(glm::uvec2)),
+                         nullptr,
+                         GL_DYNAMIC_DRAW);
+    gl.glNamedBufferData(buffers.attachment_barycentric_offset,
+                         scalar_byte_size(allocated_attachment_constraints, sizeof(glm::vec4)),
+                         nullptr,
+                         GL_DYNAMIC_DRAW);
+    gl.glNamedBufferData(buffers.triangle_normal,
+                         float_byte_size(allocated_elements.triangle, normal_components),
+                         nullptr,
+                         GL_DYNAMIC_DRAW);
+    gl.glNamedBufferData(buffers.vertex_normal,
+                         float_byte_size(allocated_elements.vertex, normal_components),
+                         nullptr,
+                         GL_DYNAMIC_DRAW);
+
+    return buffers;
+}
+
+// Buffer data
 struct TopologyUploadData final
 {
     std::vector<std::uint32_t> vertex_indices;
@@ -270,7 +384,6 @@ void upload_topology_data(const ClothBufferSet& buffers,
         data.adjacent_triangle_indices.data());
 }
 
-// stretch constraint //
 struct DistanceConstraintUploadData final
 {
     std::vector<std::uint32_t> edge_indices;
@@ -412,7 +525,6 @@ void append_color_ranges(const std::vector<MeshElementRange>& local_ranges,
     }
 }
 
-// garment upload //
 struct GarmentUploadData final
 {
     TopologyUploadData topology;
@@ -426,7 +538,8 @@ GarmentUploadData prepare_garment_upload_data(const GarmentObject& garment,
 {
     GarmentUploadData data;
     data.topology.vertex_indices.reserve(garment.mesh.triangle_vertex_indices.size());
-    data.topology.adjacent_triangle_offsets.resize(static_cast<std::size_t>(buffer_ranges.vertices.count) + 1u,
+    data.topology.adjacent_triangle_offsets.resize(static_cast<std::size_t>(buffer_ranges.vertices.count) +
+                                                       1u,
                                                    0);
     data.topology.adjacent_triangle_indices.reserve(garment.mesh.adjacency.face_indices.size());
     data.stretch_constraints.edge_indices.reserve(buffer_ranges.stretch_constraints.count * 2u);
@@ -503,7 +616,6 @@ void upload_rest_length_data(const ClothBufferSet& buffers,
         bending_constraints.rest_lengths.data());
 }
 
-// buffer rebuild upload //
 struct BufferRebuildUploadData final
 {
     TopologyUploadData topology;
@@ -550,111 +662,7 @@ void build_buffer_rebuild_upload_data(const GarmentObject& garment,
                         data.bending_color_ranges);
 }
 
-// buffer object //
-ClothBufferSet create_buffer_set(const ClothBufferElementCounts& allocated_elements,
-                                 QOpenGLFunctions_4_5_Core& gl)
-{
-    ClothBufferSet buffers;
-    const std::uint32_t allocated_attachment_constraints =
-        std::max(allocated_elements.attachment_constraint, 1u);
-
-    gl.glCreateVertexArrays(1, &buffers.vao);
-    gl.glCreateBuffers(1, &buffers.current_position);
-    gl.glCreateBuffers(1, &buffers.previous_position);
-    gl.glCreateBuffers(1, &buffers.collision_pushout);
-    gl.glCreateBuffers(1, &buffers.cloth_cloth_pushout);
-    gl.glCreateBuffers(1, &buffers.contact_motion_delta);
-    gl.glCreateBuffers(1, &buffers.body_triangle_id);
-    gl.glCreateBuffers(1, &buffers.index);
-    gl.glCreateBuffers(1, &buffers.adjacent_triangle_offsets);
-    gl.glCreateBuffers(1, &buffers.adjacent_triangle_indices);
-    gl.glCreateBuffers(1, &buffers.stretch_edge_index);
-    gl.glCreateBuffers(1, &buffers.stretch_rest_length);
-    gl.glCreateBuffers(1, &buffers.bending_edge_index);
-    gl.glCreateBuffers(1, &buffers.bending_rest_length);
-    gl.glCreateBuffers(1, &buffers.attachment_indices);
-    gl.glCreateBuffers(1, &buffers.attachment_barycentric_offset);
-    gl.glCreateBuffers(1, &buffers.triangle_normal);
-    gl.glCreateBuffers(1, &buffers.vertex_normal);
-
-    gl.glNamedBufferData(buffers.current_position,
-                         float_byte_size(allocated_elements.vertex, gpu_position_components),
-                         nullptr,
-                         GL_DYNAMIC_DRAW);
-    gl.glNamedBufferData(buffers.previous_position,
-                         float_byte_size(allocated_elements.vertex, gpu_position_components),
-                         nullptr,
-                         GL_DYNAMIC_DRAW);
-    gl.glNamedBufferData(buffers.collision_pushout,
-                         scalar_byte_size(allocated_elements.vertex, sizeof(glm::vec4)),
-                         nullptr,
-                         GL_DYNAMIC_DRAW);
-    gl.glNamedBufferData(buffers.cloth_cloth_pushout,
-                         scalar_byte_size(allocated_elements.vertex, sizeof(glm::vec4)),
-                         nullptr,
-                         GL_DYNAMIC_DRAW);
-    gl.glNamedBufferData(buffers.contact_motion_delta,
-                         scalar_byte_size(allocated_elements.vertex, sizeof(glm::vec4)),
-                         nullptr,
-                         GL_DYNAMIC_DRAW);
-    gl.glNamedBufferData(buffers.body_triangle_id,
-                         scalar_byte_size(allocated_elements.vertex, sizeof(std::uint32_t)),
-                         nullptr,
-                         GL_DYNAMIC_DRAW);
-    const std::uint32_t invalid_body_triangle_id = std::numeric_limits<std::uint32_t>::max();
-    gl.glClearNamedBufferData(buffers.body_triangle_id,
-                              GL_R32UI,
-                              GL_RED_INTEGER,
-                              GL_UNSIGNED_INT,
-                              &invalid_body_triangle_id);
-    gl.glNamedBufferData(buffers.index,
-                         scalar_byte_size(allocated_elements.index, sizeof(std::uint32_t)),
-                         nullptr,
-                         GL_STATIC_DRAW);
-    gl.glNamedBufferData(buffers.adjacent_triangle_offsets,
-                         scalar_byte_size(allocated_elements.vertex + 1u, sizeof(std::uint32_t)),
-                         nullptr,
-                         GL_STATIC_DRAW);
-    gl.glNamedBufferData(buffers.adjacent_triangle_indices,
-                         scalar_byte_size(allocated_elements.adjacency_entry, sizeof(std::uint32_t)),
-                         nullptr,
-                         GL_STATIC_DRAW);
-    gl.glNamedBufferData(buffers.stretch_edge_index,
-                         scalar_byte_size(allocated_elements.stretch_constraint * 2u, sizeof(std::uint32_t)),
-                         nullptr,
-                         GL_STATIC_DRAW);
-    gl.glNamedBufferData(buffers.stretch_rest_length,
-                         scalar_byte_size(allocated_elements.stretch_constraint, sizeof(float)),
-                         nullptr,
-                         GL_STATIC_DRAW);
-    gl.glNamedBufferData(buffers.bending_edge_index,
-                         scalar_byte_size(allocated_elements.bending_constraint * 2u, sizeof(std::uint32_t)),
-                         nullptr,
-                         GL_STATIC_DRAW);
-    gl.glNamedBufferData(buffers.bending_rest_length,
-                         scalar_byte_size(allocated_elements.bending_constraint, sizeof(float)),
-                         nullptr,
-                         GL_STATIC_DRAW);
-    gl.glNamedBufferData(buffers.attachment_indices,
-                         scalar_byte_size(allocated_attachment_constraints, sizeof(glm::uvec2)),
-                         nullptr,
-                         GL_DYNAMIC_DRAW);
-    gl.glNamedBufferData(buffers.attachment_barycentric_offset,
-                         scalar_byte_size(allocated_attachment_constraints, sizeof(glm::vec4)),
-                         nullptr,
-                         GL_DYNAMIC_DRAW);
-    gl.glNamedBufferData(buffers.triangle_normal,
-                         float_byte_size(allocated_elements.triangle, normal_components),
-                         nullptr,
-                         GL_DYNAMIC_DRAW);
-    gl.glNamedBufferData(buffers.vertex_normal,
-                         float_byte_size(allocated_elements.vertex, normal_components),
-                         nullptr,
-                         GL_DYNAMIC_DRAW);
-
-    return buffers;
-}
-
+// State preservation
 void copy_used_buffer_data(const ClothBufferSet& old_buffers,
                            const ClothBufferSet& next_buffers,
                            const ClothBufferElementCounts& used_elements,
@@ -958,15 +966,6 @@ bool rebuild_buffer_data(const std::vector<BufferRebuildGarmentData>& rebuild_ga
     return true;
 }
 
-std::array<GarmentBufferRanges, 2> make_buffer_rebuild_ranges(
-    const std::vector<BufferRebuildGarmentData>& rebuild_garments)
-{
-    std::array<GarmentBufferRanges, 2> rebuild_ranges;
-    for (const BufferRebuildGarmentData& rebuild_garment : rebuild_garments) {
-        rebuild_ranges[rebuild_garment.garment->layer] = rebuild_garment.buffer_ranges;
-    }
-    return rebuild_ranges;
-}
 }
 
 ClothGpuResources::ClothGpuResources(ClothGpuResources&& other) noexcept
@@ -985,27 +984,7 @@ ClothGpuResources::ClothGpuResources(ClothGpuResources&& other) noexcept
     other.reset_resources();
 }
 
-void ClothGpuResources::release(QOpenGLFunctions_4_5_Core& gl)
-{
-    delete_gpu_objects(gl);
-    reset_resources();
-}
-
-void ClothGpuResources::reset_resources() noexcept
-{
-    buffers_ = {};
-    garments_ = {};
-    stretch_color_ranges_.clear();
-    bending_color_ranges_.clear();
-    attachment_ranges_.clear();
-    used_elements_ = {};
-    allocated_elements_ = {};
-
-    base_positions_ = 0;
-    base_position_vertex_count_ = 0;
-}
-
-// garment buffer updates //
+// Buffer management
 bool ClothGpuResources::update_garment_buffers(const std::vector<GarmentObject>& garments,
                                                std::optional<GarmentLayer> updated_layer,
                                                QOpenGLFunctions_4_5_Core& gl)
@@ -1049,115 +1028,6 @@ bool ClothGpuResources::update_garment_buffers(const std::vector<GarmentObject>&
         }
     }
     return true;
-}
-
-bool ClothGpuResources::update_garment_placement(const GarmentObject& garment,
-                                                 QOpenGLFunctions_4_5_Core& gl)
-{
-    const GarmentBufferRanges& buffer_ranges = garments_[garment.layer];
-    if (!is_initialized() || !buffer_ranges.is_loaded() || !is_uploadable_mesh(garment.mesh)) {
-        return false;
-    }
-
-    upload_position_data(buffers_, garment.mesh.vertices, buffer_ranges, gl);
-    upload_rest_length_data(buffers_, garment, buffer_ranges, gl);
-
-    return true;
-}
-
-bool ClothGpuResources::upload_garment_attachment_vertices(const GarmentObject& garment,
-                                                           ElementRange& target_range,
-                                                           QOpenGLFunctions_4_5_Core& gl)
-{
-    target_range = {};
-    const GarmentBufferRanges& buffer_ranges = garments_[garment.layer];
-    if (!is_initialized() || !buffer_ranges.is_loaded() || !has_valid_attachment_vertices(garment)) {
-        return false;
-    }
-
-    const auto attachment_constraint_count =
-        static_cast<std::uint32_t>(garment.mesh.attachment_vertex_indices.size());
-    if (attachment_constraint_count > buffer_ranges.attachment_constraints.count) {
-        std::cerr << "Too many attachment vertices for garment layer " << garment.layer << ".\n";
-        return false;
-    }
-
-    target_range = {buffer_ranges.attachment_constraints.offset, attachment_constraint_count};
-    if (attachment_constraint_count == 0u) {
-        set_attachment_range(buffer_ranges.attachment_constraints.offset, 0u, attachment_ranges_);
-        return true;
-    }
-
-    AttachmentConstraintUploadData upload_data;
-    upload_data.attachment_indices.reserve(attachment_constraint_count);
-    upload_data.barycentric_offsets.reserve(attachment_constraint_count);
-    build_attachment_vertex_upload_data(garment.mesh.attachment_vertex_indices, buffer_ranges, upload_data);
-    upload_attachment_constraints_data(buffers_, buffer_ranges.attachment_constraints.offset, upload_data, gl);
-    return true;
-}
-
-bool ClothGpuResources::activate_attachment_targets(const ElementRange& target_range)
-{
-    if (!is_initialized() ||
-        target_range.offset > used_elements_.attachment_constraint ||
-        target_range.count > used_elements_.attachment_constraint - target_range.offset) {
-        return false;
-    }
-
-    set_attachment_range(target_range.offset, target_range.count, attachment_ranges_);
-    return true;
-}
-
-bool ClothGpuResources::capture_base_positions(QOpenGLFunctions_4_5_Core& gl)
-{
-    if (buffers_.current_position == 0 || used_elements_.vertex == 0) {
-        return false;
-    }
-
-    clear_base_positions(gl);
-
-    const GLsizeiptr position_bytes = float_byte_size(used_elements_.vertex, gpu_position_components);
-    gl.glCreateBuffers(1, &base_positions_);
-    gl.glNamedBufferData(base_positions_, position_bytes, nullptr, GL_DYNAMIC_COPY);
-
-    gl.glMemoryBarrier(GL_SHADER_STORAGE_BARRIER_BIT | GL_BUFFER_UPDATE_BARRIER_BIT);
-    gl.glCopyNamedBufferSubData(buffers_.current_position, base_positions_, 0, 0, position_bytes);
-    gl.glMemoryBarrier(GL_SHADER_STORAGE_BARRIER_BIT | GL_BUFFER_UPDATE_BARRIER_BIT);
-
-    base_position_vertex_count_ = used_elements_.vertex;
-    return true;
-}
-
-bool ClothGpuResources::restore_base_positions(QOpenGLFunctions_4_5_Core& gl) const
-{
-    if (base_positions_ == 0 ||
-        buffers_.current_position == 0 ||
-        buffers_.previous_position == 0 ||
-        buffers_.collision_pushout == 0 ||
-        buffers_.cloth_cloth_pushout == 0 ||
-        buffers_.contact_motion_delta == 0 ||
-        used_elements_.vertex == 0 ||
-        base_position_vertex_count_ != used_elements_.vertex) {
-        return false;
-    }
-
-    const GLsizeiptr position_bytes = float_byte_size(used_elements_.vertex, gpu_position_components);
-
-    gl.glMemoryBarrier(GL_SHADER_STORAGE_BARRIER_BIT | GL_BUFFER_UPDATE_BARRIER_BIT);
-    gl.glCopyNamedBufferSubData(base_positions_, buffers_.current_position, 0, 0, position_bytes);
-    gl.glCopyNamedBufferSubData(base_positions_, buffers_.previous_position, 0, 0, position_bytes);
-    clear_dynamic_state_range(buffers_, 0, used_elements_.vertex, gl);
-    gl.glMemoryBarrier(GL_SHADER_STORAGE_BARRIER_BIT | GL_BUFFER_UPDATE_BARRIER_BIT);
-
-    return true;
-}
-
-void ClothGpuResources::clear_base_positions(QOpenGLFunctions_4_5_Core& gl)
-{
-    gl.glDeleteBuffers(1, &base_positions_);
-
-    base_positions_ = 0;
-    base_position_vertex_count_ = 0;
 }
 
 bool ClothGpuResources::rebuild_buffers(const std::vector<GarmentObject>& garments,
@@ -1251,7 +1121,8 @@ bool ClothGpuResources::append_garment(const GarmentObject& garment, QOpenGLFunc
                                    static_cast<std::uint32_t>(stretch_constraints.colorized_edges.size()),
                                    static_cast<std::uint32_t>(bending_constraints.colorized_edges.size()),
                                    attachment_constraint_count);
-    const ClothBufferElementCounts next_used_elements = make_next_used_elements(used_elements_, buffer_ranges);
+    const ClothBufferElementCounts next_used_elements =
+        make_next_used_elements(used_elements_, buffer_ranges);
 
     // 1. 현재 GPU buffer에 새 garment가 사용할 구간이 남아있는지 확인 -> 부족하면 새 buffer 할당
     ensure_capacity(next_used_elements, gl);
@@ -1295,17 +1166,6 @@ bool ClothGpuResources::append_garment(const GarmentObject& garment, QOpenGLFunc
     return true;
 }
 
-// buffer object management //
-bool ClothGpuResources::has_enough_capacity(const ClothBufferElementCounts& required_elements) const
-{
-    return required_elements.vertex <= allocated_elements_.vertex &&
-           required_elements.index <= allocated_elements_.index &&
-           required_elements.triangle <= allocated_elements_.triangle &&
-           required_elements.adjacency_entry <= allocated_elements_.adjacency_entry &&
-           required_elements.stretch_constraint <= allocated_elements_.stretch_constraint &&
-           required_elements.bending_constraint <= allocated_elements_.bending_constraint &&
-           required_elements.attachment_constraint <= allocated_elements_.attachment_constraint;
-}
 // GPU buffer 공간이 충분한지 확인 -> 부족하면 더 큰 buffer로 교체
 void ClothGpuResources::ensure_capacity(const ClothBufferElementCounts& required_elements,
                                         QOpenGLFunctions_4_5_Core& gl)
@@ -1322,6 +1182,17 @@ void ClothGpuResources::ensure_capacity(const ClothBufferElementCounts& required
     delete_buffer_set(old_buffers, gl);
 }
 
+bool ClothGpuResources::has_enough_capacity(const ClothBufferElementCounts& required_elements) const
+{
+    return required_elements.vertex <= allocated_elements_.vertex &&
+           required_elements.index <= allocated_elements_.index &&
+           required_elements.triangle <= allocated_elements_.triangle &&
+           required_elements.adjacency_entry <= allocated_elements_.adjacency_entry &&
+           required_elements.stretch_constraint <= allocated_elements_.stretch_constraint &&
+           required_elements.bending_constraint <= allocated_elements_.bending_constraint &&
+           required_elements.attachment_constraint <= allocated_elements_.attachment_constraint;
+}
+
 void ClothGpuResources::create_buffers(const ClothBufferElementCounts& allocated_elements,
                                        QOpenGLFunctions_4_5_Core& gl)
 {
@@ -1329,36 +1200,6 @@ void ClothGpuResources::create_buffers(const ClothBufferElementCounts& allocated
     allocated_elements_ = allocated_elements;
 
     configure_vao(gl);
-}
-
-void ClothGpuResources::delete_buffer_set(ClothBufferSet& buffers, QOpenGLFunctions_4_5_Core& gl)
-{
-    gl.glDeleteBuffers(1, &buffers.vertex_normal);
-    gl.glDeleteBuffers(1, &buffers.triangle_normal);
-    gl.glDeleteBuffers(1, &buffers.adjacent_triangle_indices);
-    gl.glDeleteBuffers(1, &buffers.adjacent_triangle_offsets);
-    gl.glDeleteBuffers(1, &buffers.stretch_rest_length);
-    gl.glDeleteBuffers(1, &buffers.stretch_edge_index);
-    gl.glDeleteBuffers(1, &buffers.bending_rest_length);
-    gl.glDeleteBuffers(1, &buffers.bending_edge_index);
-    gl.glDeleteBuffers(1, &buffers.attachment_barycentric_offset);
-    gl.glDeleteBuffers(1, &buffers.attachment_indices);
-    gl.glDeleteBuffers(1, &buffers.index);
-    gl.glDeleteBuffers(1, &buffers.previous_position);
-    gl.glDeleteBuffers(1, &buffers.collision_pushout);
-    gl.glDeleteBuffers(1, &buffers.cloth_cloth_pushout);
-    gl.glDeleteBuffers(1, &buffers.contact_motion_delta);
-    gl.glDeleteBuffers(1, &buffers.body_triangle_id);
-    gl.glDeleteBuffers(1, &buffers.current_position);
-    gl.glDeleteVertexArrays(1, &buffers.vao);
-
-    buffers = {};
-}
-
-void ClothGpuResources::delete_gpu_objects(QOpenGLFunctions_4_5_Core& gl)
-{
-    delete_buffer_set(buffers_, gl);
-    clear_base_positions(gl);
 }
 
 void ClothGpuResources::configure_vao(QOpenGLFunctions_4_5_Core& gl)
@@ -1383,7 +1224,137 @@ void ClothGpuResources::configure_vao(QOpenGLFunctions_4_5_Core& gl)
     gl.glVertexArrayElementBuffer(buffers_.vao, buffers_.index);
 }
 
-// rendering //
+bool ClothGpuResources::update_garment_placement(const GarmentObject& garment, QOpenGLFunctions_4_5_Core& gl)
+{
+    const GarmentBufferRanges& buffer_ranges = garments_[garment.layer];
+    if (!is_initialized() || !buffer_ranges.is_loaded() || !is_uploadable_mesh(garment.mesh)) {
+        return false;
+    }
+
+    upload_position_data(buffers_, garment.mesh.vertices, buffer_ranges, gl);
+    upload_rest_length_data(buffers_, garment, buffer_ranges, gl);
+
+    return true;
+}
+
+bool ClothGpuResources::upload_garment_attachment_vertices(const GarmentObject& garment,
+                                                           ElementRange& target_range,
+                                                           QOpenGLFunctions_4_5_Core& gl)
+{
+    target_range = {};
+    const GarmentBufferRanges& buffer_ranges = garments_[garment.layer];
+    if (!is_initialized() || !buffer_ranges.is_loaded() || !has_valid_attachment_vertices(garment)) {
+        return false;
+    }
+
+    const auto attachment_constraint_count =
+        static_cast<std::uint32_t>(garment.mesh.attachment_vertex_indices.size());
+    if (attachment_constraint_count > buffer_ranges.attachment_constraints.count) {
+        std::cerr << "Too many attachment vertices for garment layer " << garment.layer << ".\n";
+        return false;
+    }
+
+    target_range = {buffer_ranges.attachment_constraints.offset, attachment_constraint_count};
+    if (attachment_constraint_count == 0u) {
+        set_attachment_range(buffer_ranges.attachment_constraints.offset, 0u, attachment_ranges_);
+        return true;
+    }
+
+    AttachmentConstraintUploadData upload_data;
+    upload_data.attachment_indices.reserve(attachment_constraint_count);
+    upload_data.barycentric_offsets.reserve(attachment_constraint_count);
+    build_attachment_vertex_upload_data(garment.mesh.attachment_vertex_indices, buffer_ranges, upload_data);
+    upload_attachment_constraints_data(buffers_,
+                                       buffer_ranges.attachment_constraints.offset,
+                                       upload_data,
+                                       gl);
+    return true;
+}
+
+bool ClothGpuResources::activate_attachment_targets(const ElementRange& target_range)
+{
+    if (!is_initialized() ||
+        target_range.offset > used_elements_.attachment_constraint ||
+        target_range.count > used_elements_.attachment_constraint - target_range.offset) {
+        return false;
+    }
+
+    set_attachment_range(target_range.offset, target_range.count, attachment_ranges_);
+    return true;
+}
+
+bool ClothGpuResources::capture_base_positions(QOpenGLFunctions_4_5_Core& gl)
+{
+    if (buffers_.current_position == 0 || used_elements_.vertex == 0) {
+        return false;
+    }
+
+    clear_base_positions(gl);
+
+    const GLsizeiptr position_bytes = float_byte_size(used_elements_.vertex, gpu_position_components);
+    gl.glCreateBuffers(1, &base_positions_);
+    gl.glNamedBufferData(base_positions_, position_bytes, nullptr, GL_DYNAMIC_COPY);
+
+    gl.glMemoryBarrier(GL_SHADER_STORAGE_BARRIER_BIT | GL_BUFFER_UPDATE_BARRIER_BIT);
+    gl.glCopyNamedBufferSubData(buffers_.current_position, base_positions_, 0, 0, position_bytes);
+    gl.glMemoryBarrier(GL_SHADER_STORAGE_BARRIER_BIT | GL_BUFFER_UPDATE_BARRIER_BIT);
+
+    base_position_vertex_count_ = used_elements_.vertex;
+    return true;
+}
+
+bool ClothGpuResources::restore_base_positions(QOpenGLFunctions_4_5_Core& gl) const
+{
+    if (base_positions_ == 0 ||
+        buffers_.current_position == 0 ||
+        buffers_.previous_position == 0 ||
+        buffers_.collision_pushout == 0 ||
+        buffers_.cloth_cloth_pushout == 0 ||
+        buffers_.contact_motion_delta == 0 ||
+        used_elements_.vertex == 0 ||
+        base_position_vertex_count_ != used_elements_.vertex) {
+        return false;
+    }
+
+    const GLsizeiptr position_bytes = float_byte_size(used_elements_.vertex, gpu_position_components);
+
+    gl.glMemoryBarrier(GL_SHADER_STORAGE_BARRIER_BIT | GL_BUFFER_UPDATE_BARRIER_BIT);
+    gl.glCopyNamedBufferSubData(base_positions_, buffers_.current_position, 0, 0, position_bytes);
+    gl.glCopyNamedBufferSubData(base_positions_, buffers_.previous_position, 0, 0, position_bytes);
+    clear_dynamic_state_range(buffers_, 0, used_elements_.vertex, gl);
+    gl.glMemoryBarrier(GL_SHADER_STORAGE_BARRIER_BIT | GL_BUFFER_UPDATE_BARRIER_BIT);
+
+    return true;
+}
+
+void ClothGpuResources::clear_base_positions(QOpenGLFunctions_4_5_Core& gl)
+{
+    gl.glDeleteBuffers(1, &base_positions_);
+
+    base_positions_ = 0;
+    base_position_vertex_count_ = 0;
+}
+
+void ClothGpuResources::copy_current_positions_to_previous(QOpenGLFunctions_4_5_Core& gl) const
+{
+    if (buffers_.current_position == 0 ||
+        buffers_.previous_position == 0 ||
+        buffers_.collision_pushout == 0 ||
+        buffers_.cloth_cloth_pushout == 0 ||
+        buffers_.contact_motion_delta == 0 ||
+        used_elements_.vertex == 0) {
+        return;
+    }
+
+    const GLsizeiptr position_bytes = float_byte_size(used_elements_.vertex, gpu_position_components);
+
+    gl.glMemoryBarrier(GL_SHADER_STORAGE_BARRIER_BIT | GL_BUFFER_UPDATE_BARRIER_BIT);
+    gl.glCopyNamedBufferSubData(buffers_.current_position, buffers_.previous_position, 0, 0, position_bytes);
+    clear_dynamic_state_range(buffers_, 0, used_elements_.vertex, gl);
+    gl.glMemoryBarrier(GL_SHADER_STORAGE_BARRIER_BIT);
+}
+
+// Rendering
 void ClothGpuResources::bind_vertex_normals(GLuint binding_index, QOpenGLFunctions_4_5_Core& gl) const
 {
     if (buffers_.vertex_normal == 0) {
@@ -1409,7 +1380,22 @@ void ClothGpuResources::draw_garment(GarmentLayer layer, QOpenGLFunctions_4_5_Co
                       reinterpret_cast<const void*>(index_offset_bytes));
 }
 
-// state checks //
+// State
+bool ClothGpuResources::is_initialized() const
+{
+    return has_gpu_objects() &&
+           std::any_of(garments_.begin(),
+                       garments_.end(),
+                       [](const GarmentBufferRanges& ranges) { return ranges.is_loaded(); }) &&
+           used_elements_.vertex > 0 &&
+           used_elements_.index > 0 &&
+           used_elements_.triangle > 0 &&
+           used_elements_.stretch_constraint > 0 &&
+           used_elements_.bending_constraint > 0 &&
+           !stretch_color_ranges_.empty() &&
+           !bending_color_ranges_.empty();
+}
+
 bool ClothGpuResources::has_gpu_objects() const
 {
     return buffers_.vao != 0 &&
@@ -1432,22 +1418,7 @@ bool ClothGpuResources::has_gpu_objects() const
            buffers_.vertex_normal != 0;
 }
 
-bool ClothGpuResources::is_initialized() const
-{
-    return has_gpu_objects() &&
-           std::any_of(garments_.begin(),
-                       garments_.end(),
-                       [](const GarmentBufferRanges& ranges) { return ranges.is_loaded(); }) &&
-           used_elements_.vertex > 0 &&
-           used_elements_.index > 0 &&
-           used_elements_.triangle > 0 &&
-           used_elements_.stretch_constraint > 0 &&
-           used_elements_.bending_constraint > 0 &&
-           !stretch_color_ranges_.empty() &&
-           !bending_color_ranges_.empty();
-}
-
-// getter //
+// Accessors
 
 std::array<ElementRange, 2> ClothGpuResources::garment_vertex_ranges() const
 {
@@ -1486,25 +1457,6 @@ ClothBodyTriangleIdBufferView ClothGpuResources::body_triangle_id_buffer_view() 
     view.body_triangle_id_buffer = buffers_.body_triangle_id;
     view.vertex_count = used_elements_.vertex;
     return view;
-}
-
-void ClothGpuResources::copy_current_positions_to_previous(QOpenGLFunctions_4_5_Core& gl) const
-{
-    if (buffers_.current_position == 0 ||
-        buffers_.previous_position == 0 ||
-        buffers_.collision_pushout == 0 ||
-        buffers_.cloth_cloth_pushout == 0 ||
-        buffers_.contact_motion_delta == 0 ||
-        used_elements_.vertex == 0) {
-        return;
-    }
-
-    const GLsizeiptr position_bytes = float_byte_size(used_elements_.vertex, gpu_position_components);
-
-    gl.glMemoryBarrier(GL_SHADER_STORAGE_BARRIER_BIT | GL_BUFFER_UPDATE_BARRIER_BIT);
-    gl.glCopyNamedBufferSubData(buffers_.current_position, buffers_.previous_position, 0, 0, position_bytes);
-    clear_dynamic_state_range(buffers_, 0, used_elements_.vertex, gl);
-    gl.glMemoryBarrier(GL_SHADER_STORAGE_BARRIER_BIT);
 }
 
 DistanceConstraintBufferView ClothGpuResources::stretch_constraint_buffer_view() const
@@ -1555,4 +1507,55 @@ ClothNormalResources ClothGpuResources::mesh_normal_resources() const
     normals.triangle_normal_buffer = buffers_.triangle_normal;
     normals.vertex_normal_buffer = buffers_.vertex_normal;
     return normals;
+}
+
+// Release
+void ClothGpuResources::release(QOpenGLFunctions_4_5_Core& gl)
+{
+    delete_gpu_objects(gl);
+    reset_resources();
+}
+
+void ClothGpuResources::delete_gpu_objects(QOpenGLFunctions_4_5_Core& gl)
+{
+    delete_buffer_set(buffers_, gl);
+    clear_base_positions(gl);
+}
+
+void ClothGpuResources::delete_buffer_set(ClothBufferSet& buffers, QOpenGLFunctions_4_5_Core& gl)
+{
+    gl.glDeleteBuffers(1, &buffers.vertex_normal);
+    gl.glDeleteBuffers(1, &buffers.triangle_normal);
+    gl.glDeleteBuffers(1, &buffers.adjacent_triangle_indices);
+    gl.glDeleteBuffers(1, &buffers.adjacent_triangle_offsets);
+    gl.glDeleteBuffers(1, &buffers.stretch_rest_length);
+    gl.glDeleteBuffers(1, &buffers.stretch_edge_index);
+    gl.glDeleteBuffers(1, &buffers.bending_rest_length);
+    gl.glDeleteBuffers(1, &buffers.bending_edge_index);
+    gl.glDeleteBuffers(1, &buffers.attachment_barycentric_offset);
+    gl.glDeleteBuffers(1, &buffers.attachment_indices);
+    gl.glDeleteBuffers(1, &buffers.index);
+    gl.glDeleteBuffers(1, &buffers.previous_position);
+    gl.glDeleteBuffers(1, &buffers.collision_pushout);
+    gl.glDeleteBuffers(1, &buffers.cloth_cloth_pushout);
+    gl.glDeleteBuffers(1, &buffers.contact_motion_delta);
+    gl.glDeleteBuffers(1, &buffers.body_triangle_id);
+    gl.glDeleteBuffers(1, &buffers.current_position);
+    gl.glDeleteVertexArrays(1, &buffers.vao);
+
+    buffers = {};
+}
+
+void ClothGpuResources::reset_resources() noexcept
+{
+    buffers_ = {};
+    garments_ = {};
+    stretch_color_ranges_.clear();
+    bending_color_ranges_.clear();
+    attachment_ranges_.clear();
+    used_elements_ = {};
+    allocated_elements_ = {};
+
+    base_positions_ = 0;
+    base_position_vertex_count_ = 0;
 }
