@@ -2,6 +2,7 @@
 
 #include "scene/SceneState.h"
 
+#include <cassert>
 #include <limits>
 #include <stdexcept>
 
@@ -65,9 +66,7 @@ SimulationGpuView SceneGpuState::simulation_view() const
 
 void SceneGpuState::release(QOpenGLFunctions_4_5_Core& gl)
 {
-    collision_candidate_buffers_.release(gl);
-    cloth_bvh_resources_.release(gl);
-    cloth_gpu_state_.release(gl);
+    release_garment_resources(gl);
     character_gpu_state_.release(gl);
     character_gpu_state_updater_.release(gl);
     normal_updater_.release(gl);
@@ -140,11 +139,20 @@ CollisionCandidateBufferView SceneGpuState::collision_candidate_buffer_view() co
     return collision_candidate_buffers_.view();
 }
 
-void SceneGpuState::update_garment_meshes(const SceneState& scene,
-                                          QOpenGLFunctions_4_5_Core& gl,
-                                          std::optional<GarmentLayer> updated_layer)
+void SceneGpuState::release_garment_resources(QOpenGLFunctions_4_5_Core& gl)
 {
-    cloth_gpu_state_.update_garment_buffers(scene.garments(), updated_layer, gl);
+    collision_candidate_buffers_.release(gl);
+    cloth_bvh_resources_.release(gl);
+    cloth_gpu_state_.release(gl);
+}
+
+void SceneGpuState::rebuild_garment_resources(const SceneState& scene,
+                                              QOpenGLFunctions_4_5_Core& gl,
+                                              GarmentLayer changed_layer)
+{
+    assert(!scene.garments().empty());
+
+    cloth_gpu_state_.rebuild_buffers(scene.garments(), changed_layer, gl);
     if (!cloth_bvh_resources_.rebuild(scene.garments(), gl)) {
         throw std::runtime_error("Failed to rebuild cloth BVH resources.");
     }

@@ -150,8 +150,7 @@ void SimulationController::reset_scene()
         reset_garment_placements();
 
         scene_.clear_garments();
-        gpu_state_.update_garment_meshes(scene_, gl);
-        gpu_state_.clear_base_positions(gl);
+        gpu_state_.release_garment_resources(gl);
         set_character_motion_state(default_character_motion_, gl);
         is_default_pose_ = true;
     });
@@ -197,7 +196,7 @@ void SimulationController::set_garment_mesh(GarmentLayer layer, GarmentMesh mesh
 
     run_with_gl_context_([this, layer, &garment](QOpenGLFunctions_4_5_Core& gl) {
         scene_.set_garment(std::move(garment));
-        gpu_state_.update_garment_meshes(scene_, gl, layer);
+        gpu_state_.rebuild_garment_resources(scene_, gl, layer);
 
         garment_placement_states_[layer].emplace();
     });
@@ -258,7 +257,7 @@ void SimulationController::discard_garment_placement(GarmentLayer layer)
 
     run_with_gl_context_([this, layer](QOpenGLFunctions_4_5_Core& gl) {
         if (scene_.remove_garment(layer)) {
-            gpu_state_.update_garment_meshes(scene_, gl);
+            gpu_state_.rebuild_garment_resources(scene_, gl, layer);
         }
         garment_placement_states_[layer].reset();
     });
@@ -271,14 +270,16 @@ void SimulationController::cancel_placement_session()
     assert(is_gpu_initialized());
 
     run_with_gl_context_([this](QOpenGLFunctions_4_5_Core& gl) {
-        for (GarmentLayer layer : {GarmentLayer::Lower, GarmentLayer::Upper}) {
-            if (garment_placement_states_[layer].has_value()) {
-                scene_.remove_garment(layer);
-            }
-        }
-
+        const bool clear_all = garment_placement_states_[GarmentLayer::Lower].has_value();
         reset_garment_placements();
-        gpu_state_.update_garment_meshes(scene_, gl);
+
+        if (clear_all) {
+            scene_.clear_garments();
+            gpu_state_.release_garment_resources(gl);
+        } else {
+            scene_.remove_garment(GarmentLayer::Upper);
+            gpu_state_.rebuild_garment_resources(scene_, gl, GarmentLayer::Upper);
+        }
     });
 
     Q_EMIT viewport_update_requested();

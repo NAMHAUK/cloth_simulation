@@ -4,7 +4,6 @@
 
 #include <array>
 #include <cstdint>
-#include <optional>
 #include <vector>
 
 #include <QOpenGLFunctions_4_5_Core>
@@ -21,9 +20,9 @@ public:
     ClothGpuResources(ClothGpuResources&& other) noexcept;
     ClothGpuResources& operator=(ClothGpuResources&& other) noexcept = delete;
 
-    void update_garment_buffers(const std::vector<GarmentObject>& garments,
-                                std::optional<GarmentLayer> updated_layer,
-                                QOpenGLFunctions_4_5_Core& gl);
+    void rebuild_buffers(const std::vector<GarmentObject>& garments,
+                         GarmentLayer changed_layer,
+                         QOpenGLFunctions_4_5_Core& gl);
     void upload_garment_placement(const GarmentObject& garment, QOpenGLFunctions_4_5_Core& gl);
     void upload_garment_attachment_vertices(const GarmentObject& garment,
                                             ElementRange& target_range,
@@ -53,9 +52,6 @@ public:
     void release(QOpenGLFunctions_4_5_Core& gl);
 
 private:
-    void rebuild_buffers(const std::vector<GarmentObject>& garments,
-                         std::optional<GarmentLayer> updated_layer,
-                         QOpenGLFunctions_4_5_Core& gl);
     void replace_with_rebuild_buffers(ClothBufferSet rebuild_buffer_set,
                                       std::array<GarmentBufferRanges, 2> rebuild_ranges,
                                       std::vector<ElementRange> rebuild_stretch_color_ranges,
