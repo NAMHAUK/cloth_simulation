@@ -556,56 +556,6 @@ void build_buffer_rebuild_upload_data(const GarmentObject& garment,
 }
 
 // State preservation
-void copy_used_buffer_data(const ClothBufferSet& old_buffers,
-                           const ClothBufferSet& next_buffers,
-                           const ClothBufferElementCounts& used_elements,
-                           QOpenGLFunctions_4_5_Core& gl)
-{
-    if (old_buffers.current_position == 0) {
-        return;
-    }
-
-    const auto copy_buffer = [&gl](GLuint source, GLuint destination, GLsizeiptr size) {
-        if (source != 0 && size > 0) {
-            gl.glCopyNamedBufferSubData(source, destination, 0, 0, size);
-        }
-    };
-    const GLsizeiptr vertex_vec4_bytes = byte_size(used_elements.vertex, sizeof(glm::vec4));
-    copy_buffer(old_buffers.current_position, next_buffers.current_position, vertex_vec4_bytes);
-    copy_buffer(old_buffers.previous_position, next_buffers.previous_position, vertex_vec4_bytes);
-    copy_buffer(old_buffers.collision_pushout, next_buffers.collision_pushout, vertex_vec4_bytes);
-    copy_buffer(old_buffers.cloth_cloth_pushout, next_buffers.cloth_cloth_pushout, vertex_vec4_bytes);
-    copy_buffer(old_buffers.contact_motion_delta, next_buffers.contact_motion_delta, vertex_vec4_bytes);
-    copy_buffer(old_buffers.body_triangle_id,
-                next_buffers.body_triangle_id,
-                byte_size(used_elements.vertex, sizeof(std::uint32_t)));
-    copy_buffer(old_buffers.index, next_buffers.index, byte_size(used_elements.index, sizeof(std::uint32_t)));
-    copy_buffer(old_buffers.adjacent_triangle_offsets,
-                next_buffers.adjacent_triangle_offsets,
-                byte_size(used_elements.vertex + 1u, sizeof(std::uint32_t)));
-    copy_buffer(old_buffers.adjacent_triangle_indices,
-                next_buffers.adjacent_triangle_indices,
-                byte_size(used_elements.adjacency_entry, sizeof(std::uint32_t)));
-    copy_buffer(old_buffers.stretch_edge_index,
-                next_buffers.stretch_edge_index,
-                byte_size(used_elements.stretch_constraint * 2u, sizeof(std::uint32_t)));
-    copy_buffer(old_buffers.stretch_rest_length,
-                next_buffers.stretch_rest_length,
-                byte_size(used_elements.stretch_constraint, sizeof(float)));
-    copy_buffer(old_buffers.bending_edge_index,
-                next_buffers.bending_edge_index,
-                byte_size(used_elements.bending_constraint * 2u, sizeof(std::uint32_t)));
-    copy_buffer(old_buffers.bending_rest_length,
-                next_buffers.bending_rest_length,
-                byte_size(used_elements.bending_constraint, sizeof(float)));
-    copy_buffer(old_buffers.attachment_indices,
-                next_buffers.attachment_indices,
-                byte_size(used_elements.attachment_constraint, sizeof(glm::uvec2)));
-    copy_buffer(old_buffers.attachment_barycentric_offset,
-                next_buffers.attachment_barycentric_offset,
-                byte_size(used_elements.attachment_constraint, sizeof(glm::vec4)));
-}
-
 bool copy_dynamic_state_buffers(const GarmentBufferRanges& source_ranges,
                                 const GarmentBufferRanges& destination_ranges,
                                 const ClothBufferSet& source_buffers,
@@ -782,8 +732,6 @@ ClothGpuResources::ClothGpuResources(ClothGpuResources&& other) noexcept
     bending_color_ranges_ = std::move(other.bending_color_ranges_);
     attachment_ranges_ = std::move(other.attachment_ranges_);
     used_elements_ = other.used_elements_;
-    allocated_elements_ = other.allocated_elements_;
-
     base_positions_ = other.base_positions_;
     base_position_vertex_count_ = other.base_position_vertex_count_;
 
@@ -827,10 +775,10 @@ bool ClothGpuResources::update_garment_buffers(const std::vector<GarmentObject>&
         return rebuild_buffers(garments, std::nullopt, gl);
     }
 
-    // 2. 새로운 garment 발견 (scene에서 추가된 것) -> 기존 buffer에 append
+    // 2. 새로운 garment 발견 (scene에서 추가된 것) -> buffer rebuild
     for (const GarmentObject& garment : garments) {
-        if (!garments_[garment.layer].is_loaded() && !append_garment(garment, gl)) {
-            return false;
+        if (!garments_[garment.layer].is_loaded()) {
+            return rebuild_buffers(garments, std::nullopt, gl);
         }
     }
     return true;
@@ -907,115 +855,6 @@ void ClothGpuResources::replace_with_rebuild_buffers(ClothBufferSet rebuild_buff
     bending_color_ranges_ = std::move(rebuild_bending_color_ranges);
     attachment_ranges_ = std::move(rebuild_attachment_ranges);
     used_elements_ = rebuild_element_counts;
-    allocated_elements_ = rebuild_element_counts;
-
-    configure_vao(gl);
-}
-
-// 새 garment 추가
-bool ClothGpuResources::append_garment(const GarmentObject& garment, QOpenGLFunctions_4_5_Core& gl)
-{
-    if (!is_uploadable_mesh(garment.mesh)) {
-        std::cerr << "Cannot upload invalid garment mesh for garment layer " << garment.layer << ".\n";
-        return false;
-    }
-
-    // 이미 upload된 garment면 기존 GPU buffer 사용
-    if (garments_[garment.layer].is_loaded()) {
-        return true;
-    }
-
-    const GarmentDistanceConstraints& stretch_constraints = garment.mesh.stretch_constraints;
-    const GarmentDistanceConstraints& bending_constraints = garment.mesh.bending_constraints;
-    const auto attachment_constraint_count =
-        static_cast<std::uint32_t>(garment.mesh.attachment_vertex_indices.size());
-    GarmentBufferRanges buffer_ranges =
-        make_garment_buffer_ranges(garment,
-                                   used_elements_,
-                                   static_cast<std::uint32_t>(stretch_constraints.colorized_edges.size()),
-                                   static_cast<std::uint32_t>(bending_constraints.colorized_edges.size()),
-                                   attachment_constraint_count);
-    const ClothBufferElementCounts next_used_elements =
-        make_next_used_elements(used_elements_, buffer_ranges);
-
-    // 1. 현재 GPU buffer에 새 garment가 사용할 구간이 남아있는지 확인 -> 부족하면 새 buffer 할당
-    ensure_capacity(next_used_elements, gl);
-
-    // 2. buffer에 garment data upload
-    upload_position_data(buffers_, garment.mesh.vertices, buffer_ranges, gl);
-
-    GarmentUploadData upload_data = prepare_garment_upload_data(garment, buffer_ranges);
-    build_garment_upload_data(garment, buffer_ranges, upload_data);
-
-    upload_topology_data(buffers_,
-                         TopologyUploadOffsets{
-                             buffer_ranges.indices.offset,
-                             buffer_ranges.vertices.offset,
-                             buffer_ranges.adjacency_entries.offset,
-                         },
-                         upload_data.topology,
-                         gl);
-    upload_distance_constraint_data(buffers_.stretch_edge_index,
-                                    buffers_.stretch_rest_length,
-                                    buffer_ranges.stretch_constraints.offset,
-                                    upload_data.stretch_constraints,
-                                    gl);
-    upload_distance_constraint_data(buffers_.bending_edge_index,
-                                    buffers_.bending_rest_length,
-                                    buffer_ranges.bending_constraints.offset,
-                                    upload_data.bending_constraints,
-                                    gl);
-    upload_attachment_constraints_data(buffers_,
-                                       buffer_ranges.attachment_constraints.offset,
-                                       upload_data.attachment_constraints,
-                                       gl);
-
-    // 3. garment GPU data 등록, buffer 사용량 update
-    garments_[garment.layer] = buffer_ranges;
-    append_color_ranges(stretch_constraints.color_ranges,
-                        buffer_ranges.stretch_constraints.offset,
-                        stretch_color_ranges_);
-    append_color_ranges(bending_constraints.color_ranges,
-                        buffer_ranges.bending_constraints.offset,
-                        bending_color_ranges_);
-    used_elements_ = next_used_elements;
-    return true;
-}
-
-// GPU buffer 공간이 충분한지 확인 -> 부족하면 더 큰 buffer로 교체
-void ClothGpuResources::ensure_capacity(const ClothBufferElementCounts& required_elements,
-                                        QOpenGLFunctions_4_5_Core& gl)
-{
-    ClothBufferElementCounts capacities = allocated_elements_;
-    bool expanded = false;
-    const auto ensure_element_capacity = [&expanded](std::uint32_t& capacity, std::uint32_t required) {
-        if (required > capacity) {
-            capacity = std::max(required, capacity * 2u);
-            expanded = true;
-        }
-    };
-
-    ensure_element_capacity(capacities.vertex, required_elements.vertex);
-    ensure_element_capacity(capacities.index, required_elements.index);
-    ensure_element_capacity(capacities.triangle, required_elements.triangle);
-    ensure_element_capacity(capacities.adjacency_entry, required_elements.adjacency_entry);
-    ensure_element_capacity(capacities.stretch_constraint, required_elements.stretch_constraint);
-    ensure_element_capacity(capacities.bending_constraint, required_elements.bending_constraint);
-    ensure_element_capacity(capacities.attachment_constraint, required_elements.attachment_constraint);
-
-    if (expanded) {
-        ClothBufferSet old_buffers = buffers_;
-        create_buffers(capacities, gl);
-        copy_used_buffer_data(old_buffers, buffers_, used_elements_, gl);
-        delete_buffer_set(old_buffers, gl);
-    }
-}
-
-void ClothGpuResources::create_buffers(const ClothBufferElementCounts& allocated_elements,
-                                       QOpenGLFunctions_4_5_Core& gl)
-{
-    buffers_ = create_buffer_set(allocated_elements, gl);
-    allocated_elements_ = allocated_elements;
 
     configure_vao(gl);
 }
@@ -1045,7 +884,14 @@ void ClothGpuResources::configure_vao(QOpenGLFunctions_4_5_Core& gl)
 bool ClothGpuResources::update_garment_placement(const GarmentObject& garment, QOpenGLFunctions_4_5_Core& gl)
 {
     const GarmentBufferRanges& buffer_ranges = garments_[garment.layer];
-    if (!is_initialized() || !buffer_ranges.is_loaded() || !is_uploadable_mesh(garment.mesh)) {
+    const GarmentMesh& mesh = garment.mesh;
+    const std::size_t vertex_value_count =
+        static_cast<std::size_t>(buffer_ranges.vertices.count) * vertex_position_components;
+    if (!is_initialized() ||
+        !buffer_ranges.is_loaded() ||
+        mesh.vertices.size() != vertex_value_count ||
+        mesh.stretch_constraints.rest_lengths.size() != buffer_ranges.stretch_constraints.count ||
+        mesh.bending_constraints.rest_lengths.size() != buffer_ranges.bending_constraints.count) {
         return false;
     }
 
@@ -1375,7 +1221,6 @@ void ClothGpuResources::reset_resources() noexcept
     bending_color_ranges_.clear();
     attachment_ranges_.clear();
     used_elements_ = {};
-    allocated_elements_ = {};
 
     base_positions_ = 0;
     base_position_vertex_count_ = 0;

@@ -63,9 +63,6 @@ private:
                                       std::vector<ElementRange> rebuild_attachment_ranges,
                                       const ClothBufferElementCounts& rebuild_element_counts,
                                       QOpenGLFunctions_4_5_Core& gl);
-    bool append_garment(const GarmentObject& garment, QOpenGLFunctions_4_5_Core& gl);
-    void ensure_capacity(const ClothBufferElementCounts& required_elements, QOpenGLFunctions_4_5_Core& gl);
-    void create_buffers(const ClothBufferElementCounts& allocated_elements, QOpenGLFunctions_4_5_Core& gl);
     void configure_vao(QOpenGLFunctions_4_5_Core& gl);
 
     bool has_gpu_objects() const;
@@ -81,6 +78,5 @@ private:
     std::vector<ElementRange> bending_color_ranges_;
     std::vector<ElementRange> attachment_ranges_;
     ClothBufferElementCounts used_elements_;
-    ClothBufferElementCounts allocated_elements_;
     std::uint32_t base_position_vertex_count_ = 0;
 };
