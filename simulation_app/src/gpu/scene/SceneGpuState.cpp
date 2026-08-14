@@ -144,9 +144,7 @@ void SceneGpuState::update_garment_meshes(const SceneState& scene,
                                           QOpenGLFunctions_4_5_Core& gl,
                                           std::optional<GarmentLayer> updated_layer)
 {
-    if (!cloth_gpu_state_.update_garment_buffers(scene.garments(), updated_layer, gl)) {
-        throw std::runtime_error("Failed to update garment GPU buffers.");
-    }
+    cloth_gpu_state_.update_garment_buffers(scene.garments(), updated_layer, gl);
     if (!cloth_bvh_resources_.rebuild(scene.garments(), gl)) {
         throw std::runtime_error("Failed to rebuild cloth BVH resources.");
     }
@@ -176,11 +174,9 @@ void SceneGpuState::update_garment_meshes(const SceneState& scene,
                                          gl);
 }
 
-void SceneGpuState::update_garment_placement(const GarmentObject& garment, QOpenGLFunctions_4_5_Core& gl)
+void SceneGpuState::upload_garment_placement(const GarmentObject& garment, QOpenGLFunctions_4_5_Core& gl)
 {
-    if (!cloth_gpu_state_.update_garment_placement(garment, gl)) {
-        throw std::runtime_error("Failed to update garment GPU placement.");
-    }
+    cloth_gpu_state_.upload_garment_placement(garment, gl);
 }
 
 void SceneGpuState::build_garment_attachment_targets(SceneState& scene,
@@ -193,9 +189,7 @@ void SceneGpuState::build_garment_attachment_targets(SceneState& scene,
     }
 
     ElementRange target_range;
-    if (!cloth_gpu_state_.upload_garment_attachment_vertices(*garment, target_range, gl)) {
-        throw std::runtime_error("Failed to upload garment attachment vertices.");
-    }
+    cloth_gpu_state_.upload_garment_attachment_vertices(*garment, target_range, gl);
 
     if (target_range.count == 0u) {
         return;
@@ -206,9 +200,7 @@ void SceneGpuState::build_garment_attachment_targets(SceneState& scene,
         throw std::runtime_error("Cannot build garment attachment targets because GPU buffers are missing.");
     }
 
-    if (!cloth_gpu_state_.activate_attachment_targets(target_range)) {
-        throw std::runtime_error("Failed to activate garment attachment targets.");
-    }
+    cloth_gpu_state_.activate_attachment_targets(target_range);
 }
 
 void SceneGpuState::capture_garment_base_positions(QOpenGLFunctions_4_5_Core& gl)
@@ -216,9 +208,7 @@ void SceneGpuState::capture_garment_base_positions(QOpenGLFunctions_4_5_Core& gl
     if (!has_garment_resources()) {
         return;
     }
-    if (!cloth_gpu_state_.capture_base_positions(gl)) {
-        throw std::runtime_error("Failed to capture garment base positions.");
-    }
+    cloth_gpu_state_.capture_base_positions(gl);
 }
 
 void SceneGpuState::restore_garment_base_positions(QOpenGLFunctions_4_5_Core& gl)

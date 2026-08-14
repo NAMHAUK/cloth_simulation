@@ -21,15 +21,15 @@ public:
     ClothGpuResources(ClothGpuResources&& other) noexcept;
     ClothGpuResources& operator=(ClothGpuResources&& other) noexcept = delete;
 
-    bool update_garment_buffers(const std::vector<GarmentObject>& garments,
+    void update_garment_buffers(const std::vector<GarmentObject>& garments,
                                 std::optional<GarmentLayer> updated_layer,
                                 QOpenGLFunctions_4_5_Core& gl);
-    bool update_garment_placement(const GarmentObject& garment, QOpenGLFunctions_4_5_Core& gl);
-    bool upload_garment_attachment_vertices(const GarmentObject& garment,
+    void upload_garment_placement(const GarmentObject& garment, QOpenGLFunctions_4_5_Core& gl);
+    void upload_garment_attachment_vertices(const GarmentObject& garment,
                                             ElementRange& target_range,
                                             QOpenGLFunctions_4_5_Core& gl);
-    bool activate_attachment_targets(const ElementRange& target_range);
-    bool capture_base_positions(QOpenGLFunctions_4_5_Core& gl);
+    void activate_attachment_targets(const ElementRange& target_range);
+    void capture_base_positions(QOpenGLFunctions_4_5_Core& gl);
     bool restore_base_positions(QOpenGLFunctions_4_5_Core& gl) const;
     void clear_base_positions(QOpenGLFunctions_4_5_Core& gl);
     void copy_current_positions_to_previous(QOpenGLFunctions_4_5_Core& gl) const;
@@ -53,7 +53,7 @@ public:
     void release(QOpenGLFunctions_4_5_Core& gl);
 
 private:
-    bool rebuild_buffers(const std::vector<GarmentObject>& garments,
+    void rebuild_buffers(const std::vector<GarmentObject>& garments,
                          std::optional<GarmentLayer> updated_layer,
                          QOpenGLFunctions_4_5_Core& gl);
     void replace_with_rebuild_buffers(ClothBufferSet rebuild_buffer_set,

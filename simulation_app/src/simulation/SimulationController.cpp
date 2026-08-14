@@ -237,7 +237,7 @@ void SimulationController::confirm_garment_placement()
             placement_layers.push_back(layer);
             const auto& garment =
                 scene_.apply_garment_placement(layer, placement->position_offset, placement->scale);
-            gpu_state_.update_garment_placement(garment, gl);
+            gpu_state_.upload_garment_placement(garment, gl);
         }
 
         simulation_pipeline_.prefit_garments(gpu_state_, placement_layers, gl);

@@ -46,7 +46,7 @@ public:
     void update_garment_meshes(const SceneState& scene,
                                QOpenGLFunctions_4_5_Core& gl,
                                std::optional<GarmentLayer> updated_layer = std::nullopt);
-    void update_garment_placement(const GarmentObject& garment, QOpenGLFunctions_4_5_Core& gl);
+    void upload_garment_placement(const GarmentObject& garment, QOpenGLFunctions_4_5_Core& gl);
     void build_garment_attachment_targets(SceneState& scene,
                                           GarmentLayer layer,
                                           QOpenGLFunctions_4_5_Core& gl);
