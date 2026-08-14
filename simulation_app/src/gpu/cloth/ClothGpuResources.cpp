@@ -5,7 +5,6 @@
 #include <cstddef>
 #include <cstdint>
 #include <iterator>
-#include <limits>
 #include <utility>
 
 #include <glm/vec2.hpp>
@@ -36,89 +35,51 @@ void clear_dynamic_state(const ClothBufferSet& buffers, ElementRange vertices, Q
 }
 
 // Buffer allocation
-ClothBufferSet create_buffer_set(const ClothBufferElementCounts& allocated_elements,
-                                 QOpenGLFunctions_4_5_Core& gl)
+ClothBufferSet create_buffer_set(const ClothBufferElementCounts& counts, QOpenGLFunctions_4_5_Core& gl)
 {
     ClothBufferSet buffers;
-    const std::uint32_t allocated_attachment_constraints =
-        std::max(allocated_elements.attachment_constraint, 1u);
+    const auto create_buffer =
+        [&](GLuint& buffer, std::uint32_t count, std::size_t element_size, GLenum usage) {
+            gl.glCreateBuffers(1, &buffer);
+            gl.glNamedBufferData(buffer, byte_size(count, element_size), nullptr, usage);
+        };
+    const std::uint32_t attachment_capacity = std::max(counts.attachment_constraint, 1u);
 
     gl.glCreateVertexArrays(1, &buffers.vao);
-    gl.glCreateBuffers(1, &buffers.current_position);
-    gl.glCreateBuffers(1, &buffers.previous_position);
-    gl.glCreateBuffers(1, &buffers.collision_pushout);
-    gl.glCreateBuffers(1, &buffers.cloth_cloth_pushout);
-    gl.glCreateBuffers(1, &buffers.contact_motion_delta);
-    gl.glCreateBuffers(1, &buffers.body_triangle_id);
-    gl.glCreateBuffers(1, &buffers.triangle_vertex_indices);
-    gl.glCreateBuffers(1, &buffers.adjacent_triangle_offsets);
-    gl.glCreateBuffers(1, &buffers.adjacent_triangle_indices);
-    gl.glCreateBuffers(1, &buffers.stretch_edge_index);
-    gl.glCreateBuffers(1, &buffers.stretch_rest_length);
-    gl.glCreateBuffers(1, &buffers.bending_edge_index);
-    gl.glCreateBuffers(1, &buffers.bending_rest_length);
-    gl.glCreateBuffers(1, &buffers.attachment_indices);
-    gl.glCreateBuffers(1, &buffers.attachment_barycentric_offset);
-    gl.glCreateBuffers(1, &buffers.triangle_normal);
-    gl.glCreateBuffers(1, &buffers.vertex_normal);
+    create_buffer(buffers.current_position, counts.vertex, sizeof(glm::vec4), GL_DYNAMIC_DRAW);
+    create_buffer(buffers.previous_position, counts.vertex, sizeof(glm::vec4), GL_DYNAMIC_DRAW);
+    create_buffer(buffers.collision_pushout, counts.vertex, sizeof(glm::vec4), GL_DYNAMIC_DRAW);
+    create_buffer(buffers.cloth_cloth_pushout, counts.vertex, sizeof(glm::vec4), GL_DYNAMIC_DRAW);
+    create_buffer(buffers.contact_motion_delta, counts.vertex, sizeof(glm::vec4), GL_DYNAMIC_DRAW);
 
-    const GLsizeiptr vertex_vec4_bytes = byte_size(allocated_elements.vertex, sizeof(glm::vec4));
-    gl.glNamedBufferData(buffers.current_position, vertex_vec4_bytes, nullptr, GL_DYNAMIC_DRAW);
-    gl.glNamedBufferData(buffers.previous_position, vertex_vec4_bytes, nullptr, GL_DYNAMIC_DRAW);
-    gl.glNamedBufferData(buffers.collision_pushout, vertex_vec4_bytes, nullptr, GL_DYNAMIC_DRAW);
-    gl.glNamedBufferData(buffers.cloth_cloth_pushout, vertex_vec4_bytes, nullptr, GL_DYNAMIC_DRAW);
-    gl.glNamedBufferData(buffers.contact_motion_delta, vertex_vec4_bytes, nullptr, GL_DYNAMIC_DRAW);
-    gl.glNamedBufferData(buffers.body_triangle_id,
-                         byte_size(allocated_elements.vertex, sizeof(std::uint32_t)),
-                         nullptr,
-                         GL_DYNAMIC_DRAW);
-    const std::uint32_t invalid_body_triangle_id = std::numeric_limits<std::uint32_t>::max();
-    gl.glClearNamedBufferData(buffers.body_triangle_id,
-                              GL_R32UI,
-                              GL_RED_INTEGER,
-                              GL_UNSIGNED_INT,
-                              &invalid_body_triangle_id);
-    gl.glNamedBufferData(buffers.triangle_vertex_indices,
-                         byte_size(allocated_elements.index, sizeof(std::uint32_t)),
-                         nullptr,
-                         GL_STATIC_DRAW);
-    gl.glNamedBufferData(buffers.adjacent_triangle_offsets,
-                         byte_size(allocated_elements.vertex + 1u, sizeof(std::uint32_t)),
-                         nullptr,
-                         GL_STATIC_DRAW);
-    gl.glNamedBufferData(buffers.adjacent_triangle_indices,
-                         byte_size(allocated_elements.adjacency, sizeof(std::uint32_t)),
-                         nullptr,
-                         GL_STATIC_DRAW);
-    gl.glNamedBufferData(buffers.stretch_edge_index,
-                         byte_size(allocated_elements.stretch_constraint * 2u, sizeof(std::uint32_t)),
-                         nullptr,
-                         GL_STATIC_DRAW);
-    gl.glNamedBufferData(buffers.stretch_rest_length,
-                         byte_size(allocated_elements.stretch_constraint, sizeof(float)),
-                         nullptr,
-                         GL_STATIC_DRAW);
-    gl.glNamedBufferData(buffers.bending_edge_index,
-                         byte_size(allocated_elements.bending_constraint * 2u, sizeof(std::uint32_t)),
-                         nullptr,
-                         GL_STATIC_DRAW);
-    gl.glNamedBufferData(buffers.bending_rest_length,
-                         byte_size(allocated_elements.bending_constraint, sizeof(float)),
-                         nullptr,
-                         GL_STATIC_DRAW);
-    gl.glNamedBufferData(buffers.attachment_indices,
-                         byte_size(allocated_attachment_constraints, sizeof(glm::uvec2)),
-                         nullptr,
-                         GL_DYNAMIC_DRAW);
-    gl.glNamedBufferData(buffers.attachment_barycentric_offset,
-                         byte_size(allocated_attachment_constraints, sizeof(glm::vec4)),
-                         nullptr,
-                         GL_DYNAMIC_DRAW);
-    gl.glNamedBufferData(buffers.triangle_normal,
-                         byte_size(allocated_elements.triangle, sizeof(glm::vec4)),
-                         nullptr,
-                         GL_DYNAMIC_DRAW);
-    gl.glNamedBufferData(buffers.vertex_normal, vertex_vec4_bytes, nullptr, GL_DYNAMIC_DRAW);
+    create_buffer(buffers.body_triangle_id, counts.vertex, sizeof(std::uint32_t), GL_DYNAMIC_DRAW);
+
+    create_buffer(buffers.triangle_vertex_indices, counts.index, sizeof(std::uint32_t), GL_STATIC_DRAW);
+    create_buffer(buffers.adjacent_triangle_offsets,
+                  counts.vertex + 1u,
+                  sizeof(std::uint32_t),
+                  GL_STATIC_DRAW);
+    create_buffer(buffers.adjacent_triangle_indices, counts.adjacency, sizeof(std::uint32_t), GL_STATIC_DRAW);
+
+    create_buffer(buffers.stretch_edge_index,
+                  counts.stretch_constraint * 2u,
+                  sizeof(std::uint32_t),
+                  GL_STATIC_DRAW);
+    create_buffer(buffers.stretch_rest_length, counts.stretch_constraint, sizeof(float), GL_STATIC_DRAW);
+    create_buffer(buffers.bending_edge_index,
+                  counts.bending_constraint * 2u,
+                  sizeof(std::uint32_t),
+                  GL_STATIC_DRAW);
+    create_buffer(buffers.bending_rest_length, counts.bending_constraint, sizeof(float), GL_STATIC_DRAW);
+
+    create_buffer(buffers.attachment_indices, attachment_capacity, sizeof(glm::uvec2), GL_DYNAMIC_DRAW);
+    create_buffer(buffers.attachment_barycentric_offset,
+                  attachment_capacity,
+                  sizeof(glm::vec4),
+                  GL_DYNAMIC_DRAW);
+
+    create_buffer(buffers.triangle_normal, counts.triangle, sizeof(glm::vec4), GL_DYNAMIC_DRAW);
+    create_buffer(buffers.vertex_normal, counts.vertex, sizeof(glm::vec4), GL_DYNAMIC_DRAW);
 
     return buffers;
 }
