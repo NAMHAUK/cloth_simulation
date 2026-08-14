@@ -5,7 +5,6 @@
 #include <iostream>
 
 namespace {
-constexpr std::size_t vertex_position_components = 3;
 constexpr std::size_t endpoint_position_components = 4;
 constexpr std::size_t character_triangle_geometry_components = 16;
 
@@ -13,7 +12,7 @@ std::size_t frame_position_component_count(const CharacterMotion& character_moti
 {
     return static_cast<std::size_t>(character_motion.frame_count) *
            static_cast<std::size_t>(character_motion.vertex_count) *
-           vertex_position_components;
+           position_components;
 }
 
 std::size_t vertex_position_component_count(std::uint32_t vertex_count)

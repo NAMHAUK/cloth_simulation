@@ -52,13 +52,27 @@ public:
     void release(QOpenGLFunctions_4_5_Core& gl);
 
 private:
-    void replace_with_rebuild_buffers(ClothBufferSet rebuild_buffer_set,
-                                      std::array<GarmentBufferRanges, 2> rebuild_ranges,
-                                      std::vector<ElementRange> rebuild_stretch_color_ranges,
-                                      std::vector<ElementRange> rebuild_bending_color_ranges,
-                                      std::vector<ElementRange> rebuild_attachment_ranges,
-                                      const ClothBufferElementCounts& rebuild_element_counts,
-                                      QOpenGLFunctions_4_5_Core& gl);
+    struct BufferState final
+    {
+        ClothBufferSet buffers;
+        std::array<ElementRange, 2> vertex_ranges;
+        std::array<ElementRange, 2> index_ranges;
+        std::array<ElementRange, 2> triangle_ranges;
+        std::array<ElementRange, 2> adjacency_ranges;
+        std::array<ElementRange, 2> stretch_constraint_ranges;
+        std::array<ElementRange, 2> bending_constraint_ranges;
+        std::array<ElementRange, 2> attachment_constraint_ranges;
+        std::vector<ElementRange> stretch_color_ranges;
+        std::vector<ElementRange> bending_color_ranges;
+        std::vector<ElementRange> attachment_ranges;
+        ClothBufferElementCounts element_counts;
+    };
+
+    static void assign_buffer_ranges(const std::vector<GarmentObject>& garments, BufferState& state);
+    void build_buffer_state(const std::vector<GarmentObject>& garments,
+                            GarmentLayer changed_layer,
+                            BufferState& rebuild_state,
+                            QOpenGLFunctions_4_5_Core& gl) const;
     void configure_vao(QOpenGLFunctions_4_5_Core& gl);
 
     bool has_gpu_objects() const;
@@ -67,12 +81,7 @@ private:
     static void delete_buffer_set(ClothBufferSet& buffers, QOpenGLFunctions_4_5_Core& gl);
     void reset_resources() noexcept;
 
-    ClothBufferSet buffers_;
+    BufferState state_;
     GLuint base_positions_ = 0;
-    std::array<GarmentBufferRanges, 2> garments_;
-    std::vector<ElementRange> stretch_color_ranges_;
-    std::vector<ElementRange> bending_color_ranges_;
-    std::vector<ElementRange> attachment_ranges_;
-    ClothBufferElementCounts used_elements_;
     std::uint32_t base_position_vertex_count_ = 0;
 };

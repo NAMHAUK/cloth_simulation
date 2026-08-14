@@ -98,7 +98,7 @@ bool orient_triangle_winding_outward(std::uint32_t vertex_count,
 {
     flipped_triangle_count = 0u;
     if (vertex_count == 0u ||
-        vertices.size() != static_cast<std::size_t>(vertex_count) * vertex_position_components ||
+        vertices.size() != static_cast<std::size_t>(vertex_count) * position_components ||
         triangle_indices.empty() ||
         triangle_indices.size() % 3u != 0u) {
         return false;
@@ -218,7 +218,7 @@ bool orient_triangle_winding_outward(std::uint32_t vertex_count,
 // vertex position //
 glm::vec3 get_vertex_position(const std::vector<float>& vertices, std::uint32_t vertex_index)
 {
-    const std::size_t position_base = static_cast<std::size_t>(vertex_index) * vertex_position_components;
+    const std::size_t position_base = static_cast<std::size_t>(vertex_index) * position_components;
     return {
         vertices[position_base],
         vertices[position_base + 1u],

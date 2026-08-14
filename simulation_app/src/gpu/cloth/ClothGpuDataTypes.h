@@ -17,7 +17,7 @@ struct ClothBufferSet final
     GLuint cloth_cloth_pushout = 0;
     GLuint contact_motion_delta = 0;
     GLuint body_triangle_id = 0;
-    GLuint index = 0;
+    GLuint triangle_vertex_indices = 0;
     GLuint adjacent_triangle_offsets = 0;
     GLuint adjacent_triangle_indices = 0;
     GLuint stretch_edge_index = 0;
@@ -41,7 +41,7 @@ struct ClothBufferElementCounts final
     std::uint32_t vertex = 0;
     std::uint32_t index = 0;
     std::uint32_t triangle = 0;
-    std::uint32_t adjacency_entry = 0;
+    std::uint32_t adjacency = 0;
     std::uint32_t stretch_constraint = 0;
     std::uint32_t bending_constraint = 0;
     std::uint32_t attachment_constraint = 0;
@@ -104,17 +104,4 @@ struct AttachmentConstraintBufferView final
     GLuint barycentric_offset_buffer = 0;
     std::uint32_t constraint_count = 0;
     const std::vector<ElementRange>* ranges = nullptr;
-};
-
-struct GarmentBufferRanges final
-{
-    ElementRange vertices;
-    ElementRange indices;
-    ElementRange triangles;
-    ElementRange adjacency_entries;
-    ElementRange stretch_constraints;
-    ElementRange bending_constraints;
-    ElementRange attachment_constraints;
-
-    bool is_loaded() const { return vertices.count != 0u; }
 };

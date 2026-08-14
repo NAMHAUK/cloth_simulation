@@ -35,7 +35,7 @@ struct GarmentAssetCounts final
 
 GarmentAssetCounts make_garment_asset_counts(const GarmentMesh& garment_mesh)
 {
-    return {static_cast<std::uint32_t>(garment_mesh.vertices.size() / vertex_position_components),
+    return {static_cast<std::uint32_t>(garment_mesh.vertices.size() / position_components),
             static_cast<std::uint32_t>(garment_mesh.triangle_vertex_indices.size() / 3u),
             static_cast<std::uint32_t>(garment_mesh.adjacency.offsets.size()),
             static_cast<std::uint32_t>(garment_mesh.adjacency.face_indices.size()),
@@ -104,7 +104,7 @@ bool read_garment_asset_data(std::ifstream& input,
                              GarmentMesh& garment_mesh)
 {
     garment_mesh.adjacency.face_count = counts.triangle_count;
-    const std::uint32_t position_value_count = counts.vertex_count * vertex_position_components;
+    const std::uint32_t position_value_count = counts.vertex_count * position_components;
     const std::size_t triangle_vertex_index_count = static_cast<std::size_t>(counts.triangle_count) * 3u;
     if (!read_binary_values(input, garment_mesh.vertices, position_value_count) ||
         !read_binary_values(input, garment_mesh.triangle_vertex_indices, triangle_vertex_index_count) ||
@@ -172,7 +172,7 @@ bool read_motion_asset_file_sizes(const std::filesystem::path& motion_asset_path
                                   bool is_default)
 {
     const std::size_t reference_position_count =
-        static_cast<std::size_t>(character_motion.frame_count) * vertex_position_components;
+        static_cast<std::size_t>(character_motion.frame_count) * position_components;
     const std::size_t orientation_count =
         static_cast<std::size_t>(character_motion.frame_count) * quaternion_components;
     const std::size_t vertex_position_count = reference_position_count * character_motion.vertex_count;
@@ -213,7 +213,7 @@ bool read_motion_asset_data(const std::filesystem::path& motion_asset_path,
                             std::ifstream& input)
 {
     const std::size_t reference_position_count =
-        static_cast<std::size_t>(character_motion.frame_count) * vertex_position_components;
+        static_cast<std::size_t>(character_motion.frame_count) * position_components;
     const std::size_t orientation_count =
         static_cast<std::size_t>(character_motion.frame_count) * quaternion_components;
     const std::size_t vertex_position_count = reference_position_count * character_motion.vertex_count;
@@ -385,13 +385,12 @@ bool is_valid_garment_mesh(const GarmentMesh& garment_mesh)
                                             garment_mesh.garment_category == GarmentCategory::FullBody;
     if (!has_valid_garment_category ||
         garment_mesh.vertices.empty() ||
-        garment_mesh.vertices.size() % vertex_position_components != 0u ||
+        garment_mesh.vertices.size() % position_components != 0u ||
         !is_finite_values(garment_mesh.vertices)) {
         return false;
     }
 
-    const auto vertex_count =
-        static_cast<std::uint32_t>(garment_mesh.vertices.size() / vertex_position_components);
+    const auto vertex_count = static_cast<std::uint32_t>(garment_mesh.vertices.size() / position_components);
 
     if (garment_mesh.triangle_vertex_indices.empty() ||
         garment_mesh.triangle_vertex_indices.size() % 3u != 0u ||
@@ -469,7 +468,7 @@ bool read_garment_mesh(const std::filesystem::path& garment_asset_path, GarmentM
     }
 
     std::cout << "Loaded garment asset: " << garment_asset_path << '\n';
-    std::cout << "  vertices=" << asset_mesh.vertices.size() / vertex_position_components
+    std::cout << "  vertices=" << asset_mesh.vertices.size() / position_components
               << " triangles=" << asset_mesh.triangle_vertex_indices.size() / 3u
               << " stretch_constraints=" << asset_mesh.stretch_constraints.colorized_edges.size()
               << " stretch_color_groups=" << asset_mesh.stretch_constraints.color_ranges.size()
