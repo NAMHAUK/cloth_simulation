@@ -159,32 +159,6 @@ std::array<GarmentBufferRanges, 2> make_buffer_rebuild_ranges(
 }
 
 // Buffer allocation
-ClothBufferElementCounts make_expanded_capacity(const ClothBufferElementCounts& allocated_elements,
-                                                const ClothBufferElementCounts& required_elements)
-{
-    const auto expand_count = [](std::uint32_t current_capacity, std::uint32_t required_capacity) {
-        if (required_capacity <= current_capacity) {
-            return current_capacity;
-        }
-
-        const std::uint32_t doubled_capacity =
-            current_capacity > (std::numeric_limits<std::uint32_t>::max() / 2u)
-                ? std::numeric_limits<std::uint32_t>::max()
-                : current_capacity * 2u;
-        return std::max(required_capacity, doubled_capacity);
-    };
-
-    return ClothBufferElementCounts{
-        expand_count(allocated_elements.vertex, required_elements.vertex),
-        expand_count(allocated_elements.index, required_elements.index),
-        expand_count(allocated_elements.triangle, required_elements.triangle),
-        expand_count(allocated_elements.adjacency_entry, required_elements.adjacency_entry),
-        expand_count(allocated_elements.stretch_constraint, required_elements.stretch_constraint),
-        expand_count(allocated_elements.bending_constraint, required_elements.bending_constraint),
-        expand_count(allocated_elements.attachment_constraint, required_elements.attachment_constraint),
-    };
-}
-
 ClothBufferSet create_buffer_set(const ClothBufferElementCounts& allocated_elements,
                                  QOpenGLFunctions_4_5_Core& gl)
 {
@@ -1012,27 +986,29 @@ bool ClothGpuResources::append_garment(const GarmentObject& garment, QOpenGLFunc
 void ClothGpuResources::ensure_capacity(const ClothBufferElementCounts& required_elements,
                                         QOpenGLFunctions_4_5_Core& gl)
 {
-    if (has_enough_capacity(required_elements)) {
-        return;
+    ClothBufferElementCounts capacities = allocated_elements_;
+    bool expanded = false;
+    const auto ensure_element_capacity = [&expanded](std::uint32_t& capacity, std::uint32_t required) {
+        if (required > capacity) {
+            capacity = std::max(required, capacity * 2u);
+            expanded = true;
+        }
+    };
+
+    ensure_element_capacity(capacities.vertex, required_elements.vertex);
+    ensure_element_capacity(capacities.index, required_elements.index);
+    ensure_element_capacity(capacities.triangle, required_elements.triangle);
+    ensure_element_capacity(capacities.adjacency_entry, required_elements.adjacency_entry);
+    ensure_element_capacity(capacities.stretch_constraint, required_elements.stretch_constraint);
+    ensure_element_capacity(capacities.bending_constraint, required_elements.bending_constraint);
+    ensure_element_capacity(capacities.attachment_constraint, required_elements.attachment_constraint);
+
+    if (expanded) {
+        ClothBufferSet old_buffers = buffers_;
+        create_buffers(capacities, gl);
+        copy_used_buffer_data(old_buffers, buffers_, used_elements_, gl);
+        delete_buffer_set(old_buffers, gl);
     }
-
-    const ClothBufferElementCounts next_allocated_elements =
-        make_expanded_capacity(allocated_elements_, required_elements);
-    ClothBufferSet old_buffers = buffers_;
-    create_buffers(next_allocated_elements, gl);
-    copy_used_buffer_data(old_buffers, buffers_, used_elements_, gl);
-    delete_buffer_set(old_buffers, gl);
-}
-
-bool ClothGpuResources::has_enough_capacity(const ClothBufferElementCounts& required_elements) const
-{
-    return required_elements.vertex <= allocated_elements_.vertex &&
-           required_elements.index <= allocated_elements_.index &&
-           required_elements.triangle <= allocated_elements_.triangle &&
-           required_elements.adjacency_entry <= allocated_elements_.adjacency_entry &&
-           required_elements.stretch_constraint <= allocated_elements_.stretch_constraint &&
-           required_elements.bending_constraint <= allocated_elements_.bending_constraint &&
-           required_elements.attachment_constraint <= allocated_elements_.attachment_constraint;
 }
 
 void ClothGpuResources::create_buffers(const ClothBufferElementCounts& allocated_elements,

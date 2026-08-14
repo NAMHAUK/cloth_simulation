@@ -65,7 +65,6 @@ private:
                                       QOpenGLFunctions_4_5_Core& gl);
     bool append_garment(const GarmentObject& garment, QOpenGLFunctions_4_5_Core& gl);
     void ensure_capacity(const ClothBufferElementCounts& required_elements, QOpenGLFunctions_4_5_Core& gl);
-    bool has_enough_capacity(const ClothBufferElementCounts& required_elements) const;
     void create_buffers(const ClothBufferElementCounts& allocated_elements, QOpenGLFunctions_4_5_Core& gl);
     void configure_vao(QOpenGLFunctions_4_5_Core& gl);
 
