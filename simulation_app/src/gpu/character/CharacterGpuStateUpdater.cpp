@@ -177,8 +177,8 @@ void CharacterGpuStateUpdater::copy_current_position_to_previous(const Character
         return;
     }
 
-    const GLsizeiptr position_bytes = static_cast<GLsizeiptr>(
-        static_cast<std::size_t>(vertex_view.vertex_count) * position_components_per_vertex * sizeof(float));
+    const GLsizeiptr position_bytes =
+        byte_size<float>(static_cast<std::size_t>(vertex_view.vertex_count) * position_components_per_vertex);
 
     gl.glCopyNamedBufferSubData(vertex_view.current_position_buffer,
                                 vertex_view.previous_position_buffer,

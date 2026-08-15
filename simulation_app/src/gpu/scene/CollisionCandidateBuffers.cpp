@@ -1,5 +1,7 @@
 #include "gpu/scene/CollisionCandidateBuffers.h"
 
+#include "utils/BufferUtils.h"
+
 #include <iostream>
 #include <limits>
 
@@ -30,14 +32,12 @@ void create_collision_candidate_buffer(CollisionCandidateBuffer& buffers,
                                        QOpenGLFunctions_4_5_Core& gl)
 {
     buffers.capacity = capacity;
-    const auto candidate_bytes = static_cast<GLsizeiptr>(
-        static_cast<std::uint64_t>(capacity) * sizeof(std::uint32_t) * component_count);
+    const auto candidate_bytes =
+        byte_size<std::uint32_t>(static_cast<std::size_t>(capacity) * component_count);
     create_buffer(buffers.candidates, candidate_bytes, gl);
-    create_buffer(buffers.candidate_count, static_cast<GLsizeiptr>(sizeof(std::uint32_t)), gl);
-    create_buffer(buffers.dispatch_size,
-                  static_cast<GLsizeiptr>(dispatch_component_count * sizeof(std::uint32_t)),
-                  gl);
-    create_buffer(buffers.overflow_count, static_cast<GLsizeiptr>(sizeof(std::uint32_t)), gl);
+    create_buffer(buffers.candidate_count, byte_size<std::uint32_t>(1u), gl);
+    create_buffer(buffers.dispatch_size, byte_size<std::uint32_t>(dispatch_component_count), gl);
+    create_buffer(buffers.overflow_count, byte_size<std::uint32_t>(1u), gl);
 }
 
 void clear_normal_corrections(GLuint buffer, QOpenGLFunctions_4_5_Core& gl)
@@ -133,15 +133,10 @@ bool CollisionCandidateBuffers::ensure_capacity(std::uint32_t vertex_count,
                                           cloth_cloth_candidate_component_count,
                                           gl);
     }
-    create_buffer(buffers_.normal_correction_sum_buffer,
-                  static_cast<GLsizeiptr>(vertex_count * sizeof(std::int32_t) * 4u),
-                  gl);
-    create_buffer(buffers_.friction_correction_sum_buffer,
-                  static_cast<GLsizeiptr>(vertex_count * sizeof(std::int32_t) * 4u),
-                  gl);
-    create_buffer(buffers_.contact_motion_delta_sum_buffer,
-                  static_cast<GLsizeiptr>(vertex_count * sizeof(std::int32_t) * 4u),
-                  gl);
+    const GLsizeiptr correction_bytes = byte_size<std::int32_t>(static_cast<std::size_t>(vertex_count) * 4u);
+    create_buffer(buffers_.normal_correction_sum_buffer, correction_bytes, gl);
+    create_buffer(buffers_.friction_correction_sum_buffer, correction_bytes, gl);
+    create_buffer(buffers_.contact_motion_delta_sum_buffer, correction_bytes, gl);
 
     const bool initialized = has_collision_candidate_buffer(buffers_.cloth_vertex_body_face) &&
                              has_collision_candidate_buffer(buffers_.cloth_edge_body_edge) &&

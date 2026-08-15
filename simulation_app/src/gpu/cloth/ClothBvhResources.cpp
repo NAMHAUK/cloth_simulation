@@ -1,6 +1,7 @@
 #include "gpu/cloth/ClothBvhResources.h"
 
 #include "scene/SceneState.h"
+#include "utils/BufferUtils.h"
 
 #include <cstddef>
 #include <cstdint>
@@ -62,11 +63,9 @@ void ClothBvhResources::rebuild(const std::vector<GarmentObject>& garments, QOpe
     gl.glCreateBuffers(1, &node_buffer_);
     gl.glCreateBuffers(1, &triangle_bounds_buffer_);
 
-    const GLsizeiptr triangle_index_bytes =
-        static_cast<GLsizeiptr>(bvh_data.triangle_indices.size() * sizeof(std::uint32_t));
-    const GLsizeiptr bvh_node_bytes = static_cast<GLsizeiptr>(bvh_data.nodes.size() * sizeof(BvhNode));
-    const GLsizeiptr triangle_bounds_bytes =
-        static_cast<GLsizeiptr>(static_cast<std::size_t>(bvh_data.triangle_count) * sizeof(Aabb));
+    const GLsizeiptr triangle_index_bytes = byte_size<std::uint32_t>(bvh_data.triangle_indices.size());
+    const GLsizeiptr bvh_node_bytes = byte_size<BvhNode>(bvh_data.nodes.size());
+    const GLsizeiptr triangle_bounds_bytes = byte_size<Aabb>(bvh_data.triangle_count);
     gl.glNamedBufferData(collision_triangle_index_buffer_,
                          triangle_index_bytes,
                          bvh_data.triangle_indices.data(),

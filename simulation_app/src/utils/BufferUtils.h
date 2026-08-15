@@ -5,6 +5,16 @@
 #include "gpu/cloth/ClothGpuResources.h"
 #include "gpu/scene/CollisionCandidateBuffers.h"
 
+#include <cstddef>
+
+#include <QOpenGLFunctions_4_5_Core>
+
+template <typename T>
+constexpr GLsizeiptr byte_size(std::size_t count) noexcept
+{
+    return static_cast<GLsizeiptr>(count * sizeof(T));
+}
+
 inline bool is_valid_motion_view(const ClothMotionBufferView& motion_view)
 {
     return motion_view.current_position_buffer != 0 &&

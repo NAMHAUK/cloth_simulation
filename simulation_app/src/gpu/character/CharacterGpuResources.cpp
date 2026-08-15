@@ -1,6 +1,7 @@
 #include "gpu/character/CharacterGpuResources.h"
 
 #include "asset/MeshGeometryUtils.h"
+#include "utils/BufferUtils.h"
 #include <cstddef>
 #include <iostream>
 
@@ -114,38 +115,30 @@ void CharacterGpuResources::upload_motion(const CharacterMotion& character_motio
     initialize_gpu_resources(gl);
 
     // GPU buffer 공간 생성 & 초기값 설정
-    const GLsizeiptr position_bytes =
-        static_cast<GLsizeiptr>(frame_position_component_count(character_motion) * sizeof(float));
-    const GLsizeiptr endpoint_position_bytes = static_cast<GLsizeiptr>(
-        vertex_position_component_count(character_motion.vertex_count) * sizeof(float));
-    const GLsizeiptr triangle_index_bytes = static_cast<GLsizeiptr>(
-        default_body_triangle_bvh_data.triangle_indices.size() * sizeof(std::uint32_t));
-    const GLsizeiptr bvh_node_bytes =
-        static_cast<GLsizeiptr>(default_body_triangle_bvh_data.nodes.size() * sizeof(BvhNode));
-    const GLsizeiptr body_triangle_bounds_bytes = static_cast<GLsizeiptr>(
-        static_cast<std::size_t>(default_body_triangle_bvh_data.collision_triangle_count) * sizeof(Aabb));
+    const GLsizeiptr position_bytes = byte_size<float>(frame_position_component_count(character_motion));
+    const GLsizeiptr endpoint_position_bytes =
+        byte_size<float>(vertex_position_component_count(character_motion.vertex_count));
+    const GLsizeiptr triangle_index_bytes =
+        byte_size<std::uint32_t>(default_body_triangle_bvh_data.triangle_indices.size());
+    const GLsizeiptr bvh_node_bytes = byte_size<BvhNode>(default_body_triangle_bvh_data.nodes.size());
+    const GLsizeiptr body_triangle_bounds_bytes =
+        byte_size<Aabb>(default_body_triangle_bvh_data.collision_triangle_count);
     const GLsizeiptr body_vertex_bvh_node_bytes =
-        static_cast<GLsizeiptr>(default_body_vertex_bvh_data.nodes.size() * sizeof(BvhNode));
+        byte_size<BvhNode>(default_body_vertex_bvh_data.nodes.size());
     const GLsizeiptr body_vertex_bvh_vertex_id_bytes =
-        static_cast<GLsizeiptr>(default_body_vertex_bvh_data.vertex_ids.size() * sizeof(std::uint32_t));
-    const GLsizeiptr body_vertex_bounds_bytes =
-        static_cast<GLsizeiptr>(static_cast<std::size_t>(character_motion.vertex_count) * sizeof(Aabb));
-    const GLsizeiptr body_edge_bvh_node_bytes =
-        static_cast<GLsizeiptr>(default_body_edge_bvh_data.nodes.size() * sizeof(BvhNode));
-    const GLsizeiptr body_edge_index_bytes = static_cast<GLsizeiptr>(
-        default_body_edge_bvh_data.edge_vertex_indices.size() * sizeof(std::uint32_t));
-    const GLsizeiptr body_edge_bounds_bytes = static_cast<GLsizeiptr>(
-        static_cast<std::size_t>(default_body_edge_bvh_data.edge_count()) * sizeof(Aabb));
-    const GLsizeiptr adjacent_triangle_offsets_bytes =
-        static_cast<GLsizeiptr>(adjacency.offsets.size() * sizeof(std::uint32_t));
+        byte_size<std::uint32_t>(default_body_vertex_bvh_data.vertex_ids.size());
+    const GLsizeiptr body_vertex_bounds_bytes = byte_size<Aabb>(character_motion.vertex_count);
+    const GLsizeiptr body_edge_bvh_node_bytes = byte_size<BvhNode>(default_body_edge_bvh_data.nodes.size());
+    const GLsizeiptr body_edge_index_bytes =
+        byte_size<std::uint32_t>(default_body_edge_bvh_data.edge_vertex_indices.size());
+    const GLsizeiptr body_edge_bounds_bytes = byte_size<Aabb>(default_body_edge_bvh_data.edge_count());
+    const GLsizeiptr adjacent_triangle_offsets_bytes = byte_size<std::uint32_t>(adjacency.offsets.size());
     const GLsizeiptr adjacent_triangle_indices_bytes =
-        static_cast<GLsizeiptr>(adjacency.triangle_indices.size() * sizeof(std::uint32_t));
-    const GLsizeiptr triangle_geometry_bytes =
-        static_cast<GLsizeiptr>(static_cast<std::size_t>(adjacency.triangle_count) *
-                                character_triangle_geometry_components *
-                                sizeof(float));
+        byte_size<std::uint32_t>(adjacency.triangle_indices.size());
+    const GLsizeiptr triangle_geometry_bytes = byte_size<float>(
+        static_cast<std::size_t>(adjacency.triangle_count) * character_triangle_geometry_components);
     const GLsizeiptr vertex_normals_bytes =
-        static_cast<GLsizeiptr>(character_motion.vertex_count * 4u * sizeof(float));
+        byte_size<float>(static_cast<std::size_t>(character_motion.vertex_count) * 4u);
 
     gl.glNamedBufferData(buffers_.all_frame_position,
                          position_bytes,
