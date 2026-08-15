@@ -4,7 +4,6 @@
 
 #include <array>
 #include <cstdint>
-#include <optional>
 #include <vector>
 
 #include <QOpenGLFunctions_4_5_Core>
@@ -18,18 +17,15 @@ public:
 
     ClothGpuResources(const ClothGpuResources&) = delete;
     ClothGpuResources& operator=(const ClothGpuResources&) = delete;
-    ClothGpuResources(ClothGpuResources&& other) noexcept;
     ClothGpuResources& operator=(ClothGpuResources&& other) noexcept = delete;
 
-    bool update_garment_buffers(const std::vector<GarmentObject>& garments,
-                                std::optional<GarmentLayer> updated_layer,
-                                QOpenGLFunctions_4_5_Core& gl);
-    bool update_garment_placement(const GarmentObject& garment, QOpenGLFunctions_4_5_Core& gl);
-    bool upload_garment_attachment_vertices(const GarmentObject& garment,
-                                            ElementRange& target_range,
-                                            QOpenGLFunctions_4_5_Core& gl);
-    bool activate_attachment_targets(const ElementRange& target_range);
-    bool capture_base_positions(QOpenGLFunctions_4_5_Core& gl);
+    void rebuild_buffers(const std::vector<GarmentObject>& garments,
+                         GarmentLayer changed_layer,
+                         QOpenGLFunctions_4_5_Core& gl);
+    void upload_garment_placement(const GarmentObject& garment, QOpenGLFunctions_4_5_Core& gl);
+    ElementRange upload_attachment_indices(const GarmentObject& garment, QOpenGLFunctions_4_5_Core& gl);
+    void activate_attachment_targets(GarmentLayer layer, const ElementRange& target_range);
+    void capture_base_positions(QOpenGLFunctions_4_5_Core& gl);
     bool restore_base_positions(QOpenGLFunctions_4_5_Core& gl) const;
     void clear_base_positions(QOpenGLFunctions_4_5_Core& gl);
     void copy_current_positions_to_previous(QOpenGLFunctions_4_5_Core& gl) const;
@@ -53,35 +49,47 @@ public:
     void release(QOpenGLFunctions_4_5_Core& gl);
 
 private:
-    bool rebuild_buffers(const std::vector<GarmentObject>& garments,
-                         std::optional<GarmentLayer> updated_layer,
-                         QOpenGLFunctions_4_5_Core& gl);
-    void replace_with_rebuild_buffers(ClothBufferSet rebuild_buffer_set,
-                                      std::array<GarmentBufferRanges, 2> rebuild_ranges,
-                                      std::vector<ElementRange> rebuild_stretch_color_ranges,
-                                      std::vector<ElementRange> rebuild_bending_color_ranges,
-                                      std::vector<ElementRange> rebuild_attachment_ranges,
-                                      const ClothBufferElementCounts& rebuild_element_counts,
-                                      QOpenGLFunctions_4_5_Core& gl);
-    bool append_garment(const GarmentObject& garment, QOpenGLFunctions_4_5_Core& gl);
-    void ensure_capacity(const ClothBufferElementCounts& required_elements, QOpenGLFunctions_4_5_Core& gl);
-    bool has_enough_capacity(const ClothBufferElementCounts& required_elements) const;
-    void create_buffers(const ClothBufferElementCounts& allocated_elements, QOpenGLFunctions_4_5_Core& gl);
+    struct BufferState final
+    {
+        ClothBufferSet buffers;
+        std::array<ElementRange, 2> vertex_ranges;
+        std::array<ElementRange, 2> index_ranges;
+        std::array<ElementRange, 2> triangle_ranges;
+        std::array<ElementRange, 2> adjacent_triangle_index_ranges;
+        std::array<ElementRange, 2> stretch_constraint_ranges;
+        std::array<ElementRange, 2> bending_constraint_ranges;
+        std::array<ElementRange, 2> attachment_constraint_ranges;
+        std::vector<ElementRange> stretch_color_ranges;
+        std::vector<ElementRange> bending_color_ranges;
+        std::array<ElementRange, 2> attachment_ranges;
+        ClothBufferElementCounts element_counts;
+    };
+
+    static void assign_buffer_ranges(const std::vector<GarmentObject>& garments, BufferState& state);
+    void create_dynamic_buffers(const std::vector<GarmentObject>& garments,
+                                GarmentLayer changed_layer,
+                                BufferState& rebuild_state,
+                                QOpenGLFunctions_4_5_Core& gl) const;
+    void copy_dynamic_state_buffers(GarmentLayer layer,
+                                    const BufferState& rebuild_state,
+                                    QOpenGLFunctions_4_5_Core& gl) const;
+    void copy_attachment_target_state(GarmentLayer layer,
+                                      BufferState& rebuild_state,
+                                      QOpenGLFunctions_4_5_Core& gl) const;
+    static void create_topology_buffers(const std::vector<GarmentObject>& garments,
+                                        BufferState& rebuild_state,
+                                        QOpenGLFunctions_4_5_Core& gl);
+    static void create_distance_constraint_buffers(const std::vector<GarmentObject>& garments,
+                                                   BufferState& rebuild_state,
+                                                   QOpenGLFunctions_4_5_Core& gl);
     void configure_vao(QOpenGLFunctions_4_5_Core& gl);
 
     bool has_gpu_objects() const;
 
-    void delete_gpu_objects(QOpenGLFunctions_4_5_Core& gl);
     static void delete_buffer_set(ClothBufferSet& buffers, QOpenGLFunctions_4_5_Core& gl);
     void reset_resources() noexcept;
 
-    ClothBufferSet buffers_;
+    BufferState state_;
     GLuint base_positions_ = 0;
-    std::array<GarmentBufferRanges, 2> garments_;
-    std::vector<ElementRange> stretch_color_ranges_;
-    std::vector<ElementRange> bending_color_ranges_;
-    std::vector<ElementRange> attachment_ranges_;
-    ClothBufferElementCounts used_elements_;
-    ClothBufferElementCounts allocated_elements_;
     std::uint32_t base_position_vertex_count_ = 0;
 };

@@ -55,7 +55,7 @@ GarmentDistanceConstraints build_distance_constraints(const std::vector<std::uin
                                                       const std::vector<float>& vertices,
                                                       MeshEdgeBuilder build_edges)
 {
-    const auto vertex_count = static_cast<std::uint32_t>(vertices.size() / vertex_position_components);
+    const auto vertex_count = static_cast<std::uint32_t>(vertices.size() / position_components);
     const std::vector<MeshEdge> edges = build_edges(vertex_count, triangle_indices);
     ColorizedMeshEdges colorized_edges = colorize_mesh_edges(vertex_count, edges);
 
@@ -122,8 +122,7 @@ std::vector<MeshEdge> build_boundary_edges(const std::vector<std::uint32_t>& tri
 
 std::vector<std::vector<std::uint32_t>> find_boundary_loops(const GarmentMesh& garment_mesh)
 {
-    const auto vertex_count =
-        static_cast<std::uint32_t>(garment_mesh.vertices.size() / vertex_position_components);
+    const auto vertex_count = static_cast<std::uint32_t>(garment_mesh.vertices.size() / position_components);
     const std::vector<MeshEdge> boundary_edges =
         build_boundary_edges(garment_mesh.triangle_vertex_indices, vertex_count);
     if (boundary_edges.empty()) {
@@ -180,8 +179,7 @@ float average_loop_y(const std::vector<std::uint32_t>& loop_vertices, const std:
 
 std::vector<std::uint32_t> build_waistband_attachment_vertex_indices(const GarmentMesh& garment_mesh)
 {
-    const auto vertex_count =
-        static_cast<std::uint32_t>(garment_mesh.vertices.size() / vertex_position_components);
+    const auto vertex_count = static_cast<std::uint32_t>(garment_mesh.vertices.size() / position_components);
     if (vertex_count == 0u) {
         return {};
     }
@@ -233,7 +231,7 @@ std::uint32_t find_component_root(std::vector<std::uint32_t>& component_parent, 
 bool validate_garment_obj(const GarmentMesh& garment_mesh, std::uint32_t vertex_count)
 {
     if (vertex_count == 0 ||
-        garment_mesh.vertices.size() != static_cast<std::size_t>(vertex_count) * vertex_position_components) {
+        garment_mesh.vertices.size() != static_cast<std::size_t>(vertex_count) * position_components) {
         std::cerr << "Invalid garment OBJ vertex data.\n";
         return false;
     }
@@ -438,9 +436,9 @@ bool build_garment_simulation_data(GarmentMesh& garment_mesh,
                                    std::uint32_t vertex_count,
                                    AttachmentType attachment_type)
 {
-    if (!build_vertex_face_adjacency(vertex_count,
-                                     garment_mesh.triangle_vertex_indices,
-                                     garment_mesh.adjacency)) {
+    if (!build_vertex_triangle_adjacency(vertex_count,
+                                         garment_mesh.triangle_vertex_indices,
+                                         garment_mesh.adjacency)) {
         std::cerr << "Invalid garment OBJ topology.\n";
         return false;
     }
@@ -471,7 +469,7 @@ bool build_garment_simulation_data(GarmentMesh& garment_mesh,
 void print_garment_obj_summary(const std::filesystem::path& obj_path, const GarmentMesh& garment_mesh)
 {
     std::cout << "Read garment OBJ: " << obj_path << '\n';
-    std::cout << "  vertices=" << garment_mesh.vertices.size() / vertex_position_components
+    std::cout << "  vertices=" << garment_mesh.vertices.size() / position_components
               << " triangles=" << garment_mesh.triangle_vertex_indices.size() / 3u
               << " stretch_constraints=" << garment_mesh.stretch_constraints.colorized_edges.size()
               << " bending_constraints=" << garment_mesh.bending_constraints.colorized_edges.size()

@@ -5,7 +5,6 @@
 #include <iostream>
 
 namespace {
-constexpr std::size_t vertex_position_components = 3;
 constexpr std::size_t endpoint_position_components = 4;
 constexpr std::size_t character_triangle_geometry_components = 16;
 
@@ -13,7 +12,7 @@ std::size_t frame_position_component_count(const CharacterMotion& character_moti
 {
     return static_cast<std::size_t>(character_motion.frame_count) *
            static_cast<std::size_t>(character_motion.vertex_count) *
-           vertex_position_components;
+           position_components;
 }
 
 std::size_t vertex_position_component_count(std::uint32_t vertex_count)
@@ -104,10 +103,10 @@ void CharacterGpuResources::upload_motion(const CharacterMotion& character_motio
         return;
     }
 
-    VertexFaceAdjacency adjacency;
-    if (!build_vertex_face_adjacency(character_motion.vertex_count,
-                                     default_body_triangle_bvh_data.triangle_indices,
-                                     adjacency)) {
+    VertexTriangleAdjacency adjacency;
+    if (!build_vertex_triangle_adjacency(character_motion.vertex_count,
+                                         default_body_triangle_bvh_data.triangle_indices,
+                                         adjacency)) {
         release(gl);
         return;
     }
@@ -140,9 +139,9 @@ void CharacterGpuResources::upload_motion(const CharacterMotion& character_motio
     const GLsizeiptr adjacent_triangle_offsets_bytes =
         static_cast<GLsizeiptr>(adjacency.offsets.size() * sizeof(std::uint32_t));
     const GLsizeiptr adjacent_triangle_indices_bytes =
-        static_cast<GLsizeiptr>(adjacency.face_indices.size() * sizeof(std::uint32_t));
+        static_cast<GLsizeiptr>(adjacency.triangle_indices.size() * sizeof(std::uint32_t));
     const GLsizeiptr triangle_geometry_bytes =
-        static_cast<GLsizeiptr>(static_cast<std::size_t>(adjacency.face_count) *
+        static_cast<GLsizeiptr>(static_cast<std::size_t>(adjacency.triangle_count) *
                                 character_triangle_geometry_components *
                                 sizeof(float));
     const GLsizeiptr vertex_normals_bytes =
@@ -187,7 +186,7 @@ void CharacterGpuResources::upload_motion(const CharacterMotion& character_motio
                          GL_STATIC_DRAW);
     gl.glNamedBufferData(buffers_.adjacent_triangle_indices,
                          adjacent_triangle_indices_bytes,
-                         adjacency.face_indices.data(),
+                         adjacency.triangle_indices.data(),
                          GL_STATIC_DRAW);
     gl.glNamedBufferData(buffers_.triangle_geometry, triangle_geometry_bytes, nullptr, GL_DYNAMIC_DRAW);
     gl.glNamedBufferData(buffers_.vertex_normal, vertex_normals_bytes, nullptr, GL_DYNAMIC_DRAW);
@@ -195,7 +194,7 @@ void CharacterGpuResources::upload_motion(const CharacterMotion& character_motio
     // 캐릭터 mesh GPU 초기값 설정
     frame_count_ = character_motion.frame_count;
     vertex_count_ = character_motion.vertex_count;
-    triangle_count_ = adjacency.face_count;
+    triangle_count_ = adjacency.triangle_count;
     body_collision_triangle_count_ = default_body_triangle_bvh_data.collision_triangle_count;
     body_triangle_bvh_node_count_ = static_cast<std::uint32_t>(default_body_triangle_bvh_data.nodes.size());
     body_vertex_bvh_node_count_ = static_cast<std::uint32_t>(default_body_vertex_bvh_data.nodes.size());

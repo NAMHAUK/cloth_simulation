@@ -8,13 +8,13 @@
 
 #include <glm/vec3.hpp>
 
-inline constexpr std::uint32_t vertex_position_components = 3;
+inline constexpr std::uint32_t position_components = 3;
 
-struct VertexFaceAdjacency final
+struct VertexTriangleAdjacency final
 {
     std::vector<std::uint32_t> offsets;
-    std::vector<std::uint32_t> face_indices;
-    std::uint32_t face_count = 0;
+    std::vector<std::uint32_t> triangle_indices;
+    std::uint32_t triangle_count = 0;
 
     bool is_valid(std::uint32_t vertex_count) const;
 };
@@ -89,7 +89,7 @@ struct GarmentMesh
     GarmentCategory garment_category = GarmentCategory::Top;
     std::vector<float> vertices;
     std::vector<std::uint32_t> triangle_vertex_indices;
-    VertexFaceAdjacency adjacency;
+    VertexTriangleAdjacency adjacency;
     GarmentDistanceConstraints stretch_constraints;
     GarmentDistanceConstraints bending_constraints;
     std::vector<std::uint32_t> attachment_vertex_indices;

@@ -12,7 +12,6 @@
 #include "scene/SceneState.h"
 
 #include <filesystem>
-#include <optional>
 
 #include <QOpenGLFunctions_4_5_Core>
 
@@ -43,10 +42,11 @@ public:
     const ClothGpuResources& cloth_gpu_state() const;
     ClothBvhBufferView cloth_bvh_buffer_view() const;
     CollisionCandidateBufferView collision_candidate_buffer_view() const;
-    void update_garment_meshes(const SceneState& scene,
-                               QOpenGLFunctions_4_5_Core& gl,
-                               std::optional<GarmentLayer> updated_layer = std::nullopt);
-    void update_garment_placement(const GarmentObject& garment, QOpenGLFunctions_4_5_Core& gl);
+    void release_garment_resources(QOpenGLFunctions_4_5_Core& gl);
+    void rebuild_garment_resources(const SceneState& scene,
+                                   QOpenGLFunctions_4_5_Core& gl,
+                                   GarmentLayer changed_layer);
+    void upload_garment_placement(const GarmentObject& garment, QOpenGLFunctions_4_5_Core& gl);
     void build_garment_attachment_targets(SceneState& scene,
                                           GarmentLayer layer,
                                           QOpenGLFunctions_4_5_Core& gl);

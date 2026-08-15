@@ -9,7 +9,6 @@
 #include <utility>
 
 namespace {
-constexpr std::size_t position_components = 3u;
 constexpr std::size_t quaternion_components = 4u;
 
 glm::vec3 frame_position(const std::vector<float>& positions, std::uint32_t frame_index)

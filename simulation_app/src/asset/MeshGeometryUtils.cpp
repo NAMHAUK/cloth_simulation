@@ -98,7 +98,7 @@ bool orient_triangle_winding_outward(std::uint32_t vertex_count,
 {
     flipped_triangle_count = 0u;
     if (vertex_count == 0u ||
-        vertices.size() != static_cast<std::size_t>(vertex_count) * vertex_position_components ||
+        vertices.size() != static_cast<std::size_t>(vertex_count) * position_components ||
         triangle_indices.empty() ||
         triangle_indices.size() % 3u != 0u) {
         return false;
@@ -218,7 +218,7 @@ bool orient_triangle_winding_outward(std::uint32_t vertex_count,
 // vertex position //
 glm::vec3 get_vertex_position(const std::vector<float>& vertices, std::uint32_t vertex_index)
 {
-    const std::size_t position_base = static_cast<std::size_t>(vertex_index) * vertex_position_components;
+    const std::size_t position_base = static_cast<std::size_t>(vertex_index) * position_components;
     return {
         vertices[position_base],
         vertices[position_base + 1u],
@@ -226,18 +226,18 @@ glm::vec3 get_vertex_position(const std::vector<float>& vertices, std::uint32_t 
     };
 }
 
-// vertex_face_adjacency //
-bool VertexFaceAdjacency::is_valid(std::uint32_t vertex_count) const
+// vertex_triangle_adjacency //
+bool VertexTriangleAdjacency::is_valid(std::uint32_t vertex_count) const
 {
-    return face_count > 0 &&
+    return triangle_count > 0 &&
            offsets.size() == static_cast<std::size_t>(vertex_count) + 1u &&
-           !face_indices.empty();
+           !triangle_indices.empty();
 }
 
-// 각 vertex가 어떤 face들에 포함되는지 계산
-bool build_vertex_face_adjacency(std::uint32_t vertex_count,
-                                 const std::vector<std::uint32_t>& triangle_indices,
-                                 VertexFaceAdjacency& adjacency)
+// 각 vertex가 어떤 triangle들에 포함되는지 계산
+bool build_vertex_triangle_adjacency(std::uint32_t vertex_count,
+                                     const std::vector<std::uint32_t>& triangle_indices,
+                                     VertexTriangleAdjacency& adjacency)
 {
     adjacency = {};
 
@@ -245,10 +245,10 @@ bool build_vertex_face_adjacency(std::uint32_t vertex_count,
         return false;
     }
 
-    const std::uint32_t face_count = static_cast<std::uint32_t>(triangle_indices.size() / 3u);
+    const std::uint32_t triangle_count = static_cast<std::uint32_t>(triangle_indices.size() / 3u);
     adjacency.offsets.resize(static_cast<std::size_t>(vertex_count) + 1u, 0);
 
-    // 각 vetex가 전체 face에서 몇 번 나오는지 count
+    // 각 vetex가 전체 triangle에서 몇 번 나오는지 count
     for (std::uint32_t index : triangle_indices) {
         if (index >= vertex_count) {
             return false;
@@ -256,27 +256,27 @@ bool build_vertex_face_adjacency(std::uint32_t vertex_count,
         ++adjacency.offsets[static_cast<std::size_t>(index) + 1u];
     }
 
-    // offsets에 vertex 누적합으로 저장 -> 각 vertex의 face_indices 시작 위치
+    // offsets에 vertex 누적합으로 저장 -> 각 vertex의 triangle_indices 시작 위치
     for (std::uint32_t vertex_index = 0; vertex_index < vertex_count; ++vertex_index) {
         const std::size_t offset_index = static_cast<std::size_t>(vertex_index);
         const std::size_t next_offset_index = offset_index + 1u;
         adjacency.offsets[next_offset_index] += adjacency.offsets[offset_index];
     }
 
-    // 각 vertex가 포함된 face index 저장 (여러 face에 포함된 경우 연속되게 저장됨)
-    adjacency.face_indices.resize(adjacency.offsets.back(), 0);
+    // 각 vertex가 포함된 triangle index 저장 (여러 triangle에 포함된 경우 연속되게 저장됨)
+    adjacency.triangle_indices.resize(adjacency.offsets.back(), 0);
     std::vector<std::uint32_t> write_offsets = adjacency.offsets;
 
-    for (std::uint32_t face_index = 0; face_index < face_count; ++face_index) {
-        const std::size_t index_base = static_cast<std::size_t>(face_index) * 3u;
+    for (std::uint32_t triangle_index = 0; triangle_index < triangle_count; ++triangle_index) {
+        const std::size_t index_base = static_cast<std::size_t>(triangle_index) * 3u;
         for (std::uint32_t corner = 0; corner < 3u; ++corner) {
             const std::uint32_t vertex_index = triangle_indices[index_base + corner];
             const std::uint32_t write_index = write_offsets[vertex_index]++;
-            adjacency.face_indices[write_index] = face_index;
+            adjacency.triangle_indices[write_index] = triangle_index;
         }
     }
 
-    adjacency.face_count = face_count;
+    adjacency.triangle_count = triangle_count;
     return adjacency.is_valid(vertex_count);
 }
 

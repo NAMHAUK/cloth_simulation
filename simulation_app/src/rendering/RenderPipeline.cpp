@@ -76,16 +76,12 @@ void RenderPipeline::draw(const SceneState& scene,
     const ClothGpuResources& cloth_gpu_state = gpu_state.cloth_gpu_state();
     if (cloth_gpu_state.is_initialized()) {
         cloth_gpu_state.bind_vertex_normals(vertex_normal_binding, gl);
-    }
-    const std::vector<GarmentObject>& garments = scene.garments();
-    for (const GarmentObject& garment : garments) {
-        if (!cloth_gpu_state.is_initialized()) {
-            continue;
+        const std::vector<GarmentObject>& garments = scene.garments();
+        for (const GarmentObject& garment : garments) {
+            viewer_shader_.set_solid_color(garment.mesh.color, gl);
+            viewer_shader_.set_mvp(mvp * placement_matrices[garment.layer], gl);
+            cloth_gpu_state.draw_garment(garment.layer, gl);
         }
-
-        viewer_shader_.set_solid_color(garment.mesh.color, gl);
-        viewer_shader_.set_mvp(mvp * placement_matrices[garment.layer], gl);
-        cloth_gpu_state.draw_garment(garment.layer, gl);
     }
 
     // character

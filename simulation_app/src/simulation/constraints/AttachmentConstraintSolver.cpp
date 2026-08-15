@@ -20,7 +20,9 @@ bool has_attachment_constraints(const AttachmentConstraintBufferView& constraint
 {
     return constraint_view.constraint_count > 0 &&
            constraint_view.ranges != nullptr &&
-           !constraint_view.ranges->empty();
+           std::any_of(constraint_view.ranges->begin(),
+                       constraint_view.ranges->end(),
+                       [](ElementRange range) { return range.count > 0u; });
 }
 
 bool is_valid_attachment_constraint_view(const AttachmentConstraintBufferView& constraint_view)

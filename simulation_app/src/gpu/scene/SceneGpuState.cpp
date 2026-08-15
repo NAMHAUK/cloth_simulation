@@ -2,6 +2,7 @@
 
 #include "scene/SceneState.h"
 
+#include <cassert>
 #include <limits>
 #include <stdexcept>
 
@@ -65,9 +66,7 @@ SimulationGpuView SceneGpuState::simulation_view() const
 
 void SceneGpuState::release(QOpenGLFunctions_4_5_Core& gl)
 {
-    collision_candidate_buffers_.release(gl);
-    cloth_bvh_resources_.release(gl);
-    cloth_gpu_state_.release(gl);
+    release_garment_resources(gl);
     character_gpu_state_.release(gl);
     character_gpu_state_updater_.release(gl);
     normal_updater_.release(gl);
@@ -140,13 +139,20 @@ CollisionCandidateBufferView SceneGpuState::collision_candidate_buffer_view() co
     return collision_candidate_buffers_.view();
 }
 
-void SceneGpuState::update_garment_meshes(const SceneState& scene,
-                                          QOpenGLFunctions_4_5_Core& gl,
-                                          std::optional<GarmentLayer> updated_layer)
+void SceneGpuState::release_garment_resources(QOpenGLFunctions_4_5_Core& gl)
 {
-    if (!cloth_gpu_state_.update_garment_buffers(scene.garments(), updated_layer, gl)) {
-        throw std::runtime_error("Failed to update garment GPU buffers.");
-    }
+    collision_candidate_buffers_.release(gl);
+    cloth_bvh_resources_.release(gl);
+    cloth_gpu_state_.release(gl);
+}
+
+void SceneGpuState::rebuild_garment_resources(const SceneState& scene,
+                                              QOpenGLFunctions_4_5_Core& gl,
+                                              GarmentLayer changed_layer)
+{
+    assert(!scene.garments().empty());
+
+    cloth_gpu_state_.rebuild_buffers(scene.garments(), changed_layer, gl);
     if (!cloth_bvh_resources_.rebuild(scene.garments(), gl)) {
         throw std::runtime_error("Failed to rebuild cloth BVH resources.");
     }
@@ -176,11 +182,9 @@ void SceneGpuState::update_garment_meshes(const SceneState& scene,
                                          gl);
 }
 
-void SceneGpuState::update_garment_placement(const GarmentObject& garment, QOpenGLFunctions_4_5_Core& gl)
+void SceneGpuState::upload_garment_placement(const GarmentObject& garment, QOpenGLFunctions_4_5_Core& gl)
 {
-    if (!cloth_gpu_state_.update_garment_placement(garment, gl)) {
-        throw std::runtime_error("Failed to update garment GPU placement.");
-    }
+    cloth_gpu_state_.upload_garment_placement(garment, gl);
 }
 
 void SceneGpuState::build_garment_attachment_targets(SceneState& scene,
@@ -192,10 +196,7 @@ void SceneGpuState::build_garment_attachment_targets(SceneState& scene,
         throw std::runtime_error("Cannot build garment attachment targets because garment is missing.");
     }
 
-    ElementRange target_range;
-    if (!cloth_gpu_state_.upload_garment_attachment_vertices(*garment, target_range, gl)) {
-        throw std::runtime_error("Failed to upload garment attachment vertices.");
-    }
+    const ElementRange target_range = cloth_gpu_state_.upload_attachment_indices(*garment, gl);
 
     if (target_range.count == 0u) {
         return;
@@ -206,9 +207,7 @@ void SceneGpuState::build_garment_attachment_targets(SceneState& scene,
         throw std::runtime_error("Cannot build garment attachment targets because GPU buffers are missing.");
     }
 
-    if (!cloth_gpu_state_.activate_attachment_targets(target_range)) {
-        throw std::runtime_error("Failed to activate garment attachment targets.");
-    }
+    cloth_gpu_state_.activate_attachment_targets(layer, target_range);
 }
 
 void SceneGpuState::capture_garment_base_positions(QOpenGLFunctions_4_5_Core& gl)
@@ -216,9 +215,7 @@ void SceneGpuState::capture_garment_base_positions(QOpenGLFunctions_4_5_Core& gl
     if (!has_garment_resources()) {
         return;
     }
-    if (!cloth_gpu_state_.capture_base_positions(gl)) {
-        throw std::runtime_error("Failed to capture garment base positions.");
-    }
+    cloth_gpu_state_.capture_base_positions(gl);
 }
 
 void SceneGpuState::restore_garment_base_positions(QOpenGLFunctions_4_5_Core& gl)
