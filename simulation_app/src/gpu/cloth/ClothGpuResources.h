@@ -69,15 +69,26 @@ private:
     };
 
     static void assign_buffer_ranges(const std::vector<GarmentObject>& garments, BufferState& state);
-    void build_buffer_state(const std::vector<GarmentObject>& garments,
-                            GarmentLayer changed_layer,
-                            BufferState& rebuild_state,
-                            QOpenGLFunctions_4_5_Core& gl) const;
+    void create_dynamic_buffers(const std::vector<GarmentObject>& garments,
+                                GarmentLayer changed_layer,
+                                BufferState& rebuild_state,
+                                QOpenGLFunctions_4_5_Core& gl) const;
+    void copy_dynamic_state_buffers(GarmentLayer layer,
+                                    const BufferState& rebuild_state,
+                                    QOpenGLFunctions_4_5_Core& gl) const;
+    void copy_attachment_target_state(GarmentLayer layer,
+                                      BufferState& rebuild_state,
+                                      QOpenGLFunctions_4_5_Core& gl) const;
+    static void create_topology_buffers(const std::vector<GarmentObject>& garments,
+                                        BufferState& rebuild_state,
+                                        QOpenGLFunctions_4_5_Core& gl);
+    static void create_distance_constraint_buffers(const std::vector<GarmentObject>& garments,
+                                                   BufferState& rebuild_state,
+                                                   QOpenGLFunctions_4_5_Core& gl);
     void configure_vao(QOpenGLFunctions_4_5_Core& gl);
 
     bool has_gpu_objects() const;
 
-    void delete_gpu_objects(QOpenGLFunctions_4_5_Core& gl);
     static void delete_buffer_set(ClothBufferSet& buffers, QOpenGLFunctions_4_5_Core& gl);
     void reset_resources() noexcept;
 
