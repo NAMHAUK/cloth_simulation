@@ -42,16 +42,10 @@ struct BvhNodeRange final
     std::uint32_t node_count = 0;
 };
 
-struct GarmentBvhRange final
+struct GarmentBvhRanges final
 {
-    GarmentLayer layer = GarmentLayer::Lower;
     BvhBufferRange collision_triangles;
-    BvhBufferRange bvh_nodes;
-};
-
-struct GarmentBvhLayout final
-{
-    GarmentBvhRange range;
+    BvhBufferRange nodes;
     std::vector<BvhNodeRange> node_ranges_by_level;
 };
 
