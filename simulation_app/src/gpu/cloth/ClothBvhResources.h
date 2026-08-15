@@ -27,7 +27,7 @@ public:
     ClothBvhResources& operator=(const ClothBvhResources&) = delete;
 
     ClothBvhBufferView buffer_view() const;
-    bool rebuild(const std::vector<GarmentObject>& garments, QOpenGLFunctions_4_5_Core& gl);
+    void rebuild(const std::vector<GarmentObject>& garments, QOpenGLFunctions_4_5_Core& gl);
     void release(QOpenGLFunctions_4_5_Core& gl);
 
 private:

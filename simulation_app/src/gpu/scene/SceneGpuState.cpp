@@ -153,9 +153,7 @@ void SceneGpuState::rebuild_garment_resources(const SceneState& scene,
     assert(!scene.garments().empty());
 
     cloth_gpu_state_.rebuild_buffers(scene.garments(), changed_layer, gl);
-    if (!cloth_bvh_resources_.rebuild(scene.garments(), gl)) {
-        throw std::runtime_error("Failed to rebuild cloth BVH resources.");
-    }
+    cloth_bvh_resources_.rebuild(scene.garments(), gl);
     if (has_garment_resources()) {
         if (scene.garments().size() > std::numeric_limits<std::uint32_t>::max()) {
             collision_candidate_buffers_.release(gl);
