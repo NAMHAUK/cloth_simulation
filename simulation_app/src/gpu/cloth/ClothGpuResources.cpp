@@ -62,30 +62,6 @@ ClothBufferSet create_dynamic_buffer_set(const ClothBufferElementCounts& counts,
 }
 
 // Buffer data
-void set_attachment_range(std::uint32_t constraint_offset,
-                          std::uint32_t constraint_count,
-                          std::vector<ElementRange>& attachment_ranges)
-{
-    const auto iter = std::find_if(
-        attachment_ranges.begin(),
-        attachment_ranges.end(),
-        [constraint_offset](const ElementRange& range) { return range.offset == constraint_offset; });
-
-    if (constraint_count == 0u) {
-        if (iter != attachment_ranges.end()) {
-            attachment_ranges.erase(iter);
-        }
-        return;
-    }
-
-    if (iter != attachment_ranges.end()) {
-        iter->count = constraint_count;
-        return;
-    }
-
-    attachment_ranges.push_back({constraint_offset, constraint_count});
-}
-
 void upload_position_data(const ClothBufferSet& buffers,
                           const std::vector<float>& vertices,
                           ElementRange vertex_range,
@@ -245,11 +221,8 @@ void ClothGpuResources::copy_attachment_target_state(GarmentLayer layer,
 {
     const ElementRange source_range = state_.attachment_constraint_ranges[layer];
     const ElementRange destination_range = rebuild_state.attachment_constraint_ranges[layer];
-    const auto attachment_range = std::find_if(
-        state_.attachment_ranges.begin(),
-        state_.attachment_ranges.end(),
-        [source_range](const ElementRange& range) { return range.offset == source_range.offset; });
-    if (attachment_range == state_.attachment_ranges.end()) {
+    const ElementRange attachment_range = state_.attachment_ranges[layer];
+    if (attachment_range.count == 0u) {
         return;
     }
 
@@ -258,14 +231,14 @@ void ClothGpuResources::copy_attachment_target_state(GarmentLayer layer,
                                 rebuild_state.buffers.attachment_indices,
                                 byte_size(source_range.offset, sizeof(glm::uvec2)),
                                 byte_size(destination_range.offset, sizeof(glm::uvec2)),
-                                byte_size(attachment_range->count, sizeof(glm::uvec2)));
+                                byte_size(attachment_range.count, sizeof(glm::uvec2)));
     gl.glCopyNamedBufferSubData(state_.buffers.attachment_barycentric_offset,
                                 rebuild_state.buffers.attachment_barycentric_offset,
                                 byte_size(source_range.offset, sizeof(glm::vec4)),
                                 byte_size(destination_range.offset, sizeof(glm::vec4)),
-                                byte_size(attachment_range->count, sizeof(glm::vec4)));
+                                byte_size(attachment_range.count, sizeof(glm::vec4)));
 
-    rebuild_state.attachment_ranges.push_back({destination_range.offset, attachment_range->count});
+    rebuild_state.attachment_ranges[layer] = {destination_range.offset, attachment_range.count};
 }
 
 void ClothGpuResources::create_topology_buffers(const std::vector<GarmentObject>& garments,
@@ -423,7 +396,7 @@ void ClothGpuResources::upload_garment_attachment_vertices(const GarmentObject& 
         static_cast<std::uint32_t>(garment.mesh.attachment_vertex_indices.size());
     target_range = {attachment_constraint_range.offset, attachment_constraint_count};
     if (attachment_constraint_count == 0u) {
-        set_attachment_range(attachment_constraint_range.offset, 0u, state_.attachment_ranges);
+        state_.attachment_ranges[layer] = {};
         return;
     }
 
@@ -439,9 +412,9 @@ void ClothGpuResources::upload_garment_attachment_vertices(const GarmentObject& 
                             attachment_indices.data());
 }
 
-void ClothGpuResources::activate_attachment_targets(const ElementRange& target_range)
+void ClothGpuResources::activate_attachment_targets(GarmentLayer layer, const ElementRange& target_range)
 {
-    set_attachment_range(target_range.offset, target_range.count, state_.attachment_ranges);
+    state_.attachment_ranges[layer] = target_range;
 }
 
 void ClothGpuResources::capture_base_positions(QOpenGLFunctions_4_5_Core& gl)

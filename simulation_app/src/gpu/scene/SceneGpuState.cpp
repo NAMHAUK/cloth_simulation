@@ -208,7 +208,7 @@ void SceneGpuState::build_garment_attachment_targets(SceneState& scene,
         throw std::runtime_error("Cannot build garment attachment targets because GPU buffers are missing.");
     }
 
-    cloth_gpu_state_.activate_attachment_targets(target_range);
+    cloth_gpu_state_.activate_attachment_targets(layer, target_range);
 }
 
 void SceneGpuState::capture_garment_base_positions(QOpenGLFunctions_4_5_Core& gl)

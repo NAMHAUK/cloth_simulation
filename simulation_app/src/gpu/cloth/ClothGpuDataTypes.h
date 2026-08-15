@@ -103,5 +103,5 @@ struct AttachmentConstraintBufferView final
     GLuint attachment_index_buffer = 0;
     GLuint barycentric_offset_buffer = 0;
     std::uint32_t constraint_count = 0;
-    const std::vector<ElementRange>* ranges = nullptr;
+    const std::array<ElementRange, 2>* ranges = nullptr;
 };

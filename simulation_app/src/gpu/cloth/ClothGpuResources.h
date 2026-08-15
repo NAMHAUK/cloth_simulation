@@ -27,7 +27,7 @@ public:
     void upload_garment_attachment_vertices(const GarmentObject& garment,
                                             ElementRange& target_range,
                                             QOpenGLFunctions_4_5_Core& gl);
-    void activate_attachment_targets(const ElementRange& target_range);
+    void activate_attachment_targets(GarmentLayer layer, const ElementRange& target_range);
     void capture_base_positions(QOpenGLFunctions_4_5_Core& gl);
     bool restore_base_positions(QOpenGLFunctions_4_5_Core& gl) const;
     void clear_base_positions(QOpenGLFunctions_4_5_Core& gl);
@@ -64,7 +64,7 @@ private:
         std::array<ElementRange, 2> attachment_constraint_ranges;
         std::vector<ElementRange> stretch_color_ranges;
         std::vector<ElementRange> bending_color_ranges;
-        std::vector<ElementRange> attachment_ranges;
+        std::array<ElementRange, 2> attachment_ranges;
         ClothBufferElementCounts element_counts;
     };
 
