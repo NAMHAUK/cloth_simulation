@@ -196,8 +196,7 @@ void SceneGpuState::build_garment_attachment_targets(SceneState& scene,
         throw std::runtime_error("Cannot build garment attachment targets because garment is missing.");
     }
 
-    ElementRange target_range;
-    cloth_gpu_state_.upload_garment_attachment_vertices(*garment, target_range, gl);
+    const ElementRange target_range = cloth_gpu_state_.upload_attachment_indices(*garment, gl);
 
     if (target_range.count == 0u) {
         return;

@@ -24,9 +24,7 @@ public:
                          GarmentLayer changed_layer,
                          QOpenGLFunctions_4_5_Core& gl);
     void upload_garment_placement(const GarmentObject& garment, QOpenGLFunctions_4_5_Core& gl);
-    void upload_garment_attachment_vertices(const GarmentObject& garment,
-                                            ElementRange& target_range,
-                                            QOpenGLFunctions_4_5_Core& gl);
+    ElementRange upload_attachment_indices(const GarmentObject& garment, QOpenGLFunctions_4_5_Core& gl);
     void activate_attachment_targets(GarmentLayer layer, const ElementRange& target_range);
     void capture_base_positions(QOpenGLFunctions_4_5_Core& gl);
     bool restore_base_positions(QOpenGLFunctions_4_5_Core& gl) const;

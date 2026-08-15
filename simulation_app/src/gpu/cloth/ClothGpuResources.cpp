@@ -11,10 +11,8 @@
 #include <glm/vec4.hpp>
 
 namespace {
-constexpr std::uint32_t gpu_position_components = 4;
 static_assert(sizeof(MeshEdge) == sizeof(std::uint32_t) * 2u);
 
-// Buffer utilities
 GLsizeiptr byte_size(std::size_t count, std::size_t element_size)
 {
     return static_cast<GLsizeiptr>(count * element_size);
@@ -35,7 +33,6 @@ void clear_dynamic_state(const ClothBufferSet& buffers, ElementRange vertices, Q
     }
 }
 
-// Buffer allocation
 ClothBufferSet create_dynamic_buffer_set(const ClothBufferElementCounts& counts,
                                          QOpenGLFunctions_4_5_Core& gl)
 {
@@ -61,53 +58,44 @@ ClothBufferSet create_dynamic_buffer_set(const ClothBufferElementCounts& counts,
     return buffers;
 }
 
-// Buffer data
-void upload_position_data(const ClothBufferSet& buffers,
-                          const std::vector<float>& vertices,
-                          ElementRange vertex_range,
-                          QOpenGLFunctions_4_5_Core& gl)
+void upload_vertex_positions(const ClothBufferSet& buffers,
+                             const std::vector<float>& vertices,
+                             ElementRange vertex_range,
+                             QOpenGLFunctions_4_5_Core& gl)
 {
     std::vector<glm::vec4> gpu_positions(vertex_range.count);
-    for (std::uint32_t vertex_index = 0; vertex_index < vertex_range.count; ++vertex_index) {
-        const std::size_t source_index = static_cast<std::size_t>(vertex_index) * position_components;
-        gpu_positions[vertex_index] =
-            glm::vec4(vertices[source_index], vertices[source_index + 1u], vertices[source_index + 2u], 0.0f);
+    for (std::size_t index = 0; index < gpu_positions.size(); ++index) {
+        const std::size_t offset = index * position_components;
+        gpu_positions[index] = glm::vec4(vertices[offset], vertices[offset + 1], vertices[offset + 2], 0.0f);
     }
 
-    const GLsizeiptr position_offset_bytes = byte_size(vertex_range.offset, sizeof(glm::vec4));
-    const GLsizeiptr position_size_bytes = byte_size(vertex_range.count, sizeof(glm::vec4));
-
     gl.glNamedBufferSubData(buffers.current_position,
-                            position_offset_bytes,
-                            position_size_bytes,
+                            byte_size(vertex_range.offset, sizeof(glm::vec4)),
+                            byte_size(vertex_range.count, sizeof(glm::vec4)),
                             gpu_positions.data());
     gl.glNamedBufferSubData(buffers.previous_position,
-                            position_offset_bytes,
-                            position_size_bytes,
+                            byte_size(vertex_range.offset, sizeof(glm::vec4)),
+                            byte_size(vertex_range.count, sizeof(glm::vec4)),
                             gpu_positions.data());
     clear_dynamic_state(buffers, vertex_range, gl);
 }
 
-void upload_rest_length_data(const ClothBufferSet& buffers,
-                             const GarmentObject& garment,
-                             ElementRange stretch_constraint_range,
-                             ElementRange bending_constraint_range,
-                             QOpenGLFunctions_4_5_Core& gl)
+void upload_rest_lengths(const ClothBufferSet& buffers,
+                         const GarmentObject& garment,
+                         ElementRange stretch_constraint_range,
+                         ElementRange bending_constraint_range,
+                         QOpenGLFunctions_4_5_Core& gl)
 {
-    const GarmentDistanceConstraints& stretch_constraints = garment.mesh.stretch_constraints;
-    const GarmentDistanceConstraints& bending_constraints = garment.mesh.bending_constraints;
-
     gl.glNamedBufferSubData(buffers.stretch_rest_length,
                             byte_size(stretch_constraint_range.offset, sizeof(float)),
-                            byte_size(stretch_constraints.rest_lengths.size(), sizeof(float)),
-                            stretch_constraints.rest_lengths.data());
+                            byte_size(garment.mesh.stretch_constraints.rest_lengths.size(), sizeof(float)),
+                            garment.mesh.stretch_constraints.rest_lengths.data());
 
     gl.glNamedBufferSubData(buffers.bending_rest_length,
                             byte_size(bending_constraint_range.offset, sizeof(float)),
-                            byte_size(bending_constraints.rest_lengths.size(), sizeof(float)),
-                            bending_constraints.rest_lengths.data());
+                            byte_size(garment.mesh.bending_constraints.rest_lengths.size(), sizeof(float)),
+                            garment.mesh.bending_constraints.rest_lengths.data());
 }
-
 }
 
 ClothGpuResources::ClothGpuResources(ClothGpuResources&& other) noexcept
@@ -119,7 +107,7 @@ ClothGpuResources::ClothGpuResources(ClothGpuResources&& other) noexcept
     other.reset_resources();
 }
 
-// Buffer management
+// Buffer rebuild
 void ClothGpuResources::rebuild_buffers(const std::vector<GarmentObject>& garments,
                                         GarmentLayer changed_layer,
                                         QOpenGLFunctions_4_5_Core& gl)
@@ -178,7 +166,7 @@ void ClothGpuResources::create_dynamic_buffers(const std::vector<GarmentObject>&
         const ElementRange vertex_range = rebuild_state.vertex_ranges[layer];
 
         if (changed_layer == layer) {
-            upload_position_data(rebuild_state.buffers, garment.mesh.vertices, vertex_range, gl);
+            upload_vertex_positions(rebuild_state.buffers, garment.mesh.vertices, vertex_range, gl);
         } else {
             copy_dynamic_state_buffers(layer, rebuild_state, gl);
             copy_attachment_target_state(layer, rebuild_state, gl);
@@ -361,7 +349,7 @@ void ClothGpuResources::configure_vao(QOpenGLFunctions_4_5_Core& gl)
                                  position_binding_index,
                                  state_.buffers.current_position,
                                  0,
-                                 gpu_position_components * static_cast<GLsizei>(sizeof(float)));
+                                 static_cast<GLsizei>(sizeof(glm::vec4)));
     gl.glEnableVertexArrayAttrib(state_.buffers.vao, position_attribute_location);
     gl.glVertexArrayAttribFormat(state_.buffers.vao,
                                  position_attribute_location,
@@ -373,43 +361,40 @@ void ClothGpuResources::configure_vao(QOpenGLFunctions_4_5_Core& gl)
     gl.glVertexArrayElementBuffer(state_.buffers.vao, state_.buffers.triangle_vertex_indices);
 }
 
+// Garment updates
 void ClothGpuResources::upload_garment_placement(const GarmentObject& garment, QOpenGLFunctions_4_5_Core& gl)
 {
     const GarmentLayer layer = garment.layer;
-    upload_position_data(state_.buffers, garment.mesh.vertices, state_.vertex_ranges[layer], gl);
-    upload_rest_length_data(state_.buffers,
-                            garment,
-                            state_.stretch_constraint_ranges[layer],
-                            state_.bending_constraint_ranges[layer],
-                            gl);
+    upload_vertex_positions(state_.buffers, garment.mesh.vertices, state_.vertex_ranges[layer], gl);
+    upload_rest_lengths(state_.buffers,
+                        garment,
+                        state_.stretch_constraint_ranges[layer],
+                        state_.bending_constraint_ranges[layer],
+                        gl);
 }
 
-void ClothGpuResources::upload_garment_attachment_vertices(const GarmentObject& garment,
-                                                           ElementRange& target_range,
-                                                           QOpenGLFunctions_4_5_Core& gl)
+ElementRange ClothGpuResources::upload_attachment_indices(const GarmentObject& garment,
+                                                          QOpenGLFunctions_4_5_Core& gl)
 {
-    target_range = {};
     const GarmentLayer layer = garment.layer;
     const ElementRange vertex_range = state_.vertex_ranges[layer];
-    const ElementRange attachment_constraint_range = state_.attachment_constraint_ranges[layer];
-    const auto attachment_constraint_count =
-        static_cast<std::uint32_t>(garment.mesh.attachment_vertex_indices.size());
-    target_range = {attachment_constraint_range.offset, attachment_constraint_count};
-    if (attachment_constraint_count == 0u) {
+    const ElementRange target_range = state_.attachment_constraint_ranges[layer];
+    if (target_range.count == 0u) {
         state_.attachment_ranges[layer] = {};
-        return;
+        return target_range;
     }
 
     std::vector<glm::uvec2> attachment_indices;
-    attachment_indices.reserve(attachment_constraint_count);
+    attachment_indices.reserve(target_range.count);
     for (std::uint32_t local_vertex_index : garment.mesh.attachment_vertex_indices) {
         attachment_indices.push_back({vertex_range.offset + local_vertex_index, 0u});
     }
 
     gl.glNamedBufferSubData(state_.buffers.attachment_indices,
-                            byte_size(attachment_constraint_range.offset, sizeof(glm::uvec2)),
-                            byte_size(attachment_constraint_count, sizeof(glm::uvec2)),
+                            byte_size(target_range.offset, sizeof(glm::uvec2)),
+                            byte_size(target_range.count, sizeof(glm::uvec2)),
                             attachment_indices.data());
+    return target_range;
 }
 
 void ClothGpuResources::activate_attachment_targets(GarmentLayer layer, const ElementRange& target_range)
@@ -417,6 +402,21 @@ void ClothGpuResources::activate_attachment_targets(GarmentLayer layer, const El
     state_.attachment_ranges[layer] = target_range;
 }
 
+void ClothGpuResources::copy_current_positions_to_previous(QOpenGLFunctions_4_5_Core& gl) const
+{
+    const GLsizeiptr position_bytes = byte_size(state_.element_counts.vertex, sizeof(glm::vec4));
+
+    gl.glMemoryBarrier(GL_SHADER_STORAGE_BARRIER_BIT | GL_BUFFER_UPDATE_BARRIER_BIT);
+    gl.glCopyNamedBufferSubData(state_.buffers.current_position,
+                                state_.buffers.previous_position,
+                                0,
+                                0,
+                                position_bytes);
+    clear_dynamic_state(state_.buffers, {0, state_.element_counts.vertex}, gl);
+    gl.glMemoryBarrier(GL_SHADER_STORAGE_BARRIER_BIT);
+}
+
+// Base Position Buffers
 void ClothGpuResources::capture_base_positions(QOpenGLFunctions_4_5_Core& gl)
 {
     clear_base_positions(gl);
@@ -455,20 +455,6 @@ void ClothGpuResources::clear_base_positions(QOpenGLFunctions_4_5_Core& gl)
 
     base_positions_ = 0;
     base_position_vertex_count_ = 0;
-}
-
-void ClothGpuResources::copy_current_positions_to_previous(QOpenGLFunctions_4_5_Core& gl) const
-{
-    const GLsizeiptr position_bytes = byte_size(state_.element_counts.vertex, sizeof(glm::vec4));
-
-    gl.glMemoryBarrier(GL_SHADER_STORAGE_BARRIER_BIT | GL_BUFFER_UPDATE_BARRIER_BIT);
-    gl.glCopyNamedBufferSubData(state_.buffers.current_position,
-                                state_.buffers.previous_position,
-                                0,
-                                0,
-                                position_bytes);
-    clear_dynamic_state(state_.buffers, {0, state_.element_counts.vertex}, gl);
-    gl.glMemoryBarrier(GL_SHADER_STORAGE_BARRIER_BIT);
 }
 
 // Rendering
