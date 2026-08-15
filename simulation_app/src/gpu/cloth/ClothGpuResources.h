@@ -17,7 +17,6 @@ public:
 
     ClothGpuResources(const ClothGpuResources&) = delete;
     ClothGpuResources& operator=(const ClothGpuResources&) = delete;
-    ClothGpuResources(ClothGpuResources&& other) noexcept;
     ClothGpuResources& operator=(ClothGpuResources&& other) noexcept = delete;
 
     void rebuild_buffers(const std::vector<GarmentObject>& garments,

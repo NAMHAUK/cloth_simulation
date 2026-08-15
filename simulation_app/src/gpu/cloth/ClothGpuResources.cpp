@@ -98,15 +98,6 @@ void upload_rest_lengths(const ClothBufferSet& buffers,
 }
 }
 
-ClothGpuResources::ClothGpuResources(ClothGpuResources&& other) noexcept
-{
-    state_ = std::move(other.state_);
-    base_positions_ = other.base_positions_;
-    base_position_vertex_count_ = other.base_position_vertex_count_;
-
-    other.reset_resources();
-}
-
 // Buffer rebuild
 void ClothGpuResources::rebuild_buffers(const std::vector<GarmentObject>& garments,
                                         GarmentLayer changed_layer,
