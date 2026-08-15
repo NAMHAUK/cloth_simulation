@@ -33,9 +33,9 @@ public:
     void release(QOpenGLFunctions_4_5_Core& gl);
 
 private:
-    GLuint collision_triangle_index_ = 0;
-    GLuint bvh_node_ = 0;
-    GLuint triangle_bounds_ = 0;
+    GLuint collision_triangle_index_buffer_ = 0;
+    GLuint node_buffer_ = 0;
+    GLuint triangle_bounds_buffer_ = 0;
     std::array<GarmentBvhRanges, 2> garment_ranges_;
     std::uint32_t triangle_count_ = 0;
     std::uint32_t node_count_ = 0;
