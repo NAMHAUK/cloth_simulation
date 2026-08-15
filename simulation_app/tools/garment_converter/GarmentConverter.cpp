@@ -436,9 +436,9 @@ bool build_garment_simulation_data(GarmentMesh& garment_mesh,
                                    std::uint32_t vertex_count,
                                    AttachmentType attachment_type)
 {
-    if (!build_vertex_face_adjacency(vertex_count,
-                                     garment_mesh.triangle_vertex_indices,
-                                     garment_mesh.adjacency)) {
+    if (!build_vertex_triangle_adjacency(vertex_count,
+                                         garment_mesh.triangle_vertex_indices,
+                                         garment_mesh.adjacency)) {
         std::cerr << "Invalid garment OBJ topology.\n";
         return false;
     }

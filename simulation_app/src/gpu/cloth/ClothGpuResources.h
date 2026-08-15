@@ -58,7 +58,7 @@ private:
         std::array<ElementRange, 2> vertex_ranges;
         std::array<ElementRange, 2> index_ranges;
         std::array<ElementRange, 2> triangle_ranges;
-        std::array<ElementRange, 2> adjacency_ranges;
+        std::array<ElementRange, 2> adjacent_triangle_index_ranges;
         std::array<ElementRange, 2> stretch_constraint_ranges;
         std::array<ElementRange, 2> bending_constraint_ranges;
         std::array<ElementRange, 2> attachment_constraint_ranges;

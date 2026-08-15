@@ -154,9 +154,9 @@ void ClothGpuResources::assign_buffer_ranges(const std::vector<GarmentObject>& g
             append_range(element_counts.vertex, mesh.vertices.size() / position_components);
         state.index_ranges[layer] =
             append_range(element_counts.triangle_vertex_index, mesh.triangle_vertex_indices.size());
-        state.triangle_ranges[layer] = append_range(element_counts.triangle, mesh.adjacency.face_count);
-        state.adjacency_ranges[layer] =
-            append_range(element_counts.adjacent_triangle_index, mesh.adjacency.face_indices.size());
+        state.triangle_ranges[layer] = append_range(element_counts.triangle, mesh.adjacency.triangle_count);
+        state.adjacent_triangle_index_ranges[layer] =
+            append_range(element_counts.adjacent_triangle_index, mesh.adjacency.triangle_indices.size());
         state.stretch_constraint_ranges[layer] =
             append_range(element_counts.stretch_constraint, mesh.stretch_constraints.colorized_edges.size());
         state.bending_constraint_ranges[layer] =
@@ -255,11 +255,11 @@ void ClothGpuResources::create_topology_buffers(const std::vector<GarmentObject>
     for (const GarmentObject& garment : garments) {
         const GarmentLayer layer = garment.layer;
         const GarmentMesh& mesh = garment.mesh;
-        const VertexFaceAdjacency& adjacency = mesh.adjacency;
+        const VertexTriangleAdjacency& adjacency = mesh.adjacency;
         const std::uint32_t vertex_offset = rebuild_state.vertex_ranges[layer].offset;
         const std::uint32_t index_offset = rebuild_state.index_ranges[layer].offset;
         const std::uint32_t triangle_offset = rebuild_state.triangle_ranges[layer].offset;
-        const std::uint32_t adjacency_offset = rebuild_state.adjacency_ranges[layer].offset;
+        const std::uint32_t adjacency_offset = rebuild_state.adjacent_triangle_index_ranges[layer].offset;
 
         for (std::size_t index = 0; index < mesh.triangle_vertex_indices.size(); ++index) {
             triangle_vertex_indices[index_offset + index] =
@@ -268,9 +268,9 @@ void ClothGpuResources::create_topology_buffers(const std::vector<GarmentObject>
         for (std::size_t index = 0; index < adjacency.offsets.size(); ++index) {
             adjacent_triangle_offsets[vertex_offset + index] = adjacency_offset + adjacency.offsets[index];
         }
-        for (std::size_t index = 0; index < adjacency.face_indices.size(); ++index) {
+        for (std::size_t index = 0; index < adjacency.triangle_indices.size(); ++index) {
             adjacent_triangle_indices[adjacency_offset + index] =
-                triangle_offset + adjacency.face_indices[index];
+                triangle_offset + adjacency.triangle_indices[index];
         }
     }
 
