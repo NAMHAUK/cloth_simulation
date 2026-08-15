@@ -47,9 +47,9 @@ private:
 
     void detect(const SimulationGpuView& views, float bounds_margin, QOpenGLFunctions_4_5_Core& gl) const;
     void detect_pair(const ElementRange& upper_vertex_range,
-                     const GarmentBvhLayout& upper_layout,
+                     const GarmentBvhRanges& upper_bvh,
                      const ElementRange& lower_vertex_range,
-                     const GarmentBvhLayout& lower_layout,
+                     const GarmentBvhRanges& lower_bvh,
                      const CollisionCandidateBuffer& collision_candidates,
                      QOpenGLFunctions_4_5_Core& gl) const;
     void build_dispatch_size(const CollisionCandidateBuffer& collision_candidates,

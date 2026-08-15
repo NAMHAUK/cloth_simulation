@@ -14,35 +14,34 @@ struct PackedClothBvhData final
 {
     std::vector<std::uint32_t> triangle_indices;
     std::vector<BvhNode> nodes;
-    std::vector<GarmentBvhLayout> garment_layouts;
+    std::array<GarmentBvhRanges, 2> garment_ranges;
     std::uint32_t triangle_count = 0;
     std::uint32_t node_count = 0;
+    std::uint32_t garment_count = 0;
 };
 
 PackedClothBvhData build_packed_data(const std::vector<GarmentObject>& garments)
 {
     PackedClothBvhData packed_data;
-    packed_data.garment_layouts.reserve(garments.size());
 
     for (const GarmentObject& garment : garments) {
         const TriangleBvhData& bvh = garment.triangle_bvh;
         const std::size_t triangle_count = bvh.triangle_indices.size() / triangle_vertex_count;
         const auto local_triangle_count = static_cast<std::uint32_t>(triangle_count);
 
-        GarmentBvhLayout layout;
-        layout.range.layer = garment.layer;
-        layout.range.collision_triangles = {packed_data.triangle_count, local_triangle_count};
-        layout.range.bvh_nodes = {packed_data.node_count, static_cast<std::uint32_t>(bvh.nodes.size())};
-        layout.node_ranges_by_level = bvh.node_ranges_by_level;
+        GarmentBvhRanges& ranges = packed_data.garment_ranges[garment.layer];
+        ranges.collision_triangles = {packed_data.triangle_count, local_triangle_count};
+        ranges.nodes = {packed_data.node_count, static_cast<std::uint32_t>(bvh.nodes.size())};
+        ranges.node_ranges_by_level = bvh.node_ranges_by_level;
 
         packed_data.triangle_indices.insert(packed_data.triangle_indices.end(),
                                             bvh.triangle_indices.begin(),
                                             bvh.triangle_indices.end());
         packed_data.nodes.insert(packed_data.nodes.end(), bvh.nodes.begin(), bvh.nodes.end());
-        packed_data.garment_layouts.push_back(std::move(layout));
         packed_data.triangle_count += local_triangle_count;
         packed_data.node_count += static_cast<std::uint32_t>(bvh.nodes.size());
     }
+    packed_data.garment_count = static_cast<std::uint32_t>(garments.size());
 
     return packed_data;
 }
@@ -68,7 +67,8 @@ ClothBvhBufferView ClothBvhResources::buffer_view() const
             triangle_bounds_,
             triangle_count_,
             node_count_,
-            &garment_layouts_};
+            garment_count_,
+            &garment_ranges_};
 }
 
 void ClothBvhResources::rebuild(const std::vector<GarmentObject>& garments, QOpenGLFunctions_4_5_Core& gl)
@@ -98,15 +98,17 @@ void ClothBvhResources::rebuild(const std::vector<GarmentObject>& garments, QOpe
     collision_triangle_index_ = next_collision_triangle_index;
     bvh_node_ = next_bvh_node;
     triangle_bounds_ = next_triangle_bounds;
-    garment_layouts_ = std::move(packed_data.garment_layouts);
+    garment_ranges_ = std::move(packed_data.garment_ranges);
     triangle_count_ = packed_data.triangle_count;
     node_count_ = packed_data.node_count;
+    garment_count_ = packed_data.garment_count;
 }
 
 void ClothBvhResources::release(QOpenGLFunctions_4_5_Core& gl)
 {
     delete_buffers(collision_triangle_index_, bvh_node_, triangle_bounds_, gl);
-    garment_layouts_.clear();
+    garment_ranges_ = {};
     triangle_count_ = 0;
     node_count_ = 0;
+    garment_count_ = 0;
 }

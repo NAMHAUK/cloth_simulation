@@ -5,6 +5,7 @@
 #include "utils/ShaderUtils.h"
 
 #include <algorithm>
+#include <array>
 #include <cassert>
 #include <cmath>
 #include <cstdint>
@@ -23,14 +24,14 @@ bool is_valid_range(std::uint32_t offset, std::uint32_t count, std::uint32_t tot
     return count != 0 && offset <= total_count && count <= total_count - offset;
 }
 
-bool has_valid_node_level_ranges(const GarmentBvhLayout& layout)
+bool has_valid_node_level_ranges(const GarmentBvhRanges& ranges)
 {
-    if (layout.node_ranges_by_level.empty()) {
+    if (ranges.node_ranges_by_level.empty()) {
         return false;
     }
 
-    std::uint32_t expected_range_end = layout.range.bvh_nodes.count;
-    for (const BvhNodeRange& range : layout.node_ranges_by_level) {
+    std::uint32_t expected_range_end = ranges.nodes.count;
+    for (const BvhNodeRange& range : ranges.node_ranges_by_level) {
         if (range.node_count == 0 ||
             range.first_node > expected_range_end ||
             range.node_count != expected_range_end - range.first_node) {
@@ -40,6 +41,25 @@ bool has_valid_node_level_ranges(const GarmentBvhLayout& layout)
     }
 
     return expected_range_end == 0;
+}
+
+bool ranges_cover_buffer(std::array<BvhBufferRange, 2> ranges, std::uint32_t total_count)
+{
+    if (ranges[1].offset < ranges[0].offset) {
+        std::swap(ranges[0], ranges[1]);
+    }
+
+    std::uint32_t expected_offset = 0;
+    for (const BvhBufferRange& range : ranges) {
+        if (range.count == 0) {
+            continue;
+        }
+        if (range.offset != expected_offset) {
+            return false;
+        }
+        expected_offset += range.count;
+    }
+    return expected_offset == total_count;
 }
 
 }
@@ -78,27 +98,33 @@ bool ClothBvhBoundsUpdater::can_update(const SimulationGpuView& views, float bou
         return false;
     }
 
-    std::uint32_t expected_triangle_offset = 0;
-    std::uint32_t expected_node_offset = 0;
-    for (const GarmentBvhLayout& layout : *bvh_view.garment_layouts) {
-        const GarmentBvhRange& bvh_range = layout.range;
-        const ElementRange& vertex_range = views.garment_vertex_ranges[bvh_range.layer];
-        if (!is_valid_range(vertex_range.offset, vertex_range.count, motion_view.vertex_count) ||
-            !is_valid_range(bvh_range.collision_triangles.offset,
-                            bvh_range.collision_triangles.count,
-                            bvh_view.triangle_count) ||
-            !is_valid_range(bvh_range.bvh_nodes.offset, bvh_range.bvh_nodes.count, bvh_view.node_count) ||
-            bvh_range.collision_triangles.offset != expected_triangle_offset ||
-            bvh_range.bvh_nodes.offset != expected_node_offset ||
-            !has_valid_node_level_ranges(layout)) {
-            return false;
+    std::uint32_t garment_count = 0;
+    for (std::size_t layer = 0; layer < bvh_view.garment_ranges->size(); ++layer) {
+        const GarmentBvhRanges& ranges = (*bvh_view.garment_ranges)[layer];
+        const ElementRange& vertex_range = views.garment_vertex_ranges[layer];
+        if (vertex_range.count == 0 &&
+            ranges.collision_triangles.count == 0 &&
+            ranges.nodes.count == 0 &&
+            ranges.node_ranges_by_level.empty()) {
+            continue;
         }
 
-        expected_triangle_offset += bvh_range.collision_triangles.count;
-        expected_node_offset += bvh_range.bvh_nodes.count;
+        if (!is_valid_range(vertex_range.offset, vertex_range.count, motion_view.vertex_count) ||
+            !is_valid_range(ranges.collision_triangles.offset,
+                            ranges.collision_triangles.count,
+                            bvh_view.triangle_count) ||
+            !is_valid_range(ranges.nodes.offset, ranges.nodes.count, bvh_view.node_count) ||
+            !has_valid_node_level_ranges(ranges)) {
+            return false;
+        }
+        ++garment_count;
     }
 
-    return expected_triangle_offset == bvh_view.triangle_count && expected_node_offset == bvh_view.node_count;
+    const auto& garment_ranges = *bvh_view.garment_ranges;
+    return garment_count == bvh_view.garment_count &&
+           ranges_cover_buffer({garment_ranges[0].collision_triangles, garment_ranges[1].collision_triangles},
+                               bvh_view.triangle_count) &&
+           ranges_cover_buffer({garment_ranges[0].nodes, garment_ranges[1].nodes}, bvh_view.node_count);
 }
 
 void ClothBvhBoundsUpdater::update(const SimulationGpuView& views,
@@ -127,25 +153,25 @@ void ClothBvhBoundsUpdater::update(const SimulationGpuView& views,
     gl.glProgramUniform1f(program_, bounds_margin_location_, bounds_margin);
 
     std::size_t level_count = 0;
-    for (const GarmentBvhLayout& layout : *bvh_view.garment_layouts) {
-        level_count = std::max(level_count, layout.node_ranges_by_level.size());
+    for (const GarmentBvhRanges& ranges : *bvh_view.garment_ranges) {
+        level_count = std::max(level_count, ranges.node_ranges_by_level.size());
     }
 
     for (std::size_t level_index = 0; level_index < level_count; ++level_index) {
-        for (const GarmentBvhLayout& layout : *bvh_view.garment_layouts) {
-            if (level_index >= layout.node_ranges_by_level.size()) {
+        for (std::size_t layer = 0; layer < bvh_view.garment_ranges->size(); ++layer) {
+            const GarmentBvhRanges& ranges = (*bvh_view.garment_ranges)[layer];
+            if (level_index >= ranges.node_ranges_by_level.size()) {
                 continue;
             }
 
-            const GarmentBvhRange& bvh_range = layout.range;
-            const ElementRange& vertex_range = views.garment_vertex_ranges[bvh_range.layer];
-            const BvhNodeRange& level_range = layout.node_ranges_by_level[level_index];
+            const ElementRange& vertex_range = views.garment_vertex_ranges[layer];
+            const BvhNodeRange& level_range = ranges.node_ranges_by_level[level_index];
 
             gl.glProgramUniform1ui(program_, vertex_offset_location_, vertex_range.offset);
             gl.glProgramUniform1ui(program_,
                                    collision_triangle_offset_location_,
-                                   bvh_range.collision_triangles.offset);
-            gl.glProgramUniform1ui(program_, bvh_node_offset_location_, bvh_range.bvh_nodes.offset);
+                                   ranges.collision_triangles.offset);
+            gl.glProgramUniform1ui(program_, bvh_node_offset_location_, ranges.nodes.offset);
             gl.glProgramUniform1ui(program_, level_first_node_location_, level_range.first_node);
             gl.glProgramUniform1ui(program_, level_node_count_location_, level_range.node_count);
             gl.glDispatchCompute(compute_group_count(level_range.node_count, bvh_bounds_update_local_size),
