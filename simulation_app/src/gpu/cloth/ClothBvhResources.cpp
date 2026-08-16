@@ -1,5 +1,6 @@
 #include "gpu/cloth/ClothBvhResources.h"
 
+#include "gpu/bvh/BvhBuildUtils.h"
 #include "scene/SceneState.h"
 #include "utils/BufferUtils.h"
 
@@ -17,6 +18,23 @@ struct ClothBvhData final
     std::uint32_t node_count = 0;
 };
 
+void append_bvh_data(const TriangleBvhData& bvh, GarmentBvhRanges& ranges, std::vector<BvhNode>& nodes)
+{
+    // Append garment BVH data and adjust indices to the global range
+    for (BvhNodeRange& level_range : ranges.node_ranges_by_level) {
+        level_range.first_node += ranges.nodes.offset;
+    }
+    for (BvhNode node : bvh.nodes) {
+        if (bvh_build::is_leaf_node(node.element_count)) {
+            node.first_element_index += ranges.collision_triangles.offset;
+        } else {
+            node.left_child_index += ranges.nodes.offset;
+            node.right_child_index += ranges.nodes.offset;
+        }
+        nodes.push_back(node);
+    }
+}
+
 ClothBvhData build_cloth_bvh_data(const std::vector<GarmentObject>& garments)
 {
     ClothBvhData bvh_data;
@@ -29,14 +47,13 @@ ClothBvhData build_cloth_bvh_data(const std::vector<GarmentObject>& garments)
         ranges.nodes = {bvh_data.node_count, static_cast<std::uint32_t>(bvh.nodes.size())};
         ranges.node_ranges_by_level = bvh.node_ranges_by_level;
 
-        bvh_data.nodes.insert(bvh_data.nodes.end(), bvh.nodes.begin(), bvh.nodes.end());
+        append_bvh_data(bvh, ranges, bvh_data.nodes);
         bvh_data.triangle_count += bvh.collision_triangle_count;
         bvh_data.node_count += static_cast<std::uint32_t>(bvh.nodes.size());
     }
 
     return bvh_data;
 }
-
 }
 
 ClothBvhBufferView ClothBvhResources::buffer_view() const

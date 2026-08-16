@@ -30,9 +30,10 @@ bool has_valid_node_level_ranges(const GarmentBvhRanges& ranges)
         return false;
     }
 
-    std::uint32_t expected_range_end = ranges.nodes.count;
+    std::uint32_t expected_range_end = ranges.nodes.offset + ranges.nodes.count;
     for (const BvhNodeRange& range : ranges.node_ranges_by_level) {
         if (range.node_count == 0 ||
+            range.first_node < ranges.nodes.offset ||
             range.first_node > expected_range_end ||
             range.node_count != expected_range_end - range.first_node) {
             return false;
@@ -40,7 +41,7 @@ bool has_valid_node_level_ranges(const GarmentBvhRanges& ranges)
         expected_range_end = range.first_node;
     }
 
-    return expected_range_end == 0;
+    return expected_range_end == ranges.nodes.offset;
 }
 
 bool ranges_cover_buffer(std::array<BvhBufferRange, 2> ranges, std::uint32_t total_count)
@@ -69,17 +70,11 @@ void ClothBvhBoundsUpdater::initialize(const std::filesystem::path& shader_dir, 
     program_ = load_compute_program(shader_dir / "cloth" / "cloth_bvh_bounds_update.comp",
                                     "Cloth BVH bounds update",
                                     gl);
-    collision_triangle_offset_location_ = gl.glGetUniformLocation(program_, "uCollisionTriangleOffset");
-    bvh_node_offset_location_ = gl.glGetUniformLocation(program_, "uBvhNodeOffset");
     level_first_node_location_ = gl.glGetUniformLocation(program_, "uLevelFirstNode");
     level_node_count_location_ = gl.glGetUniformLocation(program_, "uLevelNodeCount");
     bounds_margin_location_ = gl.glGetUniformLocation(program_, "uBoundsMargin");
 
-    if (std::min({collision_triangle_offset_location_,
-                  bvh_node_offset_location_,
-                  level_first_node_location_,
-                  level_node_count_location_,
-                  bounds_margin_location_}) < 0) {
+    if (std::min({level_first_node_location_, level_node_count_location_, bounds_margin_location_}) < 0) {
         throw std::runtime_error("Cloth BVH bounds update compute shader missing required uniforms.");
     }
 }
@@ -168,10 +163,6 @@ void ClothBvhBoundsUpdater::update(const SimulationGpuView& views,
 
             const BvhNodeRange& level_range = ranges.node_ranges_by_level[level_index];
 
-            gl.glProgramUniform1ui(program_,
-                                   collision_triangle_offset_location_,
-                                   ranges.collision_triangles.offset);
-            gl.glProgramUniform1ui(program_, bvh_node_offset_location_, ranges.nodes.offset);
             gl.glProgramUniform1ui(program_, level_first_node_location_, level_range.first_node);
             gl.glProgramUniform1ui(program_, level_node_count_location_, level_range.node_count);
             gl.glDispatchCompute(compute_group_count(level_range.node_count, bvh_bounds_update_local_size),
