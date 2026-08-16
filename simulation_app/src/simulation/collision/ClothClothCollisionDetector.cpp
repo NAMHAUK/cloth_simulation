@@ -15,7 +15,6 @@ constexpr std::uint32_t candidate_accumulate_local_size = 128u;
 namespace candidate_detect_binding {
 constexpr GLuint cloth_current = 0;
 constexpr GLuint cloth_previous = 1;
-constexpr GLuint collision_triangles = 2;
 constexpr GLuint triangle_bounds = 3;
 constexpr GLuint bvh_nodes = 4;
 constexpr GLuint candidates = 5;
@@ -35,7 +34,11 @@ bool is_valid_range(std::uint32_t offset, std::uint32_t count, std::uint32_t tot
 
 bool has_valid_garment_bvhs(const SimulationGpuView& views)
 {
-    if (!is_valid_motion_view(views.cloth_motion) || !is_valid_cloth_bvh_buffer_view(views.cloth_bvh)) {
+    if (!is_valid_motion_view(views.cloth_motion) ||
+        !is_valid_cloth_mesh_topology_resource(views.cloth_topology) ||
+        !is_valid_cloth_bvh_buffer_view(views.cloth_bvh) ||
+        views.cloth_topology.vertex_count != views.cloth_motion.vertex_count ||
+        views.cloth_topology.triangle_count != views.cloth_bvh.triangle_count) {
         return false;
     }
 
@@ -177,9 +180,6 @@ void ClothClothCollisionDetector::detect(const SimulationGpuView& views,
     gl.glBindBufferBase(GL_SHADER_STORAGE_BUFFER,
                         candidate_detect_binding::cloth_previous,
                         views.cloth_motion.previous_position_buffer);
-    gl.glBindBufferBase(GL_SHADER_STORAGE_BUFFER,
-                        candidate_detect_binding::collision_triangles,
-                        views.cloth_bvh.collision_triangle_index_buffer);
     gl.glBindBufferBase(GL_SHADER_STORAGE_BUFFER,
                         candidate_detect_binding::triangle_bounds,
                         views.cloth_bvh.triangle_bounds_buffer);

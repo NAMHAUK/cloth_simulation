@@ -12,10 +12,6 @@ layout(std430, binding = 1) readonly buffer ClothPreviousPositions {
     vec4 cloth_previous_positions[];
 };
 
-layout(std430, binding = 2) readonly buffer CollisionTriangleIndices {
-    uint collision_triangle_indices[];
-};
-
 layout(std430, binding = 3) readonly buffer ClothTriangleBounds {
     Aabb triangle_bounds[];
 };

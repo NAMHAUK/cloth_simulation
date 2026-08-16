@@ -14,8 +14,8 @@ layout(std430, binding = 1) readonly buffer ClothPreviousPositions {
     vec4 cloth_previous_positions[];
 };
 
-layout(std430, binding = 2) readonly buffer CollisionTriangleIndices {
-    uint collision_triangle_indices[];
+layout(std430, binding = 2) readonly buffer ClothTriangleIndices {
+    uint cloth_triangle_indices[];
 };
 
 layout(std430, binding = 3) buffer ClothBvhNodes {
@@ -26,7 +26,6 @@ layout(std430, binding = 4) buffer ClothTriangleBounds {
     Aabb triangle_bounds[];
 };
 
-uniform uint uVertexOffset;
 uniform uint uCollisionTriangleOffset;
 uniform uint uBvhNodeOffset;
 uniform uint uLevelFirstNode;
@@ -47,9 +46,9 @@ void update_leaf_bounds(uint packed_node_index, BvhNode node)
         uint global_triangle_index = uCollisionTriangleOffset + local_triangle_index;
         uint index_base = global_triangle_index * 3u;
 
-        uint vertex_a = uVertexOffset + collision_triangle_indices[index_base];
-        uint vertex_b = uVertexOffset + collision_triangle_indices[index_base + 1u];
-        uint vertex_c = uVertexOffset + collision_triangle_indices[index_base + 2u];
+        uint vertex_a = cloth_triangle_indices[index_base];
+        uint vertex_b = cloth_triangle_indices[index_base + 1u];
+        uint vertex_c = cloth_triangle_indices[index_base + 2u];
 
         vec3 current_a = read_cloth_current_position(vertex_a);
         vec3 current_b = read_cloth_current_position(vertex_b);

@@ -12,7 +12,6 @@ struct GarmentObject;
 
 struct ClothBvhBufferView final
 {
-    GLuint collision_triangle_index_buffer = 0;
     GLuint node_buffer = 0;
     GLuint triangle_bounds_buffer = 0;
     std::uint32_t triangle_count = 0;
@@ -33,7 +32,6 @@ public:
     void release(QOpenGLFunctions_4_5_Core& gl);
 
 private:
-    GLuint collision_triangle_index_buffer_ = 0;
     GLuint node_buffer_ = 0;
     GLuint triangle_bounds_buffer_ = 0;
     std::array<GarmentBvhRanges, 2> garment_ranges_;

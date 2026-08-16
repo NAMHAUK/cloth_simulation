@@ -15,7 +15,7 @@ constexpr std::uint32_t body_triangle_index_build_local_size = 128u;
 namespace accumulate_binding {
 constexpr GLuint cloth_current = 0;
 constexpr GLuint cloth_previous = 1;
-constexpr GLuint collision_triangles = 2;
+constexpr GLuint cloth_triangles = 2;
 constexpr GLuint candidates = 3;
 constexpr GLuint candidate_count = 4;
 constexpr GLuint normal_correction_sums = 5;
@@ -25,7 +25,7 @@ constexpr GLuint cloth_body_triangle_indices = 7;
 
 namespace initial_accumulate_binding {
 constexpr GLuint cloth_current = 0;
-constexpr GLuint collision_triangles = 1;
+constexpr GLuint cloth_triangles = 1;
 constexpr GLuint candidates = 2;
 constexpr GLuint candidate_count = 3;
 constexpr GLuint normal_correction_sums = 4;
@@ -60,8 +60,11 @@ bool has_valid_common_solve_views(const SimulationGpuView& views)
                       [](const ElementRange& vertex_range) { return vertex_range.count != 0u; }));
     return is_valid_motion_view(views.cloth_motion) &&
            is_valid_collision_pushout_view(views.cloth_collision_pushout) &&
+           is_valid_cloth_mesh_topology_resource(views.cloth_topology) &&
            views.cloth_motion.vertex_count == views.cloth_collision_pushout.vertex_count &&
+           views.cloth_motion.vertex_count == views.cloth_topology.vertex_count &&
            is_valid_cloth_bvh_buffer_view(views.cloth_bvh) &&
+           views.cloth_topology.triangle_count == views.cloth_bvh.triangle_count &&
            garment_count == views.cloth_bvh.garment_count &&
            (views.cloth_bvh.garment_count < 2u ||
             (is_valid_triangle_geometry_resource(views.body_triangle_geometry) &&
@@ -225,8 +228,8 @@ void ClothClothCollisionSolver::solve(const SimulationGpuView& views, QOpenGLFun
                         accumulate_binding::cloth_previous,
                         views.cloth_motion.previous_position_buffer);
     gl.glBindBufferBase(GL_SHADER_STORAGE_BUFFER,
-                        accumulate_binding::collision_triangles,
-                        views.cloth_bvh.collision_triangle_index_buffer);
+                        accumulate_binding::cloth_triangles,
+                        views.cloth_topology.triangle_index_buffer);
     gl.glBindBufferBase(GL_SHADER_STORAGE_BUFFER,
                         accumulate_binding::candidates,
                         collision_candidates.candidates);
@@ -273,8 +276,8 @@ void ClothClothCollisionSolver::solve_initial(const SimulationGpuView& views,
                         initial_accumulate_binding::cloth_current,
                         views.cloth_motion.current_position_buffer);
     gl.glBindBufferBase(GL_SHADER_STORAGE_BUFFER,
-                        initial_accumulate_binding::collision_triangles,
-                        views.cloth_bvh.collision_triangle_index_buffer);
+                        initial_accumulate_binding::cloth_triangles,
+                        views.cloth_topology.triangle_index_buffer);
     gl.glBindBufferBase(GL_SHADER_STORAGE_BUFFER,
                         initial_accumulate_binding::candidates,
                         collision_candidates.candidates);
