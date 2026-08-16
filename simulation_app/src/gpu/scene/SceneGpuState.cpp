@@ -153,7 +153,8 @@ void SceneGpuState::rebuild_garment_resources(const SceneState& scene,
     assert(!scene.garments().empty());
 
     cloth_gpu_state_.rebuild_buffers(scene.garments(), changed_layer, gl);
-    cloth_bvh_resources_.rebuild(scene.garments(), gl);
+    const ClothMeshTopologyResources topology = cloth_gpu_state_.mesh_topology_resources();
+    cloth_bvh_resources_.rebuild(scene.garments(), topology.triangle_count, gl);
     if (has_garment_resources()) {
         if (scene.garments().size() > std::numeric_limits<std::uint32_t>::max()) {
             collision_candidate_buffers_.release(gl);
@@ -162,7 +163,6 @@ void SceneGpuState::rebuild_garment_resources(const SceneState& scene,
         }
 
         const ClothMotionBufferView motion_view = cloth_gpu_state_.motion_buffer_view();
-        const ClothMeshTopologyResources topology = cloth_gpu_state_.mesh_topology_resources();
         const DistanceConstraintBufferView stretch_constraints =
             cloth_gpu_state_.stretch_constraint_buffer_view();
         if (!collision_candidate_buffers_.ensure_capacity(motion_view.vertex_count,

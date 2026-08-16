@@ -130,12 +130,8 @@ void ClothGpuResources::assign_buffer_ranges(const std::vector<GarmentObject>& g
 
         state.vertex_ranges[layer] =
             append_range(element_counts.vertex, mesh.vertices.size() / position_components);
-        state.index_ranges[layer] =
-            append_range(element_counts.triangle_vertex_index, triangle_vertex_indices.size());
         state.triangle_ranges[layer] =
             append_range(element_counts.triangle, triangle_vertex_indices.size() / 3u);
-        state.adjacent_triangle_index_ranges[layer] =
-            append_range(element_counts.adjacent_triangle_index, triangle_vertex_indices.size());
         state.stretch_constraint_ranges[layer] =
             append_range(element_counts.stretch_constraint, mesh.stretch_constraints.colorized_edges.size());
         state.bending_constraint_ranges[layer] =
@@ -228,7 +224,7 @@ void ClothGpuResources::create_topology_buffers(const std::vector<GarmentObject>
     const ClothBufferElementCounts& counts = rebuild_state.element_counts;
 
     std::vector<std::uint32_t> triangle_vertex_indices;
-    triangle_vertex_indices.reserve(counts.triangle_vertex_index);
+    triangle_vertex_indices.reserve(static_cast<std::size_t>(counts.triangle) * 3u);
 
     for (const GarmentObject& garment : garments) {
         const std::uint32_t vertex_offset = rebuild_state.vertex_ranges[garment.layer].offset;
@@ -446,11 +442,12 @@ void ClothGpuResources::bind_vertex_normals(GLuint binding_index, QOpenGLFunctio
 
 void ClothGpuResources::draw_garment(GarmentLayer layer, QOpenGLFunctions_4_5_Core& gl) const
 {
-    const ElementRange index_range = state_.index_ranges[layer];
-    const auto index_offset_bytes = static_cast<std::uintptr_t>(index_range.offset) * sizeof(std::uint32_t);
+    const ElementRange triangle_range = state_.triangle_ranges[layer];
+    const auto index_offset_bytes =
+        static_cast<std::uintptr_t>(triangle_range.offset) * 3u * sizeof(std::uint32_t);
     gl.glBindVertexArray(state_.buffers.vao);
     gl.glDrawElements(GL_TRIANGLES,
-                      static_cast<GLsizei>(index_range.count),
+                      static_cast<GLsizei>(triangle_range.count * 3u),
                       GL_UNSIGNED_INT,
                       reinterpret_cast<const void*>(index_offset_bytes));
 }
@@ -463,7 +460,6 @@ bool ClothGpuResources::is_initialized() const
                        state_.vertex_ranges.end(),
                        [](ElementRange range) { return range.count != 0u; }) &&
            state_.element_counts.vertex > 0 &&
-           state_.element_counts.triangle_vertex_index > 0 &&
            state_.element_counts.triangle > 0 &&
            state_.element_counts.stretch_constraint > 0 &&
            state_.element_counts.bending_constraint > 0 &&

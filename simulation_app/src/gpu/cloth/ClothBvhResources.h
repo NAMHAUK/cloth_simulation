@@ -14,7 +14,6 @@ struct ClothBvhBufferView final
 {
     GLuint node_buffer = 0;
     GLuint triangle_bounds_buffer = 0;
-    std::uint32_t triangle_count = 0;
     std::uint32_t node_count = 0;
     std::uint32_t garment_count = 0;
     const std::array<GarmentBvhRanges, 2>* garment_ranges = nullptr;
@@ -28,14 +27,15 @@ public:
     ClothBvhResources& operator=(const ClothBvhResources&) = delete;
 
     ClothBvhBufferView buffer_view() const;
-    void rebuild(const std::vector<GarmentObject>& garments, QOpenGLFunctions_4_5_Core& gl);
+    void rebuild(const std::vector<GarmentObject>& garments,
+                 std::uint32_t triangle_count,
+                 QOpenGLFunctions_4_5_Core& gl);
     void release(QOpenGLFunctions_4_5_Core& gl);
 
 private:
     GLuint node_buffer_ = 0;
     GLuint triangle_bounds_buffer_ = 0;
     std::array<GarmentBvhRanges, 2> garment_ranges_;
-    std::uint32_t triangle_count_ = 0;
     std::uint32_t node_count_ = 0;
     std::uint32_t garment_count_ = 0;
 };

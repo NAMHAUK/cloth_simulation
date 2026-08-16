@@ -12,23 +12,23 @@ layout(std430, binding = 1) readonly buffer ClothPreviousPositions {
     vec4 cloth_previous_positions[];
 };
 
-layout(std430, binding = 3) readonly buffer ClothTriangleBounds {
+layout(std430, binding = 2) readonly buffer ClothTriangleBounds {
     Aabb triangle_bounds[];
 };
 
-layout(std430, binding = 4) readonly buffer ClothBvhNodes {
+layout(std430, binding = 3) readonly buffer ClothBvhNodes {
     BvhNode bvh_nodes[];
 };
 
-layout(std430, binding = 5) buffer Candidates {
+layout(std430, binding = 4) buffer Candidates {
     uvec2 candidates[];
 };
 
-layout(std430, binding = 6) buffer CandidateCount {
+layout(std430, binding = 5) buffer CandidateCount {
     uint candidate_count;
 };
 
-layout(std430, binding = 7) buffer OverflowCount {
+layout(std430, binding = 6) buffer OverflowCount {
     uint overflow_count;
 };
 

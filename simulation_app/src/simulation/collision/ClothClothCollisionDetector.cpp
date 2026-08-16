@@ -15,11 +15,11 @@ constexpr std::uint32_t candidate_accumulate_local_size = 128u;
 namespace candidate_detect_binding {
 constexpr GLuint cloth_current = 0;
 constexpr GLuint cloth_previous = 1;
-constexpr GLuint triangle_bounds = 3;
-constexpr GLuint bvh_nodes = 4;
-constexpr GLuint candidates = 5;
-constexpr GLuint candidate_count = 6;
-constexpr GLuint overflow_count = 7;
+constexpr GLuint triangle_bounds = 2;
+constexpr GLuint bvh_nodes = 3;
+constexpr GLuint candidates = 4;
+constexpr GLuint candidate_count = 5;
+constexpr GLuint overflow_count = 6;
 }
 
 namespace dispatch_size_binding {
@@ -37,8 +37,7 @@ bool has_valid_garment_bvhs(const SimulationGpuView& views)
     if (!is_valid_motion_view(views.cloth_motion) ||
         !is_valid_cloth_mesh_topology_resource(views.cloth_topology) ||
         !is_valid_cloth_bvh_buffer_view(views.cloth_bvh) ||
-        views.cloth_topology.vertex_count != views.cloth_motion.vertex_count ||
-        views.cloth_topology.triangle_count != views.cloth_bvh.triangle_count) {
+        views.cloth_topology.vertex_count != views.cloth_motion.vertex_count) {
         return false;
     }
 
@@ -46,14 +45,11 @@ bool has_valid_garment_bvhs(const SimulationGpuView& views)
     for (std::size_t layer = 0; layer < views.cloth_bvh.garment_ranges->size(); ++layer) {
         const ElementRange& vertex_range = views.garment_vertex_ranges[layer];
         const GarmentBvhRanges& ranges = (*views.cloth_bvh.garment_ranges)[layer];
-        if (vertex_range.count == 0 && ranges.collision_triangles.count == 0 && ranges.nodes.count == 0) {
+        if (vertex_range.count == 0 && ranges.nodes.count == 0) {
             continue;
         }
 
         if (!is_valid_range(vertex_range.offset, vertex_range.count, views.cloth_motion.vertex_count) ||
-            !is_valid_range(ranges.collision_triangles.offset,
-                            ranges.collision_triangles.count,
-                            views.cloth_bvh.triangle_count) ||
             !is_valid_range(ranges.nodes.offset, ranges.nodes.count, views.cloth_bvh.node_count)) {
             return false;
         }

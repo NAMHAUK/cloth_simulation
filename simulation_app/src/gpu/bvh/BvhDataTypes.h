@@ -44,7 +44,6 @@ struct BvhNodeRange final
 
 struct GarmentBvhRanges final
 {
-    BvhBufferRange collision_triangles;
     BvhBufferRange nodes;
     std::vector<BvhNodeRange> node_ranges_by_level;
 };

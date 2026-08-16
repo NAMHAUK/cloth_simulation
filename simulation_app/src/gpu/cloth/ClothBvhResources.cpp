@@ -14,11 +14,13 @@ struct ClothBvhData final
 {
     std::vector<BvhNode> nodes;
     std::array<GarmentBvhRanges, 2> garment_ranges;
-    std::uint32_t triangle_count = 0;
     std::uint32_t node_count = 0;
 };
 
-void append_bvh_data(const TriangleBvhData& bvh, GarmentBvhRanges& ranges, std::vector<BvhNode>& nodes)
+void append_bvh_data(const TriangleBvhData& bvh,
+                     std::uint32_t triangle_offset,
+                     GarmentBvhRanges& ranges,
+                     std::vector<BvhNode>& nodes)
 {
     // Append garment BVH data and adjust indices to the global range
     for (BvhNodeRange& level_range : ranges.node_ranges_by_level) {
@@ -26,7 +28,7 @@ void append_bvh_data(const TriangleBvhData& bvh, GarmentBvhRanges& ranges, std::
     }
     for (BvhNode node : bvh.nodes) {
         if (bvh_build::is_leaf_node(node.element_count)) {
-            node.first_element_index += ranges.collision_triangles.offset;
+            node.first_element_index += triangle_offset;
         } else {
             node.left_child_index += ranges.nodes.offset;
             node.right_child_index += ranges.nodes.offset;
@@ -38,17 +40,17 @@ void append_bvh_data(const TriangleBvhData& bvh, GarmentBvhRanges& ranges, std::
 ClothBvhData build_cloth_bvh_data(const std::vector<GarmentObject>& garments)
 {
     ClothBvhData bvh_data;
+    std::uint32_t triangle_offset = 0;
 
     for (const GarmentObject& garment : garments) {
         const TriangleBvhData& bvh = garment.triangle_bvh;
 
         GarmentBvhRanges& ranges = bvh_data.garment_ranges[garment.layer];
-        ranges.collision_triangles = {bvh_data.triangle_count, bvh.collision_triangle_count};
         ranges.nodes = {bvh_data.node_count, static_cast<std::uint32_t>(bvh.nodes.size())};
         ranges.node_ranges_by_level = bvh.node_ranges_by_level;
 
-        append_bvh_data(bvh, ranges, bvh_data.nodes);
-        bvh_data.triangle_count += bvh.collision_triangle_count;
+        append_bvh_data(bvh, triangle_offset, ranges, bvh_data.nodes);
+        triangle_offset += bvh.collision_triangle_count;
         bvh_data.node_count += static_cast<std::uint32_t>(bvh.nodes.size());
     }
 
@@ -58,15 +60,12 @@ ClothBvhData build_cloth_bvh_data(const std::vector<GarmentObject>& garments)
 
 ClothBvhBufferView ClothBvhResources::buffer_view() const
 {
-    return {node_buffer_,
-            triangle_bounds_buffer_,
-            triangle_count_,
-            node_count_,
-            garment_count_,
-            &garment_ranges_};
+    return {node_buffer_, triangle_bounds_buffer_, node_count_, garment_count_, &garment_ranges_};
 }
 
-void ClothBvhResources::rebuild(const std::vector<GarmentObject>& garments, QOpenGLFunctions_4_5_Core& gl)
+void ClothBvhResources::rebuild(const std::vector<GarmentObject>& garments,
+                                std::uint32_t triangle_count,
+                                QOpenGLFunctions_4_5_Core& gl)
 {
     ClothBvhData bvh_data = build_cloth_bvh_data(garments);
 
@@ -75,12 +74,11 @@ void ClothBvhResources::rebuild(const std::vector<GarmentObject>& garments, QOpe
     gl.glCreateBuffers(1, &triangle_bounds_buffer_);
 
     const GLsizeiptr bvh_node_bytes = byte_size<BvhNode>(bvh_data.nodes.size());
-    const GLsizeiptr triangle_bounds_bytes = byte_size<Aabb>(bvh_data.triangle_count);
+    const GLsizeiptr triangle_bounds_bytes = byte_size<Aabb>(triangle_count);
     gl.glNamedBufferData(node_buffer_, bvh_node_bytes, bvh_data.nodes.data(), GL_DYNAMIC_DRAW);
     gl.glNamedBufferData(triangle_bounds_buffer_, triangle_bounds_bytes, nullptr, GL_DYNAMIC_DRAW);
 
     garment_ranges_ = std::move(bvh_data.garment_ranges);
-    triangle_count_ = bvh_data.triangle_count;
     node_count_ = bvh_data.node_count;
     garment_count_ = static_cast<std::uint32_t>(garments.size());
 }
@@ -92,7 +90,6 @@ void ClothBvhResources::release(QOpenGLFunctions_4_5_Core& gl)
     node_buffer_ = 0;
     triangle_bounds_buffer_ = 0;
     garment_ranges_ = {};
-    triangle_count_ = 0;
     node_count_ = 0;
     garment_count_ = 0;
 }

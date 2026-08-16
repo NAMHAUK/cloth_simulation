@@ -64,7 +64,6 @@ bool has_valid_common_solve_views(const SimulationGpuView& views)
            views.cloth_motion.vertex_count == views.cloth_collision_pushout.vertex_count &&
            views.cloth_motion.vertex_count == views.cloth_topology.vertex_count &&
            is_valid_cloth_bvh_buffer_view(views.cloth_bvh) &&
-           views.cloth_topology.triangle_count == views.cloth_bvh.triangle_count &&
            garment_count == views.cloth_bvh.garment_count &&
            (views.cloth_bvh.garment_count < 2u ||
             (is_valid_triangle_geometry_resource(views.body_triangle_geometry) &&

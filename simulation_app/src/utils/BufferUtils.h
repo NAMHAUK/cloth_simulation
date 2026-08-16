@@ -58,7 +58,6 @@ inline bool is_valid_cloth_bvh_buffer_view(const ClothBvhBufferView& view)
 {
     return view.node_buffer != 0 &&
            view.triangle_bounds_buffer != 0 &&
-           view.triangle_count != 0 &&
            view.node_count != 0 &&
            view.garment_count != 0 &&
            view.garment_ranges != nullptr &&
