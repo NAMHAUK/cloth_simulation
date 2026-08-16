@@ -1,11 +1,13 @@
 #include "gpu/cloth/ClothGpuResources.h"
 
+#include "asset/MeshGeometryUtils.h"
 #include "scene/SceneState.h"
 #include "utils/BufferUtils.h"
 #include <algorithm>
 #include <cstddef>
 #include <cstdint>
 #include <iterator>
+#include <stdexcept>
 #include <utility>
 
 #include <glm/vec2.hpp>
@@ -123,15 +125,17 @@ void ClothGpuResources::assign_buffer_ranges(const std::vector<GarmentObject>& g
     for (const GarmentObject& garment : garments) {
         const GarmentLayer layer = garment.layer;
         const auto& mesh = garment.mesh;
+        const auto& triangle_vertex_indices = garment.triangle_bvh.triangle_vertex_indices;
         auto& element_counts = state.element_counts;
 
         state.vertex_ranges[layer] =
             append_range(element_counts.vertex, mesh.vertices.size() / position_components);
         state.index_ranges[layer] =
-            append_range(element_counts.triangle_vertex_index, mesh.triangle_vertex_indices.size());
-        state.triangle_ranges[layer] = append_range(element_counts.triangle, mesh.adjacency.triangle_count);
+            append_range(element_counts.triangle_vertex_index, triangle_vertex_indices.size());
+        state.triangle_ranges[layer] =
+            append_range(element_counts.triangle, triangle_vertex_indices.size() / 3u);
         state.adjacent_triangle_index_ranges[layer] =
-            append_range(element_counts.adjacent_triangle_index, mesh.adjacency.triangle_indices.size());
+            append_range(element_counts.adjacent_triangle_index, triangle_vertex_indices.size());
         state.stretch_constraint_ranges[layer] =
             append_range(element_counts.stretch_constraint, mesh.stretch_constraints.colorized_edges.size());
         state.bending_constraint_ranges[layer] =
@@ -223,30 +227,20 @@ void ClothGpuResources::create_topology_buffers(const std::vector<GarmentObject>
     ClothBufferSet& buffers = rebuild_state.buffers;
     const ClothBufferElementCounts& counts = rebuild_state.element_counts;
 
-    std::vector<std::uint32_t> triangle_vertex_indices(counts.triangle_vertex_index);
-    std::vector<std::uint32_t> adjacent_triangle_offsets(static_cast<std::size_t>(counts.vertex) + 1u);
-    std::vector<std::uint32_t> adjacent_triangle_indices(counts.adjacent_triangle_index);
+    std::vector<std::uint32_t> triangle_vertex_indices;
+    triangle_vertex_indices.reserve(counts.triangle_vertex_index);
 
     for (const GarmentObject& garment : garments) {
-        const GarmentLayer layer = garment.layer;
-        const GarmentMesh& mesh = garment.mesh;
-        const VertexTriangleAdjacency& adjacency = mesh.adjacency;
-        const std::uint32_t vertex_offset = rebuild_state.vertex_ranges[layer].offset;
-        const std::uint32_t index_offset = rebuild_state.index_ranges[layer].offset;
-        const std::uint32_t triangle_offset = rebuild_state.triangle_ranges[layer].offset;
-        const std::uint32_t adjacency_offset = rebuild_state.adjacent_triangle_index_ranges[layer].offset;
+        const std::uint32_t vertex_offset = rebuild_state.vertex_ranges[garment.layer].offset;
+        for (std::uint32_t vertex_index : garment.triangle_bvh.triangle_vertex_indices) {
+            triangle_vertex_indices.push_back(vertex_offset + vertex_index);
+        }
+    }
 
-        for (std::size_t index = 0; index < mesh.triangle_vertex_indices.size(); ++index) {
-            triangle_vertex_indices[index_offset + index] =
-                vertex_offset + mesh.triangle_vertex_indices[index];
-        }
-        for (std::size_t index = 0; index < adjacency.offsets.size(); ++index) {
-            adjacent_triangle_offsets[vertex_offset + index] = adjacency_offset + adjacency.offsets[index];
-        }
-        for (std::size_t index = 0; index < adjacency.triangle_indices.size(); ++index) {
-            adjacent_triangle_indices[adjacency_offset + index] =
-                triangle_offset + adjacency.triangle_indices[index];
-        }
+    VertexTriangleAdjacency adjacency;
+    if (!build_vertex_triangle_adjacency(counts.vertex, triangle_vertex_indices, adjacency)) {
+        delete_buffer_set(rebuild_state.buffers, gl);
+        throw std::runtime_error("Failed to build cloth topology buffers.");
     }
 
     gl.glCreateBuffers(1, &buffers.triangle_vertex_indices);
@@ -256,13 +250,13 @@ void ClothGpuResources::create_topology_buffers(const std::vector<GarmentObject>
                          GL_STATIC_DRAW);
     gl.glCreateBuffers(1, &buffers.adjacent_triangle_offsets);
     gl.glNamedBufferData(buffers.adjacent_triangle_offsets,
-                         byte_size<std::uint32_t>(adjacent_triangle_offsets.size()),
-                         adjacent_triangle_offsets.data(),
+                         byte_size<std::uint32_t>(adjacency.offsets.size()),
+                         adjacency.offsets.data(),
                          GL_STATIC_DRAW);
     gl.glCreateBuffers(1, &buffers.adjacent_triangle_indices);
     gl.glNamedBufferData(buffers.adjacent_triangle_indices,
-                         byte_size<std::uint32_t>(adjacent_triangle_indices.size()),
-                         adjacent_triangle_indices.data(),
+                         byte_size<std::uint32_t>(adjacency.triangle_indices.size()),
+                         adjacency.triangle_indices.data(),
                          GL_STATIC_DRAW);
 }
 
