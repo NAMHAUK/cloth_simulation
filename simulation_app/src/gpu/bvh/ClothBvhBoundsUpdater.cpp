@@ -19,11 +19,6 @@ constexpr GLuint cloth_bvh_nodes_binding = 3;
 constexpr GLuint cloth_triangle_bounds_binding = 4;
 constexpr std::uint32_t bvh_bounds_update_local_size = 128;
 
-bool is_valid_range(std::uint32_t offset, std::uint32_t count, std::uint32_t total_count)
-{
-    return count != 0 && offset <= total_count && count <= total_count - offset;
-}
-
 bool has_valid_node_level_ranges(const GarmentBvhRanges& ranges)
 {
     if (ranges.node_ranges_by_level.empty()) {
@@ -94,7 +89,6 @@ bool ClothBvhBoundsUpdater::can_update(const SimulationGpuView& views, float bou
         return false;
     }
 
-    std::uint32_t garment_count = 0;
     for (std::size_t layer = 0; layer < bvh_view.garment_ranges->size(); ++layer) {
         const GarmentBvhRanges& ranges = (*bvh_view.garment_ranges)[layer];
         const ElementRange& vertex_range = views.garment_vertex_ranges[layer];
@@ -102,17 +96,15 @@ bool ClothBvhBoundsUpdater::can_update(const SimulationGpuView& views, float bou
             continue;
         }
 
-        if (!is_valid_range(vertex_range.offset, vertex_range.count, motion_view.vertex_count) ||
-            !is_valid_range(ranges.nodes.offset, ranges.nodes.count, bvh_view.node_count) ||
+        if (!is_valid_buffer_range(vertex_range.offset, vertex_range.count, motion_view.vertex_count) ||
+            !is_valid_buffer_range(ranges.nodes.offset, ranges.nodes.count, bvh_view.node_count) ||
             !has_valid_node_level_ranges(ranges)) {
             return false;
         }
-        ++garment_count;
     }
 
     const auto& garment_ranges = *bvh_view.garment_ranges;
-    return garment_count == bvh_view.garment_count &&
-           ranges_cover_buffer({garment_ranges[0].nodes, garment_ranges[1].nodes}, bvh_view.node_count);
+    return ranges_cover_buffer({garment_ranges[0].nodes, garment_ranges[1].nodes}, bvh_view.node_count);
 }
 
 void ClothBvhBoundsUpdater::update(const SimulationGpuView& views,

@@ -1,6 +1,7 @@
 #pragma once
 
 #include "asset/AssetDataTypes.h"
+#include "gpu/bvh/BvhDataTypes.h"
 
 #include <array>
 #include <cstdint>
@@ -28,6 +29,8 @@ struct ClothBufferSet final
     GLuint attachment_barycentric_offset = 0;
     GLuint triangle_normal = 0;
     GLuint vertex_normal = 0;
+    GLuint bvh_node = 0;
+    GLuint triangle_bounds = 0;
 };
 
 struct ElementRange final
@@ -86,6 +89,15 @@ struct ClothNormalResources final
 {
     GLuint triangle_normal_buffer = 0;
     GLuint vertex_normal_buffer = 0;
+};
+
+struct ClothBvhBufferView final
+{
+    GLuint node_buffer = 0;
+    GLuint triangle_bounds_buffer = 0;
+    std::uint32_t node_count = 0;
+    std::uint32_t garment_count = 0;
+    const std::array<GarmentBvhRanges, 2>* garment_ranges = nullptr;
 };
 
 struct DistanceConstraintBufferView final

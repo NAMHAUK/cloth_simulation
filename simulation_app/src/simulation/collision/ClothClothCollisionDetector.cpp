@@ -27,11 +27,6 @@ constexpr GLuint candidate_count = 0;
 constexpr GLuint dispatch_size = 1;
 }
 
-bool is_valid_range(std::uint32_t offset, std::uint32_t count, std::uint32_t total_count)
-{
-    return count != 0u && offset <= total_count && count <= total_count - offset;
-}
-
 bool has_valid_garment_bvhs(const SimulationGpuView& views)
 {
     if (!is_valid_motion_view(views.cloth_motion) ||
@@ -41,7 +36,6 @@ bool has_valid_garment_bvhs(const SimulationGpuView& views)
         return false;
     }
 
-    std::uint32_t garment_count = 0;
     for (std::size_t layer = 0; layer < views.cloth_bvh.garment_ranges->size(); ++layer) {
         const ElementRange& vertex_range = views.garment_vertex_ranges[layer];
         const GarmentBvhRanges& ranges = (*views.cloth_bvh.garment_ranges)[layer];
@@ -49,14 +43,15 @@ bool has_valid_garment_bvhs(const SimulationGpuView& views)
             continue;
         }
 
-        if (!is_valid_range(vertex_range.offset, vertex_range.count, views.cloth_motion.vertex_count) ||
-            !is_valid_range(ranges.nodes.offset, ranges.nodes.count, views.cloth_bvh.node_count)) {
+        if (!is_valid_buffer_range(vertex_range.offset,
+                                   vertex_range.count,
+                                   views.cloth_motion.vertex_count) ||
+            !is_valid_buffer_range(ranges.nodes.offset, ranges.nodes.count, views.cloth_bvh.node_count)) {
             return false;
         }
-        ++garment_count;
     }
 
-    return garment_count == views.cloth_bvh.garment_count;
+    return true;
 }
 }
 

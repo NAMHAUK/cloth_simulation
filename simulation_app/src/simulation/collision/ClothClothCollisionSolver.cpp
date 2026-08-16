@@ -4,7 +4,6 @@
 #include "utils/BufferUtils.h"
 #include "utils/ShaderUtils.h"
 
-#include <algorithm>
 #include <cassert>
 #include <stdexcept>
 
@@ -54,17 +53,12 @@ bool are_uniform_locations_valid(Locations... locations)
 
 bool has_valid_common_solve_views(const SimulationGpuView& views)
 {
-    const auto garment_count = static_cast<std::size_t>(
-        std::count_if(views.garment_vertex_ranges.begin(),
-                      views.garment_vertex_ranges.end(),
-                      [](const ElementRange& vertex_range) { return vertex_range.count != 0u; }));
     return is_valid_motion_view(views.cloth_motion) &&
            is_valid_collision_pushout_view(views.cloth_collision_pushout) &&
            is_valid_cloth_mesh_topology_resource(views.cloth_topology) &&
            views.cloth_motion.vertex_count == views.cloth_collision_pushout.vertex_count &&
            views.cloth_motion.vertex_count == views.cloth_topology.vertex_count &&
            is_valid_cloth_bvh_buffer_view(views.cloth_bvh) &&
-           garment_count == views.cloth_bvh.garment_count &&
            (views.cloth_bvh.garment_count < 2u ||
             (is_valid_triangle_geometry_resource(views.body_triangle_geometry) &&
              is_valid_cloth_cloth_candidate_buffer_view(views.collision_candidates) &&

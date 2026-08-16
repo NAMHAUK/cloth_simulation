@@ -1,11 +1,11 @@
 #pragma once
 
 #include "gpu/character/CharacterGpuDataTypes.h"
-#include "gpu/cloth/ClothBvhResources.h"
-#include "gpu/cloth/ClothGpuResources.h"
+#include "gpu/cloth/ClothGpuDataTypes.h"
 #include "gpu/scene/CollisionCandidateBuffers.h"
 
 #include <cstddef>
+#include <cstdint>
 
 #include <QOpenGLFunctions_4_5_Core>
 
@@ -13,6 +13,11 @@ template <typename T>
 constexpr GLsizeiptr byte_size(std::size_t count) noexcept
 {
     return static_cast<GLsizeiptr>(count * sizeof(T));
+}
+
+inline bool is_valid_buffer_range(std::uint32_t offset, std::uint32_t count, std::uint32_t total_count)
+{
+    return count != 0u && offset <= total_count && count <= total_count - offset;
 }
 
 inline bool is_valid_motion_view(const ClothMotionBufferView& motion_view)

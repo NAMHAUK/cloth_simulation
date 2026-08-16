@@ -1,7 +1,6 @@
 #pragma once
 
 #include "gpu/character/CharacterGpuDataTypes.h"
-#include "gpu/cloth/ClothBvhResources.h"
 #include "gpu/cloth/ClothGpuDataTypes.h"
 #include "gpu/scene/CollisionCandidateBuffers.h"
 

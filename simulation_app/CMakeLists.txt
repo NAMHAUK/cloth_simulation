@@ -71,8 +71,6 @@ add_executable(simulation_app
     src/gpu/cloth/ClothGpuResources.cpp
     src/gpu/cloth/ClothGpuDataTypes.h
     src/gpu/cloth/ClothGpuResources.h
-    src/gpu/cloth/ClothBvhResources.cpp
-    src/gpu/cloth/ClothBvhResources.h
     src/rendering/BackgroundGradient.cpp
     src/rendering/BackgroundGradient.h
     src/rendering/GroundGridMesh.cpp

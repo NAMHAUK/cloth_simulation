@@ -45,6 +45,7 @@ public:
     AttachmentConstraintBufferView attachment_constraint_buffer_view() const;
     ClothMeshTopologyResources mesh_topology_resources() const;
     ClothNormalResources mesh_normal_resources() const;
+    ClothBvhBufferView cloth_bvh_buffer_view() const;
 
     void release(QOpenGLFunctions_4_5_Core& gl);
 
@@ -60,7 +61,10 @@ private:
         std::vector<ElementRange> stretch_color_ranges;
         std::vector<ElementRange> bending_color_ranges;
         std::array<ElementRange, 2> attachment_ranges;
+        std::array<GarmentBvhRanges, 2> garment_bvh_ranges;
         ClothBufferElementCounts element_counts;
+        std::uint32_t bvh_node_count = 0;
+        std::uint32_t garment_count = 0;
     };
 
     static void assign_buffer_ranges(const std::vector<GarmentObject>& garments, BufferState& state);
@@ -77,6 +81,9 @@ private:
     static void create_topology_buffers(const std::vector<GarmentObject>& garments,
                                         BufferState& rebuild_state,
                                         QOpenGLFunctions_4_5_Core& gl);
+    static void create_bvh_buffers(const std::vector<GarmentObject>& garments,
+                                   BufferState& rebuild_state,
+                                   QOpenGLFunctions_4_5_Core& gl);
     static void create_distance_constraint_buffers(const std::vector<GarmentObject>& garments,
                                                    BufferState& rebuild_state,
                                                    QOpenGLFunctions_4_5_Core& gl);

@@ -1,6 +1,7 @@
 #include "gpu/cloth/ClothGpuResources.h"
 
 #include "asset/MeshGeometryUtils.h"
+#include "gpu/bvh/BvhBuildUtils.h"
 #include "scene/SceneState.h"
 #include "utils/BufferUtils.h"
 #include <algorithm>
@@ -94,6 +95,25 @@ void upload_rest_lengths(const ClothBufferSet& buffers,
                             byte_size<float>(garment.mesh.bending_constraints.rest_lengths.size()),
                             garment.mesh.bending_constraints.rest_lengths.data());
 }
+
+void append_bvh_nodes(const TriangleBvhData& bvh,
+                      std::uint32_t triangle_offset,
+                      GarmentBvhRanges& ranges,
+                      std::vector<BvhNode>& nodes)
+{
+    for (BvhNodeRange& level_range : ranges.node_ranges_by_level) {
+        level_range.first_node += ranges.nodes.offset;
+    }
+    for (BvhNode node : bvh.nodes) {
+        if (bvh_build::is_leaf_node(node.element_count)) {
+            node.first_element_index += triangle_offset;
+        } else {
+            node.left_child_index += ranges.nodes.offset;
+            node.right_child_index += ranges.nodes.offset;
+        }
+        nodes.push_back(node);
+    }
+}
 }
 
 // Buffer rebuild
@@ -106,6 +126,7 @@ void ClothGpuResources::rebuild_buffers(const std::vector<GarmentObject>& garmen
 
     create_dynamic_buffers(garments, changed_layer, rebuild_state, gl);
     create_topology_buffers(garments, rebuild_state, gl);
+    create_bvh_buffers(garments, rebuild_state, gl);
     create_distance_constraint_buffers(garments, rebuild_state, gl);
 
     delete_buffer_set(state_.buffers, gl);
@@ -254,6 +275,36 @@ void ClothGpuResources::create_topology_buffers(const std::vector<GarmentObject>
                          byte_size<std::uint32_t>(adjacency.triangle_indices.size()),
                          adjacency.triangle_indices.data(),
                          GL_STATIC_DRAW);
+}
+
+void ClothGpuResources::create_bvh_buffers(const std::vector<GarmentObject>& garments,
+                                           BufferState& rebuild_state,
+                                           QOpenGLFunctions_4_5_Core& gl)
+{
+    std::vector<BvhNode> nodes;
+
+    for (const GarmentObject& garment : garments) {
+        const TriangleBvhData& bvh = garment.triangle_bvh;
+        GarmentBvhRanges& ranges = rebuild_state.garment_bvh_ranges[garment.layer];
+        ranges.nodes = {rebuild_state.bvh_node_count, static_cast<std::uint32_t>(bvh.nodes.size())};
+        ranges.node_ranges_by_level = bvh.node_ranges_by_level;
+
+        append_bvh_nodes(bvh, rebuild_state.triangle_ranges[garment.layer].offset, ranges, nodes);
+        rebuild_state.bvh_node_count += ranges.nodes.count;
+    }
+
+    gl.glCreateBuffers(1, &rebuild_state.buffers.bvh_node);
+    gl.glNamedBufferData(rebuild_state.buffers.bvh_node,
+                         byte_size<BvhNode>(nodes.size()),
+                         nodes.data(),
+                         GL_DYNAMIC_DRAW);
+    gl.glCreateBuffers(1, &rebuild_state.buffers.triangle_bounds);
+    gl.glNamedBufferData(rebuild_state.buffers.triangle_bounds,
+                         byte_size<Aabb>(rebuild_state.element_counts.triangle),
+                         nullptr,
+                         GL_DYNAMIC_DRAW);
+
+    rebuild_state.garment_count = static_cast<std::uint32_t>(garments.size());
 }
 
 void ClothGpuResources::create_distance_constraint_buffers(const std::vector<GarmentObject>& garments,
@@ -486,7 +537,9 @@ bool ClothGpuResources::has_gpu_objects() const
            state_.buffers.attachment_indices != 0 &&
            state_.buffers.attachment_barycentric_offset != 0 &&
            state_.buffers.triangle_normal != 0 &&
-           state_.buffers.vertex_normal != 0;
+           state_.buffers.vertex_normal != 0 &&
+           state_.buffers.bvh_node != 0 &&
+           state_.buffers.triangle_bounds != 0;
 }
 
 // Accessors
@@ -580,6 +633,15 @@ ClothNormalResources ClothGpuResources::mesh_normal_resources() const
     return normals;
 }
 
+ClothBvhBufferView ClothGpuResources::cloth_bvh_buffer_view() const
+{
+    return {state_.buffers.bvh_node,
+            state_.buffers.triangle_bounds,
+            state_.bvh_node_count,
+            state_.garment_count,
+            &state_.garment_bvh_ranges};
+}
+
 // Release
 void ClothGpuResources::release(QOpenGLFunctions_4_5_Core& gl)
 {
@@ -608,6 +670,8 @@ void ClothGpuResources::delete_buffer_set(ClothBufferSet& buffers, QOpenGLFuncti
         buffers.attachment_barycentric_offset,
         buffers.triangle_normal,
         buffers.vertex_normal,
+        buffers.bvh_node,
+        buffers.triangle_bounds,
     };
     gl.glDeleteBuffers(static_cast<GLsizei>(std::size(buffer_ids)), buffer_ids);
     gl.glDeleteVertexArrays(1, &buffers.vao);
