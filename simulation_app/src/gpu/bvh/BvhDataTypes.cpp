@@ -19,7 +19,7 @@ bool TriangleBvhData::is_valid(std::uint32_t triangle_count) const
         collision_triangle_count > triangle_count ||
         nodes.empty() ||
         node_ranges_by_level.empty() ||
-        triangle_indices.size() != static_cast<std::size_t>(triangle_count) * triangle_vertex_count) {
+        triangle_vertex_indices.size() != static_cast<std::size_t>(triangle_count) * triangle_vertex_count) {
         return false;
     }
 
@@ -29,14 +29,14 @@ bool TriangleBvhData::is_valid(std::uint32_t triangle_count) const
 bool VertexBvhData::is_valid(std::uint32_t vertex_count) const
 {
     if (vertex_count == 0 ||
-        vertex_ids.empty() ||
-        vertex_ids.size() > vertex_count ||
+        vertex_indices.empty() ||
+        vertex_indices.size() > vertex_count ||
         nodes.empty() ||
         node_ranges_by_level.empty()) {
         return false;
     }
 
-    if (!bvh_build::has_valid_bvh_node_topology(nodes, static_cast<std::uint32_t>(vertex_ids.size()))) {
+    if (!bvh_build::has_valid_bvh_node_topology(nodes, static_cast<std::uint32_t>(vertex_indices.size()))) {
         return false;
     }
 
@@ -45,17 +45,17 @@ bool VertexBvhData::is_valid(std::uint32_t vertex_count) const
     for (const BvhNode& node : nodes) {
         if (bvh_build::is_leaf_node(node.element_count)) {
             for (std::uint32_t offset = 0; offset < node.element_count; ++offset) {
-                const std::uint32_t vertex_id = vertex_ids[node.first_element_index + offset];
-                if (vertex_id >= vertex_count || used_vertices[vertex_id] != 0u) {
+                const std::uint32_t vertex_index = vertex_indices[node.first_element_index + offset];
+                if (vertex_index >= vertex_count || used_vertices[vertex_index] != 0u) {
                     return false;
                 }
-                used_vertices[vertex_id] = 1u;
+                used_vertices[vertex_index] = 1u;
                 ++used_vertex_count;
             }
         }
     }
 
-    return used_vertex_count == vertex_ids.size();
+    return used_vertex_count == vertex_indices.size();
 }
 
 std::uint32_t EdgeBvhData::edge_count() const

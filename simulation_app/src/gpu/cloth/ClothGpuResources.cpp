@@ -45,7 +45,7 @@ ClothBufferSet create_dynamic_buffer_set(const ClothBufferElementCounts& counts,
     create_buffer(buffers.collision_pushout, byte_size<glm::vec4>(counts.vertex));
     create_buffer(buffers.cloth_cloth_pushout, byte_size<glm::vec4>(counts.vertex));
     create_buffer(buffers.contact_motion_delta, byte_size<glm::vec4>(counts.vertex));
-    create_buffer(buffers.body_triangle_id, byte_size<std::uint32_t>(counts.vertex));
+    create_buffer(buffers.body_triangle_index, byte_size<std::uint32_t>(counts.vertex));
     create_buffer(buffers.attachment_indices, byte_size<glm::uvec2>(attachment_capacity));
     create_buffer(buffers.attachment_barycentric_offset, byte_size<glm::vec4>(attachment_capacity));
     create_buffer(buffers.triangle_normal, byte_size<glm::vec4>(counts.triangle));
@@ -183,8 +183,8 @@ void ClothGpuResources::copy_dynamic_state_buffers(GarmentLayer layer,
                                     byte_size<glm::vec4>(destination_range.count));
     }
 
-    gl.glCopyNamedBufferSubData(state_.buffers.body_triangle_id,
-                                rebuild_state.buffers.body_triangle_id,
+    gl.glCopyNamedBufferSubData(state_.buffers.body_triangle_index,
+                                rebuild_state.buffers.body_triangle_index,
                                 byte_size<std::uint32_t>(source_range.offset),
                                 byte_size<std::uint32_t>(destination_range.offset),
                                 byte_size<std::uint32_t>(destination_range.count));
@@ -485,7 +485,7 @@ bool ClothGpuResources::has_gpu_objects() const
            state_.buffers.collision_pushout != 0 &&
            state_.buffers.cloth_cloth_pushout != 0 &&
            state_.buffers.contact_motion_delta != 0 &&
-           state_.buffers.body_triangle_id != 0 &&
+           state_.buffers.body_triangle_index != 0 &&
            state_.buffers.triangle_vertex_indices != 0 &&
            state_.buffers.adjacent_triangle_offsets != 0 &&
            state_.buffers.adjacent_triangle_indices != 0 &&
@@ -532,10 +532,10 @@ ClothContactMotionBufferView ClothGpuResources::contact_motion_buffer_view() con
     return view;
 }
 
-ClothBodyTriangleIdBufferView ClothGpuResources::body_triangle_id_buffer_view() const
+ClothBodyTriangleIndexBufferView ClothGpuResources::body_triangle_index_buffer_view() const
 {
-    ClothBodyTriangleIdBufferView view;
-    view.body_triangle_id_buffer = state_.buffers.body_triangle_id;
+    ClothBodyTriangleIndexBufferView view;
+    view.body_triangle_index_buffer = state_.buffers.body_triangle_index;
     view.vertex_count = state_.element_counts.vertex;
     return view;
 }
@@ -606,7 +606,7 @@ void ClothGpuResources::delete_buffer_set(ClothBufferSet& buffers, QOpenGLFuncti
         buffers.collision_pushout,
         buffers.cloth_cloth_pushout,
         buffers.contact_motion_delta,
-        buffers.body_triangle_id,
+        buffers.body_triangle_index,
         buffers.triangle_vertex_indices,
         buffers.adjacent_triangle_offsets,
         buffers.adjacent_triangle_indices,

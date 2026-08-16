@@ -39,7 +39,7 @@ public:
     ClothMotionBufferView motion_buffer_view() const;
     ClothCollisionPushoutBufferView collision_pushout_buffer_view() const;
     ClothContactMotionBufferView contact_motion_buffer_view() const;
-    ClothBodyTriangleIdBufferView body_triangle_id_buffer_view() const;
+    ClothBodyTriangleIndexBufferView body_triangle_index_buffer_view() const;
     DistanceConstraintBufferView stretch_constraint_buffer_view() const;
     DistanceConstraintBufferView bending_constraint_buffer_view() const;
     AttachmentConstraintBufferView attachment_constraint_buffer_view() const;

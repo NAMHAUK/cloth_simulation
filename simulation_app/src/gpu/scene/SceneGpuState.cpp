@@ -47,7 +47,7 @@ SimulationGpuView SceneGpuState::simulation_view() const
     views.cloth_motion = cloth_gpu_state_.motion_buffer_view();
     views.cloth_collision_pushout = cloth_gpu_state_.collision_pushout_buffer_view();
     views.cloth_contact_motion = cloth_gpu_state_.contact_motion_buffer_view();
-    views.cloth_body_triangle_ids = cloth_gpu_state_.body_triangle_id_buffer_view();
+    views.cloth_body_triangle_indices = cloth_gpu_state_.body_triangle_index_buffer_view();
     views.cloth_topology = cloth_gpu_state_.mesh_topology_resources();
     views.cloth_bvh = cloth_bvh_resources_.buffer_view();
     views.garment_vertex_ranges = cloth_gpu_state_.garment_vertex_ranges();

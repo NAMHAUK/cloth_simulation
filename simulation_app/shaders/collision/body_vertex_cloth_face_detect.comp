@@ -16,8 +16,8 @@ layout(std430, binding = 2) readonly buffer ClothTriangleIndices {
     uint cloth_triangle_indices[];
 };
 
-layout(std430, binding = 3) readonly buffer BodyVertexIds {
-    uint body_vertex_ids[];
+layout(std430, binding = 3) readonly buffer BodyVertexIndices {
+    uint body_vertex_indices[];
 };
 
 layout(std430, binding = 4) readonly buffer BvhNodes {
@@ -52,9 +52,9 @@ const uint group_candidate_capacity = 512u;
 #include "../mesh/position_io.glsl"
 #include "common/collision_candidate_output.glsl"
 
-Aabb build_cloth_triangle_swept_aabb(uint cloth_triangle_id)
+Aabb build_cloth_triangle_swept_aabb(uint cloth_triangle_index)
 {
-    uint cloth_triangle_base = cloth_triangle_id * 3u;
+    uint cloth_triangle_base = cloth_triangle_index * 3u;
     uint cloth_vertex_a = cloth_triangle_indices[cloth_triangle_base];
     uint cloth_vertex_b = cloth_triangle_indices[cloth_triangle_base + 1u];
     uint cloth_vertex_c = cloth_triangle_indices[cloth_triangle_base + 2u];
@@ -73,9 +73,9 @@ Aabb build_cloth_triangle_swept_aabb(uint cloth_triangle_id)
     return Aabb(vec4(min_bounds, 0.0), vec4(max_bounds, 0.0));
 }
 
-Aabb build_body_vertex_swept_aabb(uint body_vertex_id)
+Aabb build_body_vertex_swept_aabb(uint body_vertex_index)
 {
-    return body_vertex_bounds[body_vertex_id];
+    return body_vertex_bounds[body_vertex_index];
 }
 
 void main()
@@ -85,9 +85,9 @@ void main()
     }
     barrier();
 
-    uint cloth_triangle_id = gl_GlobalInvocationID.x;
-    if (cloth_triangle_id < uTriangleCount) {
-        Aabb cloth_swept_bounds = build_cloth_triangle_swept_aabb(cloth_triangle_id);
+    uint cloth_triangle_index = gl_GlobalInvocationID.x;
+    if (cloth_triangle_index < uTriangleCount) {
+        Aabb cloth_swept_bounds = build_cloth_triangle_swept_aabb(cloth_triangle_index);
 
         uint node_index_stack[max_bvh_stack_depth];
         uint stack_count = 0u;
@@ -103,13 +103,13 @@ void main()
 
             if (is_leaf_node(current_node)) {
                 for (uint vertex_offset = 0u; vertex_offset < current_node.element_count; ++vertex_offset) {
-                    uint body_vertex_id = body_vertex_ids[current_node.first_element_index + vertex_offset];
-                    Aabb body_bounds = build_body_vertex_swept_aabb(body_vertex_id);
+                    uint body_vertex_index = body_vertex_indices[current_node.first_element_index + vertex_offset];
+                    Aabb body_bounds = build_body_vertex_swept_aabb(body_vertex_index);
                     if (!overlaps_aabb(cloth_swept_bounds, body_bounds)) {
                         continue;
                     }
 
-                    append_candidate(uvec2(cloth_triangle_id, body_vertex_id));
+                    append_candidate(uvec2(cloth_triangle_index, body_vertex_index));
                 }
             } else {
                 node_index_stack[stack_count++] = current_node.left_child_index;

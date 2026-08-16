@@ -78,12 +78,12 @@ struct VertexFaceContact {
     float depth;
 };
 
-bool compute_vertex_triangle_contact(uint cloth_vertex_id,
+bool compute_vertex_triangle_contact(uint cloth_vertex_index,
                                      uint triangle_index,
                                      out VertexFaceContact contact)
 {
     TriangleGeometry body_triangle = triangle_geometry[triangle_index];
-    vec3 current_cloth_position = read_cloth_current_position(cloth_vertex_id);
+    vec3 current_cloth_position = read_cloth_current_position(cloth_vertex_index);
     TrianglePositions current_body = TrianglePositions(body_triangle.a.xyz,
                                                        body_triangle.b.xyz,
                                                        body_triangle.c.xyz);
@@ -100,7 +100,7 @@ bool compute_vertex_triangle_contact(uint cloth_vertex_id,
         return false;
     }
 
-    vec3 previous_cloth_position = read_cloth_previous_position(cloth_vertex_id);
+    vec3 previous_cloth_position = read_cloth_previous_position(cloth_vertex_index);
     float previous_signed_distance = dot(previous_cloth_position - previous_body.a, body_normal);
     vec3 barycentric;
 
@@ -123,8 +123,8 @@ bool compute_vertex_triangle_contact(uint cloth_vertex_id,
 
     vec3 previous_body_contact = interpolate_triangle_position(previous_body, barycentric);
     vec3 current_body_contact = interpolate_triangle_position(current_body, barycentric);
-    vec3 friction_cloth_delta = current_cloth_position - previous_cloth_position - collision_pushouts[cloth_vertex_id].xyz;
-    vec3 cloth_delta = friction_cloth_delta - cloth_cloth_pushouts[cloth_vertex_id].xyz;
+    vec3 friction_cloth_delta = current_cloth_position - previous_cloth_position - collision_pushouts[cloth_vertex_index].xyz;
+    vec3 cloth_delta = friction_cloth_delta - cloth_cloth_pushouts[cloth_vertex_index].xyz;
     vec3 body_delta = current_body_contact - previous_body_contact;
 
     contact.normal = body_normal;
@@ -133,18 +133,18 @@ bool compute_vertex_triangle_contact(uint cloth_vertex_id,
         body_normal,
         cloth_delta,
         body_delta,
-        contact_motion_deltas[cloth_vertex_id].xyz);
+        contact_motion_deltas[cloth_vertex_index].xyz);
     contact.depth = penetration_depth;
     return true;
 }
 
-void accumulate_contact(uint cloth_vertex_id, VertexFaceContact contact)
+void accumulate_contact(uint cloth_vertex_index, VertexFaceContact contact)
 {
     vec3 normal_correction = contact.normal * contact.depth;
-    accumulate_vertex_normal_correction(cloth_vertex_id, normal_correction);
-    atomicAdd(normal_correction_sums[cloth_vertex_id].w, 1);
-    accumulate_vertex_friction_correction(cloth_vertex_id, contact.friction_correction);
-    accumulate_vertex_contact_motion_delta(cloth_vertex_id, contact.contact_motion_delta);
+    accumulate_vertex_normal_correction(cloth_vertex_index, normal_correction);
+    atomicAdd(normal_correction_sums[cloth_vertex_index].w, 1);
+    accumulate_vertex_friction_correction(cloth_vertex_index, contact.friction_correction);
+    accumulate_vertex_contact_motion_delta(cloth_vertex_index, contact.contact_motion_delta);
 }
 
 void main()

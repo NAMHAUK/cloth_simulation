@@ -13,7 +13,7 @@ constexpr GLuint body_current_positions_binding = 2;
 constexpr GLuint body_previous_positions_binding = 3;
 constexpr GLuint body_triangle_bvh_node_binding = 4;
 constexpr GLuint body_triangle_bounds_binding = 5;
-constexpr GLuint body_vertex_ids_binding = 6;
+constexpr GLuint body_vertex_indices_binding = 6;
 constexpr GLuint body_vertex_bvh_nodes_binding = 7;
 constexpr GLuint body_vertex_bounds_binding = 8;
 constexpr GLuint body_edge_indices_binding = 9;
@@ -143,7 +143,9 @@ void BodyBvhBoundsUpdater::update(const CharacterMeshTopologyResources& topology
     gl.glBindBufferBase(GL_SHADER_STORAGE_BUFFER,
                         body_triangle_bounds_binding,
                         body_triangle_bvh.triangle_bounds_buffer);
-    gl.glBindBufferBase(GL_SHADER_STORAGE_BUFFER, body_vertex_ids_binding, body_vertex_bvh.vertex_id_buffer);
+    gl.glBindBufferBase(GL_SHADER_STORAGE_BUFFER,
+                        body_vertex_indices_binding,
+                        body_vertex_bvh.vertex_index_buffer);
     gl.glBindBufferBase(GL_SHADER_STORAGE_BUFFER, body_vertex_bvh_nodes_binding, body_vertex_bvh.node_buffer);
     gl.glBindBufferBase(GL_SHADER_STORAGE_BUFFER,
                         body_vertex_bounds_binding,

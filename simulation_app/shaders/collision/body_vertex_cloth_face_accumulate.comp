@@ -85,10 +85,10 @@ struct AcceptedContact {
 bool compute_candidate_contact(uint candidate_index, out uvec3 cloth_vertices, out AcceptedContact contact)
 {
     uvec2 candidate = candidates[candidate_index];
-    uint cloth_triangle_id = candidate.x;
-    uint body_vertex_id = candidate.y;
+    uint cloth_triangle_index = candidate.x;
+    uint body_vertex_index = candidate.y;
 
-    uint cloth_triangle_base = cloth_triangle_id * 3u;
+    uint cloth_triangle_base = cloth_triangle_index * 3u;
     cloth_vertices = uvec3(cloth_triangle_indices[cloth_triangle_base],
                            cloth_triangle_indices[cloth_triangle_base + 1u],
                            cloth_triangle_indices[cloth_triangle_base + 2u]);
@@ -101,9 +101,9 @@ bool compute_candidate_contact(uint candidate_index, out uvec3 cloth_vertices, o
     }
 
     // Build swept body contact point
-    contact.normal = body_vertex_normals[body_vertex_id].xyz;
+    contact.normal = body_vertex_normals[body_vertex_index].xyz;
 
-    vec3 current_body_contact = read_body_current_position(body_vertex_id) + contact.normal * uCollisionThickness;
+    vec3 current_body_contact = read_body_current_position(body_vertex_index) + contact.normal * uCollisionThickness;
 
     // Reject candidates without front-to-back crossing unless the vertex is already penetrating now.
     float current_signed_distance = dot(current_body_contact - current_cloth.a, cloth_normal);
@@ -113,7 +113,7 @@ bool compute_candidate_contact(uint candidate_index, out uvec3 cloth_vertices, o
     }
 
     TrianglePositions previous_cloth = read_cloth_previous_triangle(cloth_vertices);
-    vec3 previous_body_contact = read_body_previous_position(body_vertex_id) + contact.normal * uCollisionThickness;
+    vec3 previous_body_contact = read_body_previous_position(body_vertex_index) + contact.normal * uCollisionThickness;
     float previous_signed_distance = dot(previous_body_contact - previous_cloth.a, cloth_normal);
 
     if (previous_signed_distance <= 0.0) {

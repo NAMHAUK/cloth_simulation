@@ -131,7 +131,7 @@ add_executable(simulation_app
     shaders/collision/cloth_cloth_vertex_face_detect.comp
     shaders/collision/cloth_cloth_vertex_face_accumulate.comp
     shaders/collision/cloth_cloth_initial_layer_accumulate.comp
-    shaders/cloth/setup/cloth_body_triangle_id_build.comp
+    shaders/cloth/setup/cloth_body_triangle_index_build.comp
     shaders/collision/cloth_cloth_collision_apply.comp
     shaders/collision/cloth_vertex_body_face_detect.comp
     shaders/collision/cloth_vertex_body_face_accumulate.comp

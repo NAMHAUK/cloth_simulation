@@ -32,8 +32,8 @@ layout(std430, binding = 5) buffer BodyTriangleBounds {
     Aabb body_triangle_bounds[];
 };
 
-layout(std430, binding = 6) readonly buffer BodyVertexIds {
-    uint body_vertex_ids[];
+layout(std430, binding = 6) readonly buffer BodyVertexIndices {
+    uint body_vertex_indices[];
 };
 
 layout(std430, binding = 7) buffer BodyVertexBvhNodes {
@@ -119,13 +119,13 @@ void update_vertex_leaf_bounds(uint node_index, BvhNode node)
     vec3 min_bounds = vec3(max_float);
     vec3 max_bounds = vec3(-max_float);
     for (uint vertex_offset = 0u; vertex_offset < node.element_count; ++vertex_offset) {
-        uint vertex_id = body_vertex_ids[node.first_element_index + vertex_offset];
-        vec3 previous_position = read_body_previous_position(vertex_id);
-        vec3 current_position = read_body_current_position(vertex_id);
+        uint vertex_index = body_vertex_indices[node.first_element_index + vertex_offset];
+        vec3 previous_position = read_body_previous_position(vertex_index);
+        vec3 current_position = read_body_current_position(vertex_index);
         vec3 vertex_min_bounds = min(previous_position, current_position);
         vec3 vertex_max_bounds = max(previous_position, current_position);
-        body_vertex_bounds[vertex_id].min_bounds = vec4(vertex_min_bounds - uCollisionThickness, 0.0);
-        body_vertex_bounds[vertex_id].max_bounds = vec4(vertex_max_bounds + uCollisionThickness, 0.0);
+        body_vertex_bounds[vertex_index].min_bounds = vec4(vertex_min_bounds - uCollisionThickness, 0.0);
+        body_vertex_bounds[vertex_index].max_bounds = vec4(vertex_max_bounds + uCollisionThickness, 0.0);
         min_bounds = min(min_bounds, vertex_min_bounds);
         max_bounds = max(max_bounds, vertex_max_bounds);
     }
