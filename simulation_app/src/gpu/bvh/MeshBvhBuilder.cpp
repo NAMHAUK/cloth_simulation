@@ -16,7 +16,6 @@
 namespace {
 constexpr std::size_t edge_vertex_count = 2u;
 constexpr std::size_t triangle_vertex_count = 3u;
-constexpr std::uint32_t bvh_leaf_size = 3;
 constexpr std::uint8_t left_hand_part_label = 6u;
 constexpr std::uint8_t right_hand_part_label = 7u;
 constexpr std::uint8_t invalid_part_label = 0xFFu;
@@ -78,7 +77,7 @@ MeshBvhBuilder::MeshBvhBuilder(const GarmentMesh& mesh)
 // BVH construction
 TriangleBvhData MeshBvhBuilder::build_triangle_bvh() const
 {
-    bvh_build::BvhTree tree = bvh_build::build_bvh(make_triangle_primitives(), bvh_leaf_size);
+    bvh_build::BvhTree tree = bvh_build::build_bvh(make_triangle_primitives());
 
     TriangleBvhData bvh_data;
     bvh_data.collision_triangle_count = static_cast<std::uint32_t>(tree.ordered_source_indices.size());
@@ -97,7 +96,7 @@ TriangleBvhData MeshBvhBuilder::build_triangle_bvh() const
 
 VertexBvhData MeshBvhBuilder::build_vertex_bvh() const
 {
-    bvh_build::BvhTree tree = bvh_build::build_bvh(make_vertex_primitives(), bvh_leaf_size);
+    bvh_build::BvhTree tree = bvh_build::build_bvh(make_vertex_primitives());
 
     VertexBvhData bvh_data;
     bvh_data.vertex_indices = std::move(tree.ordered_source_indices);
@@ -113,7 +112,7 @@ EdgeBvhData MeshBvhBuilder::build_edge_bvh() const
 {
     EdgeBvhData bvh_data;
     EdgePrimitiveSet edge_primitives = make_edge_primitives();
-    bvh_build::BvhTree tree = bvh_build::build_bvh(std::move(edge_primitives.primitives), bvh_leaf_size);
+    bvh_build::BvhTree tree = bvh_build::build_bvh(std::move(edge_primitives.primitives));
     write_edge_index_payload(tree.ordered_source_indices,
                              edge_primitives.source_edges,
                              bvh_data.edge_vertex_indices);

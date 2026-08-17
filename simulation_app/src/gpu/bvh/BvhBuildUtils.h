@@ -31,5 +31,5 @@ struct BvhTree final
 bool is_valid_bounds(const glm::vec3& min_bounds, const glm::vec3& max_bounds);
 bool is_leaf_node(std::uint32_t component_count);
 bool has_valid_bvh_node_topology(const std::vector<BvhNode>& nodes, std::uint32_t source_element_count);
-BvhTree build_bvh(std::vector<BvhPrimitive> primitives, std::uint32_t leaf_size);
+BvhTree build_bvh(std::vector<BvhPrimitive> primitives);
 }

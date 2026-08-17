@@ -4,27 +4,17 @@
 #include <array>
 #include <cmath>
 #include <limits>
-#include <optional>
 #include <utility>
 
 namespace bvh_build {
 namespace {
-struct BvhBuildNode final
-{
-    glm::vec3 min_bounds{};
-    glm::vec3 max_bounds{};
-    std::uint32_t left_child_index = invalid_bvh_node;
-    std::uint32_t right_child_index = invalid_bvh_node;
-    std::uint32_t first_element_index = 0;
-    std::uint32_t element_count = 0;
-};
+constexpr std::size_t leaf_size = 3u;
 
-struct BvhBuildContext final
+struct NodeContents final
 {
-    std::vector<BvhPrimitive>& primitives;
-    std::vector<BvhBuildNode>& nodes;
-    std::vector<std::uint32_t>& ordered_source_indices;
-    std::uint32_t leaf_size = 8u;
+    std::size_t primitive_begin;
+    std::size_t primitive_end;
+    std::uint32_t part_label_mask;
 };
 
 struct PartLabelStats final
@@ -32,18 +22,6 @@ struct PartLabelStats final
     glm::vec3 min_bounds{std::numeric_limits<float>::max()};
     glm::vec3 max_bounds{std::numeric_limits<float>::lowest()};
     std::uint32_t component_count = 0;
-};
-
-struct NextBvhLevel final
-{
-    explicit NextBvhLevel(const BvhLevelState& current_level_state)
-        : node_start_index(current_level_state.node_start_index + current_level_state.node_count)
-    {
-        node_indices.reserve(static_cast<std::size_t>(current_level_state.node_count) * 2u);
-    }
-
-    std::vector<std::uint32_t> node_indices;
-    std::uint32_t node_start_index = 0;
 };
 
 std::uint32_t find_longest_axis(const glm::vec3& extent)
@@ -184,7 +162,7 @@ std::uint32_t find_best_part_label_split_mask(const std::vector<BvhPrimitive>& p
         const double cost =
             surface_area(left_stats.min_bounds, left_stats.max_bounds) * left_stats.component_count +
             surface_area(right_stats.min_bounds, right_stats.max_bounds) * right_stats.component_count;
-        if (cost < best_cost) {
+        if (best_split_mask == 0u || cost < best_cost) {
             best_cost = cost;
             best_split_mask = split_mask;
         }
@@ -206,24 +184,6 @@ std::size_t partition_primitives_by_part_labels(std::vector<BvhPrimitive>& primi
     return static_cast<std::size_t>(middle - primitives.begin());
 }
 
-std::optional<std::size_t> split_mixed_part_labels(std::vector<BvhPrimitive>& primitives,
-                                                   std::size_t begin,
-                                                   std::size_t end)
-{
-    const std::uint32_t part_label_mask = compute_part_label_mask(primitives, begin, end);
-    if (!has_multiple_bits(part_label_mask)) {
-        return std::nullopt;
-    }
-
-    const std::uint32_t left_part_label_mask =
-        find_best_part_label_split_mask(primitives, begin, end, part_label_mask);
-    if (left_part_label_mask == 0u) {
-        return std::nullopt;
-    }
-
-    return partition_primitives_by_part_labels(primitives, begin, end, left_part_label_mask);
-}
-
 std::size_t partition_primitives(std::vector<BvhPrimitive>& primitives,
                                  std::size_t begin,
                                  std::size_t end,
@@ -242,6 +202,32 @@ std::size_t partition_primitives(std::vector<BvhPrimitive>& primitives,
     return middle;
 }
 
+std::array<NodeContents, 2> split_node_contents(std::vector<BvhPrimitive>& primitives,
+                                                const NodeContents& node,
+                                                const glm::vec3& extent)
+{
+    std::size_t middle;
+    std::uint32_t left_part_label_mask = node.part_label_mask;
+    std::uint32_t right_part_label_mask = node.part_label_mask;
+
+    if (has_multiple_bits(node.part_label_mask)) {
+        left_part_label_mask = find_best_part_label_split_mask(primitives,
+                                                               node.primitive_begin,
+                                                               node.primitive_end,
+                                                               node.part_label_mask);
+        right_part_label_mask = node.part_label_mask ^ left_part_label_mask;
+        middle = partition_primitives_by_part_labels(primitives,
+                                                     node.primitive_begin,
+                                                     node.primitive_end,
+                                                     left_part_label_mask);
+    } else {
+        middle = partition_primitives(primitives, node.primitive_begin, node.primitive_end, extent);
+    }
+
+    return {NodeContents{node.primitive_begin, middle, left_part_label_mask},
+            NodeContents{middle, node.primitive_end, right_part_label_mask}};
+}
+
 void compute_node_bounds(const std::vector<BvhPrimitive>& primitives,
                          std::size_t begin,
                          std::size_t end,
@@ -257,91 +243,6 @@ void compute_node_bounds(const std::vector<BvhPrimitive>& primitives,
     }
 }
 
-void write_leaf_node_data(BvhBuildContext& context, BvhBuildNode& node, std::size_t begin, std::size_t end)
-{
-    node.first_element_index = static_cast<std::uint32_t>(context.ordered_source_indices.size());
-    node.element_count = static_cast<std::uint32_t>(end - begin);
-
-    for (std::size_t primitive_index = begin; primitive_index < end; ++primitive_index) {
-        context.ordered_source_indices.push_back(context.primitives[primitive_index].source_index);
-    }
-}
-
-std::uint32_t build_bvh_tree(BvhBuildContext& context, std::size_t begin, std::size_t end)
-{
-    const std::uint32_t node_index = static_cast<std::uint32_t>(context.nodes.size());
-    context.nodes.emplace_back();
-
-    BvhBuildNode& node = context.nodes.back();
-    compute_node_bounds(context.primitives, begin, end, node.min_bounds, node.max_bounds);
-
-    const std::size_t primitive_count = end - begin;
-    if (const auto middle = split_mixed_part_labels(context.primitives, begin, end)) {
-        const std::uint32_t left_child_index = build_bvh_tree(context, begin, *middle);
-        const std::uint32_t right_child_index = build_bvh_tree(context, *middle, end);
-        context.nodes[node_index].left_child_index = left_child_index;
-        context.nodes[node_index].right_child_index = right_child_index;
-
-        return node_index;
-    }
-    if (primitive_count <= context.leaf_size) {
-        write_leaf_node_data(context, node, begin, end);
-        return node_index;
-    }
-
-    const std::size_t middle =
-        partition_primitives(context.primitives, begin, end, node.max_bounds - node.min_bounds);
-
-    const std::uint32_t left_child_index = build_bvh_tree(context, begin, middle);
-    const std::uint32_t right_child_index = build_bvh_tree(context, middle, end);
-    context.nodes[node_index].left_child_index = left_child_index;
-    context.nodes[node_index].right_child_index = right_child_index;
-
-    return node_index;
-}
-
-void write_level_ordered_bvh_data(std::uint32_t source_root_node,
-                                  const std::vector<BvhBuildNode>& build_nodes,
-                                  std::vector<BvhNode>& result_nodes,
-                                  std::vector<BvhLevelState>& result_levels)
-{
-    std::vector<BvhLevelState> root_to_leaf_levels;
-    root_to_leaf_levels.reserve(build_nodes.size());
-    result_nodes.clear();
-    result_nodes.reserve(build_nodes.size());
-
-    std::vector<std::uint32_t> current_level_node_indices{source_root_node};
-
-    while (!current_level_node_indices.empty()) {
-        const BvhLevelState level_state{static_cast<std::uint32_t>(result_nodes.size()),
-                                        static_cast<std::uint32_t>(current_level_node_indices.size())};
-        root_to_leaf_levels.push_back(level_state);
-        NextBvhLevel next_level(level_state);
-
-        for (const std::uint32_t build_node_index : current_level_node_indices) {
-            const auto& build_node = build_nodes[build_node_index];
-            BvhNode& node = result_nodes.emplace_back();
-            node.bounds = {glm::vec4(build_node.min_bounds, 0.0f), glm::vec4(build_node.max_bounds, 0.0f)};
-
-            if (build_node.element_count > 0u) {
-                node.first_element_index = build_node.first_element_index;
-                node.element_count = build_node.element_count;
-            } else {
-                node.left_child_index =
-                    next_level.node_start_index + static_cast<std::uint32_t>(next_level.node_indices.size());
-                next_level.node_indices.push_back(build_node.left_child_index);
-
-                node.right_child_index =
-                    next_level.node_start_index + static_cast<std::uint32_t>(next_level.node_indices.size());
-                next_level.node_indices.push_back(build_node.right_child_index);
-            }
-        }
-
-        current_level_node_indices = std::move(next_level.node_indices);
-    }
-
-    result_levels.assign(root_to_leaf_levels.rbegin(), root_to_leaf_levels.rend());
-}
 }
 
 bool is_valid_bounds(const glm::vec3& min_bounds, const glm::vec3& max_bounds)
@@ -371,21 +272,62 @@ bool has_valid_bvh_node_topology(const std::vector<BvhNode>& nodes, std::uint32_
     return has_valid_shader_stack_depth(nodes);
 }
 
-BvhTree build_bvh(std::vector<BvhPrimitive> primitives, std::uint32_t leaf_size)
+BvhTree build_bvh(std::vector<BvhPrimitive> primitives)
 {
     BvhTree result;
-    if (primitives.empty() || leaf_size == 0u) {
+    if (primitives.empty()) {
         return result;
     }
 
     const std::size_t leaf_count = (primitives.size() + leaf_size - 1u) / leaf_size;
-    std::vector<BvhBuildNode> build_nodes;
-    build_nodes.reserve(leaf_count * 2u - 1u);
+    result.nodes.reserve(leaf_count * 2u - 1u);
     result.ordered_source_indices.reserve(primitives.size());
 
-    BvhBuildContext context{primitives, build_nodes, result.ordered_source_indices, leaf_size};
-    const std::uint32_t source_root_node = build_bvh_tree(context, 0u, primitives.size());
-    write_level_ordered_bvh_data(source_root_node, build_nodes, result.nodes, result.levels);
+    const std::uint32_t part_label_mask = compute_part_label_mask(primitives, 0u, primitives.size());
+    std::vector<NodeContents> current_nodes{{0u, primitives.size(), part_label_mask}};
+
+    while (!current_nodes.empty()) {
+        const BvhLevelState level_state{static_cast<std::uint32_t>(result.nodes.size()),
+                                        static_cast<std::uint32_t>(current_nodes.size())};
+        result.levels.push_back(level_state);
+
+        std::vector<NodeContents> next_nodes;
+        next_nodes.reserve(current_nodes.size() * 2u);
+        const std::uint32_t next_node_start_index = level_state.node_start_index + level_state.node_count;
+
+        for (const NodeContents& node : current_nodes) {
+            glm::vec3 min_bounds;
+            glm::vec3 max_bounds;
+            compute_node_bounds(primitives, node.primitive_begin, node.primitive_end, min_bounds, max_bounds);
+
+            BvhNode& output_node = result.nodes.emplace_back();
+            output_node.bounds = {glm::vec4(min_bounds, 0.0f), glm::vec4(max_bounds, 0.0f)};
+
+            const std::size_t primitive_count = node.primitive_end - node.primitive_begin;
+            const bool has_multiple_part_labels = has_multiple_bits(node.part_label_mask);
+            if (!has_multiple_part_labels && primitive_count <= leaf_size) {
+                output_node.first_element_index = static_cast<std::uint32_t>(node.primitive_begin);
+                output_node.element_count = static_cast<std::uint32_t>(primitive_count);
+                continue;
+            }
+
+            const auto [left_child, right_child] =
+                split_node_contents(primitives, node, max_bounds - min_bounds);
+            output_node.left_child_index =
+                next_node_start_index + static_cast<std::uint32_t>(next_nodes.size());
+            next_nodes.push_back(left_child);
+            output_node.right_child_index =
+                next_node_start_index + static_cast<std::uint32_t>(next_nodes.size());
+            next_nodes.push_back(right_child);
+        }
+
+        current_nodes = std::move(next_nodes);
+    }
+
+    for (const BvhPrimitive& primitive : primitives) {
+        result.ordered_source_indices.push_back(primitive.source_index);
+    }
+    std::reverse(result.levels.begin(), result.levels.end());
     return result;
 }
 }
