@@ -30,29 +30,24 @@ struct BvhNode final
 
 static_assert(sizeof(BvhNode) == 48u);
 
-struct BvhBufferRange final
+struct BvhLevelState final
 {
-    std::uint32_t offset = 0;
-    std::uint32_t count = 0;
-};
-
-struct BvhNodeRange final
-{
-    std::uint32_t first_node = 0;
+    std::uint32_t node_start_index = 0;
     std::uint32_t node_count = 0;
 };
 
-struct GarmentBvhRanges final
+struct GarmentBvhState final
 {
-    BvhBufferRange nodes;
-    std::vector<BvhNodeRange> node_ranges_by_level;
+    std::uint32_t node_start_index = 0;
+    std::uint32_t node_count = 0;
+    std::vector<BvhLevelState> levels;
 };
 
 struct TriangleBvhData final
 {
     std::vector<std::uint32_t> triangle_vertex_indices;
     std::vector<BvhNode> nodes;
-    std::vector<BvhNodeRange> node_ranges_by_level;
+    std::vector<BvhLevelState> levels;
     std::uint32_t collision_triangle_count = 0;
 
     bool is_valid(std::uint32_t triangle_count) const;
@@ -62,7 +57,7 @@ struct VertexBvhData final
 {
     std::vector<std::uint32_t> vertex_indices;
     std::vector<BvhNode> nodes;
-    std::vector<BvhNodeRange> node_ranges_by_level;
+    std::vector<BvhLevelState> levels;
 
     bool is_valid(std::uint32_t vertex_count) const;
 };
@@ -71,7 +66,7 @@ struct EdgeBvhData final
 {
     std::vector<std::uint32_t> edge_vertex_indices;
     std::vector<BvhNode> nodes;
-    std::vector<BvhNodeRange> node_ranges_by_level;
+    std::vector<BvhLevelState> levels;
 
     std::uint32_t edge_count() const;
     bool is_valid() const;

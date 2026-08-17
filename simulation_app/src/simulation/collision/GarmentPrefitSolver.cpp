@@ -42,13 +42,14 @@ void GarmentPrefitSolver::initialize(const std::filesystem::path& shader_dir, QO
     }
 }
 
-bool GarmentPrefitSolver::can_solve(const SimulationGpuView& views, const ElementRange& vertex_range) const
+bool GarmentPrefitSolver::can_solve(const SimulationGpuView& views, GarmentLayer layer) const
 {
+    const GarmentBufferState& garment_state = views.garment_buffer_states[layer];
     return is_initialized() &&
            is_valid_motion_view(views.cloth_motion) &&
-           vertex_range.count != 0u &&
-           vertex_range.offset <= views.cloth_motion.vertex_count &&
-           vertex_range.count <= views.cloth_motion.vertex_count - vertex_range.offset &&
+           is_valid_buffer_access(garment_state.vertex_start_index,
+                                  garment_state.vertex_count,
+                                  views.cloth_motion.vertex_count) &&
            is_valid_triangle_geometry_resource(views.body_triangle_geometry) &&
            is_valid_triangle_bvh_resource(views.body_triangle_bvh) &&
            search_radius_ > 0.0f &&
@@ -56,11 +57,12 @@ bool GarmentPrefitSolver::can_solve(const SimulationGpuView& views, const Elemen
 }
 
 void GarmentPrefitSolver::solve(const SimulationGpuView& views,
-                                const ElementRange& vertex_range,
+                                GarmentLayer layer,
                                 QOpenGLFunctions_4_5_Core& gl) const
 {
-    assert(can_solve(views, vertex_range));
+    assert(can_solve(views, layer));
 
+    const GarmentBufferState& garment_state = views.garment_buffer_states[layer];
     const auto& motion_view = views.cloth_motion;
     const auto& body_triangle_geometry = views.body_triangle_geometry;
     const auto& body_triangle_bvh = views.body_triangle_bvh;
@@ -76,12 +78,12 @@ void GarmentPrefitSolver::solve(const SimulationGpuView& views,
                         body_triangle_bvh_node_binding,
                         body_triangle_bvh.node_buffer);
 
-    gl.glProgramUniform1ui(program_, vertex_offset_location_, vertex_range.offset);
-    gl.glProgramUniform1ui(program_, vertex_count_location_, vertex_range.count);
+    gl.glProgramUniform1ui(program_, vertex_offset_location_, garment_state.vertex_start_index);
+    gl.glProgramUniform1ui(program_, vertex_count_location_, garment_state.vertex_count);
     gl.glProgramUniform1f(program_, search_radius_squared_location_, search_radius_ * search_radius_);
     gl.glProgramUniform1f(program_, pushout_margin_location_, pushout_margin_);
 
-    gl.glDispatchCompute(compute_group_count(vertex_range.count, garment_prefit_local_size), 1, 1);
+    gl.glDispatchCompute(compute_group_count(garment_state.vertex_count, garment_prefit_local_size), 1, 1);
     gl.glMemoryBarrier(GL_SHADER_STORAGE_BARRIER_BIT);
 }
 

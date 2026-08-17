@@ -33,12 +33,6 @@ struct ClothBufferSet final
     GLuint triangle_bounds = 0;
 };
 
-struct ElementRange final
-{
-    std::uint32_t offset = 0;
-    std::uint32_t count = 0;
-};
-
 struct ClothBufferElementCounts final
 {
     std::uint32_t vertex = 0;
@@ -46,6 +40,21 @@ struct ClothBufferElementCounts final
     std::uint32_t stretch_constraint = 0;
     std::uint32_t bending_constraint = 0;
     std::uint32_t attachment_constraint = 0;
+};
+
+struct GarmentBufferState final
+{
+    std::uint32_t vertex_start_index = 0;
+    std::uint32_t vertex_count = 0;
+    std::uint32_t triangle_start_index = 0;
+    std::uint32_t triangle_count = 0;
+    std::uint32_t stretch_constraint_start_index = 0;
+    std::uint32_t stretch_constraint_count = 0;
+    std::uint32_t bending_constraint_start_index = 0;
+    std::uint32_t bending_constraint_count = 0;
+    std::uint32_t attachment_constraint_start_index = 0;
+    std::uint32_t attachment_constraint_count = 0;
+    std::uint32_t active_attachment_constraint_count = 0;
 };
 
 struct ClothMotionBufferView final
@@ -97,7 +106,7 @@ struct ClothBvhBufferView final
     GLuint triangle_bounds_buffer = 0;
     std::uint32_t node_count = 0;
     std::uint32_t garment_count = 0;
-    const std::array<GarmentBvhRanges, 2>* garment_ranges = nullptr;
+    const std::array<GarmentBvhState, 2>* garment_bvhs = nullptr;
 };
 
 struct DistanceConstraintBufferView final
@@ -105,7 +114,7 @@ struct DistanceConstraintBufferView final
     GLuint edge_index_buffer = 0;
     GLuint rest_length_buffer = 0;
     std::uint32_t constraint_count = 0;
-    const std::vector<ElementRange>* color_ranges = nullptr;
+    const std::vector<ConstraintColorState>* color_states = nullptr;
 };
 
 struct AttachmentConstraintBufferView final
@@ -113,5 +122,4 @@ struct AttachmentConstraintBufferView final
     GLuint attachment_index_buffer = 0;
     GLuint barycentric_offset_buffer = 0;
     std::uint32_t constraint_count = 0;
-    const std::array<ElementRange, 2>* ranges = nullptr;
 };

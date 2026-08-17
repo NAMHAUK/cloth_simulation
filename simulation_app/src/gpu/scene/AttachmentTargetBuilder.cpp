@@ -15,14 +15,14 @@ constexpr GLuint body_triangle_geometry_binding = 3;
 constexpr GLuint body_triangle_bvh_node_binding = 4;
 constexpr std::uint32_t attachment_target_local_size = 128;
 
-bool is_valid_attachment_target_range(const AttachmentConstraintBufferView& attachment_view,
-                                      const ElementRange& target_range)
+bool is_valid_attachment_target_access(const AttachmentConstraintBufferView& attachment_view,
+                                       const GarmentBufferState& garment_state)
 {
     return attachment_view.attachment_index_buffer != 0 &&
            attachment_view.barycentric_offset_buffer != 0 &&
-           target_range.count > 0u &&
-           target_range.offset <= attachment_view.constraint_count &&
-           target_range.count <= attachment_view.constraint_count - target_range.offset;
+           is_valid_buffer_access(garment_state.attachment_constraint_start_index,
+                                  garment_state.attachment_constraint_count,
+                                  attachment_view.constraint_count);
 }
 }
 
@@ -49,24 +49,25 @@ void AttachmentTargetBuilder::initialize(const std::filesystem::path& shader_dir
     gl.glProgramUniform1f(program_, surface_offset_location_, surface_offset);
 }
 
-bool AttachmentTargetBuilder::can_build(const SimulationGpuView& views,
-                                        const ElementRange& target_range) const
+bool AttachmentTargetBuilder::can_build(const SimulationGpuView& views, GarmentLayer layer) const
 {
     return is_initialized() &&
            is_valid_motion_view(views.cloth_motion) &&
-           is_valid_attachment_target_range(views.attachment_constraints, target_range) &&
+           is_valid_attachment_target_access(views.attachment_constraints,
+                                             views.garment_buffer_states[layer]) &&
            is_valid_triangle_geometry_resource(views.body_triangle_geometry) &&
            is_valid_triangle_bvh_resource(views.body_triangle_bvh);
 }
 
 bool AttachmentTargetBuilder::build(const SimulationGpuView& views,
-                                    const ElementRange& target_range,
+                                    GarmentLayer layer,
                                     QOpenGLFunctions_4_5_Core& gl) const
 {
-    if (!can_build(views, target_range)) {
+    if (!can_build(views, layer)) {
         return false;
     }
 
+    const GarmentBufferState& garment_state = views.garment_buffer_states[layer];
     const auto& motion_view = views.cloth_motion;
     const auto& attachment_view = views.attachment_constraints;
     const auto& body_triangle_geometry = views.body_triangle_geometry;
@@ -88,10 +89,15 @@ bool AttachmentTargetBuilder::build(const SimulationGpuView& views,
                         body_triangle_bvh_node_binding,
                         body_triangle_bvh.node_buffer);
 
-    gl.glProgramUniform1ui(program_, constraint_offset_location_, target_range.offset);
-    gl.glProgramUniform1ui(program_, constraint_count_location_, target_range.count);
+    gl.glProgramUniform1ui(program_,
+                           constraint_offset_location_,
+                           garment_state.attachment_constraint_start_index);
+    gl.glProgramUniform1ui(program_, constraint_count_location_, garment_state.attachment_constraint_count);
 
-    gl.glDispatchCompute(compute_group_count(target_range.count, attachment_target_local_size), 1, 1);
+    gl.glDispatchCompute(
+        compute_group_count(garment_state.attachment_constraint_count, attachment_target_local_size),
+        1,
+        1);
     gl.glMemoryBarrier(GL_SHADER_STORAGE_BARRIER_BIT);
     return true;
 }

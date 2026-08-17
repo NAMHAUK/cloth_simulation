@@ -14,9 +14,9 @@
 #include <glm/glm.hpp>
 
 namespace {
-constexpr std::uint32_t edge_vertex_count = 2;
-constexpr std::uint32_t triangle_vertex_count = 3;
-constexpr std::uint32_t vertex_position_component_count = 3;
+constexpr std::size_t edge_vertex_count = 2u;
+constexpr std::size_t triangle_vertex_count = 3u;
+constexpr std::size_t vertex_position_component_count = 3u;
 constexpr std::uint32_t bvh_leaf_size = 3;
 constexpr std::uint32_t body_bvh_excluded_part_mask = (1u << 6u) | (1u << 7u);
 constexpr std::uint8_t invalid_part_label = 0xFFu;
@@ -62,7 +62,7 @@ TriangleBvhData MeshBvhBuilder::build_triangle_bvh() const
     append_triangle_vertex_indices(tree.ordered_source_indices, result.triangle_vertex_indices);
     append_triangle_vertex_indices(make_excluded_triangle_indices(), result.triangle_vertex_indices);
     result.nodes = std::move(tree.nodes);
-    result.node_ranges_by_level = std::move(tree.node_ranges_by_level);
+    result.levels = std::move(tree.levels);
     const auto triangle_count =
         static_cast<std::uint32_t>(source_triangle_vertex_indices_.size() / triangle_vertex_count);
     if (!result.is_valid(triangle_count)) {
@@ -78,7 +78,7 @@ VertexBvhData MeshBvhBuilder::build_vertex_bvh() const
     bvh_build::BvhTree tree = bvh_build::build_bvh(std::move(primitives), bvh_leaf_size, has_part_labels());
     result.vertex_indices = std::move(tree.ordered_source_indices);
     result.nodes = std::move(tree.nodes);
-    result.node_ranges_by_level = std::move(tree.node_ranges_by_level);
+    result.levels = std::move(tree.levels);
     if (!result.is_valid(vertex_count_)) {
         throw std::runtime_error("Failed to build vertex BVH.");
     }
@@ -95,7 +95,7 @@ EdgeBvhData MeshBvhBuilder::build_edge_bvh() const
                              edge_primitives.source_edges,
                              result.edge_vertex_indices);
     result.nodes = std::move(tree.nodes);
-    result.node_ranges_by_level = std::move(tree.node_ranges_by_level);
+    result.levels = std::move(tree.levels);
     if (!result.is_valid()) {
         throw std::runtime_error("Failed to build edge BVH.");
     }
@@ -107,7 +107,7 @@ std::vector<bvh_build::BvhPrimitive> MeshBvhBuilder::make_triangle_primitives() 
     if (vertex_count_ == 0 ||
         source_triangle_vertex_indices_.empty() ||
         source_triangle_vertex_indices_.size() % triangle_vertex_count != 0u ||
-        vertices_.size() < static_cast<std::size_t>(vertex_count_) * vertex_position_component_count) {
+        vertices_.size() < vertex_count_ * vertex_position_component_count) {
         return {};
     }
 
@@ -121,13 +121,13 @@ std::vector<bvh_build::BvhPrimitive> MeshBvhBuilder::make_triangle_primitives() 
     primitives.reserve(triangle_count);
 
     for (std::uint32_t triangle_index = 0; triangle_index < triangle_count; ++triangle_index) {
-        const std::size_t index_base = static_cast<std::size_t>(triangle_index) * triangle_vertex_count;
+        const std::size_t index_base = triangle_index * triangle_vertex_count;
 
         glm::vec3 center_sum(0.0f);
         glm::vec3 min_bounds(std::numeric_limits<float>::max());
         glm::vec3 max_bounds(std::numeric_limits<float>::lowest());
 
-        for (std::uint32_t index_offset = 0; index_offset < triangle_vertex_count; ++index_offset) {
+        for (std::size_t index_offset = 0; index_offset < triangle_vertex_count; ++index_offset) {
             const std::uint32_t vertex_index = source_triangle_vertex_indices_[index_base + index_offset];
             if (vertex_index >= vertex_count_) {
                 return {};
@@ -163,8 +163,7 @@ std::vector<bvh_build::BvhPrimitive> MeshBvhBuilder::make_triangle_primitives() 
 
 std::vector<bvh_build::BvhPrimitive> MeshBvhBuilder::make_vertex_primitives() const
 {
-    if (vertex_count_ == 0 ||
-        vertices_.size() < static_cast<std::size_t>(vertex_count_) * vertex_position_component_count) {
+    if (vertex_count_ == 0 || vertices_.size() < vertex_count_ * vertex_position_component_count) {
         return {};
     }
 
@@ -197,7 +196,7 @@ std::vector<bvh_build::BvhPrimitive> MeshBvhBuilder::make_vertex_primitives() co
 
 MeshBvhBuilder::EdgePrimitiveSet MeshBvhBuilder::make_edge_primitives() const
 {
-    if (vertices_.size() < static_cast<std::size_t>(vertex_count_) * vertex_position_component_count) {
+    if (vertices_.size() < vertex_count_ * vertex_position_component_count) {
         return {};
     }
 
@@ -261,7 +260,7 @@ std::vector<std::uint8_t> MeshBvhBuilder::make_vertex_part_labels() const
         }
 
         const std::size_t index_base = triangle_index * triangle_vertex_count;
-        for (std::uint32_t index_offset = 0; index_offset < triangle_vertex_count; ++index_offset) {
+        for (std::size_t index_offset = 0; index_offset < triangle_vertex_count; ++index_offset) {
             const std::uint32_t vertex_index = source_triangle_vertex_indices_[index_base + index_offset];
             if (vertex_index >= vertex_count_) {
                 return {};
@@ -399,7 +398,7 @@ void MeshBvhBuilder::append_triangle_vertex_indices(const std::vector<std::uint3
                                                     std::vector<std::uint32_t>& triangle_vertex_indices) const
 {
     for (const std::uint32_t triangle_index : source_triangle_indices) {
-        const std::size_t index_base = static_cast<std::size_t>(triangle_index) * triangle_vertex_count;
+        const std::size_t index_base = triangle_index * triangle_vertex_count;
         triangle_vertex_indices.push_back(source_triangle_vertex_indices_[index_base]);
         triangle_vertex_indices.push_back(source_triangle_vertex_indices_[index_base + 1u]);
         triangle_vertex_indices.push_back(source_triangle_vertex_indices_[index_base + 2u]);

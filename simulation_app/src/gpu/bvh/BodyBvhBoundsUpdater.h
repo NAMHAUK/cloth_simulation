@@ -23,9 +23,9 @@ public:
                 const TriangleBvhResources& body_triangle_bvh,
                 const VertexBvhResources& body_vertex_bvh,
                 const EdgeBvhResources& body_edge_bvh,
-                const std::vector<BvhNodeRange>& triangle_node_ranges_by_level,
-                const std::vector<BvhNodeRange>& vertex_node_ranges_by_level,
-                const std::vector<BvhNodeRange>& edge_node_ranges_by_level,
+                const std::vector<BvhLevelState>& triangle_levels,
+                const std::vector<BvhLevelState>& vertex_levels,
+                const std::vector<BvhLevelState>& edge_levels,
                 float collision_thickness,
                 QOpenGLFunctions_4_5_Core& gl) const;
     void release(QOpenGLFunctions_4_5_Core& gl);
@@ -37,17 +37,17 @@ private:
                     const TriangleBvhResources& body_triangle_bvh,
                     const VertexBvhResources& body_vertex_bvh,
                     const EdgeBvhResources& body_edge_bvh,
-                    const std::vector<BvhNodeRange>& triangle_node_ranges_by_level,
-                    const std::vector<BvhNodeRange>& vertex_node_ranges_by_level,
-                    const std::vector<BvhNodeRange>& edge_node_ranges_by_level,
+                    const std::vector<BvhLevelState>& triangle_levels,
+                    const std::vector<BvhLevelState>& vertex_levels,
+                    const std::vector<BvhLevelState>& edge_levels,
                     float collision_thickness) const;
 
     GLuint program_ = 0;
-    GLint triangle_first_node_location_ = -1;
+    GLint triangle_node_start_index_location_ = -1;
     GLint triangle_node_count_location_ = -1;
-    GLint vertex_first_node_location_ = -1;
+    GLint vertex_node_start_index_location_ = -1;
     GLint vertex_node_count_location_ = -1;
-    GLint edge_first_node_location_ = -1;
+    GLint edge_node_start_index_location_ = -1;
     GLint edge_node_count_location_ = -1;
     GLint collision_thickness_location_ = -1;
 };

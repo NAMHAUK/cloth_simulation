@@ -50,7 +50,7 @@ SimulationGpuView SceneGpuState::simulation_view() const
     views.cloth_body_triangle_indices = cloth_gpu_state_.body_triangle_index_buffer_view();
     views.cloth_topology = cloth_gpu_state_.mesh_topology_resources();
     views.cloth_bvh = cloth_gpu_state_.cloth_bvh_buffer_view();
-    views.garment_vertex_ranges = cloth_gpu_state_.garment_vertex_ranges();
+    views.garment_buffer_states = cloth_gpu_state_.garment_buffer_states();
     views.stretch_constraints = cloth_gpu_state_.stretch_constraint_buffer_view();
     views.bending_constraints = cloth_gpu_state_.bending_constraint_buffer_view();
     views.attachment_constraints = cloth_gpu_state_.attachment_constraint_buffer_view();
@@ -96,9 +96,9 @@ void SceneGpuState::set_character_motion(const SceneState& scene,
     character_gpu_state_.set_current_frame(0);
     character_gpu_state_updater_.initialize_character_pose_state(
         0.0f,
-        scene.default_body_triangle_bvh_data().node_ranges_by_level,
-        scene.default_body_vertex_bvh_data().node_ranges_by_level,
-        scene.default_body_edge_bvh_data().node_ranges_by_level,
+        scene.default_body_triangle_bvh_data().levels,
+        scene.default_body_vertex_bvh_data().levels,
+        scene.default_body_edge_bvh_data().levels,
         body_collision_thickness,
         gl);
 }
@@ -113,13 +113,12 @@ void SceneGpuState::update_character_pose(const SceneState& scene,
     }
 
     character_gpu_state_.set_current_frame(scene.motion_frame_index());
-    character_gpu_state_updater_.update_character_pose_state(
-        frame_alpha,
-        scene.default_body_triangle_bvh_data().node_ranges_by_level,
-        scene.default_body_vertex_bvh_data().node_ranges_by_level,
-        scene.default_body_edge_bvh_data().node_ranges_by_level,
-        body_collision_thickness,
-        gl);
+    character_gpu_state_updater_.update_character_pose_state(frame_alpha,
+                                                             scene.default_body_triangle_bvh_data().levels,
+                                                             scene.default_body_vertex_bvh_data().levels,
+                                                             scene.default_body_edge_bvh_data().levels,
+                                                             body_collision_thickness,
+                                                             gl);
 }
 
 // Garments //
@@ -187,18 +186,19 @@ void SceneGpuState::build_garment_attachment_targets(SceneState& scene,
         throw std::runtime_error("Cannot build garment attachment targets because garment is missing.");
     }
 
-    const ElementRange target_range = cloth_gpu_state_.upload_attachment_indices(*garment, gl);
+    cloth_gpu_state_.upload_attachment_indices(*garment, gl);
+    const auto views = simulation_view();
+    const GarmentBufferState& garment_state = views.garment_buffer_states[layer];
 
-    if (target_range.count == 0u) {
+    if (garment_state.attachment_constraint_count == 0u) {
         return;
     }
 
-    const auto views = simulation_view();
-    if (!attachment_target_builder_.build(views, target_range, gl)) {
+    if (!attachment_target_builder_.build(views, layer, gl)) {
         throw std::runtime_error("Cannot build garment attachment targets because GPU buffers are missing.");
     }
 
-    cloth_gpu_state_.activate_attachment_targets(layer, target_range);
+    cloth_gpu_state_.activate_attachment_targets(layer);
 }
 
 void SceneGpuState::capture_garment_base_positions(QOpenGLFunctions_4_5_Core& gl)

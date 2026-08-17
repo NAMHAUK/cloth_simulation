@@ -210,7 +210,8 @@ void ClothClothCollisionSolver::solve(const SimulationGpuView& views, QOpenGLFun
     }
 
     const CollisionCandidateBuffer& collision_candidates = views.collision_candidates.cloth_cloth_vertex_face;
-    const std::uint32_t upper_vertex_offset = views.garment_vertex_ranges[GarmentLayer::Upper].offset;
+    const std::uint32_t upper_vertex_offset =
+        views.garment_buffer_states[GarmentLayer::Upper].vertex_start_index;
     views.collision_candidates.clear_normal_correction_sums(gl);
 
     gl.glUseProgram(accumulate_.program);
@@ -261,7 +262,8 @@ void ClothClothCollisionSolver::solve_initial(const SimulationGpuView& views,
     }
 
     const CollisionCandidateBuffer& collision_candidates = views.collision_candidates.cloth_cloth_vertex_face;
-    const std::uint32_t upper_vertex_offset = views.garment_vertex_ranges[GarmentLayer::Upper].offset;
+    const std::uint32_t upper_vertex_offset =
+        views.garment_buffer_states[GarmentLayer::Upper].vertex_start_index;
     views.collision_candidates.clear_normal_correction_sums(gl);
 
     gl.glUseProgram(initial_accumulate_.program);

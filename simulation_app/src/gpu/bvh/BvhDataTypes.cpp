@@ -8,8 +8,8 @@
 #include <vector>
 
 namespace {
-constexpr std::uint32_t edge_vertex_count = 2;
-constexpr std::uint32_t triangle_vertex_count = 3;
+constexpr std::size_t edge_vertex_count = 2u;
+constexpr std::size_t triangle_vertex_count = 3u;
 }
 
 bool TriangleBvhData::is_valid(std::uint32_t triangle_count) const
@@ -18,8 +18,8 @@ bool TriangleBvhData::is_valid(std::uint32_t triangle_count) const
         collision_triangle_count == 0 ||
         collision_triangle_count > triangle_count ||
         nodes.empty() ||
-        node_ranges_by_level.empty() ||
-        triangle_vertex_indices.size() != static_cast<std::size_t>(triangle_count) * triangle_vertex_count) {
+        levels.empty() ||
+        triangle_vertex_indices.size() != triangle_count * triangle_vertex_count) {
         return false;
     }
 
@@ -32,7 +32,7 @@ bool VertexBvhData::is_valid(std::uint32_t vertex_count) const
         vertex_indices.empty() ||
         vertex_indices.size() > vertex_count ||
         nodes.empty() ||
-        node_ranges_by_level.empty()) {
+        levels.empty()) {
         return false;
     }
 
@@ -68,7 +68,7 @@ bool EdgeBvhData::is_valid() const
     if (edge_vertex_indices.empty() ||
         edge_vertex_indices.size() % edge_vertex_count != 0u ||
         nodes.empty() ||
-        node_ranges_by_level.empty()) {
+        levels.empty()) {
         return false;
     }
 

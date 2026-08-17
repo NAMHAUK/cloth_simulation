@@ -61,7 +61,7 @@ GarmentDistanceConstraints build_distance_constraints(const std::vector<std::uin
 
     GarmentDistanceConstraints distance_constraints;
     distance_constraints.colorized_edges = std::move(colorized_edges.edges);
-    distance_constraints.color_ranges = std::move(colorized_edges.ranges);
+    distance_constraints.color_states = std::move(colorized_edges.color_states);
     distance_constraints.rest_lengths =
         compute_mesh_edge_lengths(distance_constraints.colorized_edges, vertices);
     return distance_constraints;
@@ -217,8 +217,7 @@ std::uint32_t find_component_root(std::vector<std::uint32_t>& component_parent, 
 
 bool validate_garment_obj(const GarmentMesh& garment_mesh, std::uint32_t vertex_count)
 {
-    if (vertex_count == 0 ||
-        garment_mesh.vertices.size() != static_cast<std::size_t>(vertex_count) * position_components) {
+    if (vertex_count == 0 || garment_mesh.vertices.size() != vertex_count * position_components) {
         std::cerr << "Invalid garment OBJ vertex data.\n";
         return false;
     }

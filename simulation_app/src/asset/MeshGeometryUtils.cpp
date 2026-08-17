@@ -98,7 +98,7 @@ bool orient_triangle_winding_outward(std::uint32_t vertex_count,
 {
     flipped_triangle_count = 0u;
     if (vertex_count == 0u ||
-        vertices.size() != static_cast<std::size_t>(vertex_count) * position_components ||
+        vertices.size() != vertex_count * position_components ||
         triangle_indices.empty() ||
         triangle_indices.size() % 3u != 0u) {
         return false;
@@ -218,7 +218,7 @@ bool orient_triangle_winding_outward(std::uint32_t vertex_count,
 // vertex position //
 glm::vec3 get_vertex_position(const std::vector<float>& vertices, std::uint32_t vertex_index)
 {
-    const std::size_t position_base = static_cast<std::size_t>(vertex_index) * position_components;
+    const std::size_t position_base = vertex_index * position_components;
     return {
         vertices[position_base],
         vertices[position_base + 1u],
@@ -403,16 +403,16 @@ ColorizedMeshEdges colorize_mesh_edges(std::uint32_t vertex_count, const std::ve
 
     ColorizedMeshEdges colorized_edges;
     colorized_edges.edges.reserve(edges.size());
-    colorized_edges.ranges.reserve(edge_groups.size());
+    colorized_edges.color_states.reserve(edge_groups.size());
     for (const MeshEdgeGroup& edge_group : edge_groups) {
         if (edge_group.edges.empty()) {
             continue;
         }
 
-        MeshElementRange range;
-        range.offset = static_cast<std::uint32_t>(colorized_edges.edges.size());
-        range.count = static_cast<std::uint32_t>(edge_group.edges.size());
-        colorized_edges.ranges.push_back(range);
+        ConstraintColorState color_state;
+        color_state.start_index = static_cast<std::uint32_t>(colorized_edges.edges.size());
+        color_state.count = static_cast<std::uint32_t>(edge_group.edges.size());
+        colorized_edges.color_states.push_back(color_state);
 
         colorized_edges.edges.insert(colorized_edges.edges.end(),
                                      edge_group.edges.begin(),

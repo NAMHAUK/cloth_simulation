@@ -13,13 +13,13 @@ constexpr std::size_t quaternion_components = 4u;
 
 glm::vec3 frame_position(const std::vector<float>& positions, std::uint32_t frame_index)
 {
-    const std::size_t base = static_cast<std::size_t>(frame_index) * position_components;
+    const std::size_t base = frame_index * position_components;
     return {positions[base], positions[base + 1u], positions[base + 2u]};
 }
 
 glm::quat frame_orientation(const std::vector<float>& orientations, std::uint32_t frame_index)
 {
-    const std::size_t base = static_cast<std::size_t>(frame_index) * quaternion_components;
+    const std::size_t base = frame_index * quaternion_components;
     return glm::normalize(quat_xyzw(orientations[base],
                                     orientations[base + 1u],
                                     orientations[base + 2u],

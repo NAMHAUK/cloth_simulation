@@ -15,9 +15,9 @@ constexpr GLsizeiptr byte_size(std::size_t count) noexcept
     return static_cast<GLsizeiptr>(count * sizeof(T));
 }
 
-inline bool is_valid_buffer_range(std::uint32_t offset, std::uint32_t count, std::uint32_t total_count)
+inline bool is_valid_buffer_access(std::uint32_t start_index, std::uint32_t count, std::uint32_t total_count)
 {
-    return count != 0u && offset <= total_count && count <= total_count - offset;
+    return count != 0u && start_index <= total_count && count <= total_count - start_index;
 }
 
 inline bool is_valid_motion_view(const ClothMotionBufferView& motion_view)
@@ -65,8 +65,8 @@ inline bool is_valid_cloth_bvh_buffer_view(const ClothBvhBufferView& view)
            view.triangle_bounds_buffer != 0 &&
            view.node_count != 0 &&
            view.garment_count != 0 &&
-           view.garment_ranges != nullptr &&
-           view.garment_count <= view.garment_ranges->size();
+           view.garment_bvhs != nullptr &&
+           view.garment_count <= view.garment_bvhs->size();
 }
 
 inline bool is_valid_character_mesh_topology_resource(const CharacterMeshTopologyResources& topology)
@@ -79,8 +79,8 @@ inline bool is_valid_distance_constraint_view(const DistanceConstraintBufferView
     return constraint_view.edge_index_buffer != 0 &&
            constraint_view.rest_length_buffer != 0 &&
            constraint_view.constraint_count != 0 &&
-           constraint_view.color_ranges != nullptr &&
-           !constraint_view.color_ranges->empty();
+           constraint_view.color_states != nullptr &&
+           !constraint_view.color_states->empty();
 }
 
 inline bool is_valid_triangle_geometry_resource(const TriangleGeometryResources& triangle_geometry)

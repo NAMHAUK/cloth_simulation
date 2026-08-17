@@ -37,14 +37,14 @@ struct PartLabelStats final
 
 struct NextBvhLevel final
 {
-    explicit NextBvhLevel(const BvhNodeRange& current_level)
-        : first_node(current_level.first_node + current_level.node_count)
+    explicit NextBvhLevel(const BvhLevelState& current_level_state)
+        : node_start_index(current_level_state.node_start_index + current_level_state.node_count)
     {
-        node_indices.reserve(static_cast<std::size_t>(current_level.node_count) * 2u);
+        node_indices.reserve(static_cast<std::size_t>(current_level_state.node_count) * 2u);
     }
 
     std::vector<std::uint32_t> node_indices;
-    std::uint32_t first_node = 0;
+    std::uint32_t node_start_index = 0;
 };
 
 std::uint32_t find_longest_axis(const glm::vec3& extent)
@@ -310,20 +310,20 @@ std::uint32_t build_bvh_tree(BvhBuildContext& context, std::size_t begin, std::s
 void write_level_ordered_bvh_data(std::uint32_t source_root_node,
                                   const std::vector<BvhBuildNode>& build_nodes,
                                   std::vector<BvhNode>& result_nodes,
-                                  std::vector<BvhNodeRange>& result_node_ranges_by_level)
+                                  std::vector<BvhLevelState>& result_levels)
 {
-    std::vector<BvhNodeRange> level_order_node_ranges;
-    level_order_node_ranges.reserve(build_nodes.size());
+    std::vector<BvhLevelState> root_to_leaf_levels;
+    root_to_leaf_levels.reserve(build_nodes.size());
     result_nodes.clear();
     result_nodes.reserve(build_nodes.size());
 
     std::vector<std::uint32_t> current_level_node_indices{source_root_node};
 
     while (!current_level_node_indices.empty()) {
-        const BvhNodeRange level_range{static_cast<std::uint32_t>(result_nodes.size()),
-                                       static_cast<std::uint32_t>(current_level_node_indices.size())};
-        level_order_node_ranges.push_back(level_range);
-        NextBvhLevel next_level(level_range);
+        const BvhLevelState level_state{static_cast<std::uint32_t>(result_nodes.size()),
+                                        static_cast<std::uint32_t>(current_level_node_indices.size())};
+        root_to_leaf_levels.push_back(level_state);
+        NextBvhLevel next_level(level_state);
 
         for (const std::uint32_t build_node_index : current_level_node_indices) {
             const auto& build_node = build_nodes[build_node_index];
@@ -335,11 +335,11 @@ void write_level_ordered_bvh_data(std::uint32_t source_root_node,
                 node.element_count = build_node.element_count;
             } else {
                 node.left_child_index =
-                    next_level.first_node + static_cast<std::uint32_t>(next_level.node_indices.size());
+                    next_level.node_start_index + static_cast<std::uint32_t>(next_level.node_indices.size());
                 next_level.node_indices.push_back(build_node.left_child_index);
 
                 node.right_child_index =
-                    next_level.first_node + static_cast<std::uint32_t>(next_level.node_indices.size());
+                    next_level.node_start_index + static_cast<std::uint32_t>(next_level.node_indices.size());
                 next_level.node_indices.push_back(build_node.right_child_index);
             }
         }
@@ -347,7 +347,7 @@ void write_level_ordered_bvh_data(std::uint32_t source_root_node,
         current_level_node_indices = std::move(next_level.node_indices);
     }
 
-    result_node_ranges_by_level.assign(level_order_node_ranges.rbegin(), level_order_node_ranges.rend());
+    result_levels.assign(root_to_leaf_levels.rbegin(), root_to_leaf_levels.rend());
 }
 }
 
@@ -396,7 +396,7 @@ BvhTree build_bvh(std::vector<BvhPrimitive> primitives, std::uint32_t leaf_size,
                             leaf_size,
                             split_by_part_labels};
     const std::uint32_t source_root_node = build_bvh_tree(context, 0u, primitives.size());
-    write_level_ordered_bvh_data(source_root_node, build_nodes, result.nodes, result.node_ranges_by_level);
+    write_level_ordered_bvh_data(source_root_node, build_nodes, result.nodes, result.levels);
     return result;
 }
 }

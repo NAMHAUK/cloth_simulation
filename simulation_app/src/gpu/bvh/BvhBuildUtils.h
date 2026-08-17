@@ -25,7 +25,7 @@ struct BvhTree final
 {
     std::vector<std::uint32_t> ordered_source_indices;
     std::vector<BvhNode> nodes;
-    std::vector<BvhNodeRange> node_ranges_by_level;
+    std::vector<BvhLevelState> levels;
 };
 
 bool is_valid_bounds(const glm::vec3& min_bounds, const glm::vec3& max_bounds);

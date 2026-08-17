@@ -18,16 +18,16 @@ namespace {
 constexpr std::array<char, 8> motion_asset_signature_v1 = {'S', 'M', 'P', 'L', 'M', 'O', 'T', 'N'};
 constexpr std::array<char, 8> motion_asset_signature_v2 = {'S', 'M', 'P', 'L', 'M', 'O', 'T', '2'};
 constexpr std::uint8_t max_body_part_label = 7u;
-constexpr std::uint32_t quaternion_components = 4u;
+constexpr std::size_t quaternion_components = 4u;
 
 struct GarmentAssetCounts final
 {
     std::uint32_t vertex_count = 0;
     std::uint32_t triangle_count = 0;
     std::uint32_t stretch_edge_count = 0;
-    std::uint32_t stretch_range_count = 0;
+    std::uint32_t stretch_color_state_count = 0;
     std::uint32_t bending_edge_count = 0;
-    std::uint32_t bending_range_count = 0;
+    std::uint32_t bending_color_state_count = 0;
     std::uint32_t attachment_vertex_count = 0;
 };
 
@@ -36,9 +36,9 @@ GarmentAssetCounts make_garment_asset_counts(const GarmentMesh& garment_mesh)
     return {static_cast<std::uint32_t>(garment_mesh.vertices.size() / position_components),
             static_cast<std::uint32_t>(garment_mesh.triangle_vertex_indices.size() / 3u),
             static_cast<std::uint32_t>(garment_mesh.stretch_constraints.colorized_edges.size()),
-            static_cast<std::uint32_t>(garment_mesh.stretch_constraints.color_ranges.size()),
+            static_cast<std::uint32_t>(garment_mesh.stretch_constraints.color_states.size()),
             static_cast<std::uint32_t>(garment_mesh.bending_constraints.colorized_edges.size()),
-            static_cast<std::uint32_t>(garment_mesh.bending_constraints.color_ranges.size()),
+            static_cast<std::uint32_t>(garment_mesh.bending_constraints.color_states.size()),
             static_cast<std::uint32_t>(garment_mesh.attachment_vertex_indices.size())};
 }
 
@@ -62,9 +62,9 @@ bool read_garment_asset_header(std::ifstream& input, GarmentAssetCounts& counts,
     const bool counts_read = read_binary_value(input, counts.vertex_count) &&
                              read_binary_value(input, counts.triangle_count) &&
                              read_binary_value(input, counts.stretch_edge_count) &&
-                             read_binary_value(input, counts.stretch_range_count) &&
+                             read_binary_value(input, counts.stretch_color_state_count) &&
                              read_binary_value(input, counts.bending_edge_count) &&
-                             read_binary_value(input, counts.bending_range_count) &&
+                             read_binary_value(input, counts.bending_color_state_count) &&
                              read_binary_value(input, counts.attachment_vertex_count);
     if (!counts_read || !read_binary_value(input, garment_mesh.garment_category)) {
         return false;
@@ -81,7 +81,7 @@ bool read_garment_asset_data(std::ifstream& input,
                              const GarmentAssetCounts& counts,
                              GarmentMesh& garment_mesh)
 {
-    const std::uint32_t position_value_count = counts.vertex_count * position_components;
+    const std::size_t position_value_count = counts.vertex_count * position_components;
     const std::size_t triangle_vertex_index_count = static_cast<std::size_t>(counts.triangle_count) * 3u;
     if (!read_binary_values(input, garment_mesh.vertices, position_value_count) ||
         !read_binary_values(input, garment_mesh.triangle_vertex_indices, triangle_vertex_index_count) ||
@@ -89,8 +89,8 @@ bool read_garment_asset_data(std::ifstream& input,
                             garment_mesh.stretch_constraints.colorized_edges,
                             counts.stretch_edge_count) ||
         !read_binary_values(input,
-                            garment_mesh.stretch_constraints.color_ranges,
-                            counts.stretch_range_count) ||
+                            garment_mesh.stretch_constraints.color_states,
+                            counts.stretch_color_state_count) ||
         !read_binary_values(input,
                             garment_mesh.stretch_constraints.rest_lengths,
                             counts.stretch_edge_count) ||
@@ -98,8 +98,8 @@ bool read_garment_asset_data(std::ifstream& input,
                             garment_mesh.bending_constraints.colorized_edges,
                             counts.bending_edge_count) ||
         !read_binary_values(input,
-                            garment_mesh.bending_constraints.color_ranges,
-                            counts.bending_range_count) ||
+                            garment_mesh.bending_constraints.color_states,
+                            counts.bending_color_state_count) ||
         !read_binary_values(input,
                             garment_mesh.bending_constraints.rest_lengths,
                             counts.bending_edge_count) ||
@@ -146,10 +146,8 @@ bool read_motion_asset_file_sizes(const std::filesystem::path& motion_asset_path
                                   bool has_reference_transforms,
                                   bool is_default)
 {
-    const std::size_t reference_position_count =
-        static_cast<std::size_t>(character_motion.frame_count) * position_components;
-    const std::size_t orientation_count =
-        static_cast<std::size_t>(character_motion.frame_count) * quaternion_components;
+    const std::size_t reference_position_count = character_motion.frame_count * position_components;
+    const std::size_t orientation_count = character_motion.frame_count * quaternion_components;
     const std::size_t vertex_position_count = reference_position_count * character_motion.vertex_count;
     const std::uintmax_t triangle_vertex_index_count =
         static_cast<std::uintmax_t>(character_motion.triangle_count) * 3u;
@@ -187,10 +185,8 @@ bool read_motion_asset_data(const std::filesystem::path& motion_asset_path,
                             bool has_reference_transforms,
                             std::ifstream& input)
 {
-    const std::size_t reference_position_count =
-        static_cast<std::size_t>(character_motion.frame_count) * position_components;
-    const std::size_t orientation_count =
-        static_cast<std::size_t>(character_motion.frame_count) * quaternion_components;
+    const std::size_t reference_position_count = character_motion.frame_count * position_components;
+    const std::size_t orientation_count = character_motion.frame_count * quaternion_components;
     const std::size_t vertex_position_count = reference_position_count * character_motion.vertex_count;
     const std::size_t triangle_vertex_index_count =
         static_cast<std::size_t>(character_motion.triangle_count) * 3u;
@@ -283,9 +279,9 @@ bool write_header_values(std::ofstream& output,
     return write_binary_value(output, counts.vertex_count) &&
            write_binary_value(output, counts.triangle_count) &&
            write_binary_value(output, counts.stretch_edge_count) &&
-           write_binary_value(output, counts.stretch_range_count) &&
+           write_binary_value(output, counts.stretch_color_state_count) &&
            write_binary_value(output, counts.bending_edge_count) &&
-           write_binary_value(output, counts.bending_range_count) &&
+           write_binary_value(output, counts.bending_color_state_count) &&
            write_binary_value(output, counts.attachment_vertex_count) &&
            write_binary_value(output, garment_mesh.garment_category) &&
            write_binary_value(output, garment_mesh.bounds_center.x) &&
@@ -299,20 +295,22 @@ bool write_mesh_data(std::ofstream& output, const GarmentMesh& garment_mesh)
     return write_binary_values(output, garment_mesh.vertices) &&
            write_binary_values(output, garment_mesh.triangle_vertex_indices) &&
            write_binary_values(output, garment_mesh.stretch_constraints.colorized_edges) &&
-           write_binary_values(output, garment_mesh.stretch_constraints.color_ranges) &&
+           write_binary_values(output, garment_mesh.stretch_constraints.color_states) &&
            write_binary_values(output, garment_mesh.stretch_constraints.rest_lengths) &&
            write_binary_values(output, garment_mesh.bending_constraints.colorized_edges) &&
-           write_binary_values(output, garment_mesh.bending_constraints.color_ranges) &&
+           write_binary_values(output, garment_mesh.bending_constraints.color_states) &&
            write_binary_values(output, garment_mesh.bending_constraints.rest_lengths) &&
            write_binary_values(output, garment_mesh.attachment_vertex_indices);
 }
 
 // validation //
-bool is_valid_element_ranges(const std::vector<MeshElementRange>& ranges, std::size_t element_count)
+bool are_valid_constraint_color_states(const std::vector<ConstraintColorState>& color_states,
+                                       std::size_t constraint_count)
 {
-    for (const auto& range : ranges) {
-        const std::size_t range_end = static_cast<std::size_t>(range.offset) + range.count;
-        if (range.count == 0u || range_end > element_count) {
+    for (const ConstraintColorState& color_state : color_states) {
+        const std::size_t color_state_end_index =
+            static_cast<std::size_t>(color_state.start_index) + color_state.count;
+        if (color_state.count == 0u || color_state_end_index > constraint_count) {
             return false;
         }
     }
@@ -322,9 +320,9 @@ bool is_valid_element_ranges(const std::vector<MeshElementRange>& ranges, std::s
 bool is_valid_edges(const std::vector<MeshEdge>& edges, std::uint32_t vertex_count)
 {
     for (const auto& edge : edges) {
-        const bool in_range = edge.vertex_a < vertex_count && edge.vertex_b < vertex_count;
+        const bool has_valid_vertex_indices = edge.vertex_a < vertex_count && edge.vertex_b < vertex_count;
         const bool different_vertices = edge.vertex_a != edge.vertex_b;
-        if (!in_range || !different_vertices) {
+        if (!has_valid_vertex_indices || !different_vertices) {
             return false;
         }
     }
@@ -345,7 +343,7 @@ bool is_valid_distance_constraints(const GarmentDistanceConstraints& constraints
 {
     return constraints.is_valid() &&
            is_valid_edges(constraints.colorized_edges, vertex_count) &&
-           is_valid_element_ranges(constraints.color_ranges, constraints.colorized_edges.size()) &&
+           are_valid_constraint_color_states(constraints.color_states, constraints.colorized_edges.size()) &&
            is_finite_values(constraints.rest_lengths);
 }
 
@@ -441,9 +439,9 @@ bool read_garment_mesh(const std::filesystem::path& garment_asset_path, GarmentM
     std::cout << "  vertices=" << asset_mesh.vertices.size() / position_components
               << " triangles=" << asset_mesh.triangle_vertex_indices.size() / 3u
               << " stretch_constraints=" << asset_mesh.stretch_constraints.colorized_edges.size()
-              << " stretch_color_groups=" << asset_mesh.stretch_constraints.color_ranges.size()
+              << " stretch_color_states=" << asset_mesh.stretch_constraints.color_states.size()
               << " bending_constraints=" << asset_mesh.bending_constraints.colorized_edges.size()
-              << " bending_color_groups=" << asset_mesh.bending_constraints.color_ranges.size()
+              << " bending_color_states=" << asset_mesh.bending_constraints.color_states.size()
               << " attachment_vertices=" << asset_mesh.attachment_vertex_indices.size()
               << " bounds_radius=" << asset_mesh.bounds_radius << '\n';
 

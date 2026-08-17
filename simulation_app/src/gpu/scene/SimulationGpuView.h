@@ -15,7 +15,7 @@ struct SimulationGpuView final
     ClothBodyTriangleIndexBufferView cloth_body_triangle_indices;
     ClothMeshTopologyResources cloth_topology;
     ClothBvhBufferView cloth_bvh;
-    std::array<ElementRange, 2> garment_vertex_ranges{};
+    std::array<GarmentBufferState, 2> garment_buffer_states{};
     DistanceConstraintBufferView stretch_constraints;
     DistanceConstraintBufferView bending_constraints;
     AttachmentConstraintBufferView attachment_constraints;

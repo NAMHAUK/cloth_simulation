@@ -23,8 +23,8 @@ public:
                          GarmentLayer changed_layer,
                          QOpenGLFunctions_4_5_Core& gl);
     void upload_garment_placement(const GarmentObject& garment, QOpenGLFunctions_4_5_Core& gl);
-    ElementRange upload_attachment_indices(const GarmentObject& garment, QOpenGLFunctions_4_5_Core& gl);
-    void activate_attachment_targets(GarmentLayer layer, const ElementRange& target_range);
+    void upload_attachment_indices(const GarmentObject& garment, QOpenGLFunctions_4_5_Core& gl);
+    void activate_attachment_targets(GarmentLayer layer);
     void capture_base_positions(QOpenGLFunctions_4_5_Core& gl);
     bool restore_base_positions(QOpenGLFunctions_4_5_Core& gl) const;
     void clear_base_positions(QOpenGLFunctions_4_5_Core& gl);
@@ -35,7 +35,7 @@ public:
 
     bool is_initialized() const;
 
-    std::array<ElementRange, 2> garment_vertex_ranges() const;
+    std::array<GarmentBufferState, 2> garment_buffer_states() const;
     ClothMotionBufferView motion_buffer_view() const;
     ClothCollisionPushoutBufferView collision_pushout_buffer_view() const;
     ClothContactMotionBufferView contact_motion_buffer_view() const;
@@ -53,21 +53,16 @@ private:
     struct BufferState final
     {
         ClothBufferSet buffers;
-        std::array<ElementRange, 2> vertex_ranges;
-        std::array<ElementRange, 2> triangle_ranges;
-        std::array<ElementRange, 2> stretch_constraint_ranges;
-        std::array<ElementRange, 2> bending_constraint_ranges;
-        std::array<ElementRange, 2> attachment_constraint_ranges;
-        std::vector<ElementRange> stretch_color_ranges;
-        std::vector<ElementRange> bending_color_ranges;
-        std::array<ElementRange, 2> attachment_ranges;
-        std::array<GarmentBvhRanges, 2> garment_bvh_ranges;
+        std::array<GarmentBufferState, 2> garments;
+        std::vector<ConstraintColorState> stretch_color_states;
+        std::vector<ConstraintColorState> bending_color_states;
+        std::array<GarmentBvhState, 2> garment_bvhs;
         ClothBufferElementCounts element_counts;
         std::uint32_t bvh_node_count = 0;
         std::uint32_t garment_count = 0;
     };
 
-    static void assign_buffer_ranges(const std::vector<GarmentObject>& garments, BufferState& state);
+    static void assign_garment_buffer_states(const std::vector<GarmentObject>& garments, BufferState& state);
     void create_dynamic_buffers(const std::vector<GarmentObject>& garments,
                                 GarmentLayer changed_layer,
                                 BufferState& rebuild_state,
