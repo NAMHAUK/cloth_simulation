@@ -24,8 +24,6 @@ struct GarmentAssetCounts final
 {
     std::uint32_t vertex_count = 0;
     std::uint32_t triangle_count = 0;
-    std::uint32_t adjacent_triangle_offset_count = 0;
-    std::uint32_t adjacent_triangle_index_count = 0;
     std::uint32_t stretch_edge_count = 0;
     std::uint32_t stretch_range_count = 0;
     std::uint32_t bending_edge_count = 0;
@@ -37,8 +35,6 @@ GarmentAssetCounts make_garment_asset_counts(const GarmentMesh& garment_mesh)
 {
     return {static_cast<std::uint32_t>(garment_mesh.vertices.size() / position_components),
             static_cast<std::uint32_t>(garment_mesh.triangle_vertex_indices.size() / 3u),
-            static_cast<std::uint32_t>(garment_mesh.adjacency.offsets.size()),
-            static_cast<std::uint32_t>(garment_mesh.adjacency.triangle_indices.size()),
             static_cast<std::uint32_t>(garment_mesh.stretch_constraints.colorized_edges.size()),
             static_cast<std::uint32_t>(garment_mesh.stretch_constraints.color_ranges.size()),
             static_cast<std::uint32_t>(garment_mesh.bending_constraints.colorized_edges.size()),
@@ -61,14 +57,10 @@ bool read_binary_values(std::ifstream& input, std::vector<T>& values, std::size_
                                         static_cast<std::streamsize>(values.size() * sizeof(T))));
 }
 
-bool read_garment_asset_header_values(std::ifstream& input,
-                                      GarmentAssetCounts& counts,
-                                      GarmentMesh& garment_mesh)
+bool read_garment_asset_header(std::ifstream& input, GarmentAssetCounts& counts, GarmentMesh& garment_mesh)
 {
     const bool counts_read = read_binary_value(input, counts.vertex_count) &&
                              read_binary_value(input, counts.triangle_count) &&
-                             read_binary_value(input, counts.adjacent_triangle_offset_count) &&
-                             read_binary_value(input, counts.adjacent_triangle_index_count) &&
                              read_binary_value(input, counts.stretch_edge_count) &&
                              read_binary_value(input, counts.stretch_range_count) &&
                              read_binary_value(input, counts.bending_edge_count) &&
@@ -84,34 +76,15 @@ bool read_garment_asset_header_values(std::ifstream& input,
            read_binary_value(input, garment_mesh.bounds_radius);
 }
 
-bool read_garment_asset_header(std::ifstream& input,
-                               const std::filesystem::path& path,
-                               GarmentAssetCounts& counts,
-                               GarmentMesh& mesh)
-{
-    if (!read_garment_asset_header_values(input, counts, mesh) ||
-        counts.adjacent_triangle_offset_count != counts.vertex_count + 1u) {
-        std::cerr << "Failed to read garment asset header: " << path << '\n';
-        return false;
-    }
-
-    return true;
-}
-
 bool read_garment_asset_data(std::ifstream& input,
                              const std::filesystem::path& path,
                              const GarmentAssetCounts& counts,
                              GarmentMesh& garment_mesh)
 {
-    garment_mesh.adjacency.triangle_count = counts.triangle_count;
     const std::uint32_t position_value_count = counts.vertex_count * position_components;
     const std::size_t triangle_vertex_index_count = static_cast<std::size_t>(counts.triangle_count) * 3u;
     if (!read_binary_values(input, garment_mesh.vertices, position_value_count) ||
         !read_binary_values(input, garment_mesh.triangle_vertex_indices, triangle_vertex_index_count) ||
-        !read_binary_values(input, garment_mesh.adjacency.offsets, counts.adjacent_triangle_offset_count) ||
-        !read_binary_values(input,
-                            garment_mesh.adjacency.triangle_indices,
-                            counts.adjacent_triangle_index_count) ||
         !read_binary_values(input,
                             garment_mesh.stretch_constraints.colorized_edges,
                             counts.stretch_edge_count) ||
@@ -309,8 +282,6 @@ bool write_header_values(std::ofstream& output,
 {
     return write_binary_value(output, counts.vertex_count) &&
            write_binary_value(output, counts.triangle_count) &&
-           write_binary_value(output, counts.adjacent_triangle_offset_count) &&
-           write_binary_value(output, counts.adjacent_triangle_index_count) &&
            write_binary_value(output, counts.stretch_edge_count) &&
            write_binary_value(output, counts.stretch_range_count) &&
            write_binary_value(output, counts.bending_edge_count) &&
@@ -327,8 +298,6 @@ bool write_mesh_data(std::ofstream& output, const GarmentMesh& garment_mesh)
 {
     return write_binary_values(output, garment_mesh.vertices) &&
            write_binary_values(output, garment_mesh.triangle_vertex_indices) &&
-           write_binary_values(output, garment_mesh.adjacency.offsets) &&
-           write_binary_values(output, garment_mesh.adjacency.triangle_indices) &&
            write_binary_values(output, garment_mesh.stretch_constraints.colorized_edges) &&
            write_binary_values(output, garment_mesh.stretch_constraints.color_ranges) &&
            write_binary_values(output, garment_mesh.stretch_constraints.rest_lengths) &&
@@ -396,8 +365,7 @@ bool is_valid_garment_mesh(const GarmentMesh& garment_mesh)
 
     if (garment_mesh.triangle_vertex_indices.empty() ||
         garment_mesh.triangle_vertex_indices.size() % 3u != 0u ||
-        !is_valid_vertex_indices(garment_mesh.triangle_vertex_indices, vertex_count) ||
-        !garment_mesh.adjacency.is_valid(vertex_count)) {
+        !is_valid_vertex_indices(garment_mesh.triangle_vertex_indices, vertex_count)) {
         return false;
     }
 
@@ -462,7 +430,7 @@ bool read_garment_mesh(const std::filesystem::path& garment_asset_path, GarmentM
     GarmentMesh asset_mesh;
     GarmentAssetCounts counts;
 
-    if (!read_garment_asset_header(input, garment_asset_path, counts, asset_mesh) ||
+    if (!read_garment_asset_header(input, counts, asset_mesh) ||
         !read_garment_asset_data(input, garment_asset_path, counts, asset_mesh) ||
         !is_valid_garment_mesh(asset_mesh)) {
         std::cerr << "Invalid garment asset payload: " << garment_asset_path << '\n';

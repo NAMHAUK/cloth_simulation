@@ -89,7 +89,6 @@ struct GarmentMesh
     GarmentCategory garment_category = GarmentCategory::Top;
     std::vector<float> vertices;
     std::vector<std::uint32_t> triangle_vertex_indices;
-    VertexTriangleAdjacency adjacency;
     GarmentDistanceConstraints stretch_constraints;
     GarmentDistanceConstraints bending_constraints;
     std::vector<std::uint32_t> attachment_vertex_indices;
