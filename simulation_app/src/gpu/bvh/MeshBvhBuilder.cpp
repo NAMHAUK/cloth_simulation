@@ -16,7 +16,6 @@
 namespace {
 constexpr std::size_t edge_vertex_count = 2u;
 constexpr std::size_t triangle_vertex_count = 3u;
-constexpr std::size_t vertex_position_component_count = 3u;
 constexpr std::uint32_t bvh_leaf_size = 3;
 constexpr std::uint32_t body_bvh_excluded_part_mask = (1u << 6u) | (1u << 7u);
 constexpr std::uint8_t invalid_part_label = 0xFFu;
@@ -44,7 +43,7 @@ MeshBvhBuilder::MeshBvhBuilder(const CharacterMotion& motion,
 {}
 
 MeshBvhBuilder::MeshBvhBuilder(const GarmentMesh& mesh)
-    : vertex_count_(static_cast<std::uint32_t>(mesh.vertices.size() / vertex_position_component_count)),
+    : vertex_count_(static_cast<std::uint32_t>(mesh.vertices.size() / position_components)),
       source_triangle_vertex_indices_(mesh.triangle_vertex_indices),
       vertices_(mesh.vertices)
 {}
@@ -54,9 +53,6 @@ TriangleBvhData MeshBvhBuilder::build_triangle_bvh() const
     TriangleBvhData result;
     auto primitives = make_triangle_primitives();
     bvh_build::BvhTree tree = bvh_build::build_bvh(std::move(primitives), bvh_leaf_size, has_part_labels());
-    if (tree.nodes.empty()) {
-        throw std::runtime_error("Failed to build triangle BVH.");
-    }
     result.collision_triangle_count = static_cast<std::uint32_t>(tree.ordered_source_indices.size());
     result.triangle_vertex_indices.reserve(source_triangle_vertex_indices_.size());
     append_triangle_vertex_indices(tree.ordered_source_indices, result.triangle_vertex_indices);
@@ -104,18 +100,8 @@ EdgeBvhData MeshBvhBuilder::build_edge_bvh() const
 
 std::vector<bvh_build::BvhPrimitive> MeshBvhBuilder::make_triangle_primitives() const
 {
-    if (vertex_count_ == 0 ||
-        source_triangle_vertex_indices_.empty() ||
-        source_triangle_vertex_indices_.size() % triangle_vertex_count != 0u ||
-        vertices_.size() < vertex_count_ * vertex_position_component_count) {
-        return {};
-    }
-
     const std::uint32_t triangle_count =
         static_cast<std::uint32_t>(source_triangle_vertex_indices_.size() / triangle_vertex_count);
-    if (has_part_labels() && triangle_part_labels_->size() != triangle_count) {
-        return {};
-    }
 
     std::vector<bvh_build::BvhPrimitive> primitives;
     primitives.reserve(triangle_count);
@@ -129,24 +115,13 @@ std::vector<bvh_build::BvhPrimitive> MeshBvhBuilder::make_triangle_primitives() 
 
         for (std::size_t index_offset = 0; index_offset < triangle_vertex_count; ++index_offset) {
             const std::uint32_t vertex_index = source_triangle_vertex_indices_[index_base + index_offset];
-            if (vertex_index >= vertex_count_) {
-                return {};
-            }
-
             const glm::vec3 position = get_vertex_position(vertices_, vertex_index);
             center_sum += position;
             min_bounds = glm::min(min_bounds, position);
             max_bounds = glm::max(max_bounds, position);
         }
 
-        if (!bvh_build::is_valid_bounds(min_bounds, max_bounds)) {
-            return {};
-        }
-
         const std::uint8_t part_label = has_part_labels() ? (*triangle_part_labels_)[triangle_index] : 0u;
-        if (part_label >= bvh_build::body_part_label_count) {
-            return {};
-        }
         if (is_part_excluded(part_label)) {
             continue;
         }
@@ -163,16 +138,9 @@ std::vector<bvh_build::BvhPrimitive> MeshBvhBuilder::make_triangle_primitives() 
 
 std::vector<bvh_build::BvhPrimitive> MeshBvhBuilder::make_vertex_primitives() const
 {
-    if (vertex_count_ == 0 || vertices_.size() < vertex_count_ * vertex_position_component_count) {
-        return {};
-    }
-
     std::vector<std::uint8_t> vertex_part_labels;
     if (has_part_labels()) {
         vertex_part_labels = make_vertex_part_labels();
-        if (vertex_part_labels.empty()) {
-            return {};
-        }
     }
 
     std::vector<bvh_build::BvhPrimitive> primitives;
@@ -184,9 +152,6 @@ std::vector<bvh_build::BvhPrimitive> MeshBvhBuilder::make_vertex_primitives() co
         }
 
         const glm::vec3 position = get_vertex_position(vertices_, vertex_index);
-        if (!bvh_build::is_valid_bounds(position, position)) {
-            return {};
-        }
         const std::uint8_t part_label = has_part_labels() ? vertex_part_labels[vertex_index] : 0u;
         primitives.push_back({vertex_index, position, position, position, part_label});
     }
@@ -196,24 +161,14 @@ std::vector<bvh_build::BvhPrimitive> MeshBvhBuilder::make_vertex_primitives() co
 
 MeshBvhBuilder::EdgePrimitiveSet MeshBvhBuilder::make_edge_primitives() const
 {
-    if (vertices_.size() < vertex_count_ * vertex_position_component_count) {
-        return {};
-    }
-
     EdgePrimitiveSet result;
     const std::vector<std::uint32_t> collision_triangle_vertex_indices =
         make_collision_triangle_vertex_indices();
     result.source_edges = build_unique_triangle_edges(vertex_count_, collision_triangle_vertex_indices);
-    if (result.source_edges.empty()) {
-        return result;
-    }
 
     std::vector<std::uint8_t> edge_part_labels;
     if (has_part_labels()) {
         edge_part_labels = make_edge_part_labels(result.source_edges);
-        if (edge_part_labels.empty()) {
-            return {};
-        }
     }
 
     result.primitives.reserve(result.source_edges.size());
@@ -223,10 +178,6 @@ MeshBvhBuilder::EdgePrimitiveSet MeshBvhBuilder::make_edge_primitives() const
         const glm::vec3 position_b = get_vertex_position(vertices_, edge.vertex_b);
         const glm::vec3 min_bounds = glm::min(position_a, position_b);
         const glm::vec3 max_bounds = glm::max(position_a, position_b);
-        if (!bvh_build::is_valid_bounds(min_bounds, max_bounds)) {
-            return {};
-        }
-
         const std::uint8_t part_label = has_part_labels() ? edge_part_labels[edge_index] : 0u;
         result.primitives.push_back(
             {edge_index, (position_a + position_b) * 0.5f, min_bounds, max_bounds, part_label});
@@ -237,24 +188,13 @@ MeshBvhBuilder::EdgePrimitiveSet MeshBvhBuilder::make_edge_primitives() const
 
 std::vector<std::uint8_t> MeshBvhBuilder::make_vertex_part_labels() const
 {
-    if (triangle_part_labels_ == nullptr ||
-        source_triangle_vertex_indices_.size() % triangle_vertex_count != 0u) {
-        return {};
-    }
-
     const std::size_t triangle_count = source_triangle_vertex_indices_.size() / triangle_vertex_count;
-    if (triangle_part_labels_->size() != triangle_count) {
-        return {};
-    }
 
     using LabelCounts = std::array<std::uint32_t, bvh_build::body_part_label_count>;
     std::vector<LabelCounts> label_counts(vertex_count_, LabelCounts{});
 
     for (std::size_t triangle_index = 0; triangle_index < triangle_count; ++triangle_index) {
         const std::uint8_t part_label = (*triangle_part_labels_)[triangle_index];
-        if (part_label >= bvh_build::body_part_label_count) {
-            return {};
-        }
         if (is_part_excluded(part_label)) {
             continue;
         }
@@ -262,9 +202,6 @@ std::vector<std::uint8_t> MeshBvhBuilder::make_vertex_part_labels() const
         const std::size_t index_base = triangle_index * triangle_vertex_count;
         for (std::size_t index_offset = 0; index_offset < triangle_vertex_count; ++index_offset) {
             const std::uint32_t vertex_index = source_triangle_vertex_indices_[index_base + index_offset];
-            if (vertex_index >= vertex_count_) {
-                return {};
-            }
             ++label_counts[vertex_index][part_label];
         }
     }
@@ -272,12 +209,9 @@ std::vector<std::uint8_t> MeshBvhBuilder::make_vertex_part_labels() const
     std::vector<std::uint8_t> vertex_part_labels(vertex_count_);
     for (std::uint32_t vertex_index = 0; vertex_index < vertex_count_; ++vertex_index) {
         const LabelCounts& counts = label_counts[vertex_index];
-        if (std::all_of(counts.begin(), counts.end(), [](std::uint32_t count) { return count == 0u; })) {
-            vertex_part_labels[vertex_index] = invalid_part_label;
-            continue;
-        }
-        const auto best_label = std::max_element(counts.begin(), counts.end()) - counts.begin();
-        vertex_part_labels[vertex_index] = static_cast<std::uint8_t>(best_label);
+        const auto best_count = std::max_element(counts.begin(), counts.end());
+        const auto best_label = static_cast<std::uint8_t>(best_count - counts.begin());
+        vertex_part_labels[vertex_index] = *best_count == 0u ? invalid_part_label : best_label;
     }
     return vertex_part_labels;
 }
@@ -285,14 +219,7 @@ std::vector<std::uint8_t> MeshBvhBuilder::make_vertex_part_labels() const
 std::vector<std::uint8_t> MeshBvhBuilder::make_edge_part_labels(
     const std::vector<MeshEdge>& source_edges) const
 {
-    if (triangle_part_labels_ == nullptr) {
-        return {};
-    }
-
     const std::size_t triangle_count = source_triangle_vertex_indices_.size() / triangle_vertex_count;
-    if (triangle_part_labels_->size() != triangle_count) {
-        return {};
-    }
 
     using LabelCounts = std::array<std::uint32_t, bvh_build::body_part_label_count>;
     std::vector<LabelCounts> label_counts(source_edges.size(), LabelCounts{});
@@ -304,9 +231,6 @@ std::vector<std::uint8_t> MeshBvhBuilder::make_edge_part_labels(
 
     for (std::size_t triangle_index = 0; triangle_index < triangle_count; ++triangle_index) {
         const std::uint8_t part_label = (*triangle_part_labels_)[triangle_index];
-        if (part_label >= bvh_build::body_part_label_count) {
-            return {};
-        }
         if (is_part_excluded(part_label)) {
             continue;
         }
@@ -321,14 +245,7 @@ std::vector<std::uint8_t> MeshBvhBuilder::make_edge_part_labels(
             make_ordered_edge(vertex_c, vertex_a),
         };
         for (const MeshEdge edge : triangle_edges) {
-            if (edge.vertex_a == edge.vertex_b) {
-                continue;
-            }
-            const auto iter = edge_indices_by_key.find(edge_key(edge));
-            if (iter == edge_indices_by_key.end()) {
-                return {};
-            }
-            ++label_counts[iter->second][part_label];
+            ++label_counts[edge_indices_by_key.at(edge_key(edge))][part_label];
         }
     }
 
@@ -343,7 +260,7 @@ std::vector<std::uint8_t> MeshBvhBuilder::make_edge_part_labels(
 
 bool MeshBvhBuilder::has_part_labels() const
 {
-    return triangle_part_labels_ != nullptr && !triangle_part_labels_->empty();
+    return triangle_part_labels_ != nullptr;
 }
 
 std::vector<std::uint32_t> MeshBvhBuilder::make_collision_triangle_vertex_indices() const
@@ -357,9 +274,6 @@ std::vector<std::uint32_t> MeshBvhBuilder::make_collision_triangle_vertex_indice
     const std::size_t triangle_count = source_triangle_vertex_indices_.size() / triangle_vertex_count;
     for (std::size_t triangle_index = 0; triangle_index < triangle_count; ++triangle_index) {
         const std::uint8_t part_label = (*triangle_part_labels_)[triangle_index];
-        if (part_label >= bvh_build::body_part_label_count) {
-            return {};
-        }
         if (is_part_excluded(part_label)) {
             continue;
         }
