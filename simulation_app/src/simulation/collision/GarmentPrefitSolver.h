@@ -1,10 +1,11 @@
 #pragma once
 
+#include "asset/AssetDataTypes.h"
+
 #include <filesystem>
 
 #include <QOpenGLFunctions_4_5_Core>
 
-struct ElementRange;
 struct PrefitParams;
 struct SimulationGpuView;
 
@@ -17,10 +18,8 @@ public:
 
     bool is_initialized() const;
     void initialize(const std::filesystem::path& shader_dir, QOpenGLFunctions_4_5_Core& gl);
-    bool can_solve(const SimulationGpuView& views, const ElementRange& vertex_range) const;
-    void solve(const SimulationGpuView& views,
-               const ElementRange& vertex_range,
-               QOpenGLFunctions_4_5_Core& gl) const;
+    bool can_solve(const SimulationGpuView& views, GarmentLayer layer) const;
+    void solve(const SimulationGpuView& views, GarmentLayer layer, QOpenGLFunctions_4_5_Core& gl) const;
     void release(QOpenGLFunctions_4_5_Core& gl);
 
 private:

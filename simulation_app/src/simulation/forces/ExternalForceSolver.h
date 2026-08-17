@@ -1,5 +1,6 @@
 #pragma once
 
+#include "asset/AssetDataTypes.h"
 #include "scene/Kinematics.h"
 
 #include <cstdint>
@@ -8,7 +9,6 @@
 #include <QOpenGLFunctions_4_5_Core>
 #include <glm/vec3.hpp>
 
-struct ElementRange;
 struct SimulationGpuView;
 
 class ExternalForceSolver final
@@ -24,7 +24,7 @@ public:
     bool is_initialized() const;
     void initialize(const std::filesystem::path& shader_dir, float dt, QOpenGLFunctions_4_5_Core& gl);
     void solve(const SimulationGpuView& views,
-               const ElementRange& vertex_range,
+               GarmentLayer layer,
                const glm::vec3& external_acceleration,
                const Kinematics& reference_frame_kinematics,
                QOpenGLFunctions_4_5_Core& gl) const;

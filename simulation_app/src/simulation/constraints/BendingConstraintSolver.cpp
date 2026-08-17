@@ -63,14 +63,14 @@ void BendingConstraintSolver::solve(const SimulationGpuView& views, QOpenGLFunct
     gl.glBindBufferBase(GL_SHADER_STORAGE_BUFFER, rest_lengths_binding, constraint_view.rest_length_buffer);
     gl.glProgramUniform1f(program_, stiffness_location_, std::clamp(stiffness_, 0.0f, 1.0f));
 
-    for (const ElementRange& range : *constraint_view.color_ranges) {
-        if (range.count == 0) {
+    for (const ConstraintColorState& color_state : *constraint_view.color_states) {
+        if (color_state.count == 0) {
             continue;
         }
 
-        gl.glProgramUniform1ui(program_, constraint_offset_location_, range.offset);
-        gl.glProgramUniform1ui(program_, constraint_count_location_, range.count);
-        gl.glDispatchCompute(compute_group_count(range.count, bending_constraint_local_size), 1, 1);
+        gl.glProgramUniform1ui(program_, constraint_offset_location_, color_state.start_index);
+        gl.glProgramUniform1ui(program_, constraint_count_location_, color_state.count);
+        gl.glDispatchCompute(compute_group_count(color_state.count, bending_constraint_local_size), 1, 1);
         gl.glMemoryBarrier(GL_SHADER_STORAGE_BARRIER_BIT);
     }
 }

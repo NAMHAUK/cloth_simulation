@@ -8,7 +8,7 @@
 
 #include <glm/vec3.hpp>
 
-inline constexpr std::uint32_t position_components = 3;
+inline constexpr std::size_t position_components = 3u;
 
 struct VertexTriangleAdjacency final
 {
@@ -25,16 +25,16 @@ struct MeshEdge final
     std::uint32_t vertex_b = 0;
 };
 
-struct MeshElementRange final
+struct ConstraintColorState final
 {
-    std::uint32_t offset = 0;
+    std::uint32_t start_index = 0;
     std::uint32_t count = 0;
 };
 
 struct ColorizedMeshEdges final
 {
     std::vector<MeshEdge> edges;
-    std::vector<MeshElementRange> ranges;
+    std::vector<ConstraintColorState> color_states;
 };
 
 struct CharacterMotion
@@ -60,13 +60,13 @@ struct MotionAsset
 struct GarmentDistanceConstraints final
 {
     std::vector<MeshEdge> colorized_edges;
-    std::vector<MeshElementRange> color_ranges;
+    std::vector<ConstraintColorState> color_states;
     std::vector<float> rest_lengths;
 
     bool is_valid() const
     {
         return !colorized_edges.empty() &&
-               !color_ranges.empty() &&
+               !color_states.empty() &&
                colorized_edges.size() == rest_lengths.size();
     }
 };

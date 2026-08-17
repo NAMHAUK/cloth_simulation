@@ -89,7 +89,7 @@ void ExternalForceSolver::initialize(const std::filesystem::path& shader_dir,
 
 // 외부 힘 계산 -> 힘에 따른 위치 변화 GPU에서 갱신
 void ExternalForceSolver::solve(const SimulationGpuView& views,
-                                const ElementRange& vertex_range,
+                                GarmentLayer layer,
                                 const glm::vec3& external_acceleration,
                                 const Kinematics& reference_frame_kinematics,
                                 QOpenGLFunctions_4_5_Core& gl) const
@@ -97,9 +97,10 @@ void ExternalForceSolver::solve(const SimulationGpuView& views,
     const auto& motion_view = views.cloth_motion;
     const auto& collision_pushout_view = views.cloth_collision_pushout;
     const auto& contact_motion_view = views.cloth_contact_motion;
-    const bool has_valid_vertices = vertex_range.count > 0u &&
-                                    vertex_range.offset <= motion_view.vertex_count &&
-                                    vertex_range.count <= motion_view.vertex_count - vertex_range.offset;
+    const GarmentBufferState& garment_state = views.garment_buffer_states[layer];
+    const bool has_valid_vertices = is_valid_buffer_access(garment_state.vertex_start_index,
+                                                           garment_state.vertex_count,
+                                                           motion_view.vertex_count);
     if (!is_initialized() ||
         !is_valid_motion_view(motion_view) ||
         !is_valid_collision_pushout_view(collision_pushout_view) ||
@@ -112,12 +113,11 @@ void ExternalForceSolver::solve(const SimulationGpuView& views,
         return;
     }
 
-    const glm::vec3 frame_acceleration = clamp_vector_length(
-        reference_frame_kinematics.acceleration,
-        reference_frame_max_acceleration_);
-    const glm::vec3 frame_angular_acceleration = clamp_vector_length(
-        reference_frame_kinematics.angular_acceleration,
-        reference_frame_max_angular_acceleration_);
+    const glm::vec3 frame_acceleration =
+        clamp_vector_length(reference_frame_kinematics.acceleration, reference_frame_max_acceleration_);
+    const glm::vec3 frame_angular_acceleration =
+        clamp_vector_length(reference_frame_kinematics.angular_acceleration,
+                            reference_frame_max_angular_acceleration_);
 
     // shader & GPU 연결
     gl.glUseProgram(program_);
@@ -138,8 +138,8 @@ void ExternalForceSolver::solve(const SimulationGpuView& views,
                         contact_motion_view.contact_motion_delta_buffer);
 
     // shader에 값 전달
-    gl.glProgramUniform1ui(program_, vertex_offset_location_, vertex_range.offset);
-    gl.glProgramUniform1ui(program_, vertex_count_location_, vertex_range.count);
+    gl.glProgramUniform1ui(program_, vertex_offset_location_, garment_state.vertex_start_index);
+    gl.glProgramUniform1ui(program_, vertex_count_location_, garment_state.vertex_count);
     gl.glProgramUniform1f(program_, delta_time_location_, dt_);
     gl.glProgramUniform1f(program_, inverse_delta_time_location_, inverse_dt_);
     gl.glProgramUniform3f(program_,
@@ -186,7 +186,7 @@ void ExternalForceSolver::solve(const SimulationGpuView& views,
     gl.glProgramUniform1f(program_, frame_inertia_scale_location_, reference_frame_inertia_scale_);
 
     // shader가 외부 가속도에 따른 위치 변화량 계산 (GPU에서 바로 업데이트)
-    gl.glDispatchCompute(compute_group_count(vertex_range.count, external_force_local_size), 1, 1);
+    gl.glDispatchCompute(compute_group_count(garment_state.vertex_count, external_force_local_size), 1, 1);
     gl.glMemoryBarrier(GL_SHADER_STORAGE_BARRIER_BIT);
 }
 

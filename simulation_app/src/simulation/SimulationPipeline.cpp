@@ -61,15 +61,14 @@ void SimulationPipeline::prefit_garments(SceneGpuState& gpu_state,
 
     // Garment pre-fit
     for (GarmentLayer layer : unconfirmed_layers) {
-        const ElementRange& vertex_range = views.garment_vertex_ranges[layer];
         for (std::uint32_t iteration = 0; iteration < params_.prefit.iteration_count; ++iteration) {
-            garment_prefit_solver_.solve(views, vertex_range, gl);
+            garment_prefit_solver_.solve(views, layer, gl);
         }
     }
     gpu_state.cloth_gpu_state().copy_current_positions_to_previous(gl);
 
     // Initial cloth-cloth collision
-    const bool has_multiple_garments = views.garment_vertex_ranges[GarmentLayer::Upper].count != 0u;
+    const bool has_multiple_garments = views.garment_buffer_states[GarmentLayer::Upper].vertex_count != 0u;
     if (has_multiple_garments) {
         for (std::uint32_t iteration = 0; iteration < params_.step.iteration_count; ++iteration) {
             cloth_cloth_collision_detector_.detect_initial(views, gl);
@@ -132,12 +131,13 @@ void SimulationPipeline::solve_external_forces(const SceneState& scene,
                                                QOpenGLFunctions_4_5_Core& gl) const
 {
     for (const GarmentObject& garment : scene.garments()) {
-        const ElementRange& vertex_range = views.garment_vertex_ranges[garment.layer];
-        assert(vertex_range.count != 0u);
+        const GarmentBufferState& garment_state = views.garment_buffer_states[garment.layer];
+        assert(garment_state.vertex_count != 0u);
 
-        const Kinematics& reference_frame_kinematics = scene.reference_frame_kinematics(garment.mesh.garment_category);
+        const Kinematics& reference_frame_kinematics =
+            scene.reference_frame_kinematics(garment.mesh.garment_category);
         external_force_solver_.solve(views,
-                                     vertex_range,
+                                     garment.layer,
                                      external_acceleration,
                                      reference_frame_kinematics,
                                      gl);

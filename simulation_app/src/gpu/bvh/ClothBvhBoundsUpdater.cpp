@@ -19,43 +19,45 @@ constexpr GLuint cloth_bvh_nodes_binding = 3;
 constexpr GLuint cloth_triangle_bounds_binding = 4;
 constexpr std::uint32_t bvh_bounds_update_local_size = 128;
 
-bool has_valid_node_level_ranges(const GarmentBvhRanges& ranges)
+bool has_valid_bvh_levels(const GarmentBvhState& bvh_state)
 {
-    if (ranges.node_ranges_by_level.empty()) {
+    if (bvh_state.levels.empty()) {
         return false;
     }
 
-    std::uint32_t expected_range_end = ranges.nodes.offset + ranges.nodes.count;
-    for (const BvhNodeRange& range : ranges.node_ranges_by_level) {
-        if (range.node_count == 0 ||
-            range.first_node < ranges.nodes.offset ||
-            range.first_node > expected_range_end ||
-            range.node_count != expected_range_end - range.first_node) {
+    std::uint32_t expected_node_end_index = bvh_state.node_start_index + bvh_state.node_count;
+    for (const BvhLevelState& level_state : bvh_state.levels) {
+        if (level_state.node_count == 0 ||
+            level_state.node_start_index < bvh_state.node_start_index ||
+            level_state.node_start_index > expected_node_end_index ||
+            level_state.node_count != expected_node_end_index - level_state.node_start_index) {
             return false;
         }
-        expected_range_end = range.first_node;
+        expected_node_end_index = level_state.node_start_index;
     }
 
-    return expected_range_end == ranges.nodes.offset;
+    return expected_node_end_index == bvh_state.node_start_index;
 }
 
-bool ranges_cover_buffer(std::array<BvhBufferRange, 2> ranges, std::uint32_t total_count)
+bool garment_bvhs_cover_node_buffer(const std::array<GarmentBvhState, 2>& garment_bvhs,
+                                    std::uint32_t total_count)
 {
-    if (ranges[1].offset < ranges[0].offset) {
-        std::swap(ranges[0], ranges[1]);
+    std::array<const GarmentBvhState*, 2> ordered_bvh_states{&garment_bvhs[0], &garment_bvhs[1]};
+    if (ordered_bvh_states[1]->node_start_index < ordered_bvh_states[0]->node_start_index) {
+        std::swap(ordered_bvh_states[0], ordered_bvh_states[1]);
     }
 
-    std::uint32_t expected_offset = 0;
-    for (const BvhBufferRange& range : ranges) {
-        if (range.count == 0) {
+    std::uint32_t expected_node_start_index = 0;
+    for (const GarmentBvhState* bvh_state : ordered_bvh_states) {
+        if (bvh_state->node_count == 0) {
             continue;
         }
-        if (range.offset != expected_offset) {
+        if (bvh_state->node_start_index != expected_node_start_index) {
             return false;
         }
-        expected_offset += range.count;
+        expected_node_start_index += bvh_state->node_count;
     }
-    return expected_offset == total_count;
+    return expected_node_start_index == total_count;
 }
 
 }
@@ -65,11 +67,12 @@ void ClothBvhBoundsUpdater::initialize(const std::filesystem::path& shader_dir, 
     program_ = load_compute_program(shader_dir / "cloth" / "cloth_bvh_bounds_update.comp",
                                     "Cloth BVH bounds update",
                                     gl);
-    level_first_node_location_ = gl.glGetUniformLocation(program_, "uLevelFirstNode");
+    level_node_start_index_location_ = gl.glGetUniformLocation(program_, "uLevelNodeStartIndex");
     level_node_count_location_ = gl.glGetUniformLocation(program_, "uLevelNodeCount");
     bounds_margin_location_ = gl.glGetUniformLocation(program_, "uBoundsMargin");
 
-    if (std::min({level_first_node_location_, level_node_count_location_, bounds_margin_location_}) < 0) {
+    if (std::min({level_node_start_index_location_, level_node_count_location_, bounds_margin_location_}) <
+        0) {
         throw std::runtime_error("Cloth BVH bounds update compute shader missing required uniforms.");
     }
 }
@@ -89,22 +92,23 @@ bool ClothBvhBoundsUpdater::can_update(const SimulationGpuView& views, float bou
         return false;
     }
 
-    for (std::size_t layer = 0; layer < bvh_view.garment_ranges->size(); ++layer) {
-        const GarmentBvhRanges& ranges = (*bvh_view.garment_ranges)[layer];
-        const ElementRange& vertex_range = views.garment_vertex_ranges[layer];
-        if (vertex_range.count == 0 && ranges.nodes.count == 0 && ranges.node_ranges_by_level.empty()) {
+    for (std::size_t layer = 0; layer < bvh_view.garment_bvhs->size(); ++layer) {
+        const GarmentBvhState& bvh_state = (*bvh_view.garment_bvhs)[layer];
+        const GarmentBufferState& garment_state = views.garment_buffer_states[layer];
+        if (garment_state.vertex_count == 0 && bvh_state.node_count == 0 && bvh_state.levels.empty()) {
             continue;
         }
 
-        if (!is_valid_buffer_range(vertex_range.offset, vertex_range.count, motion_view.vertex_count) ||
-            !is_valid_buffer_range(ranges.nodes.offset, ranges.nodes.count, bvh_view.node_count) ||
-            !has_valid_node_level_ranges(ranges)) {
+        if (!is_valid_buffer_access(garment_state.vertex_start_index,
+                                    garment_state.vertex_count,
+                                    motion_view.vertex_count) ||
+            !is_valid_buffer_access(bvh_state.node_start_index, bvh_state.node_count, bvh_view.node_count) ||
+            !has_valid_bvh_levels(bvh_state)) {
             return false;
         }
     }
 
-    const auto& garment_ranges = *bvh_view.garment_ranges;
-    return ranges_cover_buffer({garment_ranges[0].nodes, garment_ranges[1].nodes}, bvh_view.node_count);
+    return garment_bvhs_cover_node_buffer(*bvh_view.garment_bvhs, bvh_view.node_count);
 }
 
 void ClothBvhBoundsUpdater::update(const SimulationGpuView& views,
@@ -133,22 +137,22 @@ void ClothBvhBoundsUpdater::update(const SimulationGpuView& views,
     gl.glProgramUniform1f(program_, bounds_margin_location_, bounds_margin);
 
     std::size_t level_count = 0;
-    for (const GarmentBvhRanges& ranges : *bvh_view.garment_ranges) {
-        level_count = std::max(level_count, ranges.node_ranges_by_level.size());
+    for (const GarmentBvhState& bvh_state : *bvh_view.garment_bvhs) {
+        level_count = std::max(level_count, bvh_state.levels.size());
     }
 
     for (std::size_t level_index = 0; level_index < level_count; ++level_index) {
-        for (std::size_t layer = 0; layer < bvh_view.garment_ranges->size(); ++layer) {
-            const GarmentBvhRanges& ranges = (*bvh_view.garment_ranges)[layer];
-            if (level_index >= ranges.node_ranges_by_level.size()) {
+        for (std::size_t layer = 0; layer < bvh_view.garment_bvhs->size(); ++layer) {
+            const GarmentBvhState& bvh_state = (*bvh_view.garment_bvhs)[layer];
+            if (level_index >= bvh_state.levels.size()) {
                 continue;
             }
 
-            const BvhNodeRange& level_range = ranges.node_ranges_by_level[level_index];
+            const BvhLevelState& level_state = bvh_state.levels[level_index];
 
-            gl.glProgramUniform1ui(program_, level_first_node_location_, level_range.first_node);
-            gl.glProgramUniform1ui(program_, level_node_count_location_, level_range.node_count);
-            gl.glDispatchCompute(compute_group_count(level_range.node_count, bvh_bounds_update_local_size),
+            gl.glProgramUniform1ui(program_, level_node_start_index_location_, level_state.node_start_index);
+            gl.glProgramUniform1ui(program_, level_node_count_location_, level_state.node_count);
+            gl.glDispatchCompute(compute_group_count(level_state.node_count, bvh_bounds_update_local_size),
                                  1,
                                  1);
         }

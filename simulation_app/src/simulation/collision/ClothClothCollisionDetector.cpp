@@ -36,17 +36,19 @@ bool has_valid_garment_bvhs(const SimulationGpuView& views)
         return false;
     }
 
-    for (std::size_t layer = 0; layer < views.cloth_bvh.garment_ranges->size(); ++layer) {
-        const ElementRange& vertex_range = views.garment_vertex_ranges[layer];
-        const GarmentBvhRanges& ranges = (*views.cloth_bvh.garment_ranges)[layer];
-        if (vertex_range.count == 0 && ranges.nodes.count == 0) {
+    for (std::size_t layer = 0; layer < views.cloth_bvh.garment_bvhs->size(); ++layer) {
+        const GarmentBufferState& garment_state = views.garment_buffer_states[layer];
+        const GarmentBvhState& bvh_state = (*views.cloth_bvh.garment_bvhs)[layer];
+        if (garment_state.vertex_count == 0 && bvh_state.node_count == 0) {
             continue;
         }
 
-        if (!is_valid_buffer_range(vertex_range.offset,
-                                   vertex_range.count,
-                                   views.cloth_motion.vertex_count) ||
-            !is_valid_buffer_range(ranges.nodes.offset, ranges.nodes.count, views.cloth_bvh.node_count)) {
+        if (!is_valid_buffer_access(garment_state.vertex_start_index,
+                                    garment_state.vertex_count,
+                                    views.cloth_motion.vertex_count) ||
+            !is_valid_buffer_access(bvh_state.node_start_index,
+                                    bvh_state.node_count,
+                                    views.cloth_bvh.node_count)) {
             return false;
         }
     }
@@ -182,13 +184,7 @@ void ClothClothCollisionDetector::detect(const SimulationGpuView& views,
                            candidate_detect_.max_candidates,
                            collision_candidates.capacity);
 
-    const auto& garment_ranges = *views.cloth_bvh.garment_ranges;
-    detect_pair(views.garment_vertex_ranges[GarmentLayer::Upper],
-                garment_ranges[GarmentLayer::Upper],
-                views.garment_vertex_ranges[GarmentLayer::Lower],
-                garment_ranges[GarmentLayer::Lower],
-                collision_candidates,
-                gl);
+    detect_pair(views, gl);
 
     build_dispatch_size(collision_candidates, gl);
 }
@@ -202,33 +198,36 @@ void ClothClothCollisionDetector::release(QOpenGLFunctions_4_5_Core& gl)
     dispatch_size_ = {};
 }
 
-void ClothClothCollisionDetector::detect_pair(const ElementRange& upper_vertex_range,
-                                              const GarmentBvhRanges& upper_bvh,
-                                              const ElementRange& lower_vertex_range,
-                                              const GarmentBvhRanges& lower_bvh,
-                                              const CollisionCandidateBuffer& collision_candidates,
+void ClothClothCollisionDetector::detect_pair(const SimulationGpuView& views,
                                               QOpenGLFunctions_4_5_Core& gl) const
 {
+    const auto& garment_bvhs = *views.cloth_bvh.garment_bvhs;
+    const GarmentBufferState& upper_garment_state = views.garment_buffer_states[GarmentLayer::Upper];
+    const GarmentBvhState& upper_bvh_state = garment_bvhs[GarmentLayer::Upper];
+    const GarmentBufferState& lower_garment_state = views.garment_buffer_states[GarmentLayer::Lower];
+    const GarmentBvhState& lower_bvh_state = garment_bvhs[GarmentLayer::Lower];
+    const CollisionCandidateBuffer& collision_candidates = views.collision_candidates.cloth_cloth_vertex_face;
     gl.glProgramUniform1ui(candidate_detect_.program,
                            candidate_detect_.upper_vertex_offset,
-                           upper_vertex_range.offset);
+                           upper_garment_state.vertex_start_index);
     gl.glProgramUniform1ui(candidate_detect_.program,
                            candidate_detect_.upper_vertex_count,
-                           upper_vertex_range.count);
+                           upper_garment_state.vertex_count);
     gl.glProgramUniform1ui(candidate_detect_.program,
                            candidate_detect_.upper_bvh_root,
-                           upper_bvh.nodes.offset);
+                           upper_bvh_state.node_start_index);
     gl.glProgramUniform1ui(candidate_detect_.program,
                            candidate_detect_.lower_vertex_offset,
-                           lower_vertex_range.offset);
+                           lower_garment_state.vertex_start_index);
     gl.glProgramUniform1ui(candidate_detect_.program,
                            candidate_detect_.lower_vertex_count,
-                           lower_vertex_range.count);
+                           lower_garment_state.vertex_count);
     gl.glProgramUniform1ui(candidate_detect_.program,
                            candidate_detect_.lower_bvh_root,
-                           lower_bvh.nodes.offset);
+                           lower_bvh_state.node_start_index);
 
-    const std::uint32_t query_vertex_count = upper_vertex_range.count + lower_vertex_range.count;
+    const std::uint32_t query_vertex_count =
+        upper_garment_state.vertex_count + lower_garment_state.vertex_count;
     gl.glDispatchCompute(compute_group_count(query_vertex_count, candidate_detect_local_size), 1, 1);
     gl.glMemoryBarrier(GL_SHADER_STORAGE_BARRIER_BIT);
 }

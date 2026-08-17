@@ -1,10 +1,11 @@
 #pragma once
 
+#include "asset/AssetDataTypes.h"
+
 #include <filesystem>
 
 #include <QOpenGLFunctions_4_5_Core>
 
-struct ElementRange;
 struct SimulationGpuView;
 
 class AttachmentTargetBuilder final
@@ -18,13 +19,11 @@ public:
     void initialize(const std::filesystem::path& shader_dir,
                     float surface_offset,
                     QOpenGLFunctions_4_5_Core& gl);
-    bool build(const SimulationGpuView& views,
-               const ElementRange& target_range,
-               QOpenGLFunctions_4_5_Core& gl) const;
+    bool build(const SimulationGpuView& views, GarmentLayer layer, QOpenGLFunctions_4_5_Core& gl) const;
     void release(QOpenGLFunctions_4_5_Core& gl);
 
 private:
-    bool can_build(const SimulationGpuView& views, const ElementRange& target_range) const;
+    bool can_build(const SimulationGpuView& views, GarmentLayer layer) const;
 
     GLuint program_ = 0;
     GLint constraint_offset_location_ = -1;
