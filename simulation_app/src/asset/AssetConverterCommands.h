@@ -14,6 +14,5 @@ ConverterCommand make_motion_command(const ProjectPaths& project_paths,
 ConverterCommand make_garment_command(const ProjectPaths& project_paths,
                                       const std::filesystem::path& garment_obj_path,
                                       const std::filesystem::path& garment_asset_path,
-                                      const QString& attachment_type,
                                       const QString& garment_category);
 }
