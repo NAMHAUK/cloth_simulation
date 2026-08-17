@@ -25,7 +25,6 @@ struct BvhBuildContext final
     std::vector<BvhBuildNode>& nodes;
     std::vector<std::uint32_t>& ordered_source_indices;
     std::uint32_t leaf_size = 8u;
-    bool split_by_part_labels = false;
 };
 
 struct PartLabelStats final
@@ -209,13 +208,8 @@ std::size_t partition_primitives_by_part_labels(std::vector<BvhPrimitive>& primi
 
 std::optional<std::size_t> split_mixed_part_labels(std::vector<BvhPrimitive>& primitives,
                                                    std::size_t begin,
-                                                   std::size_t end,
-                                                   bool enabled)
+                                                   std::size_t end)
 {
-    if (!enabled) {
-        return std::nullopt;
-    }
-
     const std::uint32_t part_label_mask = compute_part_label_mask(primitives, begin, end);
     if (!has_multiple_bits(part_label_mask)) {
         return std::nullopt;
@@ -282,8 +276,7 @@ std::uint32_t build_bvh_tree(BvhBuildContext& context, std::size_t begin, std::s
     compute_node_bounds(context.primitives, begin, end, node.min_bounds, node.max_bounds);
 
     const std::size_t primitive_count = end - begin;
-    if (const auto middle =
-            split_mixed_part_labels(context.primitives, begin, end, context.split_by_part_labels)) {
+    if (const auto middle = split_mixed_part_labels(context.primitives, begin, end)) {
         const std::uint32_t left_child_index = build_bvh_tree(context, begin, *middle);
         const std::uint32_t right_child_index = build_bvh_tree(context, *middle, end);
         context.nodes[node_index].left_child_index = left_child_index;
@@ -378,7 +371,7 @@ bool has_valid_bvh_node_topology(const std::vector<BvhNode>& nodes, std::uint32_
     return has_valid_shader_stack_depth(nodes);
 }
 
-BvhTree build_bvh(std::vector<BvhPrimitive> primitives, std::uint32_t leaf_size, bool split_by_part_labels)
+BvhTree build_bvh(std::vector<BvhPrimitive> primitives, std::uint32_t leaf_size)
 {
     BvhTree result;
     if (primitives.empty() || leaf_size == 0u) {
@@ -390,11 +383,7 @@ BvhTree build_bvh(std::vector<BvhPrimitive> primitives, std::uint32_t leaf_size,
     build_nodes.reserve(leaf_count * 2u - 1u);
     result.ordered_source_indices.reserve(primitives.size());
 
-    BvhBuildContext context{primitives,
-                            build_nodes,
-                            result.ordered_source_indices,
-                            leaf_size,
-                            split_by_part_labels};
+    BvhBuildContext context{primitives, build_nodes, result.ordered_source_indices, leaf_size};
     const std::uint32_t source_root_node = build_bvh_tree(context, 0u, primitives.size());
     write_level_ordered_bvh_data(source_root_node, build_nodes, result.nodes, result.levels);
     return result;
