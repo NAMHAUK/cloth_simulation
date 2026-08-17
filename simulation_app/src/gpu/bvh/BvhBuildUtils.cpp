@@ -275,10 +275,6 @@ bool has_valid_bvh_node_topology(const std::vector<BvhNode>& nodes, std::uint32_
 BvhTree build_bvh(std::vector<BvhPrimitive> primitives)
 {
     BvhTree result;
-    if (primitives.empty()) {
-        return result;
-    }
-
     const std::size_t leaf_count = (primitives.size() + leaf_size - 1u) / leaf_size;
     result.nodes.reserve(leaf_count * 2u - 1u);
     result.ordered_source_indices.reserve(primitives.size());

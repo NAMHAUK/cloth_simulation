@@ -17,8 +17,15 @@
 namespace {
 constexpr std::array<char, 8> motion_asset_signature_v1 = {'S', 'M', 'P', 'L', 'M', 'O', 'T', 'N'};
 constexpr std::array<char, 8> motion_asset_signature_v2 = {'S', 'M', 'P', 'L', 'M', 'O', 'T', '2'};
+constexpr std::uint8_t left_hand_part_label = 6u;
+constexpr std::uint8_t right_hand_part_label = 7u;
 constexpr std::uint8_t max_body_part_label = 7u;
 constexpr std::size_t quaternion_components = 4u;
+
+bool is_hand_part_label(std::uint8_t label)
+{
+    return label == left_hand_part_label || label == right_hand_part_label;
+}
 
 struct GarmentAssetCounts final
 {
@@ -250,6 +257,16 @@ bool read_motion_asset_labels(const std::filesystem::path& motion_asset_path,
     if (has_invalid_label) {
         std::cerr << "Default motion asset contains invalid triangle part labels: " << motion_asset_path
                   << '\n';
+        triangle_part_labels.clear();
+        return false;
+    }
+
+    const bool has_collision_triangle =
+        std::any_of(triangle_part_labels.begin(), triangle_part_labels.end(), [](std::uint8_t label) {
+            return !is_hand_part_label(label);
+        });
+    if (!has_collision_triangle) {
+        std::cerr << "Default motion asset contains no collision triangles: " << motion_asset_path << '\n';
         triangle_part_labels.clear();
         return false;
     }
