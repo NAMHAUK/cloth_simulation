@@ -84,7 +84,6 @@ ConverterCommand make_motion_command(const ProjectPaths& project_paths,
 ConverterCommand make_garment_command(const ProjectPaths& project_paths,
                                       const std::filesystem::path& garment_obj_path,
                                       const std::filesystem::path& garment_asset_path,
-                                      const QString& attachment_type,
                                       const QString& garment_category)
 {
     ConverterCommand command;
@@ -111,8 +110,6 @@ ConverterCommand make_garment_command(const ProjectPaths& project_paths,
         to_q_string(garment_obj_path),
         "--output",
         to_q_string(garment_asset_path),
-        "--attachment-type",
-        attachment_type,
         "--garment-category",
         garment_category,
     };
@@ -122,7 +119,6 @@ ConverterCommand make_garment_command(const ProjectPaths& project_paths,
               << "  program=" << converter_exe_path << '\n'
               << "  garment_obj=" << garment_obj_path << '\n'
               << "  garment_asset=" << garment_asset_path << '\n'
-              << "  attachment_type=" << attachment_type.toStdString() << '\n'
               << "  garment_category=" << garment_category.toStdString() << '\n';
 
     command.is_valid = true;

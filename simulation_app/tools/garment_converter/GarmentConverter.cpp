@@ -199,19 +199,6 @@ std::vector<std::uint32_t> build_waistband_attachment_vertex_indices(const Garme
     return attachment_vertices;
 }
 
-std::vector<std::uint32_t> build_attachment_vertex_indices(const GarmentMesh& garment_mesh,
-                                                           AttachmentType attachment_type)
-{
-    switch (attachment_type) {
-    case AttachmentType::None:
-        return {};
-    case AttachmentType::Waistband:
-        return build_waistband_attachment_vertex_indices(garment_mesh);
-    }
-
-    return {};
-}
-
 void assign_bounds(GarmentMesh& garment_mesh, const glm::vec3& min_bounds, const glm::vec3& max_bounds)
 {
     garment_mesh.bounds_center = (min_bounds + max_bounds) * 0.5f;
@@ -432,7 +419,7 @@ bool read_obj_mesh_lines(std::istream& input,
     return true;
 }
 
-bool build_garment_simulation_data(GarmentMesh& garment_mesh, AttachmentType attachment_type)
+bool build_garment_simulation_data(GarmentMesh& garment_mesh)
 {
     garment_mesh.stretch_constraints =
         build_stretch_constraints(garment_mesh.triangle_vertex_indices, garment_mesh.vertices);
@@ -448,10 +435,12 @@ bool build_garment_simulation_data(GarmentMesh& garment_mesh, AttachmentType att
         return false;
     }
 
-    garment_mesh.attachment_vertex_indices = build_attachment_vertex_indices(garment_mesh, attachment_type);
-    if (attachment_type == AttachmentType::Waistband && garment_mesh.attachment_vertex_indices.empty()) {
-        std::cerr << "Cannot build waistband attachment vertices.\n";
-        return false;
+    if (garment_mesh.garment_category == GarmentCategory::Bottom) {
+        garment_mesh.attachment_vertex_indices = build_waistband_attachment_vertex_indices(garment_mesh);
+        if (garment_mesh.attachment_vertex_indices.empty()) {
+            std::cerr << "Cannot build waistband attachment vertices.\n";
+            return false;
+        }
     }
 
     return true;
@@ -470,7 +459,7 @@ void print_garment_obj_summary(const std::filesystem::path& obj_path, const Garm
 }
 
 bool read_garment_obj(const std::filesystem::path& obj_path,
-                      AttachmentType attachment_type,
+                      GarmentCategory garment_category,
                       GarmentMesh& garment_mesh)
 {
     const auto fail = [](const char* message) {
@@ -484,6 +473,7 @@ bool read_garment_obj(const std::filesystem::path& obj_path,
     }
 
     GarmentMesh next_mesh;
+    next_mesh.garment_category = garment_category;
     glm::vec3 min_bounds{std::numeric_limits<float>::max(),
                          std::numeric_limits<float>::max(),
                          std::numeric_limits<float>::max()};
@@ -518,7 +508,7 @@ bool read_garment_obj(const std::filesystem::path& obj_path,
                   << " triangles.\n";
     }
 
-    if (!build_garment_simulation_data(next_mesh, attachment_type)) {
+    if (!build_garment_simulation_data(next_mesh)) {
         return false;
     }
 

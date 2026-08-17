@@ -66,20 +66,10 @@ constexpr int close_icon_size = 12;
 constexpr int action_icon_size = 20;
 constexpr int garment_column_width = 369;
 
-struct GarmentConversionSettings final
-{
-    QString attachment_type;
-    QString garment_category;
-};
-
-std::optional<GarmentConversionSettings> select_garment_conversion_settings(QWidget* parent)
+std::optional<QString> select_garment_category(QWidget* parent)
 {
     QDialog dialog(parent);
     dialog.setWindowTitle("Garment Conversion Settings");
-
-    QComboBox attachment_type;
-    attachment_type.addItem("None", "none");
-    attachment_type.addItem("Waistband", "waistband");
 
     QComboBox garment_category;
     garment_category.addItem("Top", "top");
@@ -91,7 +81,6 @@ std::optional<GarmentConversionSettings> select_garment_conversion_settings(QWid
     QObject::connect(&buttons, &QDialogButtonBox::rejected, &dialog, &QDialog::reject);
 
     QFormLayout layout(&dialog);
-    layout.addRow("Attachment Type", &attachment_type);
     layout.addRow("Garment Category", &garment_category);
     layout.addRow(&buttons);
 
@@ -99,8 +88,7 @@ std::optional<GarmentConversionSettings> select_garment_conversion_settings(QWid
         return std::nullopt;
     }
 
-    return GarmentConversionSettings{attachment_type.currentData().toString(),
-                                     garment_category.currentData().toString()};
+    return garment_category.currentData().toString();
 }
 
 QString make_motion_id(const std::filesystem::path& motion_path)
@@ -500,16 +488,15 @@ void AssetBrowserPanel::request_garment_conversion()
         return;
     }
 
-    const auto settings = select_garment_conversion_settings(this);
-    if (!settings) {
+    const auto garment_category = select_garment_category(this);
+    if (!garment_category) {
         return;
     }
 
     const ConverterCommand command = converter_commands::make_garment_command(project_paths_,
                                                                               garment_obj_path,
                                                                               garment_asset_path,
-                                                                              settings->attachment_type,
-                                                                              settings->garment_category);
+                                                                              *garment_category);
 
     import_button_->setEnabled(false);
     garment_converter_->start_conversion(command);
