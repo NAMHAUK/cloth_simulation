@@ -14,7 +14,7 @@ inline constexpr std::uint32_t uploaded_bvh_root_node = 0u;
 
 struct BvhPrimitive final
 {
-    std::uint32_t primitive_index = 0;
+    std::uint32_t source_index = 0;
     glm::vec3 center{};
     glm::vec3 min_bounds{};
     glm::vec3 max_bounds{};
@@ -23,7 +23,7 @@ struct BvhPrimitive final
 
 struct BvhTree final
 {
-    std::vector<std::uint32_t> ordered_primitive_indices;
+    std::vector<std::uint32_t> ordered_source_indices;
     std::vector<BvhNode> nodes;
     std::vector<BvhNodeRange> node_ranges_by_level;
 };

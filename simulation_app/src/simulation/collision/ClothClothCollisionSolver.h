@@ -35,7 +35,7 @@ private:
         GLint upper_vertex_offset = -1;
     };
 
-    struct BodyTriangleIdBuildStage final
+    struct BodyTriangleIndexBuildStage final
     {
         GLuint program = 0;
         GLint vertex_count = -1;
@@ -59,7 +59,7 @@ private:
         GLint search_radius_squared = -1;
         GLint upper_vertex_offset = -1;
     } initial_accumulate_;
-    BodyTriangleIdBuildStage body_triangle_id_build_;
+    BodyTriangleIndexBuildStage body_triangle_index_build_;
     ApplyStage apply_;
     float collision_thickness_ = 0.0f;
     float collision_stiffness_ = 0.0f;

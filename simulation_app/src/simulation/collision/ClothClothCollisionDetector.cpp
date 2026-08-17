@@ -15,12 +15,11 @@ constexpr std::uint32_t candidate_accumulate_local_size = 128u;
 namespace candidate_detect_binding {
 constexpr GLuint cloth_current = 0;
 constexpr GLuint cloth_previous = 1;
-constexpr GLuint collision_triangles = 2;
-constexpr GLuint triangle_bounds = 3;
-constexpr GLuint bvh_nodes = 4;
-constexpr GLuint candidates = 5;
-constexpr GLuint candidate_count = 6;
-constexpr GLuint overflow_count = 7;
+constexpr GLuint triangle_bounds = 2;
+constexpr GLuint bvh_nodes = 3;
+constexpr GLuint candidates = 4;
+constexpr GLuint candidate_count = 5;
+constexpr GLuint overflow_count = 6;
 }
 
 namespace dispatch_size_binding {
@@ -28,36 +27,31 @@ constexpr GLuint candidate_count = 0;
 constexpr GLuint dispatch_size = 1;
 }
 
-bool is_valid_range(std::uint32_t offset, std::uint32_t count, std::uint32_t total_count)
-{
-    return count != 0u && offset <= total_count && count <= total_count - offset;
-}
-
 bool has_valid_garment_bvhs(const SimulationGpuView& views)
 {
-    if (!is_valid_motion_view(views.cloth_motion) || !is_valid_cloth_bvh_buffer_view(views.cloth_bvh)) {
+    if (!is_valid_motion_view(views.cloth_motion) ||
+        !is_valid_cloth_mesh_topology_resource(views.cloth_topology) ||
+        !is_valid_cloth_bvh_buffer_view(views.cloth_bvh) ||
+        views.cloth_topology.vertex_count != views.cloth_motion.vertex_count) {
         return false;
     }
 
-    std::uint32_t garment_count = 0;
     for (std::size_t layer = 0; layer < views.cloth_bvh.garment_ranges->size(); ++layer) {
         const ElementRange& vertex_range = views.garment_vertex_ranges[layer];
         const GarmentBvhRanges& ranges = (*views.cloth_bvh.garment_ranges)[layer];
-        if (vertex_range.count == 0 && ranges.collision_triangles.count == 0 && ranges.nodes.count == 0) {
+        if (vertex_range.count == 0 && ranges.nodes.count == 0) {
             continue;
         }
 
-        if (!is_valid_range(vertex_range.offset, vertex_range.count, views.cloth_motion.vertex_count) ||
-            !is_valid_range(ranges.collision_triangles.offset,
-                            ranges.collision_triangles.count,
-                            views.cloth_bvh.triangle_count) ||
-            !is_valid_range(ranges.nodes.offset, ranges.nodes.count, views.cloth_bvh.node_count)) {
+        if (!is_valid_buffer_range(vertex_range.offset,
+                                   vertex_range.count,
+                                   views.cloth_motion.vertex_count) ||
+            !is_valid_buffer_range(ranges.nodes.offset, ranges.nodes.count, views.cloth_bvh.node_count)) {
             return false;
         }
-        ++garment_count;
     }
 
-    return garment_count == views.cloth_bvh.garment_count;
+    return true;
 }
 }
 
@@ -86,18 +80,12 @@ void ClothClothCollisionDetector::initialize(const std::filesystem::path& shader
         gl.glGetUniformLocation(candidate_detect_.program, "uUpperVertexOffset");
     candidate_detect_.upper_vertex_count =
         gl.glGetUniformLocation(candidate_detect_.program, "uUpperVertexCount");
-    candidate_detect_.upper_triangle_offset =
-        gl.glGetUniformLocation(candidate_detect_.program, "uUpperTriangleOffset");
-    candidate_detect_.upper_bvh_node_offset =
-        gl.glGetUniformLocation(candidate_detect_.program, "uUpperBvhNodeOffset");
+    candidate_detect_.upper_bvh_root = gl.glGetUniformLocation(candidate_detect_.program, "uUpperBvhRoot");
     candidate_detect_.lower_vertex_offset =
         gl.glGetUniformLocation(candidate_detect_.program, "uLowerVertexOffset");
     candidate_detect_.lower_vertex_count =
         gl.glGetUniformLocation(candidate_detect_.program, "uLowerVertexCount");
-    candidate_detect_.lower_triangle_offset =
-        gl.glGetUniformLocation(candidate_detect_.program, "uLowerTriangleOffset");
-    candidate_detect_.lower_bvh_node_offset =
-        gl.glGetUniformLocation(candidate_detect_.program, "uLowerBvhNodeOffset");
+    candidate_detect_.lower_bvh_root = gl.glGetUniformLocation(candidate_detect_.program, "uLowerBvhRoot");
     candidate_detect_.max_candidates =
         gl.glGetUniformLocation(candidate_detect_.program, "uMaxCandidateCount");
     dispatch_size_.max_candidates = gl.glGetUniformLocation(dispatch_size_.program, "uMaxCandidateCount");
@@ -105,12 +93,10 @@ void ClothClothCollisionDetector::initialize(const std::filesystem::path& shader
 
     if (candidate_detect_.upper_vertex_offset < 0 ||
         candidate_detect_.upper_vertex_count < 0 ||
-        candidate_detect_.upper_triangle_offset < 0 ||
-        candidate_detect_.upper_bvh_node_offset < 0 ||
+        candidate_detect_.upper_bvh_root < 0 ||
         candidate_detect_.lower_vertex_offset < 0 ||
         candidate_detect_.lower_vertex_count < 0 ||
-        candidate_detect_.lower_triangle_offset < 0 ||
-        candidate_detect_.lower_bvh_node_offset < 0 ||
+        candidate_detect_.lower_bvh_root < 0 ||
         candidate_detect_.max_candidates < 0 ||
         dispatch_size_.max_candidates < 0 ||
         dispatch_size_.local_size < 0) {
@@ -178,9 +164,6 @@ void ClothClothCollisionDetector::detect(const SimulationGpuView& views,
                         candidate_detect_binding::cloth_previous,
                         views.cloth_motion.previous_position_buffer);
     gl.glBindBufferBase(GL_SHADER_STORAGE_BUFFER,
-                        candidate_detect_binding::collision_triangles,
-                        views.cloth_bvh.collision_triangle_index_buffer);
-    gl.glBindBufferBase(GL_SHADER_STORAGE_BUFFER,
                         candidate_detect_binding::triangle_bounds,
                         views.cloth_bvh.triangle_bounds_buffer);
     gl.glBindBufferBase(GL_SHADER_STORAGE_BUFFER,
@@ -233,10 +216,7 @@ void ClothClothCollisionDetector::detect_pair(const ElementRange& upper_vertex_r
                            candidate_detect_.upper_vertex_count,
                            upper_vertex_range.count);
     gl.glProgramUniform1ui(candidate_detect_.program,
-                           candidate_detect_.upper_triangle_offset,
-                           upper_bvh.collision_triangles.offset);
-    gl.glProgramUniform1ui(candidate_detect_.program,
-                           candidate_detect_.upper_bvh_node_offset,
+                           candidate_detect_.upper_bvh_root,
                            upper_bvh.nodes.offset);
     gl.glProgramUniform1ui(candidate_detect_.program,
                            candidate_detect_.lower_vertex_offset,
@@ -245,10 +225,7 @@ void ClothClothCollisionDetector::detect_pair(const ElementRange& upper_vertex_r
                            candidate_detect_.lower_vertex_count,
                            lower_vertex_range.count);
     gl.glProgramUniform1ui(candidate_detect_.program,
-                           candidate_detect_.lower_triangle_offset,
-                           lower_bvh.collision_triangles.offset);
-    gl.glProgramUniform1ui(candidate_detect_.program,
-                           candidate_detect_.lower_bvh_node_offset,
+                           candidate_detect_.lower_bvh_root,
                            lower_bvh.nodes.offset);
 
     const std::uint32_t query_vertex_count = upper_vertex_range.count + lower_vertex_range.count;

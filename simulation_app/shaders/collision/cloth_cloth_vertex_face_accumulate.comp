@@ -13,8 +13,8 @@ layout(std430, binding = 1) readonly buffer ClothPreviousPositions {
     vec4 cloth_previous_positions[];
 };
 
-layout(std430, binding = 2) readonly buffer CollisionTriangleIndices {
-    uint collision_triangle_indices[];
+layout(std430, binding = 2) readonly buffer ClothTriangleIndices {
+    uint cloth_triangle_indices[];
 };
 
 layout(std430, binding = 3) readonly buffer Candidates {
@@ -33,8 +33,8 @@ layout(std430, binding = 6) readonly buffer BodyTriangleGeometryBuffer {
     TriangleGeometry triangle_geometry[];
 };
 
-layout(std430, binding = 7) readonly buffer ClothBodyTriangleIds {
-    uint cloth_body_triangle_ids[];
+layout(std430, binding = 7) readonly buffer ClothBodyTriangleIndices {
+    uint cloth_body_triangle_indices[];
 };
 
 // Uniforms
@@ -65,23 +65,22 @@ struct VertexFaceContact {
     float depth;
 };
 
-uvec3 load_face_vertices(uint triangle_index, bool is_upper_vertex)
+uvec3 load_face_vertices(uint triangle_index)
 {
-    uint face_vertex_offset = is_upper_vertex ? 0u : uUpperVertexOffset;
     uint triangle_base = triangle_index * 3u;
-    return uvec3(face_vertex_offset + collision_triangle_indices[triangle_base],
-                 face_vertex_offset + collision_triangle_indices[triangle_base + 1u],
-                 face_vertex_offset + collision_triangle_indices[triangle_base + 2u]);
+    return uvec3(cloth_triangle_indices[triangle_base],
+                 cloth_triangle_indices[triangle_base + 1u],
+                 cloth_triangle_indices[triangle_base + 2u]);
 }
 
 bool read_body_normal(uint cloth_vertex_index, out vec3 body_normal)
 {
-    uint body_triangle_id = cloth_body_triangle_ids[cloth_vertex_index];
-    if (body_triangle_id >= uBodyTriangleCount) {
+    uint body_triangle_index = cloth_body_triangle_indices[cloth_vertex_index];
+    if (body_triangle_index >= uBodyTriangleCount) {
         return false;
     }
 
-    vec4 stored_normal = triangle_geometry[body_triangle_id].normal;
+    vec4 stored_normal = triangle_geometry[body_triangle_index].normal;
     if (stored_normal.w == 0.0) {
         return false;
     }
@@ -256,7 +255,7 @@ void accumulate_upper_face_vertex(uint vertex_index,
 void accumulate_candidate_correction(uint vertex_index, uint triangle_index)
 {
     bool is_upper_vertex = vertex_index >= uUpperVertexOffset;
-    uvec3 face_vertices = load_face_vertices(triangle_index, is_upper_vertex);
+    uvec3 face_vertices = load_face_vertices(triangle_index);
     VertexFaceContact contact;
     if (!compute_candidate_contact(vertex_index, is_upper_vertex, face_vertices, contact)) {
         return;

@@ -8,8 +8,8 @@ layout(std430, binding = 0) readonly buffer ClothCurrentPositions {
     vec4 cloth_current_positions[];
 };
 
-layout(std430, binding = 1) readonly buffer CollisionTriangleIndices {
-    uint collision_triangle_indices[];
+layout(std430, binding = 1) readonly buffer ClothTriangleIndices {
+    uint cloth_triangle_indices[];
 };
 
 layout(std430, binding = 2) readonly buffer Candidates {
@@ -54,12 +54,12 @@ struct VertexFaceContact {
     float depth;
 };
 
-uvec3 load_face_vertices(uint triangle_index, uint face_vertex_offset)
+uvec3 load_face_vertices(uint triangle_index)
 {
     uint triangle_base = triangle_index * 3u;
-    return uvec3(face_vertex_offset + collision_triangle_indices[triangle_base],
-                 face_vertex_offset + collision_triangle_indices[triangle_base + 1u],
-                 face_vertex_offset + collision_triangle_indices[triangle_base + 2u]);
+    return uvec3(cloth_triangle_indices[triangle_base],
+                 cloth_triangle_indices[triangle_base + 1u],
+                 cloth_triangle_indices[triangle_base + 2u]);
 }
 
 bool find_body_outward_normal(vec3 surface_point, out vec3 outward_normal)
@@ -149,8 +149,7 @@ void main()
     uint vertex_index = candidate_indices.x;
     uint triangle_index = candidate_indices.y;
     bool is_upper_vertex = vertex_index >= uUpperVertexOffset;
-    uint face_vertex_offset = is_upper_vertex ? 0u : uUpperVertexOffset;
-    uvec3 target_vertices = load_face_vertices(triangle_index, face_vertex_offset);
+    uvec3 target_vertices = load_face_vertices(triangle_index);
     VertexFaceContact contact;
     if (!compute_candidate_contact(vertex_index, is_upper_vertex, target_vertices, contact)) {
         return;

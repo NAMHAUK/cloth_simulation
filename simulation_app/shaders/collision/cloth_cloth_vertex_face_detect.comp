@@ -12,38 +12,32 @@ layout(std430, binding = 1) readonly buffer ClothPreviousPositions {
     vec4 cloth_previous_positions[];
 };
 
-layout(std430, binding = 2) readonly buffer CollisionTriangleIndices {
-    uint collision_triangle_indices[];
-};
-
-layout(std430, binding = 3) readonly buffer ClothTriangleBounds {
+layout(std430, binding = 2) readonly buffer ClothTriangleBounds {
     Aabb triangle_bounds[];
 };
 
-layout(std430, binding = 4) readonly buffer ClothBvhNodes {
+layout(std430, binding = 3) readonly buffer ClothBvhNodes {
     BvhNode bvh_nodes[];
 };
 
-layout(std430, binding = 5) buffer Candidates {
+layout(std430, binding = 4) buffer Candidates {
     uvec2 candidates[];
 };
 
-layout(std430, binding = 6) buffer CandidateCount {
+layout(std430, binding = 5) buffer CandidateCount {
     uint candidate_count;
 };
 
-layout(std430, binding = 7) buffer OverflowCount {
+layout(std430, binding = 6) buffer OverflowCount {
     uint overflow_count;
 };
 
 uniform uint uUpperVertexOffset;
 uniform uint uUpperVertexCount;
-uniform uint uUpperTriangleOffset;
-uniform uint uUpperBvhNodeOffset;
+uniform uint uUpperBvhRoot;
 uniform uint uLowerVertexOffset;
 uniform uint uLowerVertexCount;
-uniform uint uLowerTriangleOffset;
-uniform uint uLowerBvhNodeOffset;
+uniform uint uLowerBvhRoot;
 uniform uint uMaxCandidateCount;
 
 const uint max_bvh_stack_depth = 32u;
@@ -58,14 +52,12 @@ shared uint garment_roots_overlap;
 
 bool roots_overlap()
 {
-    BvhNode upper_root = bvh_nodes[uUpperBvhNodeOffset];
-    BvhNode lower_root = bvh_nodes[uLowerBvhNodeOffset];
+    BvhNode upper_root = bvh_nodes[uUpperBvhRoot];
+    BvhNode lower_root = bvh_nodes[uLowerBvhRoot];
     return overlaps_aabb(upper_root.bounds, lower_root.bounds);
 }
 
-void detect_vertex_face_candidates(uint cloth_vertex_index,
-                              uint target_triangle_offset,
-                              uint target_bvh_node_offset)
+void detect_vertex_face_candidates(uint cloth_vertex_index, uint target_bvh_root)
 {
     vec3 previous_position = read_cloth_previous_position(cloth_vertex_index);
     vec3 current_position = read_cloth_current_position(cloth_vertex_index);
@@ -73,21 +65,21 @@ void detect_vertex_face_candidates(uint cloth_vertex_index,
 
     uint node_index_stack[max_bvh_stack_depth];
     uint stack_count = 0u;
-    node_index_stack[stack_count++] = 0u;
+    node_index_stack[stack_count++] = target_bvh_root;
 
     while (stack_count > 0u) {
-        uint local_node_index = node_index_stack[--stack_count];
-        BvhNode node = bvh_nodes[target_bvh_node_offset + local_node_index];
+        uint node_index = node_index_stack[--stack_count];
+        BvhNode node = bvh_nodes[node_index];
         if (!overlaps_aabb(vertex_bounds, node.bounds)) {
             continue;
         }
 
         if (is_leaf_node(node)) {
             for (uint triangle_offset = 0u; triangle_offset < node.element_count; ++triangle_offset) {
-                uint global_triangle_index = target_triangle_offset + node.first_element_index + triangle_offset;
-                Aabb bounds = triangle_bounds[global_triangle_index];
+                uint triangle_index = node.first_element_index + triangle_offset;
+                Aabb bounds = triangle_bounds[triangle_index];
                 if (overlaps_aabb(vertex_bounds, bounds)) {
-                    append_candidate(uvec2(cloth_vertex_index, global_triangle_index));
+                    append_candidate(uvec2(cloth_vertex_index, triangle_index));
                 }
             }
         } else {
@@ -112,13 +104,11 @@ void main()
         bool is_upper_vertex = dispatch_vertex_index < uUpperVertexCount;
         if (is_upper_vertex) {
             detect_vertex_face_candidates(uUpperVertexOffset + dispatch_vertex_index,
-                                          uLowerTriangleOffset,
-                                          uLowerBvhNodeOffset);
+                                          uLowerBvhRoot);
         } else {
             uint lower_vertex_index = dispatch_vertex_index - uUpperVertexCount;
             detect_vertex_face_candidates(uLowerVertexOffset + lower_vertex_index,
-                                          uUpperTriangleOffset,
-                                          uUpperBvhNodeOffset);
+                                          uUpperBvhRoot);
         }
     }
 

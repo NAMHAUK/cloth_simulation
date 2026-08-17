@@ -8,8 +8,8 @@ layout(std430, binding = 0) readonly buffer ClothCurrentPositions {
     vec4 cloth_current_positions[];
 };
 
-layout(std430, binding = 1) writeonly buffer ClothBodyTriangleIds {
-    uint cloth_body_triangle_ids[];
+layout(std430, binding = 1) writeonly buffer ClothBodyTriangleIndices {
+    uint cloth_body_triangle_indices[];
 };
 
 #include "../../mesh/primitive_geometry.glsl"
@@ -25,7 +25,7 @@ layout(std430, binding = 3) readonly buffer BodyTriangleBvhNodeBuffer {
 uniform uint uVertexCount;
 uniform float uSearchRadiusSquared;
 
-const uint invalid_triangle_id = 0xffffffffu;
+const uint invalid_triangle_index = 0xffffffffu;
 
 #define POSITION_IO_CLOTH_CURRENT
 #include "../../mesh/position_io.glsl"
@@ -41,6 +41,6 @@ void main()
     vec3 cloth_position = read_cloth_current_position(vertex_index);
     NearestBodySurface nearest_surface;
     bool has_surface = find_nearest_body_surface(cloth_position, uSearchRadiusSquared, nearest_surface);
-    cloth_body_triangle_ids[vertex_index] = has_surface ? nearest_surface.triangle_index
-                                                        : invalid_triangle_id;
+    cloth_body_triangle_indices[vertex_index] = has_surface ? nearest_surface.triangle_index
+                                                            : invalid_triangle_index;
 }

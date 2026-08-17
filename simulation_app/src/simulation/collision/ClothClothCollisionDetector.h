@@ -29,12 +29,10 @@ private:
         GLuint program = 0;
         GLint upper_vertex_offset = -1;
         GLint upper_vertex_count = -1;
-        GLint upper_triangle_offset = -1;
-        GLint upper_bvh_node_offset = -1;
+        GLint upper_bvh_root = -1;
         GLint lower_vertex_offset = -1;
         GLint lower_vertex_count = -1;
-        GLint lower_triangle_offset = -1;
-        GLint lower_bvh_node_offset = -1;
+        GLint lower_bvh_root = -1;
         GLint max_candidates = -1;
     };
 

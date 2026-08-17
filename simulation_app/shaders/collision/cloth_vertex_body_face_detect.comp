@@ -61,10 +61,10 @@ void main()
     }
     barrier();
 
-    uint cloth_vertex_id = gl_GlobalInvocationID.x;
-    if (cloth_vertex_id < uClothVertexCount) {
-        vec3 previous_position = read_cloth_previous_position(cloth_vertex_id);
-        vec3 current_position = read_cloth_current_position(cloth_vertex_id);
+    uint cloth_vertex_index = gl_GlobalInvocationID.x;
+    if (cloth_vertex_index < uClothVertexCount) {
+        vec3 previous_position = read_cloth_previous_position(cloth_vertex_index);
+        vec3 current_position = read_cloth_current_position(cloth_vertex_index);
         Aabb query_bounds = build_swept_vertex_aabb(previous_position, current_position);
 
         uint node_index_stack[max_bvh_stack_depth];
@@ -83,7 +83,7 @@ void main()
                     uint triangle_index = current_node.first_element_index + triangle_offset;
                     Aabb triangle_bounds = build_body_triangle_aabb(triangle_index);
                     if (overlaps_aabb(query_bounds, triangle_bounds)) {
-                        append_candidate(uvec2(cloth_vertex_id, triangle_index));
+                        append_candidate(uvec2(cloth_vertex_index, triangle_index));
                     }
                 }
             } else {

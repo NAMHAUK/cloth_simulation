@@ -3,7 +3,6 @@
 #include "gpu/bvh/BodyBvhBoundsUpdater.h"
 #include "gpu/character/CharacterGpuResources.h"
 #include "gpu/character/CharacterGpuStateUpdater.h"
-#include "gpu/cloth/ClothBvhResources.h"
 #include "gpu/cloth/ClothGpuResources.h"
 #include "gpu/scene/AttachmentTargetBuilder.h"
 #include "gpu/scene/CollisionCandidateBuffers.h"
@@ -40,7 +39,6 @@ public:
                               QOpenGLFunctions_4_5_Core& gl);
 
     const ClothGpuResources& cloth_gpu_state() const;
-    ClothBvhBufferView cloth_bvh_buffer_view() const;
     CollisionCandidateBufferView collision_candidate_buffer_view() const;
     void release_garment_resources(QOpenGLFunctions_4_5_Core& gl);
     void rebuild_garment_resources(const SceneState& scene,
@@ -62,7 +60,6 @@ private:
     NormalUpdater normal_updater_;
     CharacterGpuStateUpdater character_gpu_state_updater_;
     ClothGpuResources cloth_gpu_state_;
-    ClothBvhResources cloth_bvh_resources_;
     CollisionCandidateBuffers collision_candidate_buffers_;
     AttachmentTargetBuilder attachment_target_builder_;
 

@@ -23,7 +23,7 @@ struct BvhBuildContext final
 {
     std::vector<BvhPrimitive>& primitives;
     std::vector<BvhBuildNode>& nodes;
-    std::vector<std::uint32_t>& ordered_primitive_indices;
+    std::vector<std::uint32_t>& ordered_source_indices;
     std::uint32_t leaf_size = 8u;
     bool split_by_part_labels = false;
 };
@@ -265,11 +265,11 @@ void compute_node_bounds(const std::vector<BvhPrimitive>& primitives,
 
 void write_leaf_node_data(BvhBuildContext& context, BvhBuildNode& node, std::size_t begin, std::size_t end)
 {
-    node.first_element_index = static_cast<std::uint32_t>(context.ordered_primitive_indices.size());
+    node.first_element_index = static_cast<std::uint32_t>(context.ordered_source_indices.size());
     node.element_count = static_cast<std::uint32_t>(end - begin);
 
     for (std::size_t primitive_index = begin; primitive_index < end; ++primitive_index) {
-        context.ordered_primitive_indices.push_back(context.primitives[primitive_index].primitive_index);
+        context.ordered_source_indices.push_back(context.primitives[primitive_index].source_index);
     }
 }
 
@@ -388,11 +388,11 @@ BvhTree build_bvh(std::vector<BvhPrimitive> primitives, std::uint32_t leaf_size,
     const std::size_t leaf_count = (primitives.size() + leaf_size - 1u) / leaf_size;
     std::vector<BvhBuildNode> build_nodes;
     build_nodes.reserve(leaf_count * 2u - 1u);
-    result.ordered_primitive_indices.reserve(primitives.size());
+    result.ordered_source_indices.reserve(primitives.size());
 
     BvhBuildContext context{primitives,
                             build_nodes,
-                            result.ordered_primitive_indices,
+                            result.ordered_source_indices,
                             leaf_size,
                             split_by_part_labels};
     const std::uint32_t source_root_node = build_bvh_tree(context, 0u, primitives.size());

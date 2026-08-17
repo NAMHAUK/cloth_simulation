@@ -1,6 +1,7 @@
 #pragma once
 
 #include "asset/AssetDataTypes.h"
+#include "gpu/bvh/BvhDataTypes.h"
 
 #include <array>
 #include <cstdint>
@@ -16,7 +17,7 @@ struct ClothBufferSet final
     GLuint collision_pushout = 0;
     GLuint cloth_cloth_pushout = 0;
     GLuint contact_motion_delta = 0;
-    GLuint body_triangle_id = 0;
+    GLuint body_triangle_index = 0;
     GLuint triangle_vertex_indices = 0;
     GLuint adjacent_triangle_offsets = 0;
     GLuint adjacent_triangle_indices = 0;
@@ -28,6 +29,8 @@ struct ClothBufferSet final
     GLuint attachment_barycentric_offset = 0;
     GLuint triangle_normal = 0;
     GLuint vertex_normal = 0;
+    GLuint bvh_node = 0;
+    GLuint triangle_bounds = 0;
 };
 
 struct ElementRange final
@@ -39,9 +42,7 @@ struct ElementRange final
 struct ClothBufferElementCounts final
 {
     std::uint32_t vertex = 0;
-    std::uint32_t triangle_vertex_index = 0;
     std::uint32_t triangle = 0;
-    std::uint32_t adjacent_triangle_index = 0;
     std::uint32_t stretch_constraint = 0;
     std::uint32_t bending_constraint = 0;
     std::uint32_t attachment_constraint = 0;
@@ -67,9 +68,9 @@ struct ClothContactMotionBufferView final
     std::uint32_t vertex_count = 0;
 };
 
-struct ClothBodyTriangleIdBufferView final
+struct ClothBodyTriangleIndexBufferView final
 {
-    GLuint body_triangle_id_buffer = 0;
+    GLuint body_triangle_index_buffer = 0;
     std::uint32_t vertex_count = 0;
 };
 
@@ -88,6 +89,15 @@ struct ClothNormalResources final
 {
     GLuint triangle_normal_buffer = 0;
     GLuint vertex_normal_buffer = 0;
+};
+
+struct ClothBvhBufferView final
+{
+    GLuint node_buffer = 0;
+    GLuint triangle_bounds_buffer = 0;
+    std::uint32_t node_count = 0;
+    std::uint32_t garment_count = 0;
+    const std::array<GarmentBvhRanges, 2>* garment_ranges = nullptr;
 };
 
 struct DistanceConstraintBufferView final

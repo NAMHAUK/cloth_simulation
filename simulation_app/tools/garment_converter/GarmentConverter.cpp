@@ -432,17 +432,8 @@ bool read_obj_mesh_lines(std::istream& input,
     return true;
 }
 
-bool build_garment_simulation_data(GarmentMesh& garment_mesh,
-                                   std::uint32_t vertex_count,
-                                   AttachmentType attachment_type)
+bool build_garment_simulation_data(GarmentMesh& garment_mesh, AttachmentType attachment_type)
 {
-    if (!build_vertex_triangle_adjacency(vertex_count,
-                                         garment_mesh.triangle_vertex_indices,
-                                         garment_mesh.adjacency)) {
-        std::cerr << "Invalid garment OBJ topology.\n";
-        return false;
-    }
-
     garment_mesh.stretch_constraints =
         build_stretch_constraints(garment_mesh.triangle_vertex_indices, garment_mesh.vertices);
     if (!garment_mesh.stretch_constraints.is_valid()) {
@@ -527,7 +518,7 @@ bool read_garment_obj(const std::filesystem::path& obj_path,
                   << " triangles.\n";
     }
 
-    if (!build_garment_simulation_data(next_mesh, vertex_count, attachment_type)) {
+    if (!build_garment_simulation_data(next_mesh, attachment_type)) {
         return false;
     }
 

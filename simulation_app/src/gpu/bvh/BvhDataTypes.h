@@ -44,14 +44,13 @@ struct BvhNodeRange final
 
 struct GarmentBvhRanges final
 {
-    BvhBufferRange collision_triangles;
     BvhBufferRange nodes;
     std::vector<BvhNodeRange> node_ranges_by_level;
 };
 
 struct TriangleBvhData final
 {
-    std::vector<std::uint32_t> triangle_indices;
+    std::vector<std::uint32_t> triangle_vertex_indices;
     std::vector<BvhNode> nodes;
     std::vector<BvhNodeRange> node_ranges_by_level;
     std::uint32_t collision_triangle_count = 0;
@@ -61,7 +60,7 @@ struct TriangleBvhData final
 
 struct VertexBvhData final
 {
-    std::vector<std::uint32_t> vertex_ids;
+    std::vector<std::uint32_t> vertex_indices;
     std::vector<BvhNode> nodes;
     std::vector<BvhNodeRange> node_ranges_by_level;
 

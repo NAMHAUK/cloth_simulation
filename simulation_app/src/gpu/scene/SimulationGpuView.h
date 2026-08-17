@@ -1,7 +1,6 @@
 #pragma once
 
 #include "gpu/character/CharacterGpuDataTypes.h"
-#include "gpu/cloth/ClothBvhResources.h"
 #include "gpu/cloth/ClothGpuDataTypes.h"
 #include "gpu/scene/CollisionCandidateBuffers.h"
 
@@ -13,7 +12,7 @@ struct SimulationGpuView final
     ClothMotionBufferView cloth_motion;
     ClothCollisionPushoutBufferView cloth_collision_pushout;
     ClothContactMotionBufferView cloth_contact_motion;
-    ClothBodyTriangleIdBufferView cloth_body_triangle_ids;
+    ClothBodyTriangleIndexBufferView cloth_body_triangle_indices;
     ClothMeshTopologyResources cloth_topology;
     ClothBvhBufferView cloth_bvh;
     std::array<ElementRange, 2> garment_vertex_ranges{};

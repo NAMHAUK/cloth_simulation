@@ -21,9 +21,6 @@ private:
     bool can_update(const SimulationGpuView& views, float bounds_margin) const;
 
     GLuint program_ = 0;
-    GLint vertex_offset_location_ = -1;
-    GLint collision_triangle_offset_location_ = -1;
-    GLint bvh_node_offset_location_ = -1;
     GLint level_first_node_location_ = -1;
     GLint level_node_count_location_ = -1;
     GLint bounds_margin_location_ = -1;

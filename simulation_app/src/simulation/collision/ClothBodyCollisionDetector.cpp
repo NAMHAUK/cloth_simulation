@@ -35,7 +35,7 @@ namespace cloth_face_body_vertex_binding {
 constexpr GLuint cloth_current = 0;
 constexpr GLuint cloth_previous = 1;
 constexpr GLuint cloth_triangles = 2;
-constexpr GLuint body_vertex_ids = 3;
+constexpr GLuint body_vertex_indices = 3;
 constexpr GLuint body_vertex_bvh = 4;
 constexpr GLuint body_vertex_bounds = 5;
 constexpr GLuint candidates = 7;
@@ -271,8 +271,8 @@ void ClothBodyCollisionDetector::detect_cloth_face_body_vertex_collision_candida
                         cloth_face_body_vertex_binding::cloth_triangles,
                         cloth_topology.triangle_index_buffer);
     gl.glBindBufferBase(GL_SHADER_STORAGE_BUFFER,
-                        cloth_face_body_vertex_binding::body_vertex_ids,
-                        body_vertex_bvh.vertex_id_buffer);
+                        cloth_face_body_vertex_binding::body_vertex_indices,
+                        body_vertex_bvh.vertex_index_buffer);
     gl.glBindBufferBase(GL_SHADER_STORAGE_BUFFER,
                         cloth_face_body_vertex_binding::body_vertex_bvh,
                         body_vertex_bvh.node_buffer);

@@ -1,11 +1,11 @@
 #pragma once
 
 #include "gpu/character/CharacterGpuDataTypes.h"
-#include "gpu/cloth/ClothBvhResources.h"
-#include "gpu/cloth/ClothGpuResources.h"
+#include "gpu/cloth/ClothGpuDataTypes.h"
 #include "gpu/scene/CollisionCandidateBuffers.h"
 
 #include <cstddef>
+#include <cstdint>
 
 #include <QOpenGLFunctions_4_5_Core>
 
@@ -13,6 +13,11 @@ template <typename T>
 constexpr GLsizeiptr byte_size(std::size_t count) noexcept
 {
     return static_cast<GLsizeiptr>(count * sizeof(T));
+}
+
+inline bool is_valid_buffer_range(std::uint32_t offset, std::uint32_t count, std::uint32_t total_count)
+{
+    return count != 0u && offset <= total_count && count <= total_count - offset;
 }
 
 inline bool is_valid_motion_view(const ClothMotionBufferView& motion_view)
@@ -47,17 +52,17 @@ inline bool is_valid_cloth_mesh_topology_resource(const ClothMeshTopologyResourc
     return topology.triangle_index_buffer != 0 && topology.vertex_count != 0 && topology.triangle_count != 0;
 }
 
-inline bool is_valid_body_triangle_id_view(const ClothBodyTriangleIdBufferView& body_triangle_id_view)
+inline bool is_valid_body_triangle_index_view(
+    const ClothBodyTriangleIndexBufferView& body_triangle_index_view)
 {
-    return body_triangle_id_view.body_triangle_id_buffer != 0 && body_triangle_id_view.vertex_count != 0;
+    return body_triangle_index_view.body_triangle_index_buffer != 0 &&
+           body_triangle_index_view.vertex_count != 0;
 }
 
 inline bool is_valid_cloth_bvh_buffer_view(const ClothBvhBufferView& view)
 {
-    return view.collision_triangle_index_buffer != 0 &&
-           view.node_buffer != 0 &&
+    return view.node_buffer != 0 &&
            view.triangle_bounds_buffer != 0 &&
-           view.triangle_count != 0 &&
            view.node_count != 0 &&
            view.garment_count != 0 &&
            view.garment_ranges != nullptr &&
@@ -94,7 +99,7 @@ inline bool is_valid_triangle_bvh_resource(const TriangleBvhResources& triangle_
 inline bool is_valid_vertex_bvh_resource(const VertexBvhResources& vertex_bvh)
 {
     return vertex_bvh.node_buffer != 0 &&
-           vertex_bvh.vertex_id_buffer != 0 &&
+           vertex_bvh.vertex_index_buffer != 0 &&
            vertex_bvh.vertex_bounds_buffer != 0 &&
            vertex_bvh.node_count != 0;
 }

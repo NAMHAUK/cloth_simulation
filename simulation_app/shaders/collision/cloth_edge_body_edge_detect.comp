@@ -48,9 +48,9 @@ const uint group_candidate_capacity = 512u;
 #include "../mesh/position_io.glsl"
 #include "common/collision_candidate_output.glsl"
 
-Aabb build_cloth_edge_swept_aabb(uint cloth_edge_id)
+Aabb build_cloth_edge_swept_aabb(uint cloth_edge_index)
 {
-    uint edge_base = cloth_edge_id * 2u;
+    uint edge_base = cloth_edge_index * 2u;
     uint vertex_a = cloth_edge_indices[edge_base];
     uint vertex_b = cloth_edge_indices[edge_base + 1u];
 
@@ -64,9 +64,9 @@ Aabb build_cloth_edge_swept_aabb(uint cloth_edge_id)
     return Aabb(vec4(min_bounds, 0.0), vec4(max_bounds, 0.0));
 }
 
-Aabb build_body_edge_swept_aabb(uint body_edge_id)
+Aabb build_body_edge_swept_aabb(uint body_edge_index)
 {
-    return body_edge_bounds[body_edge_id];
+    return body_edge_bounds[body_edge_index];
 }
 
 void main()
@@ -76,9 +76,9 @@ void main()
     }
     barrier();
 
-    uint cloth_edge_id = gl_GlobalInvocationID.x;
-    if (cloth_edge_id < uEdgeCount) {
-        Aabb cloth_swept_bounds = build_cloth_edge_swept_aabb(cloth_edge_id);
+    uint cloth_edge_index = gl_GlobalInvocationID.x;
+    if (cloth_edge_index < uEdgeCount) {
+        Aabb cloth_swept_bounds = build_cloth_edge_swept_aabb(cloth_edge_index);
 
         uint node_index_stack[max_bvh_stack_depth];
         uint stack_count = 0u;
@@ -93,10 +93,10 @@ void main()
 
             if (is_leaf_node(current_node)) {
                 for (uint edge_offset = 0u; edge_offset < current_node.element_count; ++edge_offset) {
-                    uint body_edge_id = current_node.first_element_index + edge_offset;
-                    Aabb body_bounds = build_body_edge_swept_aabb(body_edge_id);
+                    uint body_edge_index = current_node.first_element_index + edge_offset;
+                    Aabb body_bounds = build_body_edge_swept_aabb(body_edge_index);
                     if (overlaps_aabb(cloth_swept_bounds, body_bounds)) {
-                        append_candidate(uvec2(cloth_edge_id, body_edge_id));
+                        append_candidate(uvec2(cloth_edge_index, body_edge_index));
                     }
                 }
             } else {
