@@ -58,7 +58,6 @@ private:
         std::vector<ConstraintColorState> stretch_color_states;
         std::vector<ConstraintColorState> bending_color_states;
         ClothBufferElementCounts element_counts;
-        std::uint32_t bvh_node_count = 0;
     };
 
     static void assign_garment_buffer_states(const std::vector<GarmentObject>& garments, BufferState& state);

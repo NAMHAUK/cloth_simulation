@@ -1,7 +1,5 @@
 #pragma once
 
-#include "asset/AssetDataTypes.h"
-
 #include <cstddef>
 #include <cstdint>
 #include <vector>
@@ -43,5 +41,4 @@ struct BvhBufferView final
 {
     GLuint node_buffer = 0;
     GLuint bounds_buffer = 0;
-    std::uint32_t node_count = 0;
 };

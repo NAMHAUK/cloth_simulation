@@ -2,9 +2,7 @@
 
 #include <algorithm>
 #include <array>
-#include <cmath>
 #include <limits>
-#include <utility>
 
 namespace bvh_build {
 namespace {
@@ -286,22 +284,12 @@ bool has_valid_shader_stack_depth(const std::vector<BvhNode>& nodes)
 }
 }
 
-bool is_valid_bounds(const glm::vec3& min_bounds, const glm::vec3& max_bounds)
-{
-    return std::isfinite(min_bounds.x) &&
-           std::isfinite(min_bounds.y) &&
-           std::isfinite(min_bounds.z) &&
-           std::isfinite(max_bounds.x) &&
-           std::isfinite(max_bounds.y) &&
-           std::isfinite(max_bounds.z);
-}
-
 bool is_leaf_node(std::uint32_t component_count)
 {
     return component_count > 0u;
 }
 
-bool has_valid_bvh_node_topology(const std::vector<BvhNode>& nodes, std::uint32_t source_element_count)
+static bool has_valid_bvh_node_topology(const std::vector<BvhNode>& nodes, std::uint32_t source_element_count)
 {
     const std::size_t node_count = nodes.size();
     for (std::size_t node_index = 0; node_index < node_count; ++node_index) {
@@ -313,7 +301,8 @@ bool has_valid_bvh_node_topology(const std::vector<BvhNode>& nodes, std::uint32_
     return has_valid_shader_stack_depth(nodes);
 }
 
-bool has_valid_bvh_level_offsets(const std::vector<std::uint32_t>& level_offsets, std::size_t node_count)
+static bool has_valid_bvh_level_offsets(const std::vector<std::uint32_t>& level_offsets,
+                                        std::size_t node_count)
 {
     if (level_offsets.size() < 2u || level_offsets.front() != 0u || level_offsets.back() != node_count) {
         return false;

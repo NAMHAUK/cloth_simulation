@@ -70,14 +70,9 @@ inline std::uint32_t active_garment_count(const std::array<GarmentBufferState, 2
     return count;
 }
 
-inline std::uint32_t garment_bvh_root_node_index(const GarmentBufferState& garment)
-{
-    return garment.bvh_level_offsets.empty() ? 0u : garment.bvh_level_offsets.front();
-}
-
 inline bool is_valid_bvh_buffer_view(const BvhBufferView& view)
 {
-    return view.node_buffer != 0 && view.bounds_buffer != 0 && view.node_count != 0;
+    return view.node_buffer != 0 && view.bounds_buffer != 0;
 }
 
 inline bool is_valid_character_mesh_topology_resource(const CharacterMeshTopologyResources& topology)
@@ -86,9 +81,7 @@ inline bool is_valid_character_mesh_topology_resource(const CharacterMeshTopolog
            topology.bvh_vertex_index_buffer != 0 &&
            topology.edge_index_buffer != 0 &&
            topology.vertex_count != 0 &&
-           topology.triangle_count != 0 &&
-           topology.collision_triangle_count != 0 &&
-           topology.collision_triangle_count <= topology.triangle_count;
+           topology.triangle_count != 0;
 }
 
 inline bool is_valid_distance_constraint_view(const DistanceConstraintBufferView& constraint_view)

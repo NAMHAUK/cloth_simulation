@@ -37,9 +37,6 @@ private:
                     const BvhBufferView& body_triangle_bvh,
                     const BvhBufferView& body_vertex_bvh,
                     const BvhBufferView& body_edge_bvh,
-                    const std::vector<std::uint32_t>& triangle_level_offsets,
-                    const std::vector<std::uint32_t>& vertex_level_offsets,
-                    const std::vector<std::uint32_t>& edge_level_offsets,
                     float collision_thickness) const;
 
     GLuint program_ = 0;

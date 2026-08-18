@@ -1,6 +1,5 @@
 #include "gpu/bvh/BodyBvhBoundsUpdater.h"
 
-#include "gpu/bvh/BvhBuildUtils.h"
 #include "utils/BufferUtils.h"
 #include "utils/ShaderUtils.h"
 
@@ -24,8 +23,7 @@ constexpr GLuint body_edge_bounds_binding = 11;
 constexpr std::uint32_t bvh_bounds_update_local_size = 128;
 
 std::pair<std::uint32_t, std::uint32_t> valid_or_empty_level(const std::vector<std::uint32_t>& level_offsets,
-                                                             std::size_t level_index,
-                                                             std::uint32_t total_node_count)
+                                                             std::size_t level_index)
 {
     if (level_index + 1u >= level_offsets.size()) {
         return {};
@@ -34,9 +32,6 @@ std::pair<std::uint32_t, std::uint32_t> valid_or_empty_level(const std::vector<s
     const std::size_t offset_index = level_offsets.size() - 1u - level_index;
     const std::uint32_t first_node_index = level_offsets[offset_index - 1u];
     const std::uint32_t node_end_index = level_offsets[offset_index];
-    if (first_node_index >= node_end_index || node_end_index > total_node_count) {
-        return {};
-    }
     return {first_node_index, node_end_index - first_node_index};
 }
 }
@@ -52,9 +47,6 @@ bool BodyBvhBoundsUpdater::can_update(const CharacterMeshTopologyResources& topo
                                       const BvhBufferView& body_triangle_bvh,
                                       const BvhBufferView& body_vertex_bvh,
                                       const BvhBufferView& body_edge_bvh,
-                                      const std::vector<std::uint32_t>& triangle_level_offsets,
-                                      const std::vector<std::uint32_t>& vertex_level_offsets,
-                                      const std::vector<std::uint32_t>& edge_level_offsets,
                                       float collision_thickness) const
 {
     return is_initialized() &&
@@ -64,14 +56,10 @@ bool BodyBvhBoundsUpdater::can_update(const CharacterMeshTopologyResources& topo
            vertex_view.vertex_count != 0 &&
            is_valid_triangle_geometry_resource(body_triangle_geometry) &&
            topology.triangle_count == body_triangle_geometry.triangle_count &&
-           topology.collision_triangle_count <= topology.triangle_count &&
            topology.vertex_count == vertex_view.vertex_count &&
            is_valid_bvh_buffer_view(body_triangle_bvh) &&
            is_valid_bvh_buffer_view(body_vertex_bvh) &&
            is_valid_bvh_buffer_view(body_edge_bvh) &&
-           bvh_build::has_valid_bvh_level_offsets(triangle_level_offsets, body_triangle_bvh.node_count) &&
-           bvh_build::has_valid_bvh_level_offsets(vertex_level_offsets, body_vertex_bvh.node_count) &&
-           bvh_build::has_valid_bvh_level_offsets(edge_level_offsets, body_edge_bvh.node_count) &&
            collision_thickness > 0.0f;
 }
 
@@ -117,9 +105,6 @@ void BodyBvhBoundsUpdater::update(const CharacterMeshTopologyResources& topology
                     body_triangle_bvh,
                     body_vertex_bvh,
                     body_edge_bvh,
-                    triangle_level_offsets,
-                    vertex_level_offsets,
-                    edge_level_offsets,
                     collision_thickness)) {
         return;
     }
@@ -158,11 +143,11 @@ void BodyBvhBoundsUpdater::update(const CharacterMeshTopologyResources& topology
         1u;
     for (std::size_t level_index = 0; level_index < level_count; ++level_index) {
         const auto [triangle_first_node_index, triangle_node_count] =
-            valid_or_empty_level(triangle_level_offsets, level_index, body_triangle_bvh.node_count);
+            valid_or_empty_level(triangle_level_offsets, level_index);
         const auto [vertex_first_node_index, vertex_node_count] =
-            valid_or_empty_level(vertex_level_offsets, level_index, body_vertex_bvh.node_count);
+            valid_or_empty_level(vertex_level_offsets, level_index);
         const auto [edge_first_node_index, edge_node_count] =
-            valid_or_empty_level(edge_level_offsets, level_index, body_edge_bvh.node_count);
+            valid_or_empty_level(edge_level_offsets, level_index);
 
         const std::uint32_t dispatch_node_count =
             std::max({triangle_node_count, vertex_node_count, edge_node_count});

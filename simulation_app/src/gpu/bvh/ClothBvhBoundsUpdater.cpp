@@ -5,7 +5,6 @@
 #include "utils/ShaderUtils.h"
 
 #include <algorithm>
-#include <array>
 #include <cassert>
 #include <cmath>
 #include <cstdint>
@@ -18,47 +17,6 @@ constexpr GLuint cloth_triangle_indices_binding = 2;
 constexpr GLuint cloth_bvh_nodes_binding = 3;
 constexpr GLuint cloth_triangle_bounds_binding = 4;
 constexpr std::uint32_t bvh_bounds_update_local_size = 128;
-
-bool has_valid_bvh_level_offsets(const GarmentBufferState& garment_state, std::uint32_t total_node_count)
-{
-    if (garment_state.bvh_level_offsets.size() < 2u) {
-        return false;
-    }
-
-    if (std::adjacent_find(garment_state.bvh_level_offsets.begin(),
-                           garment_state.bvh_level_offsets.end(),
-                           [](std::uint32_t first, std::uint32_t second) { return first >= second; }) !=
-        garment_state.bvh_level_offsets.end()) {
-        return false;
-    }
-
-    const std::uint32_t root_node_index = garment_bvh_root_node_index(garment_state);
-    const std::uint32_t node_count = garment_state.bvh_level_offsets.back() - root_node_index;
-    return is_valid_buffer_access(root_node_index, node_count, total_node_count);
-}
-
-bool garment_bvhs_cover_node_buffer(const std::array<GarmentBufferState, 2>& garments,
-                                    std::uint32_t total_count)
-{
-    std::array<const GarmentBufferState*, 2> ordered_garments{&garments[0], &garments[1]};
-    if (garment_bvh_root_node_index(*ordered_garments[1]) <
-        garment_bvh_root_node_index(*ordered_garments[0])) {
-        std::swap(ordered_garments[0], ordered_garments[1]);
-    }
-
-    std::uint32_t expected_first_node_index = 0;
-    for (const GarmentBufferState* garment_state : ordered_garments) {
-        if (garment_state->bvh_level_offsets.empty()) {
-            continue;
-        }
-        if (garment_bvh_root_node_index(*garment_state) != expected_first_node_index) {
-            return false;
-        }
-        expected_first_node_index = garment_state->bvh_level_offsets.back();
-    }
-    return expected_first_node_index == total_count;
-}
-
 }
 
 void ClothBvhBoundsUpdater::initialize(const std::filesystem::path& shader_dir, QOpenGLFunctions_4_5_Core& gl)
@@ -81,30 +39,13 @@ bool ClothBvhBoundsUpdater::can_update(const SimulationGpuView& views, float bou
     const auto& motion_view = views.cloth_motion;
     const auto& topology = views.cloth_topology;
     const auto& bvh_view = views.cloth_bvh;
-    if (program_ == 0 ||
-        !is_valid_motion_view(motion_view) ||
-        !is_valid_cloth_mesh_topology_resource(topology) ||
-        !is_valid_bvh_buffer_view(bvh_view) ||
-        topology.vertex_count != motion_view.vertex_count ||
-        !std::isfinite(bounds_margin) ||
-        bounds_margin < 0.0f) {
-        return false;
-    }
-
-    for (const GarmentBufferState& garment_state : views.garment_buffer_states) {
-        if (garment_state.vertex_count == 0 && garment_state.bvh_level_offsets.empty()) {
-            continue;
-        }
-
-        if (!is_valid_buffer_access(garment_state.vertex_start_index,
-                                    garment_state.vertex_count,
-                                    motion_view.vertex_count) ||
-            !has_valid_bvh_level_offsets(garment_state, bvh_view.node_count)) {
-            return false;
-        }
-    }
-
-    return garment_bvhs_cover_node_buffer(views.garment_buffer_states, bvh_view.node_count);
+    return program_ != 0 &&
+           is_valid_motion_view(motion_view) &&
+           is_valid_cloth_mesh_topology_resource(topology) &&
+           is_valid_bvh_buffer_view(bvh_view) &&
+           topology.vertex_count == motion_view.vertex_count &&
+           std::isfinite(bounds_margin) &&
+           bounds_margin >= 0.0f;
 }
 
 void ClothBvhBoundsUpdater::update(const SimulationGpuView& views,

@@ -299,8 +299,6 @@ void ClothGpuResources::create_bvh_buffers(const std::vector<GarmentObject>& gar
 
         append_bvh_nodes(bvh, garment_state, nodes);
     }
-    rebuild_state.bvh_node_count = static_cast<std::uint32_t>(nodes.size());
-
     gl.glCreateBuffers(1, &rebuild_state.buffers.bvh_node);
     gl.glNamedBufferData(rebuild_state.buffers.bvh_node,
                          byte_size<BvhNode>(nodes.size()),
@@ -638,7 +636,7 @@ ClothNormalResources ClothGpuResources::mesh_normal_resources() const
 
 BvhBufferView ClothGpuResources::cloth_bvh_buffer_view() const
 {
-    return {state_.buffers.bvh_node, state_.buffers.triangle_bounds, state_.bvh_node_count};
+    return {state_.buffers.bvh_node, state_.buffers.triangle_bounds};
 }
 
 // Release

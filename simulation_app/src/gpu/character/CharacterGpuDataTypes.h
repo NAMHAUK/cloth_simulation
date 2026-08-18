@@ -34,7 +34,6 @@ struct CharacterMeshTopologyResources final
 
     std::uint32_t vertex_count = 0;
     std::uint32_t triangle_count = 0;
-    std::uint32_t collision_triangle_count = 0;
 };
 
 struct CharacterAnimationBufferView final

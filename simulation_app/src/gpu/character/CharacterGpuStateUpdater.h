@@ -1,7 +1,5 @@
 #pragma once
 
-#include "gpu/bvh/BvhDataTypes.h"
-
 #include <cstdint>
 #include <filesystem>
 #include <vector>
