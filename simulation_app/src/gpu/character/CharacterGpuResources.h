@@ -41,9 +41,9 @@ public:
     CharacterVertexBufferView character_vertex_buffer_view() const;
     TriangleGeometryResources character_triangle_geometry_resources() const;
     CharacterNormalResources mesh_normal_resources() const;
-    TriangleBvhResources body_triangle_bvh_resources() const;
-    VertexBvhResources body_vertex_bvh_resources() const;
-    EdgeBvhResources body_edge_bvh_resources() const;
+    BvhBufferView body_triangle_bvh_buffer_view() const;
+    BvhBufferView body_vertex_bvh_buffer_view() const;
+    BvhBufferView body_edge_bvh_buffer_view() const;
 
     // GPU resource lifetime
     void release(QOpenGLFunctions_4_5_Core& gl);
@@ -73,5 +73,4 @@ private:
     std::uint32_t body_triangle_bvh_node_count_ = 0;
     std::uint32_t body_vertex_bvh_node_count_ = 0;
     std::uint32_t body_edge_bvh_node_count_ = 0;
-    std::uint32_t body_edge_count_ = 0;
 };

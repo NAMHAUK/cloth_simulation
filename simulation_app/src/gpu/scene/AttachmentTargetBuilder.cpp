@@ -56,7 +56,7 @@ bool AttachmentTargetBuilder::can_build(const SimulationGpuView& views, GarmentL
            is_valid_attachment_target_access(views.attachment_constraints,
                                              views.garment_buffer_states[layer]) &&
            is_valid_triangle_geometry_resource(views.body_triangle_geometry) &&
-           is_valid_triangle_bvh_resource(views.body_triangle_bvh);
+           is_valid_bvh_buffer_view(views.body_triangle_bvh);
 }
 
 bool AttachmentTargetBuilder::build(const SimulationGpuView& views,

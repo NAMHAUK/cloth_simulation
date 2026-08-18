@@ -43,23 +43,22 @@ void SceneGpuState::update_mesh_normals(QOpenGLFunctions_4_5_Core& gl)
 
 SimulationGpuView SceneGpuState::simulation_view() const
 {
-    SimulationGpuView views;
+    SimulationGpuView views(cloth_gpu_state_.garment_buffer_states());
     views.cloth_motion = cloth_gpu_state_.motion_buffer_view();
     views.cloth_collision_pushout = cloth_gpu_state_.collision_pushout_buffer_view();
     views.cloth_contact_motion = cloth_gpu_state_.contact_motion_buffer_view();
     views.cloth_body_triangle_indices = cloth_gpu_state_.body_triangle_index_buffer_view();
     views.cloth_topology = cloth_gpu_state_.mesh_topology_resources();
     views.cloth_bvh = cloth_gpu_state_.cloth_bvh_buffer_view();
-    views.garment_buffer_states = cloth_gpu_state_.garment_buffer_states();
     views.stretch_constraints = cloth_gpu_state_.stretch_constraint_buffer_view();
     views.bending_constraints = cloth_gpu_state_.bending_constraint_buffer_view();
     views.attachment_constraints = cloth_gpu_state_.attachment_constraint_buffer_view();
     views.body_topology = character_gpu_state_.mesh_topology_resources();
     views.body_vertices = character_gpu_state_.character_vertex_buffer_view();
     views.body_triangle_geometry = character_gpu_state_.character_triangle_geometry_resources();
-    views.body_triangle_bvh = character_gpu_state_.body_triangle_bvh_resources();
-    views.body_vertex_bvh = character_gpu_state_.body_vertex_bvh_resources();
-    views.body_edge_bvh = character_gpu_state_.body_edge_bvh_resources();
+    views.body_triangle_bvh = character_gpu_state_.body_triangle_bvh_buffer_view();
+    views.body_vertex_bvh = character_gpu_state_.body_vertex_bvh_buffer_view();
+    views.body_edge_bvh = character_gpu_state_.body_edge_bvh_buffer_view();
     views.collision_candidates = collision_candidate_buffers_.view();
     return views;
 }

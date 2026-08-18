@@ -51,7 +51,7 @@ bool GarmentPrefitSolver::can_solve(const SimulationGpuView& views, GarmentLayer
                                   garment_state.vertex_count,
                                   views.cloth_motion.vertex_count) &&
            is_valid_triangle_geometry_resource(views.body_triangle_geometry) &&
-           is_valid_triangle_bvh_resource(views.body_triangle_bvh) &&
+           is_valid_bvh_buffer_view(views.body_triangle_bvh) &&
            search_radius_ > 0.0f &&
            pushout_margin_ > 0.0f;
 }

@@ -53,7 +53,6 @@ struct GarmentBufferState final
     std::uint32_t attachment_constraint_start_index = 0;
     std::uint32_t attachment_constraint_count = 0;
     std::uint32_t active_attachment_constraint_count = 0;
-    std::uint32_t bvh_root_node_index = 0;
     std::vector<std::uint32_t> bvh_level_offsets;
 };
 
@@ -98,14 +97,6 @@ struct ClothNormalResources final
 {
     GLuint triangle_normal_buffer = 0;
     GLuint vertex_normal_buffer = 0;
-};
-
-struct ClothBvhBufferView final
-{
-    GLuint node_buffer = 0;
-    GLuint triangle_bounds_buffer = 0;
-    std::uint32_t node_count = 0;
-    std::uint32_t garment_count = 0;
 };
 
 struct DistanceConstraintBufferView final

@@ -8,6 +8,8 @@
 
 #include <glm/glm.hpp>
 
+#include <QOpenGLFunctions_4_5_Core>
+
 inline constexpr std::uint32_t invalid_bvh_node = 0xFFFFFFFFu;
 
 struct Aabb final
@@ -35,4 +37,11 @@ struct Bvh final
     std::vector<BvhNode> nodes;
     std::vector<std::uint32_t> level_offsets;
     std::vector<std::uint32_t> indices;
+};
+
+struct BvhBufferView final
+{
+    GLuint node_buffer = 0;
+    GLuint bounds_buffer = 0;
+    std::uint32_t node_count = 0;
 };
