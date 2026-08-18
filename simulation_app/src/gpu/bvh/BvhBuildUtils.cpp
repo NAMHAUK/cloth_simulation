@@ -21,7 +21,7 @@ struct PartLabelStats final
 {
     glm::vec3 min_bounds{std::numeric_limits<float>::max()};
     glm::vec3 max_bounds{std::numeric_limits<float>::lowest()};
-    std::uint32_t component_count = 0;
+    std::uint32_t primitive_count = 0;
 };
 
 std::uint32_t find_longest_axis(const glm::vec3& extent)
@@ -127,7 +127,7 @@ std::uint32_t find_best_part_label_split_mask(const std::vector<BvhPrimitive>& p
         PartLabelStats& stats = stats_by_label[primitive.part_label];
         stats.min_bounds = glm::min(stats.min_bounds, primitive.min_bounds);
         stats.max_bounds = glm::max(stats.max_bounds, primitive.max_bounds);
-        ++stats.component_count;
+        ++stats.primitive_count;
     }
 
     double best_cost = std::numeric_limits<double>::max();
@@ -145,23 +145,23 @@ std::uint32_t find_best_part_label_split_mask(const std::vector<BvhPrimitive>& p
         for (std::size_t label = 0; label < stats_by_label.size(); ++label) {
             const std::uint32_t label_mask = 1u << label;
             const PartLabelStats& source_stats = stats_by_label[label];
-            if (source_stats.component_count == 0u) {
+            if (source_stats.primitive_count == 0u) {
                 continue;
             }
 
             PartLabelStats& target_stats = (split_mask & label_mask) != 0u ? left_stats : right_stats;
             target_stats.min_bounds = glm::min(target_stats.min_bounds, source_stats.min_bounds);
             target_stats.max_bounds = glm::max(target_stats.max_bounds, source_stats.max_bounds);
-            target_stats.component_count += source_stats.component_count;
+            target_stats.primitive_count += source_stats.primitive_count;
         }
 
-        if (left_stats.component_count == 0u || right_stats.component_count == 0u) {
+        if (left_stats.primitive_count == 0u || right_stats.primitive_count == 0u) {
             continue;
         }
 
         const double cost =
-            surface_area(left_stats.min_bounds, left_stats.max_bounds) * left_stats.component_count +
-            surface_area(right_stats.min_bounds, right_stats.max_bounds) * right_stats.component_count;
+            surface_area(left_stats.min_bounds, left_stats.max_bounds) * left_stats.primitive_count +
+            surface_area(right_stats.min_bounds, right_stats.max_bounds) * right_stats.primitive_count;
         if (best_split_mask == 0u || cost < best_cost) {
             best_cost = cost;
             best_split_mask = split_mask;
@@ -274,56 +274,60 @@ bool has_valid_bvh_node_topology(const std::vector<BvhNode>& nodes, std::uint32_
 
 BvhTree build_bvh(std::vector<BvhPrimitive> primitives)
 {
-    BvhTree result;
+    BvhTree bvh;
     const std::size_t leaf_count = (primitives.size() + leaf_size - 1u) / leaf_size;
-    result.nodes.reserve(leaf_count * 2u - 1u);
-    result.ordered_source_indices.reserve(primitives.size());
+    bvh.nodes.reserve(leaf_count * 2u - 1u);
+    bvh.leaf_element_indices.reserve(primitives.size());
 
     const std::uint32_t part_label_mask = compute_part_label_mask(primitives, 0u, primitives.size());
-    std::vector<NodeContents> current_nodes{{0u, primitives.size(), part_label_mask}};
+    std::vector<NodeContents> current_level_nodes{{0u, primitives.size(), part_label_mask}};
 
-    while (!current_nodes.empty()) {
-        const BvhLevelState level_state{static_cast<std::uint32_t>(result.nodes.size()),
-                                        static_cast<std::uint32_t>(current_nodes.size())};
-        result.levels.push_back(level_state);
+    while (!current_level_nodes.empty()) {
+        const BvhLevelState level_state{static_cast<std::uint32_t>(bvh.nodes.size()),
+                                        static_cast<std::uint32_t>(current_level_nodes.size())};
+        bvh.levels.push_back(level_state);
 
-        std::vector<NodeContents> next_nodes;
-        next_nodes.reserve(current_nodes.size() * 2u);
-        const std::uint32_t next_node_start_index = level_state.node_start_index + level_state.node_count;
+        std::vector<NodeContents> child_level_nodes;
+        child_level_nodes.reserve(current_level_nodes.size() * 2u);
+        const std::uint32_t child_first_node_index = level_state.first_node_index + level_state.node_count;
 
-        for (const NodeContents& node : current_nodes) {
+        for (const NodeContents& contents : current_level_nodes) {
             glm::vec3 min_bounds;
             glm::vec3 max_bounds;
-            compute_node_bounds(primitives, node.primitive_begin, node.primitive_end, min_bounds, max_bounds);
+            compute_node_bounds(primitives,
+                                contents.primitive_begin,
+                                contents.primitive_end,
+                                min_bounds,
+                                max_bounds);
 
-            BvhNode& output_node = result.nodes.emplace_back();
-            output_node.bounds = {glm::vec4(min_bounds, 0.0f), glm::vec4(max_bounds, 0.0f)};
+            BvhNode& node = bvh.nodes.emplace_back();
+            node.bounds = {glm::vec4(min_bounds, 0.0f), glm::vec4(max_bounds, 0.0f)};
 
-            const std::size_t primitive_count = node.primitive_end - node.primitive_begin;
-            const bool has_multiple_part_labels = has_multiple_bits(node.part_label_mask);
+            const std::size_t primitive_count = contents.primitive_end - contents.primitive_begin;
+            const bool has_multiple_part_labels = has_multiple_bits(contents.part_label_mask);
             if (!has_multiple_part_labels && primitive_count <= leaf_size) {
-                output_node.first_element_index = static_cast<std::uint32_t>(node.primitive_begin);
-                output_node.element_count = static_cast<std::uint32_t>(primitive_count);
+                node.first_element_index = static_cast<std::uint32_t>(contents.primitive_begin);
+                node.element_count = static_cast<std::uint32_t>(primitive_count);
                 continue;
             }
 
             const auto [left_child, right_child] =
-                split_node_contents(primitives, node, max_bounds - min_bounds);
-            output_node.left_child_index =
-                next_node_start_index + static_cast<std::uint32_t>(next_nodes.size());
-            next_nodes.push_back(left_child);
-            output_node.right_child_index =
-                next_node_start_index + static_cast<std::uint32_t>(next_nodes.size());
-            next_nodes.push_back(right_child);
+                split_node_contents(primitives, contents, max_bounds - min_bounds);
+            node.left_child_index =
+                child_first_node_index + static_cast<std::uint32_t>(child_level_nodes.size());
+            child_level_nodes.push_back(left_child);
+            node.right_child_index =
+                child_first_node_index + static_cast<std::uint32_t>(child_level_nodes.size());
+            child_level_nodes.push_back(right_child);
         }
 
-        current_nodes = std::move(next_nodes);
+        current_level_nodes = std::move(child_level_nodes);
     }
 
     for (const BvhPrimitive& primitive : primitives) {
-        result.ordered_source_indices.push_back(primitive.source_index);
+        bvh.leaf_element_indices.push_back(primitive.element_index);
     }
-    std::reverse(result.levels.begin(), result.levels.end());
-    return result;
+    std::reverse(bvh.levels.begin(), bvh.levels.end());
+    return bvh;
 }
 }

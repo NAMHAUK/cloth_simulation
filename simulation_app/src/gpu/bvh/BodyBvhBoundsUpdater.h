@@ -43,11 +43,11 @@ private:
                     float collision_thickness) const;
 
     GLuint program_ = 0;
-    GLint triangle_node_start_index_location_ = -1;
+    GLint triangle_first_node_index_location_ = -1;
     GLint triangle_node_count_location_ = -1;
-    GLint vertex_node_start_index_location_ = -1;
+    GLint vertex_first_node_index_location_ = -1;
     GLint vertex_node_count_location_ = -1;
-    GLint edge_node_start_index_location_ = -1;
+    GLint edge_first_node_index_location_ = -1;
     GLint edge_node_count_location_ = -1;
     GLint collision_thickness_location_ = -1;
 };

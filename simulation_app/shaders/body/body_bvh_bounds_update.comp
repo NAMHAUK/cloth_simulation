@@ -56,11 +56,11 @@ layout(std430, binding = 11) buffer BodyEdgeBounds {
     Aabb body_edge_bounds[];
 };
 
-uniform uint uTriangleNodeStartIndex;
+uniform uint uTriangleFirstNodeIndex;
 uniform uint uTriangleNodeCount;
-uniform uint uVertexNodeStartIndex;
+uniform uint uVertexFirstNodeIndex;
 uniform uint uVertexNodeCount;
-uniform uint uEdgeNodeStartIndex;
+uniform uint uEdgeFirstNodeIndex;
 uniform uint uEdgeNodeCount;
 uniform float uCollisionThickness;
 
@@ -182,7 +182,7 @@ void update_edge_internal_bounds(uint node_index, BvhNode node)
 
 void update_triangle_bounds(uint local_node_index)
 {
-    uint node_index = uTriangleNodeStartIndex + local_node_index;
+    uint node_index = uTriangleFirstNodeIndex + local_node_index;
     BvhNode node = body_triangle_bvh_nodes[node_index];
     if (is_leaf_node(node)) {
         update_triangle_leaf_bounds(node_index, node);
@@ -193,7 +193,7 @@ void update_triangle_bounds(uint local_node_index)
 
 void update_vertex_bounds(uint local_node_index)
 {
-    uint node_index = uVertexNodeStartIndex + local_node_index;
+    uint node_index = uVertexFirstNodeIndex + local_node_index;
     BvhNode node = body_vertex_bvh_nodes[node_index];
     if (is_leaf_node(node)) {
         update_vertex_leaf_bounds(node_index, node);
@@ -204,7 +204,7 @@ void update_vertex_bounds(uint local_node_index)
 
 void update_edge_bounds(uint local_node_index)
 {
-    uint node_index = uEdgeNodeStartIndex + local_node_index;
+    uint node_index = uEdgeFirstNodeIndex + local_node_index;
     BvhNode node = body_edge_bvh_nodes[node_index];
     if (is_leaf_node(node)) {
         update_edge_leaf_bounds(node_index, node);

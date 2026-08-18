@@ -78,13 +78,13 @@ MeshBvhBuilder::MeshBvhBuilder(const GarmentMesh& mesh)
 // BVH construction
 TriangleBvhData MeshBvhBuilder::build_triangle_bvh() const
 {
-    bvh_build::BvhTree tree = bvh_build::build_bvh(make_triangle_primitives());
+    bvh_build::BvhTree bvh = bvh_build::build_bvh(make_triangle_primitives());
 
     TriangleBvhData bvh_data;
-    bvh_data.collision_triangle_count = static_cast<std::uint32_t>(tree.ordered_source_indices.size());
-    bvh_data.triangle_vertex_indices = make_triangle_vertex_indices(std::move(tree.ordered_source_indices));
-    bvh_data.nodes = std::move(tree.nodes);
-    bvh_data.levels = std::move(tree.levels);
+    bvh_data.collision_triangle_count = static_cast<std::uint32_t>(bvh.leaf_element_indices.size());
+    bvh_data.triangle_vertex_indices = make_triangle_vertex_indices(std::move(bvh.leaf_element_indices));
+    bvh_data.nodes = std::move(bvh.nodes);
+    bvh_data.levels = std::move(bvh.levels);
     
     const auto triangle_count =
         static_cast<std::uint32_t>(source_triangle_vertex_indices_.size() / triangle_vertex_count);
@@ -96,12 +96,12 @@ TriangleBvhData MeshBvhBuilder::build_triangle_bvh() const
 
 VertexBvhData MeshBvhBuilder::build_vertex_bvh() const
 {
-    bvh_build::BvhTree tree = bvh_build::build_bvh(make_vertex_primitives());
+    bvh_build::BvhTree bvh = bvh_build::build_bvh(make_vertex_primitives());
 
     VertexBvhData bvh_data;
-    bvh_data.vertex_indices = std::move(tree.ordered_source_indices);
-    bvh_data.nodes = std::move(tree.nodes);
-    bvh_data.levels = std::move(tree.levels);
+    bvh_data.vertex_indices = std::move(bvh.leaf_element_indices);
+    bvh_data.nodes = std::move(bvh.nodes);
+    bvh_data.levels = std::move(bvh.levels);
 
     if (!bvh_data.is_valid(vertex_count_)) {
         throw std::runtime_error("Failed to build vertex BVH.");
@@ -114,10 +114,10 @@ EdgeBvhData MeshBvhBuilder::build_edge_bvh() const
     EdgeBvhData bvh_data;
     const std::vector<LabeledEdge> edges = make_labeled_edges();
 
-    bvh_build::BvhTree tree = bvh_build::build_bvh(make_edge_primitives(edges));
-    bvh_data.edge_vertex_indices = make_edge_vertex_indices(tree.ordered_source_indices, edges);
-    bvh_data.nodes = std::move(tree.nodes);
-    bvh_data.levels = std::move(tree.levels);
+    bvh_build::BvhTree bvh = bvh_build::build_bvh(make_edge_primitives(edges));
+    bvh_data.edge_vertex_indices = make_edge_vertex_indices(bvh.leaf_element_indices, edges);
+    bvh_data.nodes = std::move(bvh.nodes);
+    bvh_data.levels = std::move(bvh.levels);
 
     if (!bvh_data.is_valid()) {
         throw std::runtime_error("Failed to build edge BVH.");
