@@ -29,15 +29,15 @@ public:
     void release(QOpenGLFunctions_4_5_Core& gl);
 
     void initialize_character_pose_state(float frame_alpha,
-                                         const std::vector<BvhLevelState>& body_triangle_levels,
-                                         const std::vector<BvhLevelState>& body_vertex_levels,
-                                         const std::vector<BvhLevelState>& body_edge_levels,
+                                         const std::vector<std::uint32_t>& body_triangle_level_offsets,
+                                         const std::vector<std::uint32_t>& body_vertex_level_offsets,
+                                         const std::vector<std::uint32_t>& body_edge_level_offsets,
                                          float collision_thickness,
                                          QOpenGLFunctions_4_5_Core& gl) const;
     void update_character_pose_state(float frame_alpha,
-                                     const std::vector<BvhLevelState>& body_triangle_levels,
-                                     const std::vector<BvhLevelState>& body_vertex_levels,
-                                     const std::vector<BvhLevelState>& body_edge_levels,
+                                     const std::vector<std::uint32_t>& body_triangle_level_offsets,
+                                     const std::vector<std::uint32_t>& body_vertex_level_offsets,
+                                     const std::vector<std::uint32_t>& body_edge_level_offsets,
                                      float collision_thickness,
                                      QOpenGLFunctions_4_5_Core& gl) const;
 
@@ -51,9 +51,9 @@ private:
                                   const CharacterVertexBufferView& vertex_view,
                                   const TriangleGeometryResources& triangle_geometry,
                                   QOpenGLFunctions_4_5_Core& gl) const;
-    void update_derived_pose_state(const std::vector<BvhLevelState>& body_triangle_levels,
-                                   const std::vector<BvhLevelState>& body_vertex_levels,
-                                   const std::vector<BvhLevelState>& body_edge_levels,
+    void update_derived_pose_state(const std::vector<std::uint32_t>& body_triangle_level_offsets,
+                                   const std::vector<std::uint32_t>& body_vertex_level_offsets,
+                                   const std::vector<std::uint32_t>& body_edge_level_offsets,
                                    float collision_thickness,
                                    QOpenGLFunctions_4_5_Core& gl) const;
 

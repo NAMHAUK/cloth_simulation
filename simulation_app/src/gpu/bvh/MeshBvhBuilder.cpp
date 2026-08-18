@@ -76,53 +76,59 @@ MeshBvhBuilder::MeshBvhBuilder(const GarmentMesh& mesh)
 }
 
 // BVH construction
-TriangleBvhData MeshBvhBuilder::build_triangle_bvh() const
+Bvh MeshBvhBuilder::build_triangle_bvh() const
 {
-    bvh_build::BvhTree bvh = bvh_build::build_bvh(make_triangle_primitives());
+    std::vector<bvh_build::BvhPrimitive> primitives = make_triangle_primitives();
+    Bvh bvh = bvh_build::build_bvh(primitives);
 
-    TriangleBvhData bvh_data;
-    bvh_data.collision_triangle_count = static_cast<std::uint32_t>(bvh.leaf_element_indices.size());
-    bvh_data.triangle_vertex_indices = make_triangle_vertex_indices(std::move(bvh.leaf_element_indices));
-    bvh_data.nodes = std::move(bvh.nodes);
-    bvh_data.levels = std::move(bvh.levels);
-    
+    std::vector<std::uint32_t> triangle_indices;
+    triangle_indices.reserve(primitives.size());
+    for (const bvh_build::BvhPrimitive& primitive : primitives) {
+        triangle_indices.push_back(primitive.element_index);
+    }
+    bvh.indices = make_triangle_vertex_indices(std::move(triangle_indices));
+
     const auto triangle_count =
         static_cast<std::uint32_t>(source_triangle_vertex_indices_.size() / triangle_vertex_count);
-    if (!bvh_data.is_valid(triangle_count)) {
+    if (!bvh_build::is_valid_triangle_bvh(bvh, triangle_count)) {
         throw std::runtime_error("Failed to build triangle BVH.");
     }
-    return bvh_data;
+    return bvh;
 }
 
-VertexBvhData MeshBvhBuilder::build_vertex_bvh() const
+Bvh MeshBvhBuilder::build_vertex_bvh() const
 {
-    bvh_build::BvhTree bvh = bvh_build::build_bvh(make_vertex_primitives());
+    std::vector<bvh_build::BvhPrimitive> primitives = make_vertex_primitives();
+    Bvh bvh = bvh_build::build_bvh(primitives);
 
-    VertexBvhData bvh_data;
-    bvh_data.vertex_indices = std::move(bvh.leaf_element_indices);
-    bvh_data.nodes = std::move(bvh.nodes);
-    bvh_data.levels = std::move(bvh.levels);
+    bvh.indices.reserve(primitives.size());
+    for (const bvh_build::BvhPrimitive& primitive : primitives) {
+        bvh.indices.push_back(primitive.element_index);
+    }
 
-    if (!bvh_data.is_valid(vertex_count_)) {
+    if (!bvh_build::is_valid_vertex_bvh(bvh, vertex_count_)) {
         throw std::runtime_error("Failed to build vertex BVH.");
     }
-    return bvh_data;
+    return bvh;
 }
 
-EdgeBvhData MeshBvhBuilder::build_edge_bvh() const
+Bvh MeshBvhBuilder::build_edge_bvh() const
 {
-    EdgeBvhData bvh_data;
     const std::vector<LabeledEdge> edges = make_labeled_edges();
+    std::vector<bvh_build::BvhPrimitive> primitives = make_edge_primitives(edges);
+    Bvh bvh = bvh_build::build_bvh(primitives);
 
-    bvh_build::BvhTree bvh = bvh_build::build_bvh(make_edge_primitives(edges));
-    bvh_data.edge_vertex_indices = make_edge_vertex_indices(bvh.leaf_element_indices, edges);
-    bvh_data.nodes = std::move(bvh.nodes);
-    bvh_data.levels = std::move(bvh.levels);
+    std::vector<std::uint32_t> edge_indices;
+    edge_indices.reserve(primitives.size());
+    for (const bvh_build::BvhPrimitive& primitive : primitives) {
+        edge_indices.push_back(primitive.element_index);
+    }
+    bvh.indices = make_edge_vertex_indices(edge_indices, edges);
 
-    if (!bvh_data.is_valid()) {
+    if (!bvh_build::is_valid_edge_bvh(bvh)) {
         throw std::runtime_error("Failed to build edge BVH.");
     }
-    return bvh_data;
+    return bvh;
 }
 
 // Primitive construction

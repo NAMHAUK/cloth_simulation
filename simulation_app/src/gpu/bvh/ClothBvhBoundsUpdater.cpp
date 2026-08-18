@@ -19,24 +19,18 @@ constexpr GLuint cloth_bvh_nodes_binding = 3;
 constexpr GLuint cloth_triangle_bounds_binding = 4;
 constexpr std::uint32_t bvh_bounds_update_local_size = 128;
 
-bool has_valid_bvh_levels(const GarmentBvhState& bvh_state)
+bool has_valid_bvh_level_offsets(const GarmentBvhState& bvh_state)
 {
-    if (bvh_state.levels.empty()) {
+    if (bvh_state.level_offsets.size() < 2u ||
+        bvh_state.level_offsets.front() != bvh_state.first_node_index ||
+        bvh_state.level_offsets.back() != bvh_state.first_node_index + bvh_state.node_count) {
         return false;
     }
 
-    std::uint32_t expected_node_end_index = bvh_state.first_node_index + bvh_state.node_count;
-    for (const BvhLevelState& level_state : bvh_state.levels) {
-        if (level_state.node_count == 0 ||
-            level_state.first_node_index < bvh_state.first_node_index ||
-            level_state.first_node_index > expected_node_end_index ||
-            level_state.node_count != expected_node_end_index - level_state.first_node_index) {
-            return false;
-        }
-        expected_node_end_index = level_state.first_node_index;
-    }
-
-    return expected_node_end_index == bvh_state.first_node_index;
+    return std::adjacent_find(bvh_state.level_offsets.begin(),
+                              bvh_state.level_offsets.end(),
+                              [](std::uint32_t first, std::uint32_t second) { return first >= second; }) ==
+           bvh_state.level_offsets.end();
 }
 
 bool garment_bvhs_cover_node_buffer(const std::array<GarmentBvhState, 2>& garment_bvhs,
@@ -95,7 +89,7 @@ bool ClothBvhBoundsUpdater::can_update(const SimulationGpuView& views, float bou
     for (std::size_t layer = 0; layer < bvh_view.garment_bvhs->size(); ++layer) {
         const GarmentBvhState& bvh_state = (*bvh_view.garment_bvhs)[layer];
         const GarmentBufferState& garment_state = views.garment_buffer_states[layer];
-        if (garment_state.vertex_count == 0 && bvh_state.node_count == 0 && bvh_state.levels.empty()) {
+        if (garment_state.vertex_count == 0 && bvh_state.node_count == 0 && bvh_state.level_offsets.empty()) {
             continue;
         }
 
@@ -103,7 +97,7 @@ bool ClothBvhBoundsUpdater::can_update(const SimulationGpuView& views, float bou
                                     garment_state.vertex_count,
                                     motion_view.vertex_count) ||
             !is_valid_buffer_access(bvh_state.first_node_index, bvh_state.node_count, bvh_view.node_count) ||
-            !has_valid_bvh_levels(bvh_state)) {
+            !has_valid_bvh_level_offsets(bvh_state)) {
             return false;
         }
     }
@@ -138,23 +132,25 @@ void ClothBvhBoundsUpdater::update(const SimulationGpuView& views,
 
     std::size_t level_count = 0;
     for (const GarmentBvhState& bvh_state : *bvh_view.garment_bvhs) {
-        level_count = std::max(level_count, bvh_state.levels.size());
+        if (!bvh_state.level_offsets.empty()) {
+            level_count = std::max(level_count, bvh_state.level_offsets.size() - 1u);
+        }
     }
 
     for (std::size_t level_index = 0; level_index < level_count; ++level_index) {
         for (std::size_t layer = 0; layer < bvh_view.garment_bvhs->size(); ++layer) {
             const GarmentBvhState& bvh_state = (*bvh_view.garment_bvhs)[layer];
-            if (level_index >= bvh_state.levels.size()) {
+            if (level_index + 1u >= bvh_state.level_offsets.size()) {
                 continue;
             }
 
-            const BvhLevelState& level_state = bvh_state.levels[level_index];
+            const std::size_t offset_index = bvh_state.level_offsets.size() - 1u - level_index;
+            const std::uint32_t first_node_index = bvh_state.level_offsets[offset_index - 1u];
+            const std::uint32_t node_count = bvh_state.level_offsets[offset_index] - first_node_index;
 
-            gl.glProgramUniform1ui(program_, level_first_node_index_location_, level_state.first_node_index);
-            gl.glProgramUniform1ui(program_, level_node_count_location_, level_state.node_count);
-            gl.glDispatchCompute(compute_group_count(level_state.node_count, bvh_bounds_update_local_size),
-                                 1,
-                                 1);
+            gl.glProgramUniform1ui(program_, level_first_node_index_location_, first_node_index);
+            gl.glProgramUniform1ui(program_, level_node_count_location_, node_count);
+            gl.glDispatchCompute(compute_group_count(node_count, bvh_bounds_update_local_size), 1, 1);
         }
 
         gl.glMemoryBarrier(GL_SHADER_STORAGE_BARRIER_BIT);

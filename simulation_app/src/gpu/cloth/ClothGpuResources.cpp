@@ -99,13 +99,13 @@ void upload_rest_lengths(const ClothBufferSet& buffers,
                             garment.mesh.bending_constraints.rest_lengths.data());
 }
 
-void append_bvh_nodes(const TriangleBvhData& bvh,
+void append_bvh_nodes(const Bvh& bvh,
                       std::uint32_t triangle_start_index,
                       GarmentBvhState& bvh_state,
                       std::vector<BvhNode>& nodes)
 {
-    for (BvhLevelState& level_state : bvh_state.levels) {
-        level_state.first_node_index += bvh_state.first_node_index;
+    for (std::uint32_t& level_offset : bvh_state.level_offsets) {
+        level_offset += bvh_state.first_node_index;
     }
     for (BvhNode node : bvh.nodes) {
         if (bvh_build::is_leaf_node(node.element_count)) {
@@ -150,7 +150,7 @@ void ClothGpuResources::assign_garment_buffer_states(const std::vector<GarmentOb
     for (const GarmentObject& garment : garments) {
         const GarmentLayer layer = garment.layer;
         const auto& mesh = garment.mesh;
-        const auto& triangle_vertex_indices = garment.triangle_bvh.triangle_vertex_indices;
+        const auto& triangle_vertex_indices = garment.triangle_bvh.indices;
         auto& element_counts = state.element_counts;
         GarmentBufferState& garment_state = state.garments[layer];
 
@@ -260,7 +260,7 @@ void ClothGpuResources::create_topology_buffers(const std::vector<GarmentObject>
 
     for (const GarmentObject& garment : garments) {
         const std::uint32_t vertex_start_index = rebuild_state.garments[garment.layer].vertex_start_index;
-        for (std::uint32_t vertex_index : garment.triangle_bvh.triangle_vertex_indices) {
+        for (std::uint32_t vertex_index : garment.triangle_bvh.indices) {
             triangle_vertex_indices.push_back(vertex_start_index + vertex_index);
         }
     }
@@ -295,11 +295,11 @@ void ClothGpuResources::create_bvh_buffers(const std::vector<GarmentObject>& gar
     std::vector<BvhNode> nodes;
 
     for (const GarmentObject& garment : garments) {
-        const TriangleBvhData& bvh = garment.triangle_bvh;
+        const Bvh& bvh = garment.triangle_bvh;
         GarmentBvhState& bvh_state = rebuild_state.garment_bvhs[garment.layer];
         bvh_state.first_node_index = rebuild_state.bvh_node_count;
         bvh_state.node_count = static_cast<std::uint32_t>(bvh.nodes.size());
-        bvh_state.levels = bvh.levels;
+        bvh_state.level_offsets = bvh.level_offsets;
 
         append_bvh_nodes(bvh, rebuild_state.garments[garment.layer].triangle_start_index, bvh_state, nodes);
         rebuild_state.bvh_node_count += bvh_state.node_count;

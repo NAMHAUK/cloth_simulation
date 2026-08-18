@@ -89,16 +89,16 @@ void SceneGpuState::set_character_motion(const SceneState& scene,
     // 새 character mesh가 들어오면 전체 frame character mesh를 GPU에 올리고 frame 상태 설정
     const CharacterMotion& character_motion = scene.character_motion();
     character_gpu_state_.upload_motion(character_motion,
-                                       scene.default_body_triangle_bvh_data(),
-                                       scene.default_body_vertex_bvh_data(),
-                                       scene.default_body_edge_bvh_data(),
+                                       scene.default_body_triangle_bvh(),
+                                       scene.default_body_vertex_bvh(),
+                                       scene.default_body_edge_bvh(),
                                        gl);
     character_gpu_state_.set_current_frame(0);
     character_gpu_state_updater_.initialize_character_pose_state(
         0.0f,
-        scene.default_body_triangle_bvh_data().levels,
-        scene.default_body_vertex_bvh_data().levels,
-        scene.default_body_edge_bvh_data().levels,
+        scene.default_body_triangle_bvh().level_offsets,
+        scene.default_body_vertex_bvh().level_offsets,
+        scene.default_body_edge_bvh().level_offsets,
         body_collision_thickness,
         gl);
 }
@@ -114,9 +114,9 @@ void SceneGpuState::update_character_pose(const SceneState& scene,
 
     character_gpu_state_.set_current_frame(scene.motion_frame_index());
     character_gpu_state_updater_.update_character_pose_state(frame_alpha,
-                                                             scene.default_body_triangle_bvh_data().levels,
-                                                             scene.default_body_vertex_bvh_data().levels,
-                                                             scene.default_body_edge_bvh_data().levels,
+                                                             scene.default_body_triangle_bvh().level_offsets,
+                                                             scene.default_body_vertex_bvh().level_offsets,
+                                                             scene.default_body_edge_bvh().level_offsets,
                                                              body_collision_thickness,
                                                              gl);
 }

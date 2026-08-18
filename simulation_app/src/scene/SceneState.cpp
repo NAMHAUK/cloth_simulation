@@ -40,11 +40,11 @@ void SceneState::set_character_motion(CharacterMotion motion)
     torso_kinematics_.reset(torso);
 }
 
-void SceneState::set_body_bvhs(TriangleBvhData triangle_bvh, VertexBvhData vertex_bvh, EdgeBvhData edge_bvh)
+void SceneState::set_body_bvhs(Bvh triangle_bvh, Bvh vertex_bvh, Bvh edge_bvh)
 {
-    default_body_triangle_bvh_data_ = std::move(triangle_bvh);
-    default_body_vertex_bvh_data_ = std::move(vertex_bvh);
-    default_body_edge_bvh_data_ = std::move(edge_bvh);
+    default_body_triangle_bvh_ = std::move(triangle_bvh);
+    default_body_vertex_bvh_ = std::move(vertex_bvh);
+    default_body_edge_bvh_ = std::move(edge_bvh);
 }
 
 // Motion
@@ -193,19 +193,19 @@ const CharacterMotion& SceneState::character_motion() const
     return character_motion_;
 }
 
-const TriangleBvhData& SceneState::default_body_triangle_bvh_data() const
+const Bvh& SceneState::default_body_triangle_bvh() const
 {
-    return default_body_triangle_bvh_data_;
+    return default_body_triangle_bvh_;
 }
 
-const VertexBvhData& SceneState::default_body_vertex_bvh_data() const
+const Bvh& SceneState::default_body_vertex_bvh() const
 {
-    return default_body_vertex_bvh_data_;
+    return default_body_vertex_bvh_;
 }
 
-const EdgeBvhData& SceneState::default_body_edge_bvh_data() const
+const Bvh& SceneState::default_body_edge_bvh() const
 {
-    return default_body_edge_bvh_data_;
+    return default_body_edge_bvh_;
 }
 
 const std::vector<GarmentObject>& SceneState::garments() const

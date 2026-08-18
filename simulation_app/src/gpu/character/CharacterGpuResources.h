@@ -20,9 +20,9 @@ public:
 
     // Mesh upload and playback
     void upload_motion(const CharacterMotion& character_motion,
-                       const TriangleBvhData& default_body_triangle_bvh_data,
-                       const VertexBvhData& default_body_vertex_bvh_data,
-                       const EdgeBvhData& default_body_edge_bvh_data,
+                       const Bvh& body_triangle_bvh,
+                       const Bvh& body_vertex_bvh,
+                       const Bvh& body_edge_bvh,
                        QOpenGLFunctions_4_5_Core& gl);
     void set_current_frame(std::uint32_t frame_index);
     std::uint32_t current_frame_index() const;
