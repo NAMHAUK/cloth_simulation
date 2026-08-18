@@ -105,14 +105,14 @@ void append_bvh_nodes(const TriangleBvhData& bvh,
                       std::vector<BvhNode>& nodes)
 {
     for (BvhLevelState& level_state : bvh_state.levels) {
-        level_state.node_start_index += bvh_state.node_start_index;
+        level_state.first_node_index += bvh_state.first_node_index;
     }
     for (BvhNode node : bvh.nodes) {
         if (bvh_build::is_leaf_node(node.element_count)) {
             node.first_element_index += triangle_start_index;
         } else {
-            node.left_child_index += bvh_state.node_start_index;
-            node.right_child_index += bvh_state.node_start_index;
+            node.left_child_index += bvh_state.first_node_index;
+            node.right_child_index += bvh_state.first_node_index;
         }
         nodes.push_back(node);
     }
@@ -297,7 +297,7 @@ void ClothGpuResources::create_bvh_buffers(const std::vector<GarmentObject>& gar
     for (const GarmentObject& garment : garments) {
         const TriangleBvhData& bvh = garment.triangle_bvh;
         GarmentBvhState& bvh_state = rebuild_state.garment_bvhs[garment.layer];
-        bvh_state.node_start_index = rebuild_state.bvh_node_count;
+        bvh_state.first_node_index = rebuild_state.bvh_node_count;
         bvh_state.node_count = static_cast<std::uint32_t>(bvh.nodes.size());
         bvh_state.levels = bvh.levels;
 

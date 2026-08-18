@@ -46,7 +46,7 @@ bool has_valid_garment_bvhs(const SimulationGpuView& views)
         if (!is_valid_buffer_access(garment_state.vertex_start_index,
                                     garment_state.vertex_count,
                                     views.cloth_motion.vertex_count) ||
-            !is_valid_buffer_access(bvh_state.node_start_index,
+            !is_valid_buffer_access(bvh_state.first_node_index,
                                     bvh_state.node_count,
                                     views.cloth_bvh.node_count)) {
             return false;
@@ -215,7 +215,7 @@ void ClothClothCollisionDetector::detect_pair(const SimulationGpuView& views,
                            upper_garment_state.vertex_count);
     gl.glProgramUniform1ui(candidate_detect_.program,
                            candidate_detect_.upper_bvh_root,
-                           upper_bvh_state.node_start_index);
+                           upper_bvh_state.first_node_index);
     gl.glProgramUniform1ui(candidate_detect_.program,
                            candidate_detect_.lower_vertex_offset,
                            lower_garment_state.vertex_start_index);
@@ -224,7 +224,7 @@ void ClothClothCollisionDetector::detect_pair(const SimulationGpuView& views,
                            lower_garment_state.vertex_count);
     gl.glProgramUniform1ui(candidate_detect_.program,
                            candidate_detect_.lower_bvh_root,
-                           lower_bvh_state.node_start_index);
+                           lower_bvh_state.first_node_index);
 
     const std::uint32_t query_vertex_count =
         upper_garment_state.vertex_count + lower_garment_state.vertex_count;

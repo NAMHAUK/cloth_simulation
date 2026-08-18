@@ -24,8 +24,8 @@ constexpr std::uint32_t bvh_bounds_update_local_size = 128;
 bool is_valid_level_state(const BvhLevelState& level_state, std::uint32_t total_node_count)
 {
     return level_state.node_count != 0 &&
-           level_state.node_start_index < total_node_count &&
-           level_state.node_start_index + level_state.node_count <= total_node_count;
+           level_state.first_node_index < total_node_count &&
+           level_state.first_node_index + level_state.node_count <= total_node_count;
 }
 
 BvhLevelState valid_or_empty_level_state(const std::vector<BvhLevelState>& levels,
@@ -80,19 +80,19 @@ void BodyBvhBoundsUpdater::initialize(const std::filesystem::path& shader_dir, Q
     program_ = load_compute_program(shader_dir / "body" / "body_bvh_bounds_update.comp",
                                     "Body BVH bounds update",
                                     gl);
-    triangle_node_start_index_location_ = gl.glGetUniformLocation(program_, "uTriangleNodeStartIndex");
+    triangle_first_node_index_location_ = gl.glGetUniformLocation(program_, "uTriangleFirstNodeIndex");
     triangle_node_count_location_ = gl.glGetUniformLocation(program_, "uTriangleNodeCount");
-    vertex_node_start_index_location_ = gl.glGetUniformLocation(program_, "uVertexNodeStartIndex");
+    vertex_first_node_index_location_ = gl.glGetUniformLocation(program_, "uVertexFirstNodeIndex");
     vertex_node_count_location_ = gl.glGetUniformLocation(program_, "uVertexNodeCount");
-    edge_node_start_index_location_ = gl.glGetUniformLocation(program_, "uEdgeNodeStartIndex");
+    edge_first_node_index_location_ = gl.glGetUniformLocation(program_, "uEdgeFirstNodeIndex");
     edge_node_count_location_ = gl.glGetUniformLocation(program_, "uEdgeNodeCount");
     collision_thickness_location_ = gl.glGetUniformLocation(program_, "uCollisionThickness");
 
-    if (triangle_node_start_index_location_ < 0 ||
+    if (triangle_first_node_index_location_ < 0 ||
         triangle_node_count_location_ < 0 ||
-        vertex_node_start_index_location_ < 0 ||
+        vertex_first_node_index_location_ < 0 ||
         vertex_node_count_location_ < 0 ||
-        edge_node_start_index_location_ < 0 ||
+        edge_first_node_index_location_ < 0 ||
         edge_node_count_location_ < 0 ||
         collision_thickness_location_ < 0) {
         throw std::runtime_error("Body BVH bounds update compute shader missing required uniforms.");
@@ -172,14 +172,14 @@ void BodyBvhBoundsUpdater::update(const CharacterMeshTopologyResources& topology
         }
 
         gl.glProgramUniform1ui(program_,
-                               triangle_node_start_index_location_,
-                               triangle_level_state.node_start_index);
+                               triangle_first_node_index_location_,
+                               triangle_level_state.first_node_index);
         gl.glProgramUniform1ui(program_, triangle_node_count_location_, triangle_level_state.node_count);
         gl.glProgramUniform1ui(program_,
-                               vertex_node_start_index_location_,
-                               vertex_level_state.node_start_index);
+                               vertex_first_node_index_location_,
+                               vertex_level_state.first_node_index);
         gl.glProgramUniform1ui(program_, vertex_node_count_location_, vertex_level_state.node_count);
-        gl.glProgramUniform1ui(program_, edge_node_start_index_location_, edge_level_state.node_start_index);
+        gl.glProgramUniform1ui(program_, edge_first_node_index_location_, edge_level_state.first_node_index);
         gl.glProgramUniform1ui(program_, edge_node_count_location_, edge_level_state.node_count);
         gl.glDispatchCompute(compute_group_count(dispatch_node_count, bvh_bounds_update_local_size), 1, 1);
         gl.glMemoryBarrier(GL_SHADER_STORAGE_BARRIER_BIT);
@@ -191,11 +191,11 @@ void BodyBvhBoundsUpdater::release(QOpenGLFunctions_4_5_Core& gl)
     gl.glDeleteProgram(program_);
 
     program_ = 0;
-    triangle_node_start_index_location_ = -1;
+    triangle_first_node_index_location_ = -1;
     triangle_node_count_location_ = -1;
-    vertex_node_start_index_location_ = -1;
+    vertex_first_node_index_location_ = -1;
     vertex_node_count_location_ = -1;
-    edge_node_start_index_location_ = -1;
+    edge_first_node_index_location_ = -1;
     edge_node_count_location_ = -1;
     collision_thickness_location_ = -1;
 }

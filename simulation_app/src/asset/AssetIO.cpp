@@ -17,8 +17,15 @@
 namespace {
 constexpr std::array<char, 8> motion_asset_signature_v1 = {'S', 'M', 'P', 'L', 'M', 'O', 'T', 'N'};
 constexpr std::array<char, 8> motion_asset_signature_v2 = {'S', 'M', 'P', 'L', 'M', 'O', 'T', '2'};
+constexpr std::uint8_t left_hand_part_label = 6u;
+constexpr std::uint8_t right_hand_part_label = 7u;
 constexpr std::uint8_t max_body_part_label = 7u;
 constexpr std::size_t quaternion_components = 4u;
+
+bool is_hand_part_label(std::uint8_t label)
+{
+    return label == left_hand_part_label || label == right_hand_part_label;
+}
 
 struct GarmentAssetCounts final
 {
@@ -254,6 +261,16 @@ bool read_motion_asset_labels(const std::filesystem::path& motion_asset_path,
         return false;
     }
 
+    const bool has_collision_triangle =
+        std::any_of(triangle_part_labels.begin(), triangle_part_labels.end(), [](std::uint8_t label) {
+            return !is_hand_part_label(label);
+        });
+    if (!has_collision_triangle) {
+        std::cerr << "Default motion asset contains no collision triangles: " << motion_asset_path << '\n';
+        triangle_part_labels.clear();
+        return false;
+    }
+
     return true;
 }
 
@@ -339,6 +356,19 @@ bool is_valid_vertex_indices(const std::vector<std::uint32_t>& indices, std::uin
     return true;
 }
 
+bool has_distinct_triangle_vertices(const std::vector<std::uint32_t>& indices)
+{
+    for (std::size_t index = 0; index < indices.size(); index += 3u) {
+        const std::uint32_t vertex_a = indices[index];
+        const std::uint32_t vertex_b = indices[index + 1u];
+        const std::uint32_t vertex_c = indices[index + 2u];
+        if (vertex_a == vertex_b || vertex_b == vertex_c || vertex_c == vertex_a) {
+            return false;
+        }
+    }
+    return true;
+}
+
 bool is_valid_distance_constraints(const GarmentDistanceConstraints& constraints, std::uint32_t vertex_count)
 {
     return constraints.is_valid() &&
@@ -363,7 +393,8 @@ bool is_valid_garment_mesh(const GarmentMesh& garment_mesh)
 
     if (garment_mesh.triangle_vertex_indices.empty() ||
         garment_mesh.triangle_vertex_indices.size() % 3u != 0u ||
-        !is_valid_vertex_indices(garment_mesh.triangle_vertex_indices, vertex_count)) {
+        !is_valid_vertex_indices(garment_mesh.triangle_vertex_indices, vertex_count) ||
+        !has_distinct_triangle_vertices(garment_mesh.triangle_vertex_indices)) {
         return false;
     }
 
@@ -388,7 +419,9 @@ bool read_character_motion(const std::filesystem::path& motion_asset_path, Chara
     bool has_reference_transforms = false;
     if (!read_motion_asset_header(input, motion_asset_path, character_motion, has_reference_transforms) ||
         !read_motion_asset_file_sizes(motion_asset_path, character_motion, has_reference_transforms, false) ||
-        !read_motion_asset_data(motion_asset_path, character_motion, has_reference_transforms, input)) {
+        !read_motion_asset_data(motion_asset_path, character_motion, has_reference_transforms, input) ||
+        !is_valid_vertex_indices(character_motion.triangle_vertex_indices, character_motion.vertex_count) ||
+        !has_distinct_triangle_vertices(character_motion.triangle_vertex_indices)) {
         return false;
     }
 
@@ -409,6 +442,8 @@ bool read_default_character(const std::filesystem::path& motion_asset_path,
     if (!read_motion_asset_header(input, motion_asset_path, character_motion, has_reference_transforms) ||
         !read_motion_asset_file_sizes(motion_asset_path, character_motion, has_reference_transforms, true) ||
         !read_motion_asset_data(motion_asset_path, character_motion, has_reference_transforms, input) ||
+        !is_valid_vertex_indices(character_motion.triangle_vertex_indices, character_motion.vertex_count) ||
+        !has_distinct_triangle_vertices(character_motion.triangle_vertex_indices) ||
         !read_motion_asset_labels(motion_asset_path, character_motion, input, triangle_part_labels)) {
         return false;
     }

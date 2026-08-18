@@ -14,7 +14,7 @@ inline constexpr std::uint32_t uploaded_bvh_root_node = 0u;
 
 struct BvhPrimitive final
 {
-    std::uint32_t source_index = 0;
+    std::uint32_t element_index = 0;
     glm::vec3 center{};
     glm::vec3 min_bounds{};
     glm::vec3 max_bounds{};
@@ -23,7 +23,7 @@ struct BvhPrimitive final
 
 struct BvhTree final
 {
-    std::vector<std::uint32_t> ordered_source_indices;
+    std::vector<std::uint32_t> leaf_element_indices;
     std::vector<BvhNode> nodes;
     std::vector<BvhLevelState> levels;
 };
@@ -31,5 +31,5 @@ struct BvhTree final
 bool is_valid_bounds(const glm::vec3& min_bounds, const glm::vec3& max_bounds);
 bool is_leaf_node(std::uint32_t component_count);
 bool has_valid_bvh_node_topology(const std::vector<BvhNode>& nodes, std::uint32_t source_element_count);
-BvhTree build_bvh(std::vector<BvhPrimitive> primitives, std::uint32_t leaf_size, bool split_by_part_labels);
+BvhTree build_bvh(std::vector<BvhPrimitive> primitives);
 }

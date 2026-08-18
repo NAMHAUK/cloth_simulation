@@ -71,10 +71,10 @@ void SimulationController::load_default_character(CharacterMotion motion,
                                                   const std::vector<std::uint8_t>& triangle_part_labels,
                                                   QOpenGLFunctions_4_5_Core& gl)
 {
-    MeshBvhBuilder bvh_builder(motion, triangle_part_labels);
-    scene_.set_body_bvhs(bvh_builder.build_triangle_bvh(),
-                         bvh_builder.build_vertex_bvh(),
-                         bvh_builder.build_edge_bvh());
+    MeshBvhBuilder body_bvh_builder(motion, triangle_part_labels);
+    scene_.set_body_bvhs(body_bvh_builder.build_triangle_bvh(),
+                         body_bvh_builder.build_vertex_bvh(),
+                         body_bvh_builder.build_edge_bvh());
 
     default_character_motion_ = std::move(motion);
     set_character_motion_state(default_character_motion_, gl);

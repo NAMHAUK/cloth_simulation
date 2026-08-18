@@ -32,13 +32,13 @@ static_assert(sizeof(BvhNode) == 48u);
 
 struct BvhLevelState final
 {
-    std::uint32_t node_start_index = 0;
+    std::uint32_t first_node_index = 0;
     std::uint32_t node_count = 0;
 };
 
 struct GarmentBvhState final
 {
-    std::uint32_t node_start_index = 0;
+    std::uint32_t first_node_index = 0;
     std::uint32_t node_count = 0;
     std::vector<BvhLevelState> levels;
 };

@@ -23,6 +23,19 @@ struct MeshEdge final
 {
     std::uint32_t vertex_a = 0;
     std::uint32_t vertex_b = 0;
+
+    bool operator==(const MeshEdge& other) const
+    {
+        return vertex_a == other.vertex_a && vertex_b == other.vertex_b;
+    }
+
+    bool operator<(const MeshEdge& other) const
+    {
+        if (vertex_a != other.vertex_a) {
+            return vertex_a < other.vertex_a;
+        }
+        return vertex_b < other.vertex_b;
+    }
 };
 
 struct ConstraintColorState final
