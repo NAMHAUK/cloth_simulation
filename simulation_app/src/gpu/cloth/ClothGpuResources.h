@@ -56,7 +56,6 @@ private:
         std::array<GarmentBufferState, 2> garments;
         std::vector<ConstraintColorState> stretch_color_states;
         std::vector<ConstraintColorState> bending_color_states;
-        std::array<GarmentBvhState, 2> garment_bvhs;
         ClothBufferElementCounts element_counts;
         std::uint32_t bvh_node_count = 0;
         std::uint32_t garment_count = 0;

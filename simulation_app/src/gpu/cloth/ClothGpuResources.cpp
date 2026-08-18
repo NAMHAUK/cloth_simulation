@@ -99,20 +99,17 @@ void upload_rest_lengths(const ClothBufferSet& buffers,
                             garment.mesh.bending_constraints.rest_lengths.data());
 }
 
-void append_bvh_nodes(const Bvh& bvh,
-                      std::uint32_t triangle_start_index,
-                      GarmentBvhState& bvh_state,
-                      std::vector<BvhNode>& nodes)
+void append_bvh_nodes(const Bvh& bvh, GarmentBufferState& garment_state, std::vector<BvhNode>& nodes)
 {
-    for (std::uint32_t& level_offset : bvh_state.level_offsets) {
-        level_offset += bvh_state.first_node_index;
+    for (std::uint32_t& level_offset : garment_state.bvh_level_offsets) {
+        level_offset += garment_state.bvh_root_node_index;
     }
     for (BvhNode node : bvh.nodes) {
         if (bvh_build::is_leaf_node(node.element_count)) {
-            node.first_element_index += triangle_start_index;
+            node.first_element_index += garment_state.triangle_start_index;
         } else {
-            node.left_child_index += bvh_state.first_node_index;
-            node.right_child_index += bvh_state.first_node_index;
+            node.left_child_index += garment_state.bvh_root_node_index;
+            node.right_child_index += garment_state.bvh_root_node_index;
         }
         nodes.push_back(node);
     }
@@ -296,13 +293,12 @@ void ClothGpuResources::create_bvh_buffers(const std::vector<GarmentObject>& gar
 
     for (const GarmentObject& garment : garments) {
         const Bvh& bvh = garment.triangle_bvh;
-        GarmentBvhState& bvh_state = rebuild_state.garment_bvhs[garment.layer];
-        bvh_state.first_node_index = rebuild_state.bvh_node_count;
-        bvh_state.node_count = static_cast<std::uint32_t>(bvh.nodes.size());
-        bvh_state.level_offsets = bvh.level_offsets;
+        GarmentBufferState& garment_state = rebuild_state.garments[garment.layer];
+        garment_state.bvh_root_node_index = rebuild_state.bvh_node_count;
+        garment_state.bvh_level_offsets = bvh.level_offsets;
 
-        append_bvh_nodes(bvh, rebuild_state.garments[garment.layer].triangle_start_index, bvh_state, nodes);
-        rebuild_state.bvh_node_count += bvh_state.node_count;
+        append_bvh_nodes(bvh, garment_state, nodes);
+        rebuild_state.bvh_node_count += static_cast<std::uint32_t>(bvh.nodes.size());
     }
 
     gl.glCreateBuffers(1, &rebuild_state.buffers.bvh_node);
@@ -647,8 +643,7 @@ ClothBvhBufferView ClothGpuResources::cloth_bvh_buffer_view() const
     return {state_.buffers.bvh_node,
             state_.buffers.triangle_bounds,
             state_.bvh_node_count,
-            state_.garment_count,
-            &state_.garment_bvhs};
+            state_.garment_count};
 }
 
 // Release

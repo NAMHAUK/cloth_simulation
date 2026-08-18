@@ -36,10 +36,3 @@ struct Bvh final
     std::vector<std::uint32_t> level_offsets;
     std::vector<std::uint32_t> indices;
 };
-
-struct GarmentBvhState final
-{
-    std::uint32_t first_node_index = 0;
-    std::uint32_t node_count = 0;
-    std::vector<std::uint32_t> level_offsets;
-};

@@ -65,8 +65,7 @@ inline bool is_valid_cloth_bvh_buffer_view(const ClothBvhBufferView& view)
            view.triangle_bounds_buffer != 0 &&
            view.node_count != 0 &&
            view.garment_count != 0 &&
-           view.garment_bvhs != nullptr &&
-           view.garment_count <= view.garment_bvhs->size();
+           view.garment_count <= 2u;
 }
 
 inline bool is_valid_character_mesh_topology_resource(const CharacterMeshTopologyResources& topology)
