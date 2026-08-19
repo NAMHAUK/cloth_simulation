@@ -26,6 +26,8 @@ struct BvhNode final
     std::uint32_t right_child_index = invalid_bvh_node;
     std::uint32_t first_element_index = 0u;
     std::uint32_t element_count = 0u;
+
+    bool is_leaf() const { return element_count > 0u; }
 };
 
 static_assert(sizeof(BvhNode) == 48u);
@@ -35,6 +37,17 @@ struct Bvh final
     std::vector<BvhNode> nodes;
     std::vector<std::uint32_t> level_offsets;
     std::vector<std::uint32_t> indices;
+
+    std::uint32_t leaf_element_count() const
+    {
+        std::uint32_t count = 0u;
+        for (const BvhNode& node : nodes) {
+            if (node.is_leaf()) {
+                count += node.element_count;
+            }
+        }
+        return count;
+    }
 };
 
 struct BvhBufferView final
