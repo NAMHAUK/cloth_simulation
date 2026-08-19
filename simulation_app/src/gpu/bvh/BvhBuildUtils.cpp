@@ -3,12 +3,12 @@
 #include <algorithm>
 #include <array>
 #include <limits>
+#include <stdexcept>
 
 namespace bvh_build {
 namespace {
 constexpr std::size_t leaf_size = 3u;
-constexpr std::size_t edge_vertex_count = 2u;
-constexpr std::size_t triangle_vertex_count = 3u;
+constexpr std::size_t shader_max_bvh_stack_depth = 32u;
 
 struct PrimitiveRange final
 {
@@ -225,93 +225,11 @@ std::vector<PrimitiveRange> build_level(std::vector<BvhPrimitive>& primitives,
     return child_level_ranges;
 }
 
-// state
-bool is_valid_leaf_node(const BvhNode& node, std::uint32_t source_element_count)
-{
-    return node.element_count > 0u &&
-           node.left_child_index == invalid_bvh_node &&
-           node.right_child_index == invalid_bvh_node &&
-           node.first_element_index <= source_element_count &&
-           node.element_count <= source_element_count - node.first_element_index;
-}
-
-bool is_valid_internal_node(const BvhNode& node, std::size_t node_index, std::size_t node_count)
-{
-    return node.element_count == 0u &&
-           node.left_child_index > node_index &&
-           node.right_child_index > node_index &&
-           node.left_child_index != node.right_child_index &&
-           node.left_child_index < node_count &&
-           node.right_child_index < node_count;
-}
-
-bool is_valid_bvh_node_topology(const BvhNode& node,
-                                std::size_t node_index,
-                                std::size_t node_count,
-                                std::uint32_t source_element_count)
-{
-    if (is_leaf_node(node.element_count)) {
-        return is_valid_leaf_node(node, source_element_count);
-    }
-
-    return is_valid_internal_node(node, node_index, node_count);
-}
-
-bool has_valid_shader_stack_depth(const std::vector<BvhNode>& nodes)
-{
-    std::vector<std::uint32_t> node_stack;
-    node_stack.reserve(shader_max_bvh_stack_depth);
-    node_stack.push_back(uploaded_bvh_root_node);
-
-    while (!node_stack.empty()) {
-        if (node_stack.size() > shader_max_bvh_stack_depth) {
-            return false;
-        }
-
-        const std::uint32_t node_index = node_stack.back();
-        node_stack.pop_back();
-
-        const BvhNode& node = nodes[node_index];
-        if (is_leaf_node(node.element_count)) {
-            continue;
-        }
-
-        node_stack.push_back(node.right_child_index);
-        node_stack.push_back(node.left_child_index);
-    }
-
-    return true;
-}
 }
 
 bool is_leaf_node(std::uint32_t component_count)
 {
     return component_count > 0u;
-}
-
-static bool has_valid_bvh_node_topology(const std::vector<BvhNode>& nodes, std::uint32_t source_element_count)
-{
-    const std::size_t node_count = nodes.size();
-    for (std::size_t node_index = 0; node_index < node_count; ++node_index) {
-        if (!is_valid_bvh_node_topology(nodes[node_index], node_index, node_count, source_element_count)) {
-            return false;
-        }
-    }
-
-    return has_valid_shader_stack_depth(nodes);
-}
-
-static bool has_valid_bvh_level_offsets(const std::vector<std::uint32_t>& level_offsets,
-                                        std::size_t node_count)
-{
-    if (level_offsets.size() < 2u || level_offsets.front() != 0u || level_offsets.back() != node_count) {
-        return false;
-    }
-
-    return std::adjacent_find(level_offsets.begin(),
-                              level_offsets.end(),
-                              [](std::uint32_t first, std::uint32_t second) { return first >= second; }) ==
-           level_offsets.end();
 }
 
 std::uint32_t leaf_element_count(const std::vector<BvhNode>& nodes)
@@ -325,83 +243,11 @@ std::uint32_t leaf_element_count(const std::vector<BvhNode>& nodes)
     return element_count;
 }
 
-bool is_valid_triangle_bvh(const Bvh& bvh, std::uint32_t triangle_count)
-{
-    const std::uint32_t collision_triangle_count = leaf_element_count(bvh.nodes);
-    return triangle_count != 0u &&
-           collision_triangle_count != 0u &&
-           collision_triangle_count <= triangle_count &&
-           bvh.indices.size() == triangle_count * triangle_vertex_count &&
-           has_valid_bvh_level_offsets(bvh.level_offsets, bvh.nodes.size()) &&
-           has_valid_bvh_node_topology(bvh.nodes, collision_triangle_count);
-}
-
-bool is_valid_vertex_bvh(const Bvh& bvh, std::uint32_t vertex_count)
-{
-    if (vertex_count == 0u ||
-        bvh.indices.empty() ||
-        bvh.indices.size() > vertex_count ||
-        !has_valid_bvh_level_offsets(bvh.level_offsets, bvh.nodes.size()) ||
-        !has_valid_bvh_node_topology(bvh.nodes, static_cast<std::uint32_t>(bvh.indices.size()))) {
-        return false;
-    }
-
-    std::vector<std::uint8_t> used_vertices(vertex_count, 0u);
-    std::size_t used_vertex_count = 0u;
-    for (const BvhNode& node : bvh.nodes) {
-        if (is_leaf_node(node.element_count)) {
-            for (std::uint32_t offset = 0; offset < node.element_count; ++offset) {
-                const std::uint32_t vertex_index = bvh.indices[node.first_element_index + offset];
-                if (vertex_index >= vertex_count || used_vertices[vertex_index] != 0u) {
-                    return false;
-                }
-                used_vertices[vertex_index] = 1u;
-                ++used_vertex_count;
-            }
-        }
-    }
-
-    return used_vertex_count == bvh.indices.size();
-}
-
-bool is_valid_edge_bvh(const Bvh& bvh)
-{
-    if (bvh.indices.empty() ||
-        bvh.indices.size() % edge_vertex_count != 0u ||
-        !has_valid_bvh_level_offsets(bvh.level_offsets, bvh.nodes.size())) {
-        return false;
-    }
-
-    const auto edge_count = static_cast<std::uint32_t>(bvh.indices.size() / edge_vertex_count);
-    if (!has_valid_bvh_node_topology(bvh.nodes, edge_count)) {
-        return false;
-    }
-
-    std::vector<std::uint8_t> used_edges(edge_count, 0u);
-    for (const BvhNode& node : bvh.nodes) {
-        if (!is_leaf_node(node.element_count)) {
-            continue;
-        }
-
-        for (std::uint32_t offset = 0; offset < node.element_count; ++offset) {
-            const std::uint32_t edge_index = node.first_element_index + offset;
-            if (edge_index >= edge_count || used_edges[edge_index] != 0u) {
-                return false;
-            }
-            used_edges[edge_index] = 1u;
-            if (bvh.indices[edge_index * edge_vertex_count] ==
-                bvh.indices[edge_index * edge_vertex_count + 1u]) {
-                return false;
-            }
-        }
-    }
-
-    return std::all_of(used_edges.begin(), used_edges.end(), [](std::uint8_t used) { return used != 0u; });
-}
-
 Bvh build_bvh(std::vector<BvhPrimitive>& primitives)
 {
-    assert(!primitives.empty());
+    if (primitives.empty()) {
+        throw std::runtime_error("Cannot build an empty BVH.");
+    }
 
     Bvh bvh;
     bvh.nodes.reserve(primitives.size() * 2u - 1u);
@@ -412,8 +258,11 @@ Bvh build_bvh(std::vector<BvhPrimitive>& primitives)
     while (!current_level_ranges.empty()) {
         current_level_ranges = build_level(primitives, current_level_ranges, bvh);
     }
-
     bvh.level_offsets.push_back(static_cast<std::uint32_t>(bvh.nodes.size()));
+
+    if (bvh.level_offsets.size() > shader_max_bvh_stack_depth + 1u) {
+        throw std::runtime_error("Failed to build BVH.");
+    }
     return bvh;
 }
 }

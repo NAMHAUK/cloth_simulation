@@ -7,7 +7,6 @@
 #include <cstddef>
 #include <cstdint>
 #include <map>
-#include <stdexcept>
 #include <utility>
 
 #include <glm/glm.hpp>
@@ -87,12 +86,6 @@ Bvh MeshBvhBuilder::build_triangle_bvh() const
         triangle_indices.push_back(primitive.element_index);
     }
     bvh.indices = make_triangle_vertex_indices(std::move(triangle_indices));
-
-    const auto triangle_count =
-        static_cast<std::uint32_t>(source_triangle_vertex_indices_.size() / triangle_vertex_count);
-    if (!bvh_build::is_valid_triangle_bvh(bvh, triangle_count)) {
-        throw std::runtime_error("Failed to build triangle BVH.");
-    }
     return bvh;
 }
 
@@ -106,9 +99,6 @@ Bvh MeshBvhBuilder::build_vertex_bvh() const
         bvh.indices.push_back(primitive.element_index);
     }
 
-    if (!bvh_build::is_valid_vertex_bvh(bvh, vertex_count_)) {
-        throw std::runtime_error("Failed to build vertex BVH.");
-    }
     return bvh;
 }
 
@@ -125,9 +115,6 @@ Bvh MeshBvhBuilder::build_edge_bvh() const
     }
     bvh.indices = make_edge_vertex_indices(edge_indices, edges);
 
-    if (!bvh_build::is_valid_edge_bvh(bvh)) {
-        throw std::runtime_error("Failed to build edge BVH.");
-    }
     return bvh;
 }
 
