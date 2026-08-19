@@ -16,20 +16,15 @@
 namespace {
 constexpr std::size_t edge_vertex_count = 2u;
 constexpr std::size_t triangle_vertex_count = 3u;
-constexpr std::size_t body_part_label_count = 8u;
+
 constexpr std::size_t leaf_size = 3u;
 constexpr std::size_t shader_max_bvh_stack_depth = 32u;
+
 constexpr std::uint8_t left_hand_part_label = 6u;
 constexpr std::uint8_t right_hand_part_label = 7u;
 constexpr std::uint8_t invalid_part_label = 0xFFu;
+constexpr std::size_t body_part_label_count = 8u;
 using LabelCounts = std::array<std::uint32_t, body_part_label_count>;
-
-struct PartLabelStats final
-{
-    glm::vec3 min_bounds{std::numeric_limits<float>::max()};
-    glm::vec3 max_bounds{std::numeric_limits<float>::lowest()};
-    std::uint32_t primitive_count = 0;
-};
 
 bool is_excluded_part(std::uint8_t part_label)
 {
@@ -55,6 +50,11 @@ bool has_multiple_part_labels(std::uint32_t mask)
     return (mask & (mask - 1u)) != 0u;
 }
 
+bool contains_part_label(std::uint32_t mask, std::uint8_t part_label)
+{
+    return (mask & (1u << part_label)) != 0u;
+}
+
 double surface_area(const glm::vec3& min_bounds, const glm::vec3& max_bounds)
 {
     const glm::vec3 aabb_size = glm::max(max_bounds - min_bounds, glm::vec3{0.0f});
@@ -63,27 +63,32 @@ double surface_area(const glm::vec3& min_bounds, const glm::vec3& max_bounds)
                   static_cast<double>(aabb_size.z) * aabb_size.x);
 }
 
-double part_split_cost(const std::array<PartLabelStats, body_part_label_count>& stats_by_label,
-                       std::uint32_t left_part_labels)
+struct PrimitiveGroupStats final
 {
-    PartLabelStats left_stats;
-    PartLabelStats right_stats;
-    for (std::size_t label = 0; label < stats_by_label.size(); ++label) {
-        const PartLabelStats& source_stats = stats_by_label[label];
-        if (source_stats.primitive_count == 0u) {
-            continue;
-        }
+    glm::vec3 min_bounds{std::numeric_limits<float>::max()};
+    glm::vec3 max_bounds{std::numeric_limits<float>::lowest()};
+    std::uint32_t count = 0u;
 
-        const std::uint32_t label_mask = 1u << label;
-        PartLabelStats& target_stats = (left_part_labels & label_mask) != 0u ? left_stats : right_stats;
-        target_stats.min_bounds = glm::min(target_stats.min_bounds, source_stats.min_bounds);
-        target_stats.max_bounds = glm::max(target_stats.max_bounds, source_stats.max_bounds);
-        target_stats.primitive_count += source_stats.primitive_count;
+    void update(const glm::vec3& min, const glm::vec3& max)
+    {
+        min_bounds = glm::min(min_bounds, min);
+        max_bounds = glm::max(max_bounds, max);
+        ++count;
     }
 
-    return surface_area(left_stats.min_bounds, left_stats.max_bounds) * left_stats.primitive_count +
-           surface_area(right_stats.min_bounds, right_stats.max_bounds) * right_stats.primitive_count;
-}
+    void merge(const PrimitiveGroupStats& other)
+    {
+        if (other.count == 0u) {
+            return;
+        }
+
+        min_bounds = glm::min(min_bounds, other.min_bounds);
+        max_bounds = glm::max(max_bounds, other.max_bounds);
+        count += other.count;
+    }
+
+    double cost() const { return surface_area(min_bounds, max_bounds) * count; }
+};
 
 std::uint32_t find_longest_axis(const glm::vec3& aabb_size)
 {
@@ -123,8 +128,7 @@ MeshBvhBuilder::MeshBvhBuilder(const GarmentMesh& mesh)
       source_vertex_positions_(mesh.vertices)
 {
     // Garment: build triangle index list
-    const auto triangle_count =
-        static_cast<std::uint32_t>(source_triangle_vertex_indices_.size() / triangle_vertex_count);
+    const std::uint32_t triangle_count = source_triangle_vertex_indices_.size() / triangle_vertex_count;
     triangle_part_labels_.resize(triangle_count, 0u);
     collision_triangle_indices_.reserve(triangle_count);
     for (std::uint32_t triangle_index = 0; triangle_index < triangle_count; ++triangle_index) {
@@ -139,11 +143,7 @@ Bvh MeshBvhBuilder::build_triangle_bvh()
     make_triangle_primitives();
     build_bvh();
 
-    std::vector<std::uint32_t> triangle_indices;
-    triangle_indices.reserve(primitives_.size());
-    for (const BvhPrimitive& primitive : primitives_) {
-        triangle_indices.push_back(primitive.element_index);
-    }
+    std::vector<std::uint32_t> triangle_indices = std::move(bvh_.indices);
     bvh_.indices = make_triangle_vertex_indices(std::move(triangle_indices));
     return std::move(bvh_);
 }
@@ -153,11 +153,6 @@ Bvh MeshBvhBuilder::build_vertex_bvh()
     reset_build();
     make_vertex_primitives();
     build_bvh();
-
-    bvh_.indices.reserve(primitives_.size());
-    for (const BvhPrimitive& primitive : primitives_) {
-        bvh_.indices.push_back(primitive.element_index);
-    }
 
     return std::move(bvh_);
 }
@@ -169,12 +164,7 @@ Bvh MeshBvhBuilder::build_edge_bvh()
     make_edge_primitives(edges);
     build_bvh();
 
-    std::vector<std::uint32_t> edge_indices;
-    edge_indices.reserve(primitives_.size());
-    for (const BvhPrimitive& primitive : primitives_) {
-        edge_indices.push_back(primitive.element_index);
-    }
-    bvh_.indices = make_edge_vertex_indices(edge_indices, edges);
+    bvh_.indices = make_edge_vertex_indices(bvh_.indices, edges);
 
     return std::move(bvh_);
 }
@@ -187,28 +177,31 @@ void MeshBvhBuilder::reset_build()
 
 void MeshBvhBuilder::build_bvh()
 {
-    if (primitives_.empty()) {
-        throw std::runtime_error("Cannot build an empty BVH.");
-    }
-
     bvh_.nodes.reserve(primitives_.size() * 2u - 1u);
     BvhNode root;
     root.element_count = primitives_.size();
     bvh_.nodes.push_back(root);
 
-    std::uint32_t level_begin = 0u;
-    while (level_begin < bvh_.nodes.size()) {
-        const auto level_end = static_cast<std::uint32_t>(bvh_.nodes.size());
-        bvh_.level_offsets.push_back(level_begin);
-        for (std::uint32_t node_index = level_begin; node_index < level_end; ++node_index) {
+    // Build nodes level by level
+    std::uint32_t level_node_begin = 0u;
+    while (level_node_begin < bvh_.nodes.size()) {
+        bvh_.level_offsets.push_back(level_node_begin);
+
+        const auto level_node_end = static_cast<std::uint32_t>(bvh_.nodes.size());
+        for (std::uint32_t node_index = level_node_begin; node_index < level_node_end; ++node_index) {
             build_node(node_index);
         }
-        level_begin = level_end;
+        level_node_begin = level_node_end;
     }
     bvh_.level_offsets.push_back(static_cast<std::uint32_t>(bvh_.nodes.size()));
 
     if (bvh_.level_offsets.size() > shader_max_bvh_stack_depth + 1u) {
         throw std::runtime_error("Failed to build BVH.");
+    }
+
+    bvh_.indices.reserve(primitives_.size());
+    for (const BvhPrimitive& primitive : primitives_) {
+        bvh_.indices.push_back(primitive.element_index);
     }
 }
 
@@ -216,21 +209,24 @@ void MeshBvhBuilder::build_node(std::uint32_t node_index)
 {
     BvhNode& node = bvh_.nodes[node_index];
     const std::uint32_t part_label_mask = update_node_bounds(node);
+
+    // leaf node
     if (!has_multiple_part_labels(part_label_mask) && node.element_count <= leaf_size) {
         return;
     }
 
-    const std::size_t middle = split_primitives(node, part_label_mask);
-    const std::uint32_t primitive_begin = node.first_element_index;
-    const std::uint32_t primitive_end = primitive_begin + node.element_count;
+    // internal node
+    const std::size_t partition_index = partition_primitives(node, part_label_mask);
+    const std::uint32_t primitive_index_begin = node.first_element_index;
+    const std::uint32_t primitive_index_end = primitive_index_begin + node.element_count;
 
     BvhNode left_child;
-    left_child.first_element_index = primitive_begin;
-    left_child.element_count = middle - primitive_begin;
+    left_child.first_element_index = primitive_index_begin;
+    left_child.element_count = partition_index - primitive_index_begin;
 
     BvhNode right_child;
-    right_child.first_element_index = middle;
-    right_child.element_count = primitive_end - middle;
+    right_child.first_element_index = partition_index;
+    right_child.element_count = primitive_index_end - partition_index;
 
     node.left_child_index = static_cast<std::uint32_t>(bvh_.nodes.size());
     node.right_child_index = node.left_child_index + 1u;
@@ -242,55 +238,65 @@ void MeshBvhBuilder::build_node(std::uint32_t node_index)
 
 std::uint32_t MeshBvhBuilder::update_node_bounds(BvhNode& node) const
 {
-    glm::vec3 min_bounds{std::numeric_limits<float>::max()};
-    glm::vec3 max_bounds{std::numeric_limits<float>::lowest()};
+    PrimitiveGroupStats node_bounds;
     std::uint32_t part_label_mask = 0u;
-    const std::size_t primitive_end = node.first_element_index + node.element_count;
+    const std::size_t primitive_index_end = node.first_element_index + node.element_count;
 
-    for (std::size_t primitive_index = node.first_element_index; primitive_index < primitive_end;
-         ++primitive_index) {
-        const BvhPrimitive& primitive = primitives_[primitive_index];
-        min_bounds = glm::min(min_bounds, primitive.min_bounds);
-        max_bounds = glm::max(max_bounds, primitive.max_bounds);
+    for (std::size_t index = node.first_element_index; index < primitive_index_end; ++index) {
+        const BvhPrimitive& primitive = primitives_[index];
+        node_bounds.update(primitive.min_bounds, primitive.max_bounds);
         part_label_mask |= 1u << primitive.part_label;
     }
 
-    node.bounds = {glm::vec4(min_bounds, 0.0f), glm::vec4(max_bounds, 0.0f)};
+    node.bounds = {glm::vec4(node_bounds.min_bounds, 0.0f), glm::vec4(node_bounds.max_bounds, 0.0f)};
     return part_label_mask;
 }
 
-std::size_t MeshBvhBuilder::split_primitives(const BvhNode& node, std::uint32_t part_label_mask)
+std::size_t MeshBvhBuilder::partition_primitives(const BvhNode& node, std::uint32_t part_label_mask)
 {
+    // multiple part labels: split by part labels
     if (has_multiple_part_labels(part_label_mask)) {
-        const std::uint32_t left_part_label_mask = choose_part_split(node, part_label_mask);
-        return partition_primitives_by_part_labels(node, left_part_label_mask);
+        return partition_primitives_by_part_labels(node, choose_left_part_labels(node, part_label_mask));
     }
-    return partition_primitives(node);
+    // single part label: split by longest axis
+    else {
+        return partition_primitives_by_axis(node);
+    }
 }
 
-std::uint32_t MeshBvhBuilder::choose_part_split(const BvhNode& node, std::uint32_t part_label_mask) const
+std::uint32_t MeshBvhBuilder::choose_left_part_labels(const BvhNode& node,
+                                                      std::uint32_t part_label_mask) const
 {
-    std::array<PartLabelStats, body_part_label_count> stats_by_label;
-    const std::size_t primitive_end = node.first_element_index + node.element_count;
-    for (std::size_t primitive_index = node.first_element_index; primitive_index < primitive_end;
-         ++primitive_index) {
-        const BvhPrimitive& primitive = primitives_[primitive_index];
-        PartLabelStats& stats = stats_by_label[primitive.part_label];
-        stats.min_bounds = glm::min(stats.min_bounds, primitive.min_bounds);
-        stats.max_bounds = glm::max(stats.max_bounds, primitive.max_bounds);
-        ++stats.primitive_count;
+    const std::size_t primitive_index_end = node.first_element_index + node.element_count;
+
+    // Collect bounds and counts by part label
+    std::array<PrimitiveGroupStats, body_part_label_count> group_by_label;
+    for (std::size_t index = node.first_element_index; index < primitive_index_end; ++index) {
+        const BvhPrimitive& primitive = primitives_[index];
+        group_by_label[primitive.part_label].update(primitive.min_bounds, primitive.max_bounds);
     }
 
     double best_cost = std::numeric_limits<double>::max();
     std::uint32_t best_left_labels = 0u;
-    for (std::uint32_t left_labels = (part_label_mask - 1u) & part_label_mask; left_labels != 0u;
-         left_labels = (left_labels - 1u) & part_label_mask) {
+    std::uint32_t left_labels = (part_label_mask - 1u) & part_label_mask;
+
+    // Find the lowest-cost part label split
+    for (; left_labels != 0u; left_labels = (left_labels - 1u) & part_label_mask) {
         const std::uint32_t right_labels = part_label_mask ^ left_labels;
         if (left_labels > right_labels) {
             continue;
         }
 
-        const double cost = part_split_cost(stats_by_label, left_labels);
+        PrimitiveGroupStats left_group;
+        PrimitiveGroupStats right_group;
+
+        for (std::size_t label_index = 0; label_index < group_by_label.size(); ++label_index) {
+            const auto part_label = static_cast<std::uint8_t>(label_index);
+            auto& group = contains_part_label(left_labels, part_label) ? left_group : right_group;
+            group.merge(group_by_label[label_index]);
+        }
+
+        const double cost = left_group.cost() + right_group.cost();
         if (best_left_labels == 0u || cost < best_cost) {
             best_cost = cost;
             best_left_labels = left_labels;
@@ -304,26 +310,26 @@ std::size_t MeshBvhBuilder::partition_primitives_by_part_labels(const BvhNode& n
 {
     const auto primitive_begin = primitives_.begin() + node.first_element_index;
     const auto primitive_end = primitive_begin + node.element_count;
-    const auto middle =
+    const auto partition_iterator =
         std::partition(primitive_begin, primitive_end, [left_part_label_mask](const BvhPrimitive& primitive) {
-            return (left_part_label_mask & (1u << primitive.part_label)) != 0u;
+            return contains_part_label(left_part_label_mask, primitive.part_label);
         });
-    return static_cast<std::size_t>(middle - primitives_.begin());
+    return static_cast<std::size_t>(partition_iterator - primitives_.begin());
 }
 
-std::size_t MeshBvhBuilder::partition_primitives(const BvhNode& node)
+std::size_t MeshBvhBuilder::partition_primitives_by_axis(const BvhNode& node)
 {
     const glm::vec3 aabb_size = glm::vec3(node.bounds.max_bounds - node.bounds.min_bounds);
     const std::uint32_t axis = find_longest_axis(aabb_size);
-    const std::size_t middle = node.first_element_index + node.element_count / 2u;
+    const std::size_t partition_index = node.first_element_index + node.element_count / 2u;
 
     std::nth_element(primitives_.begin() + node.first_element_index,
-                     primitives_.begin() + middle,
+                     primitives_.begin() + partition_index,
                      primitives_.begin() + node.first_element_index + node.element_count,
                      [axis](const BvhPrimitive& lhs, const BvhPrimitive& rhs) {
                          return lhs.center[axis] < rhs.center[axis];
                      });
-    return middle;
+    return partition_index;
 }
 
 // Primitive construction
@@ -401,9 +407,8 @@ std::vector<std::uint8_t> MeshBvhBuilder::make_vertex_part_labels() const
     std::vector<std::uint8_t> vertex_part_labels(vertex_count_);
     for (std::uint32_t vertex_index = 0; vertex_index < vertex_count_; ++vertex_index) {
         const LabelCounts& counts = label_counts[vertex_index];
-        const auto best_count = std::max_element(counts.begin(), counts.end());
-        const auto best_label = static_cast<std::uint8_t>(best_count - counts.begin());
-        vertex_part_labels[vertex_index] = *best_count == 0u ? invalid_part_label : best_label;
+        const std::uint8_t best_label = find_most_frequent_label(counts);
+        vertex_part_labels[vertex_index] = counts[best_label] == 0u ? invalid_part_label : best_label;
     }
     return vertex_part_labels;
 }

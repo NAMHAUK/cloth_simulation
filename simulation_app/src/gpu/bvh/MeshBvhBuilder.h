@@ -39,10 +39,10 @@ private:
     void build_bvh();
     void build_node(std::uint32_t node_index);
     std::uint32_t update_node_bounds(BvhNode& node) const;
-    std::size_t split_primitives(const BvhNode& node, std::uint32_t part_label_mask);
-    std::uint32_t choose_part_split(const BvhNode& node, std::uint32_t part_label_mask) const;
+    std::size_t partition_primitives(const BvhNode& node, std::uint32_t part_label_mask);
+    std::uint32_t choose_left_part_labels(const BvhNode& node, std::uint32_t part_label_mask) const;
     std::size_t partition_primitives_by_part_labels(const BvhNode& node, std::uint32_t left_part_label_mask);
-    std::size_t partition_primitives(const BvhNode& node);
+    std::size_t partition_primitives_by_axis(const BvhNode& node);
 
     // Primitive construction
     void make_triangle_primitives();
