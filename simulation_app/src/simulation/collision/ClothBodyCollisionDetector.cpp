@@ -114,10 +114,11 @@ bool ClothBodyCollisionDetector::can_detect(const SimulationGpuView& views) cons
            is_valid_cloth_mesh_topology_resource(views.cloth_topology) &&
            views.stretch_constraints.edge_index_buffer != 0 &&
            views.stretch_constraints.constraint_count != 0 &&
+           is_valid_character_mesh_topology_resource(views.body_topology) &&
            is_valid_character_vertex_buffer_view(views.body_vertices) &&
-           is_valid_triangle_bvh_resource(views.body_triangle_bvh) &&
-           is_valid_vertex_bvh_resource(views.body_vertex_bvh) &&
-           is_valid_edge_bvh_resource(views.body_edge_bvh) &&
+           is_valid_bvh_buffer_view(views.body_triangle_bvh) &&
+           is_valid_bvh_buffer_view(views.body_vertex_bvh) &&
+           is_valid_bvh_buffer_view(views.body_edge_bvh) &&
            is_valid_collision_candidate_buffer_view(views.collision_candidates) &&
            views.collision_candidates.vertex_capacity >= views.cloth_motion.vertex_count &&
            views.collision_candidates.cloth_vertex_body_face.capacity >=
@@ -149,6 +150,7 @@ void ClothBodyCollisionDetector::detect(const SimulationGpuView& views, QOpenGLF
     build_dispatch_size(views.collision_candidates.cloth_edge_body_edge, gl);
     detect_cloth_face_body_vertex_collision_candidates(views.cloth_motion,
                                                        views.cloth_topology,
+                                                       views.body_topology.bvh_vertex_index_buffer,
                                                        views.body_vertex_bvh,
                                                        views.collision_candidates.cloth_face_body_vertex,
                                                        gl);
@@ -170,7 +172,7 @@ void ClothBodyCollisionDetector::release(QOpenGLFunctions_4_5_Core& gl)
 
 void ClothBodyCollisionDetector::detect_cloth_vertex_body_face_collision_candidates(
     const ClothMotionBufferView& motion_view,
-    const TriangleBvhResources& body_triangle_bvh,
+    const BvhBufferView& body_triangle_bvh,
     const CollisionCandidateBuffer& collision_candidates,
     QOpenGLFunctions_4_5_Core& gl) const
 {
@@ -183,7 +185,7 @@ void ClothBodyCollisionDetector::detect_cloth_vertex_body_face_collision_candida
                         motion_view.previous_position_buffer);
     gl.glBindBufferBase(GL_SHADER_STORAGE_BUFFER,
                         cloth_vertex_body_face_binding::body_triangle_bounds,
-                        body_triangle_bvh.triangle_bounds_buffer);
+                        body_triangle_bvh.bounds_buffer);
     gl.glBindBufferBase(GL_SHADER_STORAGE_BUFFER,
                         cloth_vertex_body_face_binding::body_triangle_bvh,
                         body_triangle_bvh.node_buffer);
@@ -211,7 +213,7 @@ void ClothBodyCollisionDetector::detect_cloth_vertex_body_face_collision_candida
 void ClothBodyCollisionDetector::detect_cloth_edge_body_edge_collision_candidates(
     const ClothMotionBufferView& motion_view,
     const DistanceConstraintBufferView& cloth_edges,
-    const EdgeBvhResources& body_edge_bvh,
+    const BvhBufferView& body_edge_bvh,
     const CollisionCandidateBuffer& collision_candidates,
     QOpenGLFunctions_4_5_Core& gl) const
 {
@@ -227,7 +229,7 @@ void ClothBodyCollisionDetector::detect_cloth_edge_body_edge_collision_candidate
                         cloth_edges.edge_index_buffer);
     gl.glBindBufferBase(GL_SHADER_STORAGE_BUFFER,
                         cloth_edge_body_edge_binding::body_edge_bounds,
-                        body_edge_bvh.edge_bounds_buffer);
+                        body_edge_bvh.bounds_buffer);
     gl.glBindBufferBase(GL_SHADER_STORAGE_BUFFER,
                         cloth_edge_body_edge_binding::body_edge_bvh,
                         body_edge_bvh.node_buffer);
@@ -256,7 +258,8 @@ void ClothBodyCollisionDetector::detect_cloth_edge_body_edge_collision_candidate
 void ClothBodyCollisionDetector::detect_cloth_face_body_vertex_collision_candidates(
     const ClothMotionBufferView& motion_view,
     const ClothMeshTopologyResources& cloth_topology,
-    const VertexBvhResources& body_vertex_bvh,
+    GLuint body_vertex_index_buffer,
+    const BvhBufferView& body_vertex_bvh,
     const CollisionCandidateBuffer& collision_candidates,
     QOpenGLFunctions_4_5_Core& gl) const
 {
@@ -272,13 +275,13 @@ void ClothBodyCollisionDetector::detect_cloth_face_body_vertex_collision_candida
                         cloth_topology.triangle_index_buffer);
     gl.glBindBufferBase(GL_SHADER_STORAGE_BUFFER,
                         cloth_face_body_vertex_binding::body_vertex_indices,
-                        body_vertex_bvh.vertex_index_buffer);
+                        body_vertex_index_buffer);
     gl.glBindBufferBase(GL_SHADER_STORAGE_BUFFER,
                         cloth_face_body_vertex_binding::body_vertex_bvh,
                         body_vertex_bvh.node_buffer);
     gl.glBindBufferBase(GL_SHADER_STORAGE_BUFFER,
                         cloth_face_body_vertex_binding::body_vertex_bounds,
-                        body_vertex_bvh.vertex_bounds_buffer);
+                        body_vertex_bvh.bounds_buffer);
     gl.glBindBufferBase(GL_SHADER_STORAGE_BUFFER,
                         cloth_face_body_vertex_binding::candidates,
                         collision_candidates.candidates);

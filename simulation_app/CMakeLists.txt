@@ -57,7 +57,6 @@ add_executable(simulation_app
     src/gpu/character/CharacterGpuDataTypes.h
     src/gpu/character/CharacterGpuResources.h
     src/gpu/bvh/BvhDataTypes.h
-    src/gpu/bvh/BvhDataTypes.cpp
     src/gpu/bvh/BvhBuildUtils.cpp
     src/gpu/bvh/BvhBuildUtils.h
     src/gpu/bvh/MeshBvhBuilder.cpp

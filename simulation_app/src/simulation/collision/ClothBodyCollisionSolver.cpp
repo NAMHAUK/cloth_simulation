@@ -144,7 +144,7 @@ bool ClothBodyCollisionSolver::can_solve(const SimulationGpuView& views) const
            views.body_topology.triangle_count == views.body_triangle_geometry.triangle_count &&
            views.stretch_constraints.edge_index_buffer != 0 &&
            views.stretch_constraints.constraint_count != 0 &&
-           is_valid_edge_bvh_resource(views.body_edge_bvh) &&
+           is_valid_bvh_buffer_view(views.body_edge_bvh) &&
            is_valid_collision_candidate_buffer_view(views.collision_candidates) &&
            views.collision_candidates.vertex_capacity >= views.cloth_motion.vertex_count &&
            views.collision_candidates.cloth_vertex_body_face.capacity >=
@@ -271,7 +271,7 @@ void ClothBodyCollisionSolver::ee_accumulate(const SimulationGpuView& views,
                         views.body_vertices.current_position_buffer);
     gl.glBindBufferBase(GL_SHADER_STORAGE_BUFFER,
                         ee_binding::body_edges,
-                        views.body_edge_bvh.edge_index_buffer);
+                        views.body_topology.edge_index_buffer);
     gl.glBindBufferBase(GL_SHADER_STORAGE_BUFFER, ee_binding::candidates, collision_candidates.candidates);
     gl.glBindBufferBase(GL_SHADER_STORAGE_BUFFER,
                         ee_binding::candidate_count,

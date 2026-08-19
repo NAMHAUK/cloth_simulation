@@ -2,15 +2,15 @@
 
 #include <algorithm>
 #include <array>
-#include <cmath>
 #include <limits>
-#include <utility>
 
 namespace bvh_build {
 namespace {
 constexpr std::size_t leaf_size = 3u;
+constexpr std::size_t edge_vertex_count = 2u;
+constexpr std::size_t triangle_vertex_count = 3u;
 
-struct NodeContents final
+struct PrimitiveRange final
 {
     std::size_t primitive_begin;
     std::size_t primitive_end;
@@ -69,7 +69,7 @@ double part_split_cost(const std::array<PartLabelStats, body_part_label_count>& 
            surface_area(right_stats.min_bounds, right_stats.max_bounds) * right_stats.primitive_count;
 }
 
-std::uint32_t choose_part_split(const std::vector<BvhPrimitive>& primitives, const NodeContents& node)
+std::uint32_t choose_part_split(const std::vector<BvhPrimitive>& primitives, const PrimitiveRange& node)
 {
     std::array<PartLabelStats, body_part_label_count> stats_by_label;
     for (std::size_t primitive_index = node.primitive_begin; primitive_index < node.primitive_end;
@@ -146,27 +146,27 @@ std::size_t partition_primitives(std::vector<BvhPrimitive>& primitives,
 }
 
 // Node construction
-std::array<NodeContents, 2> split_node_contents(std::vector<BvhPrimitive>& primitives,
-                                                const NodeContents& node,
-                                                const glm::vec3& extent)
+std::array<PrimitiveRange, 2> split_primitive_range(std::vector<BvhPrimitive>& primitives,
+                                                    const PrimitiveRange& range,
+                                                    const glm::vec3& extent)
 {
     std::size_t middle;
-    std::uint32_t left_part_label_mask = node.part_label_mask;
-    std::uint32_t right_part_label_mask = node.part_label_mask;
+    std::uint32_t left_part_label_mask = range.part_label_mask;
+    std::uint32_t right_part_label_mask = range.part_label_mask;
 
-    if (has_multiple_bits(node.part_label_mask)) {
-        left_part_label_mask = choose_part_split(primitives, node);
-        right_part_label_mask = node.part_label_mask ^ left_part_label_mask;
+    if (has_multiple_bits(range.part_label_mask)) {
+        left_part_label_mask = choose_part_split(primitives, range);
+        right_part_label_mask = range.part_label_mask ^ left_part_label_mask;
         middle = partition_primitives_by_part_labels(primitives,
-                                                     node.primitive_begin,
-                                                     node.primitive_end,
+                                                     range.primitive_begin,
+                                                     range.primitive_end,
                                                      left_part_label_mask);
     } else {
-        middle = partition_primitives(primitives, node.primitive_begin, node.primitive_end, extent);
+        middle = partition_primitives(primitives, range.primitive_begin, range.primitive_end, extent);
     }
 
-    return {NodeContents{node.primitive_begin, middle, left_part_label_mask},
-            NodeContents{middle, node.primitive_end, right_part_label_mask}};
+    return {PrimitiveRange{range.primitive_begin, middle, left_part_label_mask},
+            PrimitiveRange{middle, range.primitive_end, right_part_label_mask}};
 }
 
 Aabb compute_node_bounds(const std::vector<BvhPrimitive>& primitives, std::size_t begin, std::size_t end)
@@ -183,46 +183,46 @@ Aabb compute_node_bounds(const std::vector<BvhPrimitive>& primitives, std::size_
 }
 
 BvhNode build_node(std::vector<BvhPrimitive>& primitives,
-                   const NodeContents& contents,
+                   const PrimitiveRange& range,
                    std::uint32_t child_first_node_index,
-                   std::vector<NodeContents>& child_level_nodes)
+                   std::vector<PrimitiveRange>& child_level_ranges)
 {
     BvhNode node;
-    node.bounds = compute_node_bounds(primitives, contents.primitive_begin, contents.primitive_end);
+    node.bounds = compute_node_bounds(primitives, range.primitive_begin, range.primitive_end);
 
-    const std::size_t primitive_count = contents.primitive_end - contents.primitive_begin;
-    if (!has_multiple_bits(contents.part_label_mask) && primitive_count <= leaf_size) {
-        node.first_element_index = static_cast<std::uint32_t>(contents.primitive_begin);
+    const std::size_t primitive_count = range.primitive_end - range.primitive_begin;
+    if (!has_multiple_bits(range.part_label_mask) && primitive_count <= leaf_size) {
+        node.first_element_index = static_cast<std::uint32_t>(range.primitive_begin);
         node.element_count = static_cast<std::uint32_t>(primitive_count);
         return node;
     }
 
     const glm::vec3 extent = glm::vec3(node.bounds.max_bounds - node.bounds.min_bounds);
-    const auto [left_child, right_child] = split_node_contents(primitives, contents, extent);
-    node.left_child_index = child_first_node_index + static_cast<std::uint32_t>(child_level_nodes.size());
-    child_level_nodes.push_back(left_child);
-    node.right_child_index = child_first_node_index + static_cast<std::uint32_t>(child_level_nodes.size());
-    child_level_nodes.push_back(right_child);
+    const auto [left_child, right_child] = split_primitive_range(primitives, range, extent);
+    node.left_child_index = child_first_node_index + static_cast<std::uint32_t>(child_level_ranges.size());
+    child_level_ranges.push_back(left_child);
+    node.right_child_index = child_first_node_index + static_cast<std::uint32_t>(child_level_ranges.size());
+    child_level_ranges.push_back(right_child);
     return node;
 }
 
-std::vector<NodeContents> build_level(std::vector<BvhPrimitive>& primitives,
-                                      const std::vector<NodeContents>& current_level_nodes,
-                                      BvhTree& bvh)
+std::vector<PrimitiveRange> build_level(std::vector<BvhPrimitive>& primitives,
+                                        const std::vector<PrimitiveRange>& current_level_ranges,
+                                        Bvh& bvh)
 {
     const std::uint32_t first_node_index = static_cast<std::uint32_t>(bvh.nodes.size());
-    const std::uint32_t current_level_node_count = static_cast<std::uint32_t>(current_level_nodes.size());
+    const std::uint32_t current_level_node_count = static_cast<std::uint32_t>(current_level_ranges.size());
     const std::uint32_t child_first_node_index = first_node_index + current_level_node_count;
-    bvh.levels.push_back({first_node_index, current_level_node_count});
+    bvh.level_offsets.push_back(first_node_index);
 
-    std::vector<NodeContents> child_level_nodes;
-    child_level_nodes.reserve(current_level_nodes.size() * 2u);
+    std::vector<PrimitiveRange> child_level_ranges;
+    child_level_ranges.reserve(current_level_ranges.size() * 2u);
 
-    for (const NodeContents& contents : current_level_nodes) {
-        bvh.nodes.push_back(build_node(primitives, contents, child_first_node_index, child_level_nodes));
+    for (const PrimitiveRange& range : current_level_ranges) {
+        bvh.nodes.push_back(build_node(primitives, range, child_first_node_index, child_level_ranges));
     }
 
-    return child_level_nodes;
+    return child_level_ranges;
 }
 
 // state
@@ -284,22 +284,12 @@ bool has_valid_shader_stack_depth(const std::vector<BvhNode>& nodes)
 }
 }
 
-bool is_valid_bounds(const glm::vec3& min_bounds, const glm::vec3& max_bounds)
-{
-    return std::isfinite(min_bounds.x) &&
-           std::isfinite(min_bounds.y) &&
-           std::isfinite(min_bounds.z) &&
-           std::isfinite(max_bounds.x) &&
-           std::isfinite(max_bounds.y) &&
-           std::isfinite(max_bounds.z);
-}
-
 bool is_leaf_node(std::uint32_t component_count)
 {
     return component_count > 0u;
 }
 
-bool has_valid_bvh_node_topology(const std::vector<BvhNode>& nodes, std::uint32_t source_element_count)
+static bool has_valid_bvh_node_topology(const std::vector<BvhNode>& nodes, std::uint32_t source_element_count)
 {
     const std::size_t node_count = nodes.size();
     for (std::size_t node_index = 0; node_index < node_count; ++node_index) {
@@ -311,25 +301,119 @@ bool has_valid_bvh_node_topology(const std::vector<BvhNode>& nodes, std::uint32_
     return has_valid_shader_stack_depth(nodes);
 }
 
-BvhTree build_bvh(std::vector<BvhPrimitive> primitives)
+static bool has_valid_bvh_level_offsets(const std::vector<std::uint32_t>& level_offsets,
+                                        std::size_t node_count)
+{
+    if (level_offsets.size() < 2u || level_offsets.front() != 0u || level_offsets.back() != node_count) {
+        return false;
+    }
+
+    return std::adjacent_find(level_offsets.begin(),
+                              level_offsets.end(),
+                              [](std::uint32_t first, std::uint32_t second) { return first >= second; }) ==
+           level_offsets.end();
+}
+
+std::uint32_t leaf_element_count(const std::vector<BvhNode>& nodes)
+{
+    std::uint32_t element_count = 0u;
+    for (const BvhNode& node : nodes) {
+        if (is_leaf_node(node.element_count)) {
+            element_count += node.element_count;
+        }
+    }
+    return element_count;
+}
+
+bool is_valid_triangle_bvh(const Bvh& bvh, std::uint32_t triangle_count)
+{
+    const std::uint32_t collision_triangle_count = leaf_element_count(bvh.nodes);
+    return triangle_count != 0u &&
+           collision_triangle_count != 0u &&
+           collision_triangle_count <= triangle_count &&
+           bvh.indices.size() == triangle_count * triangle_vertex_count &&
+           has_valid_bvh_level_offsets(bvh.level_offsets, bvh.nodes.size()) &&
+           has_valid_bvh_node_topology(bvh.nodes, collision_triangle_count);
+}
+
+bool is_valid_vertex_bvh(const Bvh& bvh, std::uint32_t vertex_count)
+{
+    if (vertex_count == 0u ||
+        bvh.indices.empty() ||
+        bvh.indices.size() > vertex_count ||
+        !has_valid_bvh_level_offsets(bvh.level_offsets, bvh.nodes.size()) ||
+        !has_valid_bvh_node_topology(bvh.nodes, static_cast<std::uint32_t>(bvh.indices.size()))) {
+        return false;
+    }
+
+    std::vector<std::uint8_t> used_vertices(vertex_count, 0u);
+    std::size_t used_vertex_count = 0u;
+    for (const BvhNode& node : bvh.nodes) {
+        if (is_leaf_node(node.element_count)) {
+            for (std::uint32_t offset = 0; offset < node.element_count; ++offset) {
+                const std::uint32_t vertex_index = bvh.indices[node.first_element_index + offset];
+                if (vertex_index >= vertex_count || used_vertices[vertex_index] != 0u) {
+                    return false;
+                }
+                used_vertices[vertex_index] = 1u;
+                ++used_vertex_count;
+            }
+        }
+    }
+
+    return used_vertex_count == bvh.indices.size();
+}
+
+bool is_valid_edge_bvh(const Bvh& bvh)
+{
+    if (bvh.indices.empty() ||
+        bvh.indices.size() % edge_vertex_count != 0u ||
+        !has_valid_bvh_level_offsets(bvh.level_offsets, bvh.nodes.size())) {
+        return false;
+    }
+
+    const auto edge_count = static_cast<std::uint32_t>(bvh.indices.size() / edge_vertex_count);
+    if (!has_valid_bvh_node_topology(bvh.nodes, edge_count)) {
+        return false;
+    }
+
+    std::vector<std::uint8_t> used_edges(edge_count, 0u);
+    for (const BvhNode& node : bvh.nodes) {
+        if (!is_leaf_node(node.element_count)) {
+            continue;
+        }
+
+        for (std::uint32_t offset = 0; offset < node.element_count; ++offset) {
+            const std::uint32_t edge_index = node.first_element_index + offset;
+            if (edge_index >= edge_count || used_edges[edge_index] != 0u) {
+                return false;
+            }
+            used_edges[edge_index] = 1u;
+            if (bvh.indices[edge_index * edge_vertex_count] ==
+                bvh.indices[edge_index * edge_vertex_count + 1u]) {
+                return false;
+            }
+        }
+    }
+
+    return std::all_of(used_edges.begin(), used_edges.end(), [](std::uint8_t used) { return used != 0u; });
+}
+
+Bvh build_bvh(std::vector<BvhPrimitive>& primitives)
 {
     assert(!primitives.empty());
 
-    BvhTree bvh;
+    Bvh bvh;
     bvh.nodes.reserve(primitives.size() * 2u - 1u);
-    bvh.leaf_element_indices.reserve(primitives.size());
 
-    const NodeContents root_node_contents{0u, primitives.size(), compute_part_label_mask(primitives)};
-    std::vector<NodeContents> current_level_nodes{root_node_contents};
+    const PrimitiveRange root_range{0u, primitives.size(), compute_part_label_mask(primitives)};
+    std::vector<PrimitiveRange> current_level_ranges{root_range};
 
-    while (!current_level_nodes.empty()) {
-        current_level_nodes = build_level(primitives, current_level_nodes, bvh);
+    while (!current_level_ranges.empty()) {
+        current_level_ranges = build_level(primitives, current_level_ranges, bvh);
     }
 
-    for (const BvhPrimitive& primitive : primitives) {
-        bvh.leaf_element_indices.push_back(primitive.element_index);
-    }
-    std::reverse(bvh.levels.begin(), bvh.levels.end());
+    bvh.level_offsets.push_back(static_cast<std::uint32_t>(bvh.nodes.size()));
     return bvh;
 }
 }

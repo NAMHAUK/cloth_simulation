@@ -13,9 +13,9 @@ public:
     MeshBvhBuilder(const CharacterMotion& motion, const std::vector<std::uint8_t>& triangle_part_labels);
     explicit MeshBvhBuilder(const GarmentMesh& mesh);
 
-    TriangleBvhData build_triangle_bvh() const;
-    VertexBvhData build_vertex_bvh() const;
-    EdgeBvhData build_edge_bvh() const;
+    Bvh build_triangle_bvh() const;
+    Bvh build_vertex_bvh() const;
+    Bvh build_edge_bvh() const;
 
 private:
     struct LabeledEdge final

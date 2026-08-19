@@ -99,20 +99,18 @@ void upload_rest_lengths(const ClothBufferSet& buffers,
                             garment.mesh.bending_constraints.rest_lengths.data());
 }
 
-void append_bvh_nodes(const TriangleBvhData& bvh,
-                      std::uint32_t triangle_start_index,
-                      GarmentBvhState& bvh_state,
-                      std::vector<BvhNode>& nodes)
+void append_bvh_nodes(const Bvh& bvh, GarmentBufferState& garment_state, std::vector<BvhNode>& nodes)
 {
-    for (BvhLevelState& level_state : bvh_state.levels) {
-        level_state.first_node_index += bvh_state.first_node_index;
+    const auto root_node_index = static_cast<std::uint32_t>(nodes.size());
+    for (std::uint32_t& level_offset : garment_state.bvh_level_offsets) {
+        level_offset += root_node_index;
     }
     for (BvhNode node : bvh.nodes) {
         if (bvh_build::is_leaf_node(node.element_count)) {
-            node.first_element_index += triangle_start_index;
+            node.first_element_index += garment_state.triangle_start_index;
         } else {
-            node.left_child_index += bvh_state.first_node_index;
-            node.right_child_index += bvh_state.first_node_index;
+            node.left_child_index += root_node_index;
+            node.right_child_index += root_node_index;
         }
         nodes.push_back(node);
     }
@@ -150,7 +148,7 @@ void ClothGpuResources::assign_garment_buffer_states(const std::vector<GarmentOb
     for (const GarmentObject& garment : garments) {
         const GarmentLayer layer = garment.layer;
         const auto& mesh = garment.mesh;
-        const auto& triangle_vertex_indices = garment.triangle_bvh.triangle_vertex_indices;
+        const auto& triangle_vertex_indices = garment.triangle_bvh.indices;
         auto& element_counts = state.element_counts;
         GarmentBufferState& garment_state = state.garments[layer];
 
@@ -260,7 +258,7 @@ void ClothGpuResources::create_topology_buffers(const std::vector<GarmentObject>
 
     for (const GarmentObject& garment : garments) {
         const std::uint32_t vertex_start_index = rebuild_state.garments[garment.layer].vertex_start_index;
-        for (std::uint32_t vertex_index : garment.triangle_bvh.triangle_vertex_indices) {
+        for (std::uint32_t vertex_index : garment.triangle_bvh.indices) {
             triangle_vertex_indices.push_back(vertex_start_index + vertex_index);
         }
     }
@@ -295,16 +293,12 @@ void ClothGpuResources::create_bvh_buffers(const std::vector<GarmentObject>& gar
     std::vector<BvhNode> nodes;
 
     for (const GarmentObject& garment : garments) {
-        const TriangleBvhData& bvh = garment.triangle_bvh;
-        GarmentBvhState& bvh_state = rebuild_state.garment_bvhs[garment.layer];
-        bvh_state.first_node_index = rebuild_state.bvh_node_count;
-        bvh_state.node_count = static_cast<std::uint32_t>(bvh.nodes.size());
-        bvh_state.levels = bvh.levels;
+        const Bvh& bvh = garment.triangle_bvh;
+        GarmentBufferState& garment_state = rebuild_state.garments[garment.layer];
+        garment_state.bvh_level_offsets = bvh.level_offsets;
 
-        append_bvh_nodes(bvh, rebuild_state.garments[garment.layer].triangle_start_index, bvh_state, nodes);
-        rebuild_state.bvh_node_count += bvh_state.node_count;
+        append_bvh_nodes(bvh, garment_state, nodes);
     }
-
     gl.glCreateBuffers(1, &rebuild_state.buffers.bvh_node);
     gl.glNamedBufferData(rebuild_state.buffers.bvh_node,
                          byte_size<BvhNode>(nodes.size()),
@@ -315,8 +309,6 @@ void ClothGpuResources::create_bvh_buffers(const std::vector<GarmentObject>& gar
                          byte_size<Aabb>(rebuild_state.element_counts.triangle),
                          nullptr,
                          GL_DYNAMIC_DRAW);
-
-    rebuild_state.garment_count = static_cast<std::uint32_t>(garments.size());
 }
 
 void ClothGpuResources::create_distance_constraint_buffers(const std::vector<GarmentObject>& garments,
@@ -554,7 +546,7 @@ bool ClothGpuResources::has_gpu_objects() const
 
 // Accessors
 
-std::array<GarmentBufferState, 2> ClothGpuResources::garment_buffer_states() const
+const std::array<GarmentBufferState, 2>& ClothGpuResources::garment_buffer_states() const
 {
     return state_.garments;
 }
@@ -642,13 +634,9 @@ ClothNormalResources ClothGpuResources::mesh_normal_resources() const
     return normals;
 }
 
-ClothBvhBufferView ClothGpuResources::cloth_bvh_buffer_view() const
+BvhBufferView ClothGpuResources::cloth_bvh_buffer_view() const
 {
-    return {state_.buffers.bvh_node,
-            state_.buffers.triangle_bounds,
-            state_.bvh_node_count,
-            state_.garment_count,
-            &state_.garment_bvhs};
+    return {state_.buffers.bvh_node, state_.buffers.triangle_bounds};
 }
 
 // Release

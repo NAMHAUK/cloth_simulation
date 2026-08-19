@@ -1,9 +1,11 @@
 #pragma once
 
+#include "gpu/bvh/BvhDataTypes.h"
 #include "gpu/character/CharacterGpuDataTypes.h"
 #include "gpu/cloth/ClothGpuDataTypes.h"
 #include "gpu/scene/CollisionCandidateBuffers.h"
 
+#include <array>
 #include <cstddef>
 #include <cstdint>
 
@@ -59,19 +61,27 @@ inline bool is_valid_body_triangle_index_view(
            body_triangle_index_view.vertex_count != 0;
 }
 
-inline bool is_valid_cloth_bvh_buffer_view(const ClothBvhBufferView& view)
+inline std::uint32_t active_garment_count(const std::array<GarmentBufferState, 2>& garments)
 {
-    return view.node_buffer != 0 &&
-           view.triangle_bounds_buffer != 0 &&
-           view.node_count != 0 &&
-           view.garment_count != 0 &&
-           view.garment_bvhs != nullptr &&
-           view.garment_count <= view.garment_bvhs->size();
+    std::uint32_t count = 0u;
+    for (const GarmentBufferState& garment : garments) {
+        count += garment.vertex_count != 0u;
+    }
+    return count;
+}
+
+inline bool is_valid_bvh_buffer_view(const BvhBufferView& view)
+{
+    return view.node_buffer != 0 && view.bounds_buffer != 0;
 }
 
 inline bool is_valid_character_mesh_topology_resource(const CharacterMeshTopologyResources& topology)
 {
-    return topology.triangle_index_buffer != 0 && topology.vertex_count != 0 && topology.triangle_count != 0;
+    return topology.triangle_index_buffer != 0 &&
+           topology.bvh_vertex_index_buffer != 0 &&
+           topology.edge_index_buffer != 0 &&
+           topology.vertex_count != 0 &&
+           topology.triangle_count != 0;
 }
 
 inline bool is_valid_distance_constraint_view(const DistanceConstraintBufferView& constraint_view)
@@ -86,31 +96,6 @@ inline bool is_valid_distance_constraint_view(const DistanceConstraintBufferView
 inline bool is_valid_triangle_geometry_resource(const TriangleGeometryResources& triangle_geometry)
 {
     return triangle_geometry.triangle_geometry_buffer != 0 && triangle_geometry.triangle_count != 0;
-}
-
-inline bool is_valid_triangle_bvh_resource(const TriangleBvhResources& triangle_bvh)
-{
-    return triangle_bvh.node_buffer != 0 &&
-           triangle_bvh.triangle_bounds_buffer != 0 &&
-           triangle_bvh.node_count != 0 &&
-           triangle_bvh.triangle_count != 0;
-}
-
-inline bool is_valid_vertex_bvh_resource(const VertexBvhResources& vertex_bvh)
-{
-    return vertex_bvh.node_buffer != 0 &&
-           vertex_bvh.vertex_index_buffer != 0 &&
-           vertex_bvh.vertex_bounds_buffer != 0 &&
-           vertex_bvh.node_count != 0;
-}
-
-inline bool is_valid_edge_bvh_resource(const EdgeBvhResources& edge_bvh)
-{
-    return edge_bvh.node_buffer != 0 &&
-           edge_bvh.edge_index_buffer != 0 &&
-           edge_bvh.edge_bounds_buffer != 0 &&
-           edge_bvh.node_count != 0 &&
-           edge_bvh.edge_count != 0;
 }
 
 inline bool is_valid_collision_candidate_buffer(const CollisionCandidateBuffer& collision_candidate_buffer)

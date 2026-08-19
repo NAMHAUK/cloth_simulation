@@ -29,6 +29,8 @@ struct CharacterMeshTopologyResources final
     GLuint triangle_index_buffer = 0;
     GLuint adjacent_triangle_offsets_buffer = 0;
     GLuint adjacent_triangle_indices_buffer = 0;
+    GLuint bvh_vertex_index_buffer = 0;
+    GLuint edge_index_buffer = 0;
 
     std::uint32_t vertex_count = 0;
     std::uint32_t triangle_count = 0;
@@ -60,29 +62,4 @@ struct CharacterNormalResources final
     GLuint triangle_geometry_buffer = 0;
     GLuint vertex_normal_buffer = 0;
     std::uint32_t triangle_count = 0;
-};
-
-struct TriangleBvhResources final
-{
-    GLuint node_buffer = 0;
-    GLuint triangle_bounds_buffer = 0;
-    std::uint32_t node_count = 0;
-    std::uint32_t triangle_count = 0;
-};
-
-struct VertexBvhResources final
-{
-    GLuint node_buffer = 0;
-    GLuint vertex_index_buffer = 0;
-    GLuint vertex_bounds_buffer = 0;
-    std::uint32_t node_count = 0;
-};
-
-struct EdgeBvhResources final
-{
-    GLuint node_buffer = 0;
-    GLuint edge_index_buffer = 0;
-    GLuint edge_bounds_buffer = 0;
-    std::uint32_t node_count = 0;
-    std::uint32_t edge_count = 0;
 };

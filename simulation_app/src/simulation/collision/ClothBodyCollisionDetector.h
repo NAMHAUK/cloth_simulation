@@ -38,19 +38,20 @@ private:
 
     void detect_cloth_vertex_body_face_collision_candidates(
         const ClothMotionBufferView& motion_view,
-        const TriangleBvhResources& body_triangle_bvh,
+        const BvhBufferView& body_triangle_bvh,
         const CollisionCandidateBuffer& collision_candidates,
         QOpenGLFunctions_4_5_Core& gl) const;
     void detect_cloth_edge_body_edge_collision_candidates(
         const ClothMotionBufferView& motion_view,
         const DistanceConstraintBufferView& cloth_edges,
-        const EdgeBvhResources& body_edge_bvh,
+        const BvhBufferView& body_edge_bvh,
         const CollisionCandidateBuffer& collision_candidates,
         QOpenGLFunctions_4_5_Core& gl) const;
     void detect_cloth_face_body_vertex_collision_candidates(
         const ClothMotionBufferView& motion_view,
         const ClothMeshTopologyResources& cloth_topology,
-        const VertexBvhResources& body_vertex_bvh,
+        GLuint body_vertex_index_buffer,
+        const BvhBufferView& body_vertex_bvh,
         const CollisionCandidateBuffer& collision_candidates,
         QOpenGLFunctions_4_5_Core& gl) const;
     void build_dispatch_size(const CollisionCandidateBuffer& collision_candidates,

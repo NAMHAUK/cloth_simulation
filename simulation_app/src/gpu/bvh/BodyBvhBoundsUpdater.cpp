@@ -5,6 +5,7 @@
 
 #include <algorithm>
 #include <stdexcept>
+#include <utility>
 
 namespace {
 constexpr GLuint body_triangle_geometry_binding = 0;
@@ -21,23 +22,17 @@ constexpr GLuint body_edge_bvh_nodes_binding = 10;
 constexpr GLuint body_edge_bounds_binding = 11;
 constexpr std::uint32_t bvh_bounds_update_local_size = 128;
 
-bool is_valid_level_state(const BvhLevelState& level_state, std::uint32_t total_node_count)
+std::pair<std::uint32_t, std::uint32_t> valid_or_empty_level(const std::vector<std::uint32_t>& level_offsets,
+                                                             std::size_t level_index)
 {
-    return level_state.node_count != 0 &&
-           level_state.first_node_index < total_node_count &&
-           level_state.first_node_index + level_state.node_count <= total_node_count;
-}
-
-BvhLevelState valid_or_empty_level_state(const std::vector<BvhLevelState>& levels,
-                                         std::size_t level_index,
-                                         std::uint32_t total_node_count)
-{
-    if (level_index >= levels.size()) {
+    if (level_index + 1u >= level_offsets.size()) {
         return {};
     }
 
-    const BvhLevelState level_state = levels[level_index];
-    return is_valid_level_state(level_state, total_node_count) ? level_state : BvhLevelState{};
+    const std::size_t offset_index = level_offsets.size() - 1u - level_index;
+    const std::uint32_t first_node_index = level_offsets[offset_index - 1u];
+    const std::uint32_t node_end_index = level_offsets[offset_index];
+    return {first_node_index, node_end_index - first_node_index};
 }
 }
 
@@ -49,12 +44,9 @@ bool BodyBvhBoundsUpdater::is_initialized() const
 bool BodyBvhBoundsUpdater::can_update(const CharacterMeshTopologyResources& topology,
                                       const CharacterVertexBufferView& vertex_view,
                                       const TriangleGeometryResources& body_triangle_geometry,
-                                      const TriangleBvhResources& body_triangle_bvh,
-                                      const VertexBvhResources& body_vertex_bvh,
-                                      const EdgeBvhResources& body_edge_bvh,
-                                      const std::vector<BvhLevelState>& triangle_levels,
-                                      const std::vector<BvhLevelState>& vertex_levels,
-                                      const std::vector<BvhLevelState>& edge_levels,
+                                      const BvhBufferView& body_triangle_bvh,
+                                      const BvhBufferView& body_vertex_bvh,
+                                      const BvhBufferView& body_edge_bvh,
                                       float collision_thickness) const
 {
     return is_initialized() &&
@@ -64,14 +56,10 @@ bool BodyBvhBoundsUpdater::can_update(const CharacterMeshTopologyResources& topo
            vertex_view.vertex_count != 0 &&
            is_valid_triangle_geometry_resource(body_triangle_geometry) &&
            topology.triangle_count == body_triangle_geometry.triangle_count &&
-           body_triangle_bvh.triangle_count <= topology.triangle_count &&
            topology.vertex_count == vertex_view.vertex_count &&
-           is_valid_triangle_bvh_resource(body_triangle_bvh) &&
-           is_valid_vertex_bvh_resource(body_vertex_bvh) &&
-           is_valid_edge_bvh_resource(body_edge_bvh) &&
-           !triangle_levels.empty() &&
-           !vertex_levels.empty() &&
-           !edge_levels.empty() &&
+           is_valid_bvh_buffer_view(body_triangle_bvh) &&
+           is_valid_bvh_buffer_view(body_vertex_bvh) &&
+           is_valid_bvh_buffer_view(body_edge_bvh) &&
            collision_thickness > 0.0f;
 }
 
@@ -102,12 +90,12 @@ void BodyBvhBoundsUpdater::initialize(const std::filesystem::path& shader_dir, Q
 void BodyBvhBoundsUpdater::update(const CharacterMeshTopologyResources& topology,
                                   const CharacterVertexBufferView& vertex_view,
                                   const TriangleGeometryResources& body_triangle_geometry,
-                                  const TriangleBvhResources& body_triangle_bvh,
-                                  const VertexBvhResources& body_vertex_bvh,
-                                  const EdgeBvhResources& body_edge_bvh,
-                                  const std::vector<BvhLevelState>& triangle_levels,
-                                  const std::vector<BvhLevelState>& vertex_levels,
-                                  const std::vector<BvhLevelState>& edge_levels,
+                                  const BvhBufferView& body_triangle_bvh,
+                                  const BvhBufferView& body_vertex_bvh,
+                                  const BvhBufferView& body_edge_bvh,
+                                  const std::vector<std::uint32_t>& triangle_level_offsets,
+                                  const std::vector<std::uint32_t>& vertex_level_offsets,
+                                  const std::vector<std::uint32_t>& edge_level_offsets,
                                   float collision_thickness,
                                   QOpenGLFunctions_4_5_Core& gl) const
 {
@@ -117,9 +105,6 @@ void BodyBvhBoundsUpdater::update(const CharacterMeshTopologyResources& topology
                     body_triangle_bvh,
                     body_vertex_bvh,
                     body_edge_bvh,
-                    triangle_levels,
-                    vertex_levels,
-                    edge_levels,
                     collision_thickness)) {
         return;
     }
@@ -142,45 +127,40 @@ void BodyBvhBoundsUpdater::update(const CharacterMeshTopologyResources& topology
                         body_triangle_bvh.node_buffer);
     gl.glBindBufferBase(GL_SHADER_STORAGE_BUFFER,
                         body_triangle_bounds_binding,
-                        body_triangle_bvh.triangle_bounds_buffer);
+                        body_triangle_bvh.bounds_buffer);
     gl.glBindBufferBase(GL_SHADER_STORAGE_BUFFER,
                         body_vertex_indices_binding,
-                        body_vertex_bvh.vertex_index_buffer);
+                        topology.bvh_vertex_index_buffer);
     gl.glBindBufferBase(GL_SHADER_STORAGE_BUFFER, body_vertex_bvh_nodes_binding, body_vertex_bvh.node_buffer);
-    gl.glBindBufferBase(GL_SHADER_STORAGE_BUFFER,
-                        body_vertex_bounds_binding,
-                        body_vertex_bvh.vertex_bounds_buffer);
-    gl.glBindBufferBase(GL_SHADER_STORAGE_BUFFER, body_edge_indices_binding, body_edge_bvh.edge_index_buffer);
+    gl.glBindBufferBase(GL_SHADER_STORAGE_BUFFER, body_vertex_bounds_binding, body_vertex_bvh.bounds_buffer);
+    gl.glBindBufferBase(GL_SHADER_STORAGE_BUFFER, body_edge_indices_binding, topology.edge_index_buffer);
     gl.glBindBufferBase(GL_SHADER_STORAGE_BUFFER, body_edge_bvh_nodes_binding, body_edge_bvh.node_buffer);
-    gl.glBindBufferBase(GL_SHADER_STORAGE_BUFFER, body_edge_bounds_binding, body_edge_bvh.edge_bounds_buffer);
+    gl.glBindBufferBase(GL_SHADER_STORAGE_BUFFER, body_edge_bounds_binding, body_edge_bvh.bounds_buffer);
     gl.glProgramUniform1f(program_, collision_thickness_location_, collision_thickness);
 
     const std::size_t level_count =
-        std::max({triangle_levels.size(), vertex_levels.size(), edge_levels.size()});
+        std::max({triangle_level_offsets.size(), vertex_level_offsets.size(), edge_level_offsets.size()}) -
+        1u;
     for (std::size_t level_index = 0; level_index < level_count; ++level_index) {
-        const BvhLevelState triangle_level_state =
-            valid_or_empty_level_state(triangle_levels, level_index, body_triangle_bvh.node_count);
-        const BvhLevelState vertex_level_state =
-            valid_or_empty_level_state(vertex_levels, level_index, body_vertex_bvh.node_count);
-        const BvhLevelState edge_level_state =
-            valid_or_empty_level_state(edge_levels, level_index, body_edge_bvh.node_count);
+        const auto [triangle_first_node_index, triangle_node_count] =
+            valid_or_empty_level(triangle_level_offsets, level_index);
+        const auto [vertex_first_node_index, vertex_node_count] =
+            valid_or_empty_level(vertex_level_offsets, level_index);
+        const auto [edge_first_node_index, edge_node_count] =
+            valid_or_empty_level(edge_level_offsets, level_index);
 
-        const std::uint32_t dispatch_node_count = std::max(
-            {triangle_level_state.node_count, vertex_level_state.node_count, edge_level_state.node_count});
+        const std::uint32_t dispatch_node_count =
+            std::max({triangle_node_count, vertex_node_count, edge_node_count});
         if (dispatch_node_count == 0) {
             continue;
         }
 
-        gl.glProgramUniform1ui(program_,
-                               triangle_first_node_index_location_,
-                               triangle_level_state.first_node_index);
-        gl.glProgramUniform1ui(program_, triangle_node_count_location_, triangle_level_state.node_count);
-        gl.glProgramUniform1ui(program_,
-                               vertex_first_node_index_location_,
-                               vertex_level_state.first_node_index);
-        gl.glProgramUniform1ui(program_, vertex_node_count_location_, vertex_level_state.node_count);
-        gl.glProgramUniform1ui(program_, edge_first_node_index_location_, edge_level_state.first_node_index);
-        gl.glProgramUniform1ui(program_, edge_node_count_location_, edge_level_state.node_count);
+        gl.glProgramUniform1ui(program_, triangle_first_node_index_location_, triangle_first_node_index);
+        gl.glProgramUniform1ui(program_, triangle_node_count_location_, triangle_node_count);
+        gl.glProgramUniform1ui(program_, vertex_first_node_index_location_, vertex_first_node_index);
+        gl.glProgramUniform1ui(program_, vertex_node_count_location_, vertex_node_count);
+        gl.glProgramUniform1ui(program_, edge_first_node_index_location_, edge_first_node_index);
+        gl.glProgramUniform1ui(program_, edge_node_count_location_, edge_node_count);
         gl.glDispatchCompute(compute_group_count(dispatch_node_count, bvh_bounds_update_local_size), 1, 1);
         gl.glMemoryBarrier(GL_SHADER_STORAGE_BARRIER_BIT);
     }

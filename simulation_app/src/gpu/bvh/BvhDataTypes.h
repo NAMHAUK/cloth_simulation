@@ -1,12 +1,12 @@
 #pragma once
 
-#include "asset/AssetDataTypes.h"
-
 #include <cstddef>
 #include <cstdint>
 #include <vector>
 
 #include <glm/glm.hpp>
+
+#include <QOpenGLFunctions_4_5_Core>
 
 inline constexpr std::uint32_t invalid_bvh_node = 0xFFFFFFFFu;
 
@@ -30,44 +30,15 @@ struct BvhNode final
 
 static_assert(sizeof(BvhNode) == 48u);
 
-struct BvhLevelState final
+struct Bvh final
 {
-    std::uint32_t first_node_index = 0;
-    std::uint32_t node_count = 0;
-};
-
-struct GarmentBvhState final
-{
-    std::uint32_t first_node_index = 0;
-    std::uint32_t node_count = 0;
-    std::vector<BvhLevelState> levels;
-};
-
-struct TriangleBvhData final
-{
-    std::vector<std::uint32_t> triangle_vertex_indices;
     std::vector<BvhNode> nodes;
-    std::vector<BvhLevelState> levels;
-    std::uint32_t collision_triangle_count = 0;
-
-    bool is_valid(std::uint32_t triangle_count) const;
+    std::vector<std::uint32_t> level_offsets;
+    std::vector<std::uint32_t> indices;
 };
 
-struct VertexBvhData final
+struct BvhBufferView final
 {
-    std::vector<std::uint32_t> vertex_indices;
-    std::vector<BvhNode> nodes;
-    std::vector<BvhLevelState> levels;
-
-    bool is_valid(std::uint32_t vertex_count) const;
-};
-
-struct EdgeBvhData final
-{
-    std::vector<std::uint32_t> edge_vertex_indices;
-    std::vector<BvhNode> nodes;
-    std::vector<BvhLevelState> levels;
-
-    std::uint32_t edge_count() const;
-    bool is_valid() const;
+    GLuint node_buffer = 0;
+    GLuint bounds_buffer = 0;
 };

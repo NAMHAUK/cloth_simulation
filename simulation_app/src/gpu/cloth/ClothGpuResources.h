@@ -1,5 +1,6 @@
 #pragma once
 
+#include "gpu/bvh/BvhDataTypes.h"
 #include "gpu/cloth/ClothGpuDataTypes.h"
 
 #include <array>
@@ -35,7 +36,7 @@ public:
 
     bool is_initialized() const;
 
-    std::array<GarmentBufferState, 2> garment_buffer_states() const;
+    const std::array<GarmentBufferState, 2>& garment_buffer_states() const;
     ClothMotionBufferView motion_buffer_view() const;
     ClothCollisionPushoutBufferView collision_pushout_buffer_view() const;
     ClothContactMotionBufferView contact_motion_buffer_view() const;
@@ -45,7 +46,7 @@ public:
     AttachmentConstraintBufferView attachment_constraint_buffer_view() const;
     ClothMeshTopologyResources mesh_topology_resources() const;
     ClothNormalResources mesh_normal_resources() const;
-    ClothBvhBufferView cloth_bvh_buffer_view() const;
+    BvhBufferView cloth_bvh_buffer_view() const;
 
     void release(QOpenGLFunctions_4_5_Core& gl);
 
@@ -56,10 +57,7 @@ private:
         std::array<GarmentBufferState, 2> garments;
         std::vector<ConstraintColorState> stretch_color_states;
         std::vector<ConstraintColorState> bending_color_states;
-        std::array<GarmentBvhState, 2> garment_bvhs;
         ClothBufferElementCounts element_counts;
-        std::uint32_t bvh_node_count = 0;
-        std::uint32_t garment_count = 0;
     };
 
     static void assign_garment_buffer_states(const std::vector<GarmentObject>& garments, BufferState& state);
