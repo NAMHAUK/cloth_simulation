@@ -20,6 +20,8 @@ constexpr std::size_t triangle_vertex_count = 3u;
 constexpr std::size_t leaf_size = 3u;
 constexpr std::size_t shader_max_bvh_stack_depth = 32u;
 
+constexpr std::uint8_t left_arm_part_label = 2u;
+constexpr std::uint8_t right_arm_part_label = 3u;
 constexpr std::uint8_t left_hand_part_label = 6u;
 constexpr std::uint8_t right_hand_part_label = 7u;
 constexpr std::uint8_t invalid_part_label = 0xFFu;
@@ -142,6 +144,21 @@ Bvh MeshBvhBuilder::build_triangle_bvh()
     reset_build();
     make_triangle_primitives();
     build_bvh();
+
+    std::array<glm::uvec2, 2> arm_ranges{};
+    for (std::uint32_t primitive_index = 0; primitive_index < primitives_.size(); ++primitive_index) {
+        const std::uint8_t part_label = primitives_[primitive_index].part_label;
+        if (part_label != left_arm_part_label && part_label != right_arm_part_label) {
+            continue;
+        }
+
+        glm::uvec2& range = arm_ranges[part_label - left_arm_part_label];
+        if (range.y == 0u) {
+            range.x = primitive_index;
+        }
+        range.y = primitive_index + 1u;
+    }
+    bvh_.arm_triangle_ranges = {arm_ranges[0].x, arm_ranges[0].y, arm_ranges[1].x, arm_ranges[1].y};
 
     std::vector<std::uint32_t> triangle_indices = std::move(bvh_.indices);
     bvh_.indices = make_triangle_vertex_indices(std::move(triangle_indices));

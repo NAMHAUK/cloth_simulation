@@ -163,6 +163,7 @@ void CharacterGpuResources::upload_motion(const CharacterMotion& character_motio
     frame_count_ = character_motion.frame_count;
     vertex_count_ = character_motion.vertex_count;
     triangle_count_ = adjacency.triangle_count;
+    arm_triangle_ranges_ = body_triangle_bvh.arm_triangle_ranges;
     current_frame_index_ = 0;
     index_count_ = static_cast<GLsizei>(body_triangle_bvh.indices.size());
 }
@@ -283,7 +284,7 @@ CharacterNormalResources CharacterGpuResources::mesh_normal_resources() const
 
 BvhBufferView CharacterGpuResources::body_triangle_bvh_buffer_view() const
 {
-    return {buffers_.body_triangle_bvh_node, buffers_.body_triangle_bounds};
+    return {buffers_.body_triangle_bvh_node, buffers_.body_triangle_bounds, arm_triangle_ranges_};
 }
 
 BvhBufferView CharacterGpuResources::body_vertex_bvh_buffer_view() const
@@ -326,6 +327,7 @@ void CharacterGpuResources::reset_resources() noexcept
     frame_count_ = 0;
     vertex_count_ = 0;
     triangle_count_ = 0;
+    arm_triangle_ranges_ = {};
     current_frame_index_ = 0;
     index_count_ = 0;
 }

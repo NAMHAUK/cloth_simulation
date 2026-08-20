@@ -40,6 +40,7 @@ private:
         GLuint program = 0;
         GLint vertex_count = -1;
         GLint search_radius_squared = -1;
+        GLint arm_triangle_ranges = -1;
     };
 
     struct ApplyStage final

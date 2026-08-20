@@ -4,6 +4,10 @@
 const uint max_bvh_stack_depth = 32u;
 const uint bvh_root_node = 0u;
 
+#ifndef IS_BODY_SURFACE_CANDIDATE
+#define IS_BODY_SURFACE_CANDIDATE(triangle_index) true
+#endif
+
 struct NearestBodySurface {
     uint triangle_index;
     vec3 point;
@@ -166,6 +170,9 @@ bool find_nearest_body_surface(vec3 point,
 
         BvhNode current_node = bvh_nodes[current_node_index];
         if (is_leaf_node(current_node)) {
+            if (!IS_BODY_SURFACE_CANDIDATE(current_node.first_element_index)) {
+                continue;
+            }
             for (uint triangle_offset = 0u; triangle_offset < current_node.element_count; ++triangle_offset) {
                 if (update_nearest_body_surface(current_node.first_element_index + triangle_offset,
                                                 point,
