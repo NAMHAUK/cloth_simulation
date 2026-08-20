@@ -99,7 +99,7 @@ void CharacterGpuStateUpdater::initialize_character_pose_state(
     const std::vector<std::uint32_t>& body_triangle_level_offsets,
     const std::vector<std::uint32_t>& body_vertex_level_offsets,
     const std::vector<std::uint32_t>& body_edge_level_offsets,
-    float collision_thickness,
+    float detection_distance,
     QOpenGLFunctions_4_5_Core& gl) const
 {
     if (!is_initialized() || !character_gpu_state_.is_initialized()) {
@@ -113,7 +113,7 @@ void CharacterGpuStateUpdater::initialize_character_pose_state(
     update_derived_pose_state(body_triangle_level_offsets,
                               body_vertex_level_offsets,
                               body_edge_level_offsets,
-                              collision_thickness,
+                              detection_distance,
                               gl);
 }
 
@@ -122,7 +122,7 @@ void CharacterGpuStateUpdater::update_character_pose_state(
     const std::vector<std::uint32_t>& body_triangle_level_offsets,
     const std::vector<std::uint32_t>& body_vertex_level_offsets,
     const std::vector<std::uint32_t>& body_edge_level_offsets,
-    float collision_thickness,
+    float detection_distance,
     QOpenGLFunctions_4_5_Core& gl) const
 {
     if (!is_initialized() || !character_gpu_state_.is_initialized()) {
@@ -136,7 +136,7 @@ void CharacterGpuStateUpdater::update_character_pose_state(
     update_derived_pose_state(body_triangle_level_offsets,
                               body_vertex_level_offsets,
                               body_edge_level_offsets,
-                              collision_thickness,
+                              detection_distance,
                               gl);
 }
 
@@ -215,7 +215,7 @@ void CharacterGpuStateUpdater::update_derived_pose_state(
     const std::vector<std::uint32_t>& body_triangle_level_offsets,
     const std::vector<std::uint32_t>& body_vertex_level_offsets,
     const std::vector<std::uint32_t>& body_edge_level_offsets,
-    float collision_thickness,
+    float detection_distance,
     QOpenGLFunctions_4_5_Core& gl) const
 {
     const CharacterMeshTopologyResources topology = character_gpu_state_.mesh_topology_resources();
@@ -233,7 +233,7 @@ void CharacterGpuStateUpdater::update_derived_pose_state(
                                body_triangle_level_offsets,
                                body_vertex_level_offsets,
                                body_edge_level_offsets,
-                               collision_thickness,
+                               detection_distance,
                                gl);
     normal_updater_.update_character_normals(topology, character_gpu_state_.mesh_normal_resources(), gl);
 }

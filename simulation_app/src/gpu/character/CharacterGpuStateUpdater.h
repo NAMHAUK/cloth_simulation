@@ -30,13 +30,13 @@ public:
                                          const std::vector<std::uint32_t>& body_triangle_level_offsets,
                                          const std::vector<std::uint32_t>& body_vertex_level_offsets,
                                          const std::vector<std::uint32_t>& body_edge_level_offsets,
-                                         float collision_thickness,
+                                         float detection_distance,
                                          QOpenGLFunctions_4_5_Core& gl) const;
     void update_character_pose_state(float frame_alpha,
                                      const std::vector<std::uint32_t>& body_triangle_level_offsets,
                                      const std::vector<std::uint32_t>& body_vertex_level_offsets,
                                      const std::vector<std::uint32_t>& body_edge_level_offsets,
-                                     float collision_thickness,
+                                     float detection_distance,
                                      QOpenGLFunctions_4_5_Core& gl) const;
 
 private:
@@ -52,7 +52,7 @@ private:
     void update_derived_pose_state(const std::vector<std::uint32_t>& body_triangle_level_offsets,
                                    const std::vector<std::uint32_t>& body_vertex_level_offsets,
                                    const std::vector<std::uint32_t>& body_edge_level_offsets,
-                                   float collision_thickness,
+                                   float detection_distance,
                                    QOpenGLFunctions_4_5_Core& gl) const;
 
     CharacterGpuResources& character_gpu_state_;

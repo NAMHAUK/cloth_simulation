@@ -49,8 +49,8 @@ constexpr GLuint dispatch_size = 1;
 }
 }
 
-ClothBodyCollisionDetector::ClothBodyCollisionDetector(float collision_thickness)
-    : collision_thickness_(collision_thickness)
+ClothBodyCollisionDetector::ClothBodyCollisionDetector(float detection_distance)
+    : detection_distance_(detection_distance)
 {}
 
 bool ClothBodyCollisionDetector::is_initialized() const
@@ -129,7 +129,7 @@ bool ClothBodyCollisionDetector::can_detect(const SimulationGpuView& views) cons
            views.collision_candidates.cloth_face_body_vertex.capacity >=
                views.cloth_topology.triangle_count *
                    CollisionCandidateBuffers::candidate_capacity_multiplier &&
-           collision_thickness_ > 0.0f;
+           detection_distance_ > 0.0f;
 }
 
 void ClothBodyCollisionDetector::detect(const SimulationGpuView& views, QOpenGLFunctions_4_5_Core& gl) const

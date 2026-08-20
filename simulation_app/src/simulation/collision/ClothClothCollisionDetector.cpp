@@ -30,7 +30,7 @@ constexpr GLuint dispatch_size = 1;
 
 ClothClothCollisionDetector::ClothClothCollisionDetector(const ClothCollisionParams& params)
     : initial_detection_distance_(params.initial_detection_distance),
-      detection_distance_(params.detection_distance())
+      detection_distance_(params.detection_distance)
 {}
 
 bool ClothClothCollisionDetector::is_initialized() const

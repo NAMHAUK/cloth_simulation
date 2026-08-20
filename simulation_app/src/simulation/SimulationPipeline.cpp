@@ -20,7 +20,7 @@ SimulationPipeline::SimulationPipeline(SimulationParams params)
       bending_constraint_solver_(params.constraints.bending_stiffness),
       attachment_constraint_solver_(params.constraints.attachment_stiffness),
       ground_collision_solver_(params.collisions.ground),
-      cloth_body_collision_detector_(params.collisions.body.thickness),
+      cloth_body_collision_detector_(params.collisions.body.detection_distance),
       cloth_body_collision_solver_(params.collisions.body),
       cloth_cloth_collision_detector_(params.collisions.cloth),
       cloth_cloth_collision_solver_(params.collisions.cloth),
@@ -96,7 +96,7 @@ void SimulationPipeline::step(SceneState& scene,
             params_.step.motion_frame_position(motion_step_index, substep + 1u);
         const float frame_alpha = scene.motion_frame_alpha(motion_frame_position);
         scene.update_reference_frame_kinematics(frame_alpha, substep_dt_);
-        gpu_state.update_character_pose(scene, frame_alpha, params_.collisions.body.thickness, gl);
+        gpu_state.update_character_pose(scene, frame_alpha, params_.collisions.body.detection_distance, gl);
 
         solve_external_forces(scene, views, external_acceleration, gl);
 
@@ -123,7 +123,7 @@ void SimulationPipeline::step_character_only(const SceneState& scene,
 {
     const float motion_frame_position = params_.step.motion_frame_position(motion_step_index + 1u, 0);
     const float frame_alpha = scene.motion_frame_alpha(motion_frame_position);
-    gpu_state.update_character_pose(scene, frame_alpha, params_.collisions.body.thickness, gl);
+    gpu_state.update_character_pose(scene, frame_alpha, params_.collisions.body.detection_distance, gl);
 }
 
 void SimulationPipeline::solve_external_forces(const SceneState& scene,

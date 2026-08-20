@@ -26,7 +26,7 @@ public:
                 const std::vector<std::uint32_t>& triangle_level_offsets,
                 const std::vector<std::uint32_t>& vertex_level_offsets,
                 const std::vector<std::uint32_t>& edge_level_offsets,
-                float collision_thickness,
+                float detection_distance,
                 QOpenGLFunctions_4_5_Core& gl) const;
     void release(QOpenGLFunctions_4_5_Core& gl);
 
@@ -37,7 +37,7 @@ private:
                     const BvhBufferView& body_triangle_bvh,
                     const BvhBufferView& body_vertex_bvh,
                     const BvhBufferView& body_edge_bvh,
-                    float collision_thickness) const;
+                    float detection_distance) const;
 
     GLuint program_ = 0;
     GLint triangle_first_node_index_location_ = -1;
@@ -46,5 +46,5 @@ private:
     GLint vertex_node_count_location_ = -1;
     GLint edge_first_node_index_location_ = -1;
     GLint edge_node_count_location_ = -1;
-    GLint collision_thickness_location_ = -1;
+    GLint detection_distance_location_ = -1;
 };

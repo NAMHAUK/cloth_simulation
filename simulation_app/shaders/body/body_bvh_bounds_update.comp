@@ -62,7 +62,7 @@ uniform uint uVertexFirstNodeIndex;
 uniform uint uVertexNodeCount;
 uniform uint uEdgeFirstNodeIndex;
 uniform uint uEdgeNodeCount;
-uniform float uCollisionThickness;
+uniform float uDetectionDistance;
 
 #define POSITION_IO_BODY_CURRENT
 #define POSITION_IO_BODY_PREVIOUS
@@ -94,14 +94,14 @@ void update_triangle_leaf_bounds(uint node_index, BvhNode node)
         vec3 current_max_bounds = max(current_a, max(current_b, current_c));
         vec3 swept_min_bounds = min(min(previous_a, min(previous_b, previous_c)), current_min_bounds);
         vec3 swept_max_bounds = max(max(previous_a, max(previous_b, previous_c)), current_max_bounds);
-        body_triangle_bounds[triangle_index].min_bounds = vec4(swept_min_bounds - uCollisionThickness, 0.0);
-        body_triangle_bounds[triangle_index].max_bounds = vec4(swept_max_bounds + uCollisionThickness, 0.0);
+        body_triangle_bounds[triangle_index].min_bounds = vec4(swept_min_bounds - uDetectionDistance, 0.0);
+        body_triangle_bounds[triangle_index].max_bounds = vec4(swept_max_bounds + uDetectionDistance, 0.0);
         min_bounds = min(min_bounds, swept_min_bounds);
         max_bounds = max(max_bounds, swept_max_bounds);
     }
 
-    body_triangle_bvh_nodes[node_index].bounds = Aabb(vec4(min_bounds - uCollisionThickness, 0.0),
-                                                      vec4(max_bounds + uCollisionThickness, 0.0));
+    body_triangle_bvh_nodes[node_index].bounds = Aabb(vec4(min_bounds - uDetectionDistance, 0.0),
+                                                      vec4(max_bounds + uDetectionDistance, 0.0));
 }
 
 void update_triangle_internal_bounds(uint node_index, BvhNode node)
@@ -124,14 +124,14 @@ void update_vertex_leaf_bounds(uint node_index, BvhNode node)
         vec3 current_position = read_body_current_position(vertex_index);
         vec3 vertex_min_bounds = min(previous_position, current_position);
         vec3 vertex_max_bounds = max(previous_position, current_position);
-        body_vertex_bounds[vertex_index].min_bounds = vec4(vertex_min_bounds - uCollisionThickness, 0.0);
-        body_vertex_bounds[vertex_index].max_bounds = vec4(vertex_max_bounds + uCollisionThickness, 0.0);
+        body_vertex_bounds[vertex_index].min_bounds = vec4(vertex_min_bounds - uDetectionDistance, 0.0);
+        body_vertex_bounds[vertex_index].max_bounds = vec4(vertex_max_bounds + uDetectionDistance, 0.0);
         min_bounds = min(min_bounds, vertex_min_bounds);
         max_bounds = max(max_bounds, vertex_max_bounds);
     }
 
-    body_vertex_bvh_nodes[node_index].bounds = Aabb(vec4(min_bounds - uCollisionThickness, 0.0),
-                                                    vec4(max_bounds + uCollisionThickness, 0.0));
+    body_vertex_bvh_nodes[node_index].bounds = Aabb(vec4(min_bounds - uDetectionDistance, 0.0),
+                                                    vec4(max_bounds + uDetectionDistance, 0.0));
 }
 
 void update_vertex_internal_bounds(uint node_index, BvhNode node)
@@ -159,15 +159,15 @@ void update_edge_leaf_bounds(uint node_index, BvhNode node)
         vec3 current_b = read_body_current_position(vertex_b);
         vec3 edge_min_bounds = min(min(previous_a, previous_b), min(current_a, current_b));
         vec3 edge_max_bounds = max(max(previous_a, previous_b), max(current_a, current_b));
-        body_edge_bounds[edge_index].min_bounds = vec4(edge_min_bounds - uCollisionThickness, 0.0);
-        body_edge_bounds[edge_index].max_bounds = vec4(edge_max_bounds + uCollisionThickness, 0.0);
+        body_edge_bounds[edge_index].min_bounds = vec4(edge_min_bounds - uDetectionDistance, 0.0);
+        body_edge_bounds[edge_index].max_bounds = vec4(edge_max_bounds + uDetectionDistance, 0.0);
         min_bounds = min(min_bounds, edge_min_bounds);
         max_bounds = max(max_bounds, edge_max_bounds);
     }
 
     body_edge_bvh_nodes[node_index].bounds =
-        Aabb(vec4(min_bounds - uCollisionThickness, 0.0),
-             vec4(max_bounds + uCollisionThickness, 0.0));
+        Aabb(vec4(min_bounds - uDetectionDistance, 0.0),
+             vec4(max_bounds + uDetectionDistance, 0.0));
 }
 
 void update_edge_internal_bounds(uint node_index, BvhNode node)

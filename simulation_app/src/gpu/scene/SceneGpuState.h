@@ -28,14 +28,14 @@ public:
     void release(QOpenGLFunctions_4_5_Core& gl);
     void update_character_pose(const SceneState& scene,
                                float frame_alpha,
-                               float body_collision_thickness,
+                               float body_detection_distance,
                                QOpenGLFunctions_4_5_Core& gl);
     void update_mesh_normals(QOpenGLFunctions_4_5_Core& gl);
     SimulationGpuView simulation_view() const;
 
     const CharacterGpuResources& character_gpu_state() const;
     void set_character_motion(const SceneState& scene,
-                              float body_collision_thickness,
+                              float body_detection_distance,
                               QOpenGLFunctions_4_5_Core& gl);
 
     const ClothGpuResources& cloth_gpu_state() const;
