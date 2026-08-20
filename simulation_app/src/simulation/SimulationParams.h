@@ -35,7 +35,7 @@ struct ConstraintParams final
     float stretch_stiffness = 0.8f;
     float bending_stiffness = 0.15f;
     float attachment_stiffness = 0.8f;
-    float attachment_surface_offset = 0.005f;
+    float attachment_surface_offset = 0.004f;
 };
 
 struct GroundCollisionParams final
@@ -48,8 +48,8 @@ struct GroundCollisionParams final
 struct BodyCollisionParams final
 {
     float detection_distance = 0.005f;
-    float thickness = 0.005f;
-    float max_correction_length = 0.005f;
+    float thickness = 0.004f;
+    float max_correction_length = 0.004f;
 
     // Defaults target dry cotton fabric against a skin-like body surface:
     // reported kinetic COF is about 0.46-0.58, and dynamic COF is commonly
