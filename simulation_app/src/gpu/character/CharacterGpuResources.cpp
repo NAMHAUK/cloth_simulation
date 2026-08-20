@@ -1,7 +1,6 @@
 #include "gpu/character/CharacterGpuResources.h"
 
 #include "asset/MeshGeometryUtils.h"
-#include "gpu/bvh/BvhBuildUtils.h"
 #include "utils/BufferUtils.h"
 #include <cstddef>
 
@@ -96,7 +95,7 @@ void CharacterGpuResources::upload_motion(const CharacterMotion& character_motio
     const GLsizeiptr position_bytes = byte_size<float>(frame_position_component_count(character_motion));
     const GLsizeiptr endpoint_position_bytes =
         byte_size<float>(vertex_position_component_count(character_motion.vertex_count));
-    const std::uint32_t collision_triangle_count = bvh_build::leaf_element_count(body_triangle_bvh.nodes);
+    const std::uint32_t collision_triangle_count = body_triangle_bvh.leaf_element_count();
     const auto edge_count = static_cast<std::uint32_t>(body_edge_bvh.indices.size() / 2u);
     const GLsizeiptr triangle_index_bytes = byte_size<std::uint32_t>(body_triangle_bvh.indices.size());
     const GLsizeiptr bvh_node_bytes = byte_size<BvhNode>(body_triangle_bvh.nodes.size());

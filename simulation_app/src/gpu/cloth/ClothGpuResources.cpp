@@ -1,7 +1,6 @@
 #include "gpu/cloth/ClothGpuResources.h"
 
 #include "asset/MeshGeometryUtils.h"
-#include "gpu/bvh/BvhBuildUtils.h"
 #include "scene/SceneState.h"
 #include "utils/BufferUtils.h"
 #include <algorithm>
@@ -106,7 +105,7 @@ void append_bvh_nodes(const Bvh& bvh, GarmentBufferState& garment_state, std::ve
         level_offset += root_node_index;
     }
     for (BvhNode node : bvh.nodes) {
-        if (bvh_build::is_leaf_node(node.element_count)) {
+        if (node.is_leaf()) {
             node.first_element_index += garment_state.triangle_start_index;
         } else {
             node.left_child_index += root_node_index;
