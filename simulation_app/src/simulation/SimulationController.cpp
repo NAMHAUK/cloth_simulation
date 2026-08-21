@@ -172,7 +172,7 @@ void SimulationController::return_to_default_pose()
 
         reset_garment_placements();
         set_character_motion_state(default_character_motion_, gl);
-        gpu_state_.clear_base_positions(gl);
+        gpu_state_.clear_garment_base_positions(gl);
         is_default_pose_ = true;
     });
 

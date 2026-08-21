@@ -3,7 +3,6 @@
 #include "scene/SceneState.h"
 
 #include <cassert>
-#include <limits>
 #include <stdexcept>
 
 SceneGpuState::SceneGpuState()
@@ -27,15 +26,8 @@ void SceneGpuState::initialize(const std::filesystem::path& shader_dir,
     initialized_ = true;
 }
 
-void SceneGpuState::update_mesh_normals(QOpenGLFunctions_4_5_Core& gl)
+void SceneGpuState::update_cloth_normals(QOpenGLFunctions_4_5_Core& gl)
 {
-    if (!is_initialized()) {
-        return;
-    }
-
-    normal_updater_.update_character_normals(character_gpu_state_.mesh_topology_resources(),
-                                             character_gpu_state_.mesh_normal_resources(),
-                                             gl);
     normal_updater_.update_cloth_normals(cloth_gpu_state_.mesh_topology_resources(),
                                          cloth_gpu_state_.mesh_normal_resources(),
                                          gl);
@@ -85,9 +77,7 @@ void SceneGpuState::set_character_motion(const SceneState& scene,
                                          float body_detection_distance,
                                          QOpenGLFunctions_4_5_Core& gl)
 {
-    // 새 character mesh가 들어오면 전체 frame character mesh를 GPU에 올리고 frame 상태 설정
-    const CharacterMotion& character_motion = scene.character_motion();
-    character_gpu_state_.upload_motion(character_motion,
+    character_gpu_state_.upload_motion(scene.character_motion(),
                                        scene.default_body_triangle_bvh(),
                                        scene.default_body_vertex_bvh(),
                                        scene.default_body_edge_bvh(),
@@ -107,10 +97,6 @@ void SceneGpuState::update_character_pose(const SceneState& scene,
                                           float body_detection_distance,
                                           QOpenGLFunctions_4_5_Core& gl)
 {
-    if (!is_initialized() || !character_gpu_state_.is_initialized()) {
-        return;
-    }
-
     character_gpu_state_.set_current_frame(scene.motion_frame_index());
     character_gpu_state_updater_.update_character_pose_state(frame_alpha,
                                                              scene.default_body_triangle_bvh().level_offsets,
@@ -127,11 +113,6 @@ const ClothGpuResources& SceneGpuState::cloth_gpu_state() const
     return cloth_gpu_state_;
 }
 
-CollisionCandidateBufferView SceneGpuState::collision_candidate_buffer_view() const
-{
-    return collision_candidate_buffers_.view();
-}
-
 void SceneGpuState::release_garment_resources(QOpenGLFunctions_4_5_Core& gl)
 {
     collision_candidate_buffers_.release(gl);
@@ -146,13 +127,7 @@ void SceneGpuState::rebuild_garment_resources(const SceneState& scene,
 
     cloth_gpu_state_.rebuild_buffers(scene.garments(), changed_layer, gl);
     const ClothMeshTopologyResources topology = cloth_gpu_state_.mesh_topology_resources();
-    if (has_garment_resources()) {
-        if (scene.garments().size() > std::numeric_limits<std::uint32_t>::max()) {
-            collision_candidate_buffers_.release(gl);
-            throw std::runtime_error("Cannot prepare collision candidate buffers because the garment count "
-                                     "exceeds the supported range.");
-        }
-
+    if (cloth_gpu_state_.is_initialized()) {
         const ClothMotionBufferView motion_view = cloth_gpu_state_.motion_buffer_view();
         const DistanceConstraintBufferView stretch_constraints =
             cloth_gpu_state_.stretch_constraint_buffer_view();
@@ -166,9 +141,7 @@ void SceneGpuState::rebuild_garment_resources(const SceneState& scene,
     } else {
         collision_candidate_buffers_.release(gl);
     }
-    normal_updater_.update_cloth_normals(cloth_gpu_state_.mesh_topology_resources(),
-                                         cloth_gpu_state_.mesh_normal_resources(),
-                                         gl);
+    update_cloth_normals(gl);
 }
 
 void SceneGpuState::upload_garment_placement(const GarmentObject& garment, QOpenGLFunctions_4_5_Core& gl)
@@ -202,7 +175,7 @@ void SceneGpuState::build_garment_attachment_targets(SceneState& scene,
 
 void SceneGpuState::capture_garment_base_positions(QOpenGLFunctions_4_5_Core& gl)
 {
-    if (!has_garment_resources()) {
+    if (!cloth_gpu_state_.is_initialized()) {
         return;
     }
     cloth_gpu_state_.capture_base_positions(gl);
@@ -210,24 +183,17 @@ void SceneGpuState::capture_garment_base_positions(QOpenGLFunctions_4_5_Core& gl
 
 void SceneGpuState::restore_garment_base_positions(QOpenGLFunctions_4_5_Core& gl)
 {
-    if (!has_garment_resources()) {
+    if (!cloth_gpu_state_.is_initialized()) {
         return;
     }
     if (!cloth_gpu_state_.restore_base_positions(gl)) {
         throw std::runtime_error("Failed to restore garment base positions.");
     }
 
-    normal_updater_.update_cloth_normals(cloth_gpu_state_.mesh_topology_resources(),
-                                         cloth_gpu_state_.mesh_normal_resources(),
-                                         gl);
+    update_cloth_normals(gl);
 }
 
-void SceneGpuState::clear_base_positions(QOpenGLFunctions_4_5_Core& gl)
+void SceneGpuState::clear_garment_base_positions(QOpenGLFunctions_4_5_Core& gl)
 {
     cloth_gpu_state_.clear_base_positions(gl);
-}
-
-bool SceneGpuState::has_garment_resources() const
-{
-    return cloth_gpu_state_.is_initialized();
 }

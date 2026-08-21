@@ -79,7 +79,7 @@ void SimulationPipeline::prefit_garments(SceneGpuState& gpu_state,
         cloth_cloth_collision_solver_.update_body_surface_mapping(views, gl);
     }
 
-    gpu_state.update_mesh_normals(gl);
+    gpu_state.update_cloth_normals(gl);
 }
 
 void SimulationPipeline::step(SceneState& scene,
@@ -113,7 +113,7 @@ void SimulationPipeline::step(SceneState& scene,
         }
     }
 
-    gpu_state.update_mesh_normals(gl);
+    gpu_state.update_cloth_normals(gl);
 }
 
 void SimulationPipeline::step_character_only(const SceneState& scene,

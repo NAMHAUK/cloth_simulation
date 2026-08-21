@@ -30,7 +30,7 @@ public:
                                float frame_alpha,
                                float body_detection_distance,
                                QOpenGLFunctions_4_5_Core& gl);
-    void update_mesh_normals(QOpenGLFunctions_4_5_Core& gl);
+    void update_cloth_normals(QOpenGLFunctions_4_5_Core& gl);
     SimulationGpuView simulation_view() const;
 
     const CharacterGpuResources& character_gpu_state() const;
@@ -39,7 +39,6 @@ public:
                               QOpenGLFunctions_4_5_Core& gl);
 
     const ClothGpuResources& cloth_gpu_state() const;
-    CollisionCandidateBufferView collision_candidate_buffer_view() const;
     void release_garment_resources(QOpenGLFunctions_4_5_Core& gl);
     void rebuild_garment_resources(const SceneState& scene,
                                    QOpenGLFunctions_4_5_Core& gl,
@@ -50,11 +49,9 @@ public:
                                           QOpenGLFunctions_4_5_Core& gl);
     void capture_garment_base_positions(QOpenGLFunctions_4_5_Core& gl);
     void restore_garment_base_positions(QOpenGLFunctions_4_5_Core& gl);
-    void clear_base_positions(QOpenGLFunctions_4_5_Core& gl);
+    void clear_garment_base_positions(QOpenGLFunctions_4_5_Core& gl);
 
 private:
-    bool has_garment_resources() const;
-
     CharacterGpuResources character_gpu_state_;
     BodyBvhBoundsUpdater bvh_bounds_updater_;
     NormalUpdater normal_updater_;
