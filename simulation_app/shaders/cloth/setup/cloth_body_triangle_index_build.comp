@@ -24,19 +24,11 @@ layout(std430, binding = 3) readonly buffer BodyTriangleBvhNodeBuffer {
 
 uniform uint uVertexCount;
 uniform float uSearchRadiusSquared;
-uniform uvec4 uArmTriangleRanges;
 
 const uint invalid_triangle_index = 0xffffffffu;
 
-bool is_body_surface_candidate(uint triangle_index)
-{
-    return !((triangle_index >= uArmTriangleRanges.x && triangle_index < uArmTriangleRanges.y) ||
-             (triangle_index >= uArmTriangleRanges.z && triangle_index < uArmTriangleRanges.w));
-}
-
 #define POSITION_IO_CLOTH_CURRENT
 #include "../../mesh/position_io.glsl"
-#define IS_BODY_SURFACE_CANDIDATE(triangle_index) is_body_surface_candidate(triangle_index)
 #include "../../body/body_mesh_search.glsl"
 
 void main()
