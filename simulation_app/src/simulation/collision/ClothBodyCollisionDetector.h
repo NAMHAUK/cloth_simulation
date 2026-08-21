@@ -11,7 +11,7 @@
 class ClothBodyCollisionDetector final
 {
 public:
-    explicit ClothBodyCollisionDetector(float collision_thickness);
+    explicit ClothBodyCollisionDetector(float detection_distance);
     ClothBodyCollisionDetector(const ClothBodyCollisionDetector&) = delete;
     ClothBodyCollisionDetector& operator=(const ClothBodyCollisionDetector&) = delete;
 
@@ -62,5 +62,5 @@ private:
     CandidateDetectionProgram cloth_edge_body_edge_;
     CandidateDetectionProgram cloth_face_body_vertex_;
     DispatchSizeProgram dispatch_size_;
-    float collision_thickness_ = 0.0f;
+    float detection_distance_ = 0.0f;
 };

@@ -35,7 +35,7 @@ struct ConstraintParams final
     float stretch_stiffness = 0.8f;
     float bending_stiffness = 0.15f;
     float attachment_stiffness = 0.8f;
-    float attachment_surface_offset = 0.005f;
+    float attachment_surface_offset = 0.004f;
 };
 
 struct GroundCollisionParams final
@@ -47,8 +47,9 @@ struct GroundCollisionParams final
 
 struct BodyCollisionParams final
 {
-    float thickness = 0.005f;
-    float max_correction_length = 0.005f;
+    float detection_distance = 0.005f;
+    float thickness = 0.004f;
+    float max_correction_length = 0.004f;
 
     // Defaults target dry cotton fabric against a skin-like body surface:
     // reported kinetic COF is about 0.46-0.58, and dynamic COF is commonly
@@ -61,12 +62,10 @@ struct ClothCollisionParams final
 {
     float initial_detection_distance = 0.012f;
     float thickness = 0.007f;
-    float detection_margin = 0.002f;
+    float detection_distance = 0.009f;
     float stiffness = 1.0f;
     float max_correction_length = 0.003f;
     float body_search_radius = 0.15f;
-
-    constexpr float detection_distance() const { return thickness + detection_margin; }
 };
 
 struct CollisionParams final
@@ -126,13 +125,13 @@ constexpr bool is_valid_simulation_params(const SimulationParams& params)
            ground.static_friction >= ground.dynamic_friction &&
            ground.static_friction <= 1.0f &&
            body.thickness > 0.0f &&
+           body.detection_distance >= body.thickness &&
            body.max_correction_length > 0.0f &&
            body.dynamic_friction >= 0.0f &&
            body.static_friction >= body.dynamic_friction &&
            body.static_friction <= 1.0f &&
            cloth.thickness > 0.0f &&
-           cloth.detection_margin >= 0.0f &&
-           cloth.detection_distance() >= cloth.thickness &&
+           cloth.detection_distance >= cloth.thickness &&
            cloth.initial_detection_distance >= cloth.thickness &&
            cloth.stiffness >= 0.0f &&
            cloth.stiffness <= 1.0f &&

@@ -182,7 +182,7 @@ void SimulationController::return_to_default_pose()
 void SimulationController::set_character_motion_state(CharacterMotion motion, QOpenGLFunctions_4_5_Core& gl)
 {
     scene_.set_character_motion(std::move(motion));
-    gpu_state_.set_character_motion(scene_, params_.collisions.body.thickness, gl);
+    gpu_state_.set_character_motion(scene_, params_.collisions.body.detection_distance, gl);
     motion_step_index_ = 0;
     Q_EMIT camera_reset_requested(scene_.character_root_position(0));
 }

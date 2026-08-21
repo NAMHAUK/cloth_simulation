@@ -37,6 +37,7 @@ struct Bvh final
     std::vector<BvhNode> nodes;
     std::vector<std::uint32_t> level_offsets;
     std::vector<std::uint32_t> indices;
+    glm::uvec4 arm_triangle_ranges{};
 
     std::uint32_t leaf_element_count() const
     {
@@ -54,4 +55,5 @@ struct BvhBufferView final
 {
     GLuint node_buffer = 0;
     GLuint bounds_buffer = 0;
+    glm::uvec4 arm_triangle_ranges{};
 };

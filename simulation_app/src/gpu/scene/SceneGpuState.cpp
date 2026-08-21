@@ -82,7 +82,7 @@ const CharacterGpuResources& SceneGpuState::character_gpu_state() const
 }
 
 void SceneGpuState::set_character_motion(const SceneState& scene,
-                                         float body_collision_thickness,
+                                         float body_detection_distance,
                                          QOpenGLFunctions_4_5_Core& gl)
 {
     // 새 character mesh가 들어오면 전체 frame character mesh를 GPU에 올리고 frame 상태 설정
@@ -98,13 +98,13 @@ void SceneGpuState::set_character_motion(const SceneState& scene,
         scene.default_body_triangle_bvh().level_offsets,
         scene.default_body_vertex_bvh().level_offsets,
         scene.default_body_edge_bvh().level_offsets,
-        body_collision_thickness,
+        body_detection_distance,
         gl);
 }
 
 void SceneGpuState::update_character_pose(const SceneState& scene,
                                           float frame_alpha,
-                                          float body_collision_thickness,
+                                          float body_detection_distance,
                                           QOpenGLFunctions_4_5_Core& gl)
 {
     if (!is_initialized() || !character_gpu_state_.is_initialized()) {
@@ -116,7 +116,7 @@ void SceneGpuState::update_character_pose(const SceneState& scene,
                                                              scene.default_body_triangle_bvh().level_offsets,
                                                              scene.default_body_vertex_bvh().level_offsets,
                                                              scene.default_body_edge_bvh().level_offsets,
-                                                             body_collision_thickness,
+                                                             body_detection_distance,
                                                              gl);
 }
 

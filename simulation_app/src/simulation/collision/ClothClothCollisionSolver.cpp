@@ -119,6 +119,8 @@ void ClothClothCollisionSolver::initialize(const std::filesystem::path& shader_d
         gl.glGetUniformLocation(body_triangle_index_build_.program, "uVertexCount");
     body_triangle_index_build_.search_radius_squared =
         gl.glGetUniformLocation(body_triangle_index_build_.program, "uSearchRadiusSquared");
+    body_triangle_index_build_.arm_triangle_ranges =
+        gl.glGetUniformLocation(body_triangle_index_build_.program, "uArmTriangleRanges");
     apply_.vertex_count = gl.glGetUniformLocation(apply_.program, "uVertexCount");
     apply_.max_correction = gl.glGetUniformLocation(apply_.program, "uMaxCorrectionLength");
 
@@ -134,6 +136,7 @@ void ClothClothCollisionSolver::initialize(const std::filesystem::path& shader_d
                                      initial_accumulate_.upper_vertex_offset,
                                      body_triangle_index_build_.vertex_count,
                                      body_triangle_index_build_.search_radius_squared,
+                                     body_triangle_index_build_.arm_triangle_ranges,
                                      apply_.vertex_count,
                                      apply_.max_correction)) {
         throw std::runtime_error("Cloth-cloth collision compute shader missing required uniforms.");
@@ -196,6 +199,13 @@ void ClothClothCollisionSolver::update_body_surface_mapping(const SimulationGpuV
     gl.glProgramUniform1f(body_triangle_index_build_.program,
                           body_triangle_index_build_.search_radius_squared,
                           surface_search_radius_ * surface_search_radius_);
+    const glm::uvec4 arm_ranges = views.body_triangle_bvh.arm_triangle_ranges;
+    gl.glProgramUniform4ui(body_triangle_index_build_.program,
+                           body_triangle_index_build_.arm_triangle_ranges,
+                           arm_ranges.x,
+                           arm_ranges.y,
+                           arm_ranges.z,
+                           arm_ranges.w);
     gl.glDispatchCompute(
         compute_group_count(views.cloth_motion.vertex_count, body_triangle_index_build_local_size),
         1,

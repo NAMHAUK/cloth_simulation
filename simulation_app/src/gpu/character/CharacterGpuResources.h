@@ -67,4 +67,5 @@ private:
 
     // Mesh triangle and adjacent triangle data
     std::uint32_t triangle_count_ = 0;
+    glm::uvec4 arm_triangle_ranges_{};
 };

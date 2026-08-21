@@ -47,7 +47,7 @@ bool BodyBvhBoundsUpdater::can_update(const CharacterMeshTopologyResources& topo
                                       const BvhBufferView& body_triangle_bvh,
                                       const BvhBufferView& body_vertex_bvh,
                                       const BvhBufferView& body_edge_bvh,
-                                      float collision_thickness) const
+                                      float detection_distance) const
 {
     return is_initialized() &&
            is_valid_character_mesh_topology_resource(topology) &&
@@ -60,7 +60,7 @@ bool BodyBvhBoundsUpdater::can_update(const CharacterMeshTopologyResources& topo
            is_valid_bvh_buffer_view(body_triangle_bvh) &&
            is_valid_bvh_buffer_view(body_vertex_bvh) &&
            is_valid_bvh_buffer_view(body_edge_bvh) &&
-           collision_thickness > 0.0f;
+           detection_distance > 0.0f;
 }
 
 void BodyBvhBoundsUpdater::initialize(const std::filesystem::path& shader_dir, QOpenGLFunctions_4_5_Core& gl)
@@ -74,7 +74,7 @@ void BodyBvhBoundsUpdater::initialize(const std::filesystem::path& shader_dir, Q
     vertex_node_count_location_ = gl.glGetUniformLocation(program_, "uVertexNodeCount");
     edge_first_node_index_location_ = gl.glGetUniformLocation(program_, "uEdgeFirstNodeIndex");
     edge_node_count_location_ = gl.glGetUniformLocation(program_, "uEdgeNodeCount");
-    collision_thickness_location_ = gl.glGetUniformLocation(program_, "uCollisionThickness");
+    detection_distance_location_ = gl.glGetUniformLocation(program_, "uDetectionDistance");
 
     if (triangle_first_node_index_location_ < 0 ||
         triangle_node_count_location_ < 0 ||
@@ -82,7 +82,7 @@ void BodyBvhBoundsUpdater::initialize(const std::filesystem::path& shader_dir, Q
         vertex_node_count_location_ < 0 ||
         edge_first_node_index_location_ < 0 ||
         edge_node_count_location_ < 0 ||
-        collision_thickness_location_ < 0) {
+        detection_distance_location_ < 0) {
         throw std::runtime_error("Body BVH bounds update compute shader missing required uniforms.");
     }
 }
@@ -96,7 +96,7 @@ void BodyBvhBoundsUpdater::update(const CharacterMeshTopologyResources& topology
                                   const std::vector<std::uint32_t>& triangle_level_offsets,
                                   const std::vector<std::uint32_t>& vertex_level_offsets,
                                   const std::vector<std::uint32_t>& edge_level_offsets,
-                                  float collision_thickness,
+                                  float detection_distance,
                                   QOpenGLFunctions_4_5_Core& gl) const
 {
     if (!can_update(topology,
@@ -105,7 +105,7 @@ void BodyBvhBoundsUpdater::update(const CharacterMeshTopologyResources& topology
                     body_triangle_bvh,
                     body_vertex_bvh,
                     body_edge_bvh,
-                    collision_thickness)) {
+                    detection_distance)) {
         return;
     }
 
@@ -136,7 +136,7 @@ void BodyBvhBoundsUpdater::update(const CharacterMeshTopologyResources& topology
     gl.glBindBufferBase(GL_SHADER_STORAGE_BUFFER, body_edge_indices_binding, topology.edge_index_buffer);
     gl.glBindBufferBase(GL_SHADER_STORAGE_BUFFER, body_edge_bvh_nodes_binding, body_edge_bvh.node_buffer);
     gl.glBindBufferBase(GL_SHADER_STORAGE_BUFFER, body_edge_bounds_binding, body_edge_bvh.bounds_buffer);
-    gl.glProgramUniform1f(program_, collision_thickness_location_, collision_thickness);
+    gl.glProgramUniform1f(program_, detection_distance_location_, detection_distance);
 
     const std::size_t level_count =
         std::max({triangle_level_offsets.size(), vertex_level_offsets.size(), edge_level_offsets.size()}) -
@@ -177,5 +177,5 @@ void BodyBvhBoundsUpdater::release(QOpenGLFunctions_4_5_Core& gl)
     vertex_node_count_location_ = -1;
     edge_first_node_index_location_ = -1;
     edge_node_count_location_ = -1;
-    collision_thickness_location_ = -1;
+    detection_distance_location_ = -1;
 }
