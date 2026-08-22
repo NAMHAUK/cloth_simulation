@@ -5,6 +5,7 @@
 #include <glm/vec3.hpp>
 
 #include <algorithm>
+#include <cassert>
 #include <stdexcept>
 #include <utility>
 
@@ -113,13 +114,12 @@ void SceneState::set_garment(GarmentObject garment)
     garments_.push_back(std::move(garment));
 }
 
-GarmentObject& SceneState::apply_garment_placement(GarmentLayer layer,
-                                                   const glm::vec3& position_offset,
-                                                   float scale)
+GarmentObject& SceneState::place_garment(GarmentLayer layer, const glm::vec3& position_offset, float scale)
 {
     GarmentObject* garment = find_garment(layer);
-    GarmentMesh& mesh = garment->mesh;
+    assert(garment != nullptr);
 
+    GarmentMesh& mesh = garment->mesh;
     for (std::size_t index = 0; index < mesh.vertices.size(); index += 3u) {
         glm::vec3 position{
             mesh.vertices[index],
