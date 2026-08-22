@@ -4,7 +4,6 @@
 #include "gpu/character/CharacterGpuResources.h"
 #include "gpu/character/CharacterGpuStateUpdater.h"
 #include "gpu/cloth/ClothGpuResources.h"
-#include "gpu/scene/AttachmentTargetBuilder.h"
 #include "gpu/scene/CollisionCandidateBuffers.h"
 #include "gpu/scene/NormalUpdater.h"
 #include "gpu/scene/SimulationGpuView.h"
@@ -48,13 +47,26 @@ public:
     void release_garment_resources(QOpenGLFunctions_4_5_Core& gl);
 
 private:
+    // Initialization
+
+    void initialize_attachment_target_program(const std::filesystem::path& shader_dir,
+                                              float surface_offset,
+                                              QOpenGLFunctions_4_5_Core& gl);
+
+    // Garments
+
+    void build_attachment_targets(GarmentLayer layer, QOpenGLFunctions_4_5_Core& gl);
+
     CharacterGpuResources character_gpu_state_;
     BodyBvhBoundsUpdater bvh_bounds_updater_;
     NormalUpdater normal_updater_;
     CharacterGpuStateUpdater character_gpu_state_updater_;
     ClothGpuResources cloth_gpu_state_;
     CollisionCandidateBuffers collision_candidate_buffers_;
-    AttachmentTargetBuilder attachment_target_builder_;
+
+    GLuint attachment_target_program_ = 0;
+    GLint attachment_constraint_offset_location_ = -1;
+    GLint attachment_constraint_count_location_ = -1;
 
     bool initialized_ = false;
 };

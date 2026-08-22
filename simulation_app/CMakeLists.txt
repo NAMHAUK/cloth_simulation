@@ -76,8 +76,6 @@ add_executable(simulation_app
     src/gpu/scene/SceneGpuState.h
     src/gpu/scene/CollisionCandidateBuffers.cpp
     src/gpu/scene/CollisionCandidateBuffers.h
-    src/gpu/scene/AttachmentTargetBuilder.cpp
-    src/gpu/scene/AttachmentTargetBuilder.h
     src/gpu/scene/NormalUpdater.cpp
     src/gpu/scene/NormalUpdater.h
     src/rendering/RenderPipeline.cpp

@@ -1,8 +1,17 @@
 #include "gpu/scene/SceneGpuState.h"
 
 #include "scene/SceneState.h"
+#include "utils/BufferUtils.h"
+#include "utils/ShaderUtils.h"
 
+#include <array>
 #include <cassert>
+#include <cstdint>
+#include <stdexcept>
+
+namespace {
+constexpr std::uint32_t attachment_target_local_size = 128;
+}
 
 SceneGpuState::SceneGpuState()
     : character_gpu_state_updater_(character_gpu_state_, bvh_bounds_updater_, normal_updater_)
@@ -17,9 +26,34 @@ void SceneGpuState::initialize(const std::filesystem::path& shader_dir,
     normal_updater_.initialize(shader_dir, gl);
     bvh_bounds_updater_.initialize(shader_dir, gl);
     character_gpu_state_updater_.initialize(shader_dir, gl);
-    attachment_target_builder_.initialize(shader_dir, attachment_surface_offset, gl);
+
+    initialize_attachment_target_program(shader_dir, attachment_surface_offset, gl);
 
     initialized_ = true;
+}
+
+void SceneGpuState::initialize_attachment_target_program(const std::filesystem::path& shader_dir,
+                                                         float surface_offset,
+                                                         QOpenGLFunctions_4_5_Core& gl)
+{
+    attachment_target_program_ =
+        load_compute_program(shader_dir / "cloth" / "setup" / "garment_attachment_target_build.comp",
+                             "Attachment target build",
+                             gl);
+    attachment_constraint_offset_location_ =
+        gl.glGetUniformLocation(attachment_target_program_, "uConstraintOffset");
+    attachment_constraint_count_location_ =
+        gl.glGetUniformLocation(attachment_target_program_, "uConstraintCount");
+    const GLint attachment_surface_offset_location =
+        gl.glGetUniformLocation(attachment_target_program_, "uSurfaceOffset");
+
+    if (attachment_constraint_offset_location_ < 0 ||
+        attachment_constraint_count_location_ < 0 ||
+        attachment_surface_offset_location < 0) {
+        throw std::runtime_error("Attachment target build compute shader missing required uniforms.");
+    }
+
+    gl.glProgramUniform1f(attachment_target_program_, attachment_surface_offset_location, surface_offset);
 }
 
 // Character
@@ -83,8 +117,38 @@ void SceneGpuState::initialize_garment_attachments(const GarmentObject& garment,
                                                    QOpenGLFunctions_4_5_Core& gl)
 {
     cloth_gpu_state_.upload_attachment_indices(garment, gl);
-    attachment_target_builder_.build(simulation_view(), garment.layer, gl);
+    build_attachment_targets(garment.layer, gl);
     cloth_gpu_state_.activate_attachment_targets(garment.layer);
+}
+
+void SceneGpuState::build_attachment_targets(GarmentLayer layer, QOpenGLFunctions_4_5_Core& gl)
+{
+    const SimulationGpuView views = simulation_view();
+    const GarmentBufferState& garment_state = views.garment_buffer_states[layer];
+    const std::uint32_t constraint_count = garment_state.attachment_constraint_count;
+    if (constraint_count == 0u) {
+        return;
+    }
+
+    const std::array<GLuint, 5> buffers{
+        views.cloth_motion.current_position_buffer,
+        views.attachment_constraints.attachment_index_buffer,
+        views.attachment_constraints.barycentric_offset_buffer,
+        views.body_triangle_geometry.triangle_geometry_buffer,
+        views.body_triangle_bvh.node_buffer,
+    };
+
+    gl.glUseProgram(attachment_target_program_);
+    gl.glBindBuffersBase(GL_SHADER_STORAGE_BUFFER, 0, static_cast<GLsizei>(buffers.size()), buffers.data());
+    gl.glProgramUniform1ui(attachment_target_program_,
+                           attachment_constraint_offset_location_,
+                           garment_state.attachment_constraint_start_index);
+    gl.glProgramUniform1ui(attachment_target_program_,
+                           attachment_constraint_count_location_,
+                           constraint_count);
+                           
+    gl.glDispatchCompute(compute_group_count(constraint_count, attachment_target_local_size), 1, 1);
+    gl.glMemoryBarrier(GL_SHADER_STORAGE_BARRIER_BIT);
 }
 
 void SceneGpuState::capture_garment_base_positions(QOpenGLFunctions_4_5_Core& gl)
@@ -164,8 +228,9 @@ void SceneGpuState::release(QOpenGLFunctions_4_5_Core& gl)
     character_gpu_state_updater_.release(gl);
     normal_updater_.release(gl);
     bvh_bounds_updater_.release(gl);
-    attachment_target_builder_.release(gl);
+    gl.glDeleteProgram(attachment_target_program_);
 
+    attachment_target_program_ = 0;
     initialized_ = false;
 }
 
