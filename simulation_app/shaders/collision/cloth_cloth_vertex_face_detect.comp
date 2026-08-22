@@ -44,7 +44,7 @@ shared uint garment_roots_overlap;
 #define POSITION_IO_CLOTH_CURRENT
 #define POSITION_IO_CLOTH_PREVIOUS
 #include "../mesh/position_io.glsl"
-#include "common/cloth_cloth_candidate_output.glsl"
+#include "common/collision_candidate_output.glsl"
 
 bool roots_overlap()
 {
