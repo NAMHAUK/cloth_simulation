@@ -5,7 +5,6 @@
 #include "gpu/cloth/ClothGpuDataTypes.h"
 #include "gpu/scene/SimulationGpuView.h"
 
-#include <array>
 #include <cstddef>
 #include <cstdint>
 
@@ -59,15 +58,6 @@ inline bool is_valid_body_triangle_index_view(
 {
     return body_triangle_index_view.body_triangle_index_buffer != 0 &&
            body_triangle_index_view.vertex_count != 0;
-}
-
-inline std::uint32_t active_garment_count(const std::array<GarmentBufferState, 2>& garments)
-{
-    std::uint32_t count = 0u;
-    for (const GarmentBufferState& garment : garments) {
-        count += garment.vertex_count != 0u;
-    }
-    return count;
 }
 
 inline bool is_valid_bvh_buffer_view(const BvhBufferView& view)

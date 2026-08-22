@@ -155,15 +155,16 @@ void SceneGpuState::rebuild_collision_buffers(QOpenGLFunctions_4_5_Core& gl)
 {
     release_collision_buffers(gl);
 
-    const auto topology = cloth_gpu_state_.mesh_topology_resources();
-    const auto stretch_constraints = cloth_gpu_state_.stretch_constraint_buffer_view();
+    const auto views = simulation_view();
+    const auto& topology = views.cloth_topology;
+    const auto& stretch_constraints = views.stretch_constraints;
 
     create_collision_candidate_buffer(collision_buffers_.cloth_vertex_body_face, topology.vertex_count, gl);
     create_collision_candidate_buffer(collision_buffers_.cloth_edge_body_edge,
                                       stretch_constraints.constraint_count,
                                       gl);
     create_collision_candidate_buffer(collision_buffers_.cloth_face_body_vertex, topology.triangle_count, gl);
-    if (active_garment_count(cloth_gpu_state_.garment_buffer_states()) == 2u) {
+    if (views.has_multiple_garments()) {
         create_collision_candidate_buffer(collision_buffers_.cloth_cloth_vertex_face,
                                           topology.vertex_count,
                                           gl);

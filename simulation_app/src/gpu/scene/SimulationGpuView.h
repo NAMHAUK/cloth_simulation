@@ -34,6 +34,12 @@ struct SimulationGpuView final
         : garment_buffer_states(garment_states)
     {}
 
+    bool has_multiple_garments() const
+    {
+        return garment_buffer_states[GarmentLayer::Lower].vertex_count != 0u &&
+               garment_buffer_states[GarmentLayer::Upper].vertex_count != 0u;
+    }
+
     // Cloth state
     ClothMotionBufferView cloth_motion;
     ClothCollisionPushoutBufferView cloth_collision_pushout;

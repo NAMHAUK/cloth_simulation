@@ -87,8 +87,7 @@ bool ClothClothCollisionDetector::can_detect(const SimulationGpuView& views) con
         return false;
     }
 
-    const std::uint32_t garment_count = active_garment_count(views.garment_buffer_states);
-    if (garment_count < 2u) {
+    if (!views.has_multiple_garments()) {
         return true;
     }
 
@@ -113,7 +112,7 @@ void ClothClothCollisionDetector::detect(const SimulationGpuView& views,
     assert(can_detect(views));
 
     const CollisionCandidateBuffers& collision_candidates = views.collision.cloth_cloth_vertex_face;
-    if (active_garment_count(views.garment_buffer_states) < 2u) {
+    if (!views.has_multiple_garments()) {
         if (is_valid_collision_candidate_buffer(collision_candidates)) {
             clear_collision_candidate_counts(collision_candidates, gl);
             gl.glMemoryBarrier(GL_SHADER_STORAGE_BARRIER_BIT | GL_BUFFER_UPDATE_BARRIER_BIT);

@@ -68,8 +68,7 @@ void SimulationPipeline::prefit_garments(SceneGpuState& gpu_state,
     gpu_state.cloth_gpu_state().copy_current_positions_to_previous(gl);
 
     // Initial cloth-cloth collision
-    const bool has_multiple_garments = active_garment_count(views.garment_buffer_states) > 1u;
-    if (has_multiple_garments) {
+    if (views.has_multiple_garments()) {
         for (std::uint32_t iteration = 0; iteration < params_.step.iteration_count; ++iteration) {
             cloth_cloth_collision_detector_.detect_initial(views, gl);
             cloth_cloth_collision_solver_.solve_initial(views, gl);
