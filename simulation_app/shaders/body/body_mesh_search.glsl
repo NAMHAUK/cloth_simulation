@@ -120,14 +120,14 @@ bool update_nearest_body_surface(uint triangle_index,
                                  inout float best_distance_sq,
                                  inout NearestBodySurface nearest_surface)
 {
-    vec4 normal = triangle_geometry[triangle_index].normal;
+    vec4 normal = body_triangle_normals[triangle_index];
     if (normal.w == 0.0) {
         return false;
     }
 
-    vec3 a = triangle_geometry[triangle_index].a.xyz;
-    vec3 b = triangle_geometry[triangle_index].b.xyz;
-    vec3 c = triangle_geometry[triangle_index].c.xyz;
+    vec3 a = body_triangle_positions[triangle_index].a;
+    vec3 b = body_triangle_positions[triangle_index].b;
+    vec3 c = body_triangle_positions[triangle_index].c;
     vec3 unit_normal = normal.xyz;
 
     float plane_distance = dot(point - a, unit_normal);

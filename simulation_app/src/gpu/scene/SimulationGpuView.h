@@ -55,7 +55,7 @@ struct SimulationGpuView final
     // Body collision state
     CharacterMeshTopologyResources body_topology;
     CharacterVertexBufferView body_vertices;
-    TriangleGeometryResources body_triangle_geometry;
+    BodyTriangleResources body_triangles;
     BvhBufferView body_triangle_bvh;
     BvhBufferView body_vertex_bvh;
     BvhBufferView body_edge_bvh;

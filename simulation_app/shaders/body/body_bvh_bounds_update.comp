@@ -8,51 +8,55 @@ const float max_float = 3.402823e+38;
 
 #include "../mesh/primitive_geometry.glsl"
 
-layout(std430, binding = 0) readonly buffer BodyTriangleGeometryBuffer {
-    TriangleGeometry triangle_geometry[];
+layout(std430, binding = 0) readonly buffer BodyTrianglePositions {
+    TrianglePositions body_triangle_positions[];
 };
 
-layout(std430, binding = 1) readonly buffer BodyTriangleIndices {
+layout(std430, binding = 1) readonly buffer BodyTriangleNormals {
+    vec4 body_triangle_normals[];
+};
+
+layout(std430, binding = 2) readonly buffer BodyTriangleIndices {
     uint triangle_indices[];
 };
 
-layout(std430, binding = 2) readonly buffer BodyCurrentPositions {
+layout(std430, binding = 3) readonly buffer BodyCurrentPositions {
     vec4 body_current_positions[];
 };
 
-layout(std430, binding = 3) readonly buffer BodyPreviousPositions {
+layout(std430, binding = 4) readonly buffer BodyPreviousPositions {
     vec4 body_previous_positions[];
 };
 
-layout(std430, binding = 4) buffer BodyTriangleBvhNodes {
+layout(std430, binding = 5) buffer BodyTriangleBvhNodes {
     BvhNode body_triangle_bvh_nodes[];
 };
 
-layout(std430, binding = 5) buffer BodyTriangleBounds {
+layout(std430, binding = 6) buffer BodyTriangleBounds {
     Aabb body_triangle_bounds[];
 };
 
-layout(std430, binding = 6) readonly buffer BodyVertexIndices {
+layout(std430, binding = 7) readonly buffer BodyVertexIndices {
     uint body_vertex_indices[];
 };
 
-layout(std430, binding = 7) buffer BodyVertexBvhNodes {
+layout(std430, binding = 8) buffer BodyVertexBvhNodes {
     BvhNode body_vertex_bvh_nodes[];
 };
 
-layout(std430, binding = 8) buffer BodyVertexBounds {
+layout(std430, binding = 9) buffer BodyVertexBounds {
     Aabb body_vertex_bounds[];
 };
 
-layout(std430, binding = 9) readonly buffer BodyEdgeIndices {
+layout(std430, binding = 10) readonly buffer BodyEdgeIndices {
     uint body_edge_indices[];
 };
 
-layout(std430, binding = 10) buffer BodyEdgeBvhNodes {
+layout(std430, binding = 11) buffer BodyEdgeBvhNodes {
     BvhNode body_edge_bvh_nodes[];
 };
 
-layout(std430, binding = 11) buffer BodyEdgeBounds {
+layout(std430, binding = 12) buffer BodyEdgeBounds {
     Aabb body_edge_bounds[];
 };
 
@@ -74,8 +78,8 @@ void update_triangle_leaf_bounds(uint node_index, BvhNode node)
     vec3 max_bounds = vec3(-max_float);
     for (uint triangle_offset = 0u; triangle_offset < node.element_count; ++triangle_offset) {
         uint triangle_index = node.first_element_index + triangle_offset;
-        TriangleGeometry triangle = triangle_geometry[triangle_index];
-        if (triangle.normal.w == 0.0) {
+        TrianglePositions triangle = body_triangle_positions[triangle_index];
+        if (body_triangle_normals[triangle_index].w == 0.0) {
             body_triangle_bounds[triangle_index] = Aabb(vec4(vec3(max_float), 0.0),
                                                         vec4(vec3(-max_float), 0.0));
             continue;
@@ -86,9 +90,9 @@ void update_triangle_leaf_bounds(uint node_index, BvhNode node)
         vec3 previous_b = read_body_previous_position(triangle_indices[index_base + 1u]);
         vec3 previous_c = read_body_previous_position(triangle_indices[index_base + 2u]);
 
-        vec3 current_a = triangle.a.xyz;
-        vec3 current_b = triangle.b.xyz;
-        vec3 current_c = triangle.c.xyz;
+        vec3 current_a = triangle.a;
+        vec3 current_b = triangle.b;
+        vec3 current_c = triangle.c;
 
         vec3 current_min_bounds = min(current_a, min(current_b, current_c));
         vec3 current_max_bounds = max(current_a, max(current_b, current_c));

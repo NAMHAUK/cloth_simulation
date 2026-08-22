@@ -10,7 +10,7 @@ class CharacterGpuResources;
 class BodyBvhBoundsUpdater;
 struct CharacterMeshTopologyResources;
 struct CharacterVertexBufferView;
-struct TriangleGeometryResources;
+struct BodyTriangleResources;
 
 class CharacterGpuStateUpdater final
 {
@@ -45,7 +45,7 @@ private:
                                            QOpenGLFunctions_4_5_Core& gl) const;
     void update_triangle_geometry(const CharacterMeshTopologyResources& topology,
                                   const CharacterVertexBufferView& vertex_view,
-                                  const TriangleGeometryResources& triangle_geometry,
+                                  const BodyTriangleResources& body_triangles,
                                   QOpenGLFunctions_4_5_Core& gl) const;
     void update_derived_pose_state(const std::vector<std::uint32_t>& body_triangle_level_offsets,
                                    const std::vector<std::uint32_t>& body_vertex_level_offsets,

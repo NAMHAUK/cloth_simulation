@@ -83,9 +83,11 @@ inline bool is_valid_distance_constraint_view(const DistanceConstraintBufferView
            !constraint_view.color_states->empty();
 }
 
-inline bool is_valid_triangle_geometry_resource(const TriangleGeometryResources& triangle_geometry)
+inline bool is_valid_body_triangle_resource(const BodyTriangleResources& body_triangles)
 {
-    return triangle_geometry.triangle_geometry_buffer != 0 && triangle_geometry.triangle_count != 0;
+    return body_triangles.position_buffer != 0 &&
+           body_triangles.normal_buffer != 0 &&
+           body_triangles.triangle_count != 0;
 }
 
 inline bool is_valid_collision_candidate_buffer(const CollisionCandidateBuffers& collision_candidate_buffer)

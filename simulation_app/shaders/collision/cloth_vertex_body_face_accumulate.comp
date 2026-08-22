@@ -12,47 +12,51 @@ layout(std430, binding = 1) readonly buffer ClothPreviousPositions {
 
 #include "../mesh/primitive_geometry.glsl"
 
-layout(std430, binding = 2) readonly buffer BodyTriangleGeometryBuffer {
-    TriangleGeometry triangle_geometry[];
+layout(std430, binding = 2) readonly buffer BodyTrianglePositions {
+    TrianglePositions body_triangle_positions[];
 };
 
-layout(std430, binding = 3) readonly buffer Candidates {
-    uvec2 candidates[];
+layout(std430, binding = 3) readonly buffer BodyTriangleNormals {
+    vec4 body_triangle_normals[];
 };
 
-layout(std430, binding = 4) readonly buffer CandidateCount {
-    uint candidate_count;
-};
-
-layout(std430, binding = 5) buffer NormalCorrectionSums {
-    ivec4 normal_correction_sums[];
-};
-
-layout(std430, binding = 6) buffer FrictionCorrectionSums {
-    ivec4 friction_correction_sums[];
-};
-
-layout(std430, binding = 7) readonly buffer BodyPreviousPositions {
+layout(std430, binding = 4) readonly buffer BodyPreviousPositions {
     vec4 body_previous_positions[];
 };
 
-layout(std430, binding = 8) readonly buffer BodyTriangleIndices {
+layout(std430, binding = 5) readonly buffer BodyTriangleIndices {
     uint body_triangle_indices[];
 };
 
-layout(std430, binding = 9) readonly buffer CollisionPushouts {
+layout(std430, binding = 6) readonly buffer Candidates {
+    uvec2 candidates[];
+};
+
+layout(std430, binding = 7) readonly buffer CandidateCount {
+    uint candidate_count;
+};
+
+layout(std430, binding = 8) buffer NormalCorrectionSums {
+    ivec4 normal_correction_sums[];
+};
+
+layout(std430, binding = 9) buffer FrictionCorrectionSums {
+    ivec4 friction_correction_sums[];
+};
+
+layout(std430, binding = 10) readonly buffer CollisionPushouts {
     vec4 collision_pushouts[];
 };
 
-layout(std430, binding = 10) readonly buffer ClothClothPushouts {
+layout(std430, binding = 11) readonly buffer ClothClothPushouts {
     vec4 cloth_cloth_pushouts[];
 };
 
-layout(std430, binding = 11) readonly buffer ContactMotionDeltas {
+layout(std430, binding = 12) readonly buffer ContactMotionDeltas {
     vec4 contact_motion_deltas[];
 };
 
-layout(std430, binding = 12) buffer ContactMotionDeltaSums {
+layout(std430, binding = 13) buffer ContactMotionDeltaSums {
     ivec4 contact_motion_delta_sums[];
 };
 
@@ -82,12 +86,10 @@ bool compute_vertex_triangle_contact(uint cloth_vertex_index,
                                      uint triangle_index,
                                      out VertexFaceContact contact)
 {
-    TriangleGeometry body_triangle = triangle_geometry[triangle_index];
+    TrianglePositions body_triangle = body_triangle_positions[triangle_index];
     vec3 current_cloth_position = read_cloth_current_position(cloth_vertex_index);
-    TrianglePositions current_body = TrianglePositions(body_triangle.a.xyz,
-                                                       body_triangle.b.xyz,
-                                                       body_triangle.c.xyz);
-    vec3 body_normal = body_triangle.normal.xyz;
+    TrianglePositions current_body = body_triangle;
+    vec3 body_normal = body_triangle_normals[triangle_index].xyz;
     uint body_triangle_index_base = triangle_index * 3u;
     uvec3 body_triangle_vertices = uvec3(body_triangle_indices[body_triangle_index_base],
                                          body_triangle_indices[body_triangle_index_base + 1u],

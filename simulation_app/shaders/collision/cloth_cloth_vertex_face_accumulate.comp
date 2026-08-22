@@ -29,8 +29,8 @@ layout(std430, binding = 5) buffer NormalCorrectionSums {
     ivec4 normal_correction_sums[];
 };
 
-layout(std430, binding = 6) readonly buffer BodyTriangleGeometryBuffer {
-    TriangleGeometry triangle_geometry[];
+layout(std430, binding = 6) readonly buffer BodyTriangleNormals {
+    vec4 body_triangle_normals[];
 };
 
 layout(std430, binding = 7) readonly buffer ClothBodyTriangleIndices {
@@ -80,7 +80,7 @@ bool read_body_normal(uint cloth_vertex_index, out vec3 body_normal)
         return false;
     }
 
-    vec4 stored_normal = triangle_geometry[body_triangle_index].normal;
+    vec4 stored_normal = body_triangle_normals[body_triangle_index];
     if (stored_normal.w == 0.0) {
         return false;
     }

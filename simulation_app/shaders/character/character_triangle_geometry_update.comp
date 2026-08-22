@@ -12,13 +12,15 @@ layout(std430, binding = 1) readonly buffer CharacterIndices {
     uint triangle_indices[];
 };
 
-layout(std430, binding = 2) writeonly buffer CharacterTriangleGeometryBuffer {
-    TriangleGeometry triangle_geometry[];
+layout(std430, binding = 2) writeonly buffer BodyTrianglePositions {
+    TrianglePositions body_triangle_positions[];
+};
+
+layout(std430, binding = 3) writeonly buffer BodyTriangleNormals {
+    vec4 body_triangle_normals[];
 };
 
 uniform uint uTriangleCount;
-
-const float epsilon = 1.0e-20;
 
 #define POSITION_IO_BODY_CURRENT
 #include "../mesh/position_io.glsl"
@@ -35,15 +37,6 @@ void main()
     vec3 b = read_body_current_position(triangle_indices[index_base + 1u]);
     vec3 c = read_body_current_position(triangle_indices[index_base + 2u]);
 
-    vec3 face_normal = cross(b - a, c - a);
-    float normal_length_sq = dot(face_normal, face_normal);
-    float inv_normal_length = normal_length_sq > epsilon ? inversesqrt(normal_length_sq) : 0.0;
-    float normal_length = inv_normal_length > 0.0 ? 1.0 / inv_normal_length : 0.0;
-
-    triangle_geometry[triangle_index].a = vec4(a, 0.0);
-    triangle_geometry[triangle_index].b = vec4(b, 0.0);
-    triangle_geometry[triangle_index].c = vec4(c, 0.0);
-    triangle_geometry[triangle_index].normal = vec4(inv_normal_length > 0.0 ? 
-                                                    face_normal * inv_normal_length : vec3(0.0),
-                                                    normal_length);
+    body_triangle_positions[triangle_index] = TrianglePositions(a, b, c);
+    body_triangle_normals[triangle_index] = triangle_normal(a, b, c);
 }

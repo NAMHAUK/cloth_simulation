@@ -39,7 +39,7 @@ public:
     CharacterMeshTopologyResources mesh_topology_resources() const;
     CharacterAnimationBufferView animation_buffer_view() const;
     CharacterVertexBufferView character_vertex_buffer_view() const;
-    TriangleGeometryResources character_triangle_geometry_resources() const;
+    BodyTriangleResources body_triangle_resources() const;
     CharacterNormalResources mesh_normal_resources() const;
     BvhBufferView body_triangle_bvh_buffer_view() const;
     BvhBufferView body_vertex_bvh_buffer_view() const;

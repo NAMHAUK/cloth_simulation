@@ -19,7 +19,7 @@ public:
     void initialize(const std::filesystem::path& shader_dir, QOpenGLFunctions_4_5_Core& gl);
     void update(const CharacterMeshTopologyResources& topology,
                 const CharacterVertexBufferView& vertex_view,
-                const TriangleGeometryResources& body_triangle_geometry,
+                const BodyTriangleResources& body_triangles,
                 const BvhBufferView& body_triangle_bvh,
                 const BvhBufferView& body_vertex_bvh,
                 const BvhBufferView& body_edge_bvh,
@@ -33,7 +33,7 @@ public:
 private:
     bool can_update(const CharacterMeshTopologyResources& topology,
                     const CharacterVertexBufferView& vertex_view,
-                    const TriangleGeometryResources& body_triangle_geometry,
+                    const BodyTriangleResources& body_triangles,
                     const BvhBufferView& body_triangle_bvh,
                     const BvhBufferView& body_vertex_bvh,
                     const BvhBufferView& body_edge_bvh,

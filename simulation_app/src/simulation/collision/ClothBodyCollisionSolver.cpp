@@ -13,17 +13,18 @@ constexpr std::uint32_t apply_local_size = 128;
 namespace vf_binding {
 constexpr GLuint cloth_current = 0;
 constexpr GLuint cloth_previous = 1;
-constexpr GLuint body_triangle_geometry = 2;
-constexpr GLuint candidates = 3;
-constexpr GLuint candidate_count = 4;
-constexpr GLuint normal_correction_sums = 5;
-constexpr GLuint friction_correction_sums = 6;
-constexpr GLuint body_previous = 7;
-constexpr GLuint body_triangles = 8;
-constexpr GLuint collision_pushouts = 9;
-constexpr GLuint cloth_cloth_pushouts = 10;
-constexpr GLuint contact_motion_deltas = 11;
-constexpr GLuint contact_motion_delta_sums = 12;
+constexpr GLuint body_triangle_positions = 2;
+constexpr GLuint body_triangle_normals = 3;
+constexpr GLuint body_previous = 4;
+constexpr GLuint body_triangles = 5;
+constexpr GLuint candidates = 6;
+constexpr GLuint candidate_count = 7;
+constexpr GLuint normal_correction_sums = 8;
+constexpr GLuint friction_correction_sums = 9;
+constexpr GLuint collision_pushouts = 10;
+constexpr GLuint cloth_cloth_pushouts = 11;
+constexpr GLuint contact_motion_deltas = 12;
+constexpr GLuint contact_motion_delta_sums = 13;
 }
 
 namespace ee_binding {
@@ -140,8 +141,8 @@ bool ClothBodyCollisionSolver::can_solve(const SimulationGpuView& views) const
            is_valid_cloth_mesh_topology_resource(views.cloth_topology) &&
            is_valid_character_mesh_topology_resource(views.body_topology) &&
            is_valid_character_vertex_buffer_view(views.body_vertices) &&
-           is_valid_triangle_geometry_resource(views.body_triangle_geometry) &&
-           views.body_topology.triangle_count == views.body_triangle_geometry.triangle_count &&
+           is_valid_body_triangle_resource(views.body_triangles) &&
+           views.body_topology.triangle_count == views.body_triangles.triangle_count &&
            views.stretch_constraints.edge_index_buffer != 0 &&
            views.stretch_constraints.constraint_count != 0 &&
            is_valid_bvh_buffer_view(views.body_edge_bvh) &&
@@ -203,8 +204,17 @@ void ClothBodyCollisionSolver::vf_accumulate(const SimulationGpuView& views,
                         vf_binding::cloth_previous,
                         views.cloth_motion.previous_position_buffer);
     gl.glBindBufferBase(GL_SHADER_STORAGE_BUFFER,
-                        vf_binding::body_triangle_geometry,
-                        views.body_triangle_geometry.triangle_geometry_buffer);
+                        vf_binding::body_triangle_positions,
+                        views.body_triangles.position_buffer);
+    gl.glBindBufferBase(GL_SHADER_STORAGE_BUFFER,
+                        vf_binding::body_triangle_normals,
+                        views.body_triangles.normal_buffer);
+    gl.glBindBufferBase(GL_SHADER_STORAGE_BUFFER,
+                        vf_binding::body_previous,
+                        views.body_vertices.previous_position_buffer);
+    gl.glBindBufferBase(GL_SHADER_STORAGE_BUFFER,
+                        vf_binding::body_triangles,
+                        views.body_topology.triangle_index_buffer);
     gl.glBindBufferBase(GL_SHADER_STORAGE_BUFFER,
                         vf_binding::candidates,
                         collision_candidates.candidate_buffer);
@@ -217,12 +227,6 @@ void ClothBodyCollisionSolver::vf_accumulate(const SimulationGpuView& views,
     gl.glBindBufferBase(GL_SHADER_STORAGE_BUFFER,
                         vf_binding::friction_correction_sums,
                         views.collision.friction_correction_sum_buffer);
-    gl.glBindBufferBase(GL_SHADER_STORAGE_BUFFER,
-                        vf_binding::body_previous,
-                        views.body_vertices.previous_position_buffer);
-    gl.glBindBufferBase(GL_SHADER_STORAGE_BUFFER,
-                        vf_binding::body_triangles,
-                        views.body_topology.triangle_index_buffer);
     gl.glBindBufferBase(GL_SHADER_STORAGE_BUFFER,
                         vf_binding::collision_pushouts,
                         views.cloth_collision_pushout.collision_pushout_buffer);

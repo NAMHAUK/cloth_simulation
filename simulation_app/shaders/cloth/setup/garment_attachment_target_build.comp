@@ -18,11 +18,15 @@ layout(std430, binding = 2) writeonly buffer AttachmentBarycentricOffsets {
 
 #include "../../mesh/primitive_geometry.glsl"
 
-layout(std430, binding = 3) readonly buffer BodyTriangleGeometryBuffer {
-    TriangleGeometry triangle_geometry[];
+layout(std430, binding = 3) readonly buffer BodyTrianglePositions {
+    TrianglePositions body_triangle_positions[];
 };
 
-layout(std430, binding = 4) readonly buffer BvhNodeBuffer {
+layout(std430, binding = 4) readonly buffer BodyTriangleNormals {
+    vec4 body_triangle_normals[];
+};
+
+layout(std430, binding = 5) readonly buffer BvhNodeBuffer {
     BvhNode bvh_nodes[];
 };
 
@@ -38,9 +42,9 @@ uniform float uSurfaceOffset;
 
 vec3 barycentric_on_triangle(uint triangle_index, vec3 point)
 {
-    vec3 a = triangle_geometry[triangle_index].a.xyz;
-    vec3 b = triangle_geometry[triangle_index].b.xyz;
-    vec3 c = triangle_geometry[triangle_index].c.xyz;
+    vec3 a = body_triangle_positions[triangle_index].a;
+    vec3 b = body_triangle_positions[triangle_index].b;
+    vec3 c = body_triangle_positions[triangle_index].c;
     vec3 ab = b - a;
     vec3 ac = c - a;
     vec3 ap = point - a;

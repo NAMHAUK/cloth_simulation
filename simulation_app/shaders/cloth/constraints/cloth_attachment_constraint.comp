@@ -16,8 +16,12 @@ layout(std430, binding = 2) readonly buffer AttachmentBarycentricOffsets {
 
 #include "../../mesh/primitive_geometry.glsl"
 
-layout(std430, binding = 3) readonly buffer BodyTriangleGeometryBuffer {
-    TriangleGeometry triangle_geometry[];
+layout(std430, binding = 3) readonly buffer BodyTrianglePositions {
+    TrianglePositions body_triangle_positions[];
+};
+
+layout(std430, binding = 4) readonly buffer BodyTriangleNormals {
+    vec4 body_triangle_normals[];
 };
 
 uniform uint uConstraintOffset;
@@ -45,12 +49,13 @@ void main()
     uint body_triangle = attachment_index.y;
     vec4 barycentric_offset = barycentric_offsets[constraint_index];
 
-    TriangleGeometry triangle = triangle_geometry[body_triangle];
+    TrianglePositions triangle = body_triangle_positions[body_triangle];
+    vec4 triangle_normal = body_triangle_normals[body_triangle];
     vec3 target = triangle.a.xyz * barycentric_offset.x +
                   triangle.b.xyz * barycentric_offset.y +
                   triangle.c.xyz * barycentric_offset.z;
-    if (triangle.normal.w > 0.0) {
-        target += triangle.normal.xyz * barycentric_offset.w;
+    if (triangle_normal.w > 0.0) {
+        target += triangle_normal.xyz * barycentric_offset.w;
     }
 
     vec3 current = read_cloth_current_position(cloth_vertex);

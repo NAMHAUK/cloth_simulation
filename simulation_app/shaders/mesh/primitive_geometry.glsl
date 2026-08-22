@@ -12,12 +12,12 @@ struct TrianglePositions {
     vec3 c;
 };
 
-struct TriangleGeometry {
-    vec4 a;
-    vec4 b;
-    vec4 c;
-    vec4 normal;
-};
+vec4 triangle_normal(vec3 a, vec3 b, vec3 c)
+{
+    vec3 normal = cross(b - a, c - a);
+    float normal_length = length(normal);
+    return normal_length > 1.0e-10 ? vec4(normal / normal_length, normal_length) : vec4(0.0);
+}
 
 EdgePositions interpolate_edge_positions(EdgePositions previous, EdgePositions current, float time)
 {
