@@ -39,7 +39,7 @@ public:
     CollisionCandidateBuffers(const CollisionCandidateBuffers&) = delete;
     CollisionCandidateBuffers& operator=(const CollisionCandidateBuffers&) = delete;
 
-    bool ensure_capacity(std::uint32_t vertex_count,
+    void ensure_capacity(std::uint32_t vertex_count,
                          std::uint32_t triangle_count,
                          std::uint32_t edge_count,
                          std::uint32_t garment_count,

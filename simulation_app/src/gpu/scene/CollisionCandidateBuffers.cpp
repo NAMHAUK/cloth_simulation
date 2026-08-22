@@ -2,8 +2,8 @@
 
 #include "utils/BufferUtils.h"
 
-#include <iostream>
 #include <limits>
+#include <stdexcept>
 
 namespace {
 
@@ -64,7 +64,7 @@ void delete_collision_candidate_buffer(CollisionCandidateBuffer& buffers, QOpenG
 
 }
 
-bool CollisionCandidateBuffers::ensure_capacity(std::uint32_t vertex_count,
+void CollisionCandidateBuffers::ensure_capacity(std::uint32_t vertex_count,
                                                 std::uint32_t triangle_count,
                                                 std::uint32_t edge_count,
                                                 std::uint32_t garment_count,
@@ -83,9 +83,8 @@ bool CollisionCandidateBuffers::ensure_capacity(std::uint32_t vertex_count,
         !calculate_cloth_cloth_candidate_capacity(vertex_count,
                                                   garment_count,
                                                   cloth_cloth_vertex_face_capacity)) {
-        std::cerr << "Collision candidate capacity exceeds the supported 32-bit range.\n";
         release(gl);
-        return false;
+        throw std::runtime_error("Collision candidate capacity exceeds the supported 32-bit range.");
     }
 
     const auto cloth_vertex_body_face_capacity =
@@ -109,7 +108,7 @@ bool CollisionCandidateBuffers::ensure_capacity(std::uint32_t vertex_count,
         buffers_.cloth_vertex_body_face.capacity >= cloth_vertex_body_face_capacity &&
         buffers_.cloth_edge_body_edge.capacity >= cloth_edge_body_edge_capacity &&
         buffers_.cloth_face_body_vertex.capacity >= cloth_face_body_vertex_capacity) {
-        return true;
+        return;
     }
 
     release(gl);
@@ -148,8 +147,8 @@ bool CollisionCandidateBuffers::ensure_capacity(std::uint32_t vertex_count,
                              buffers_.contact_motion_delta_sum_buffer != 0;
     if (!initialized) {
         release(gl);
+        throw std::runtime_error("Failed to prepare collision candidate buffers.");
     }
-    return initialized;
 }
 
 bool CollisionCandidateBuffers::calculate_cloth_cloth_candidate_capacity(std::uint32_t vertex_count,

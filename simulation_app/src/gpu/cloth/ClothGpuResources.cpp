@@ -460,10 +460,10 @@ void ClothGpuResources::capture_base_positions(QOpenGLFunctions_4_5_Core& gl)
     base_position_vertex_count_ = state_.element_counts.vertex;
 }
 
-bool ClothGpuResources::restore_base_positions(QOpenGLFunctions_4_5_Core& gl) const
+void ClothGpuResources::restore_base_positions(QOpenGLFunctions_4_5_Core& gl) const
 {
     if (base_positions_ == 0 || base_position_vertex_count_ != state_.element_counts.vertex) {
-        return false;
+        throw std::runtime_error("Failed to restore garment base positions.");
     }
 
     const GLsizeiptr position_bytes = byte_size<glm::vec4>(state_.element_counts.vertex);
@@ -473,8 +473,6 @@ bool ClothGpuResources::restore_base_positions(QOpenGLFunctions_4_5_Core& gl) co
     gl.glCopyNamedBufferSubData(base_positions_, state_.buffers.previous_position, 0, 0, position_bytes);
     clear_dynamic_state(state_.buffers, 0, state_.element_counts.vertex, gl);
     gl.glMemoryBarrier(GL_SHADER_STORAGE_BARRIER_BIT | GL_BUFFER_UPDATE_BARRIER_BIT);
-
-    return true;
 }
 
 void ClothGpuResources::clear_base_positions(QOpenGLFunctions_4_5_Core& gl)

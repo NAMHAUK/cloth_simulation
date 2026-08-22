@@ -3,7 +3,6 @@
 #include "scene/SceneState.h"
 
 #include <cassert>
-#include <stdexcept>
 
 SceneGpuState::SceneGpuState()
     : character_gpu_state_updater_(character_gpu_state_, bvh_bounds_updater_, normal_updater_)
@@ -68,20 +67,14 @@ void SceneGpuState::rebuild_garment_resources(const SceneState& scene,
 
     cloth_gpu_state_.rebuild_buffers(scene.garments(), changed_layer, gl);
     const ClothMeshTopologyResources topology = cloth_gpu_state_.mesh_topology_resources();
-    if (cloth_gpu_state_.is_initialized()) {
-        const ClothMotionBufferView motion_view = cloth_gpu_state_.motion_buffer_view();
-        const DistanceConstraintBufferView stretch_constraints =
-            cloth_gpu_state_.stretch_constraint_buffer_view();
-        if (!collision_candidate_buffers_.ensure_capacity(motion_view.vertex_count,
-                                                          topology.triangle_count,
-                                                          stretch_constraints.constraint_count,
-                                                          static_cast<std::uint32_t>(scene.garments().size()),
-                                                          gl)) {
-            throw std::runtime_error("Failed to prepare collision candidate buffers.");
-        }
-    } else {
-        collision_candidate_buffers_.release(gl);
-    }
+    const ClothMotionBufferView motion_view = cloth_gpu_state_.motion_buffer_view();
+    const DistanceConstraintBufferView stretch_constraints =
+        cloth_gpu_state_.stretch_constraint_buffer_view();
+    collision_candidate_buffers_.ensure_capacity(motion_view.vertex_count,
+                                                 topology.triangle_count,
+                                                 stretch_constraints.constraint_count,
+                                                 static_cast<std::uint32_t>(scene.garments().size()),
+                                                 gl);
     update_cloth_normals(gl);
 }
 
@@ -111,10 +104,7 @@ void SceneGpuState::restore_garment_base_positions(QOpenGLFunctions_4_5_Core& gl
     if (!cloth_gpu_state_.is_initialized()) {
         return;
     }
-    if (!cloth_gpu_state_.restore_base_positions(gl)) {
-        throw std::runtime_error("Failed to restore garment base positions.");
-    }
-
+    cloth_gpu_state_.restore_base_positions(gl);
     update_cloth_normals(gl);
 }
 
