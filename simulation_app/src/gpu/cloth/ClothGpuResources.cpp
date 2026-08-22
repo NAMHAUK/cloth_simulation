@@ -117,9 +117,9 @@ void append_bvh_nodes(const Bvh& bvh, GarmentBufferState& garment_state, std::ve
 }
 
 // Buffer rebuild
-void ClothGpuResources::rebuild_buffers(const std::vector<GarmentObject>& garments,
-                                        GarmentLayer changed_layer,
-                                        QOpenGLFunctions_4_5_Core& gl)
+ClothBufferElementCounts ClothGpuResources::rebuild_buffers(const std::vector<GarmentObject>& garments,
+                                                            GarmentLayer changed_layer,
+                                                            QOpenGLFunctions_4_5_Core& gl)
 {
     BufferState rebuild_state{};
     assign_garment_buffer_states(garments, rebuild_state);
@@ -133,6 +133,7 @@ void ClothGpuResources::rebuild_buffers(const std::vector<GarmentObject>& garmen
     clear_base_positions(gl);
     state_ = std::move(rebuild_state);
     configure_vao(gl);
+    return state_.element_counts;
 }
 
 void ClothGpuResources::assign_garment_buffer_states(const std::vector<GarmentObject>& garments,

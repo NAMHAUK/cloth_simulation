@@ -65,14 +65,10 @@ void SceneGpuState::rebuild_garment_resources(const SceneState& scene,
 {
     assert(!scene.garments().empty());
 
-    cloth_gpu_state_.rebuild_buffers(scene.garments(), changed_layer, gl);
-    const ClothMeshTopologyResources topology = cloth_gpu_state_.mesh_topology_resources();
-    const ClothMotionBufferView motion_view = cloth_gpu_state_.motion_buffer_view();
-    const DistanceConstraintBufferView stretch_constraints =
-        cloth_gpu_state_.stretch_constraint_buffer_view();
-    collision_candidate_buffers_.ensure_capacity(motion_view.vertex_count,
-                                                 topology.triangle_count,
-                                                 stretch_constraints.constraint_count,
+    const auto counts = cloth_gpu_state_.rebuild_buffers(scene.garments(), changed_layer, gl);
+    collision_candidate_buffers_.ensure_capacity(counts.vertex,
+                                                 counts.triangle,
+                                                 counts.stretch_constraint,
                                                  static_cast<std::uint32_t>(scene.garments().size()),
                                                  gl);
     update_cloth_normals(gl);

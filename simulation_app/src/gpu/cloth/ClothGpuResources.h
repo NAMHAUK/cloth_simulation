@@ -11,6 +11,15 @@
 
 struct GarmentObject;
 
+struct ClothBufferElementCounts final
+{
+    std::uint32_t vertex = 0;
+    std::uint32_t triangle = 0;
+    std::uint32_t stretch_constraint = 0;
+    std::uint32_t bending_constraint = 0;
+    std::uint32_t attachment_constraint = 0;
+};
+
 class ClothGpuResources final
 {
 public:
@@ -20,9 +29,9 @@ public:
     ClothGpuResources& operator=(const ClothGpuResources&) = delete;
     ClothGpuResources& operator=(ClothGpuResources&& other) noexcept = delete;
 
-    void rebuild_buffers(const std::vector<GarmentObject>& garments,
-                         GarmentLayer changed_layer,
-                         QOpenGLFunctions_4_5_Core& gl);
+    ClothBufferElementCounts rebuild_buffers(const std::vector<GarmentObject>& garments,
+                                             GarmentLayer changed_layer,
+                                             QOpenGLFunctions_4_5_Core& gl);
     void upload_garment_placement(const GarmentObject& garment, QOpenGLFunctions_4_5_Core& gl);
     void upload_attachment_indices(const GarmentObject& garment, QOpenGLFunctions_4_5_Core& gl);
     void activate_attachment_targets(GarmentLayer layer);
