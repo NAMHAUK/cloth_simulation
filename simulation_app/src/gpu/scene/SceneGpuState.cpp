@@ -26,23 +26,21 @@ void create_buffer(GLuint& buffer, GLsizeiptr size, QOpenGLFunctions_4_5_Core& g
     gl.glNamedBufferData(buffer, size, nullptr, GL_DYNAMIC_DRAW);
 }
 
-void create_collision_candidate_buffer(CollisionCandidateBuffer& buffers,
+void create_collision_candidate_buffer(CollisionCandidateBuffers& buffers,
                                        std::uint32_t element_count,
                                        QOpenGLFunctions_4_5_Core& gl)
 {
-    buffers.capacity = element_count * candidate_capacity_multiplier;
-    create_buffer(buffers.candidates, byte_size<glm::uvec2>(buffers.capacity), gl);
-    create_buffer(buffers.candidate_count, byte_size<std::uint32_t>(1u), gl);
-    create_buffer(buffers.dispatch_size, byte_size<std::uint32_t>(dispatch_component_count), gl);
-    create_buffer(buffers.overflow_count, byte_size<std::uint32_t>(1u), gl);
+    buffers.max_pairs = element_count * candidate_capacity_multiplier;
+    create_buffer(buffers.candidate_buffer, byte_size<glm::uvec2>(buffers.max_pairs), gl);
+    create_buffer(buffers.count_buffer, byte_size<std::uint32_t>(1u), gl);
+    create_buffer(buffers.dispatch_size_buffer, byte_size<std::uint32_t>(dispatch_component_count), gl);
 }
 
-void delete_collision_candidate_buffer(CollisionCandidateBuffer& buffers, QOpenGLFunctions_4_5_Core& gl)
+void delete_collision_candidate_buffer(CollisionCandidateBuffers& buffers, QOpenGLFunctions_4_5_Core& gl)
 {
-    gl.glDeleteBuffers(1, &buffers.candidates);
-    gl.glDeleteBuffers(1, &buffers.candidate_count);
-    gl.glDeleteBuffers(1, &buffers.dispatch_size);
-    gl.glDeleteBuffers(1, &buffers.overflow_count);
+    gl.glDeleteBuffers(1, &buffers.candidate_buffer);
+    gl.glDeleteBuffers(1, &buffers.count_buffer);
+    gl.glDeleteBuffers(1, &buffers.dispatch_size_buffer);
     buffers = {};
 }
 }
@@ -323,7 +321,7 @@ SimulationGpuView SceneGpuState::simulation_view() const
     views.body_triangle_bvh = character_gpu_state_.body_triangle_bvh_buffer_view();
     views.body_vertex_bvh = character_gpu_state_.body_vertex_bvh_buffer_view();
     views.body_edge_bvh = character_gpu_state_.body_edge_bvh_buffer_view();
-    views.collision_candidates = collision_buffers_;
+    views.collision = collision_buffers_;
     return views;
 }
 

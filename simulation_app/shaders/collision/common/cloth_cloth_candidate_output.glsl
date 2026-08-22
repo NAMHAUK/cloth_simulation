@@ -5,24 +5,17 @@ shared uvec2 group_candidates[group_candidate_capacity];
 shared uint group_candidate_count;
 shared uint group_base_index;
 
-void append_group_overflow_candidate(uvec2 candidate)
-{
-    uint candidate_index = atomicAdd(candidate_count, 1u);
-    if (candidate_index >= uMaxCandidateCount) {
-        atomicAdd(overflow_count, 1u);
-        return;
-    }
-
-    candidates[candidate_index] = candidate;
-}
-
 void append_candidate(uvec2 candidate)
 {
     uint group_candidate_index = atomicAdd(group_candidate_count, 1u);
     if (group_candidate_index < group_candidate_capacity) {
         group_candidates[group_candidate_index] = candidate;
-    } else {
-        append_group_overflow_candidate(candidate);
+        return;
+    }
+
+    uint candidate_index = atomicAdd(candidate_count, 1u);
+    if (candidate_index < uMaxCandidateCount) {
+        candidates[candidate_index] = candidate;
     }
 }
 
@@ -33,11 +26,6 @@ void flush_group_candidates()
     uint stored_candidate_count = min(group_candidate_count, group_candidate_capacity);
     if (gl_LocalInvocationIndex == 0u && stored_candidate_count > 0u) {
         group_base_index = atomicAdd(candidate_count, stored_candidate_count);
-        uint available_candidate_count = uMaxCandidateCount - min(group_base_index, uMaxCandidateCount);
-        uint dropped_candidate_count = stored_candidate_count - min(stored_candidate_count, available_candidate_count);
-        if (dropped_candidate_count > 0u) {
-            atomicAdd(overflow_count, dropped_candidate_count);
-        }
     }
 
     barrier();

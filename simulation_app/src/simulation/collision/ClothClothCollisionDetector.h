@@ -45,7 +45,7 @@ private:
 
     void detect(const SimulationGpuView& views, float bounds_margin, QOpenGLFunctions_4_5_Core& gl) const;
     void detect_pair(const SimulationGpuView& views, QOpenGLFunctions_4_5_Core& gl) const;
-    void build_dispatch_size(const CollisionCandidateBuffer& collision_candidates,
+    void build_dispatch_size(const CollisionCandidateBuffers& collision_candidates,
                              QOpenGLFunctions_4_5_Core& gl) const;
 
     ClothBvhBoundsUpdater bounds_updater_;

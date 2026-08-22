@@ -28,10 +28,6 @@ layout(std430, binding = 5) buffer CandidateCount {
     uint candidate_count;
 };
 
-layout(std430, binding = 6) buffer OverflowCount {
-    uint overflow_count;
-};
-
 uniform uint uUpperVertexOffset;
 uniform uint uUpperVertexCount;
 uniform uint uUpperBvhRoot;
