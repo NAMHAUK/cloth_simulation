@@ -29,9 +29,9 @@ public:
     ClothGpuResources& operator=(const ClothGpuResources&) = delete;
     ClothGpuResources& operator=(ClothGpuResources&& other) noexcept = delete;
 
-    ClothBufferElementCounts rebuild_buffers(const std::vector<GarmentObject>& garments,
-                                             GarmentLayer changed_layer,
-                                             QOpenGLFunctions_4_5_Core& gl);
+    void rebuild_buffers(const std::vector<GarmentObject>& garments,
+                         GarmentLayer changed_layer,
+                         QOpenGLFunctions_4_5_Core& gl);
     void upload_garment_placement(const GarmentObject& garment, QOpenGLFunctions_4_5_Core& gl);
     void upload_attachment_indices(const GarmentObject& garment, QOpenGLFunctions_4_5_Core& gl);
     void activate_attachment_targets(GarmentLayer layer);

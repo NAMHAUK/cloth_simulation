@@ -238,6 +238,7 @@ void SimulationController::confirm_garment_placement()
             gpu_state_.upload_garment_placement(garment, gl);
         }
 
+        gpu_state_.rebuild_collision_buffers(gl);
         simulation_pipeline_.prefit_garments(gpu_state_, placement_garments, gl);
 
         for (const GarmentObject* garment : placement_garments) {

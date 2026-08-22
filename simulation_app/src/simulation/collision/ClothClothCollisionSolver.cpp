@@ -61,8 +61,13 @@ bool has_valid_common_solve_views(const SimulationGpuView& views)
            is_valid_bvh_buffer_view(views.cloth_bvh) &&
            (active_garment_count(views.garment_buffer_states) < 2u ||
             (is_valid_triangle_geometry_resource(views.body_triangle_geometry) &&
-             is_valid_cloth_cloth_candidate_buffer_view(views.collision_candidates) &&
-             views.collision_candidates.vertex_capacity >= views.cloth_motion.vertex_count));
+             is_valid_cloth_cloth_candidate_buffer_view(views.collision_candidates)));
+}
+
+void clear_normal_correction_sums(const CollisionBuffers& buffers, QOpenGLFunctions_4_5_Core& gl)
+{
+    clear_collision_correction_sum(buffers.normal_correction_sum_buffer, gl);
+    gl.glMemoryBarrier(GL_SHADER_STORAGE_BARRIER_BIT | GL_BUFFER_UPDATE_BARRIER_BIT);
 }
 }
 
@@ -223,7 +228,7 @@ void ClothClothCollisionSolver::solve(const SimulationGpuView& views, QOpenGLFun
     const CollisionCandidateBuffer& collision_candidates = views.collision_candidates.cloth_cloth_vertex_face;
     const std::uint32_t upper_vertex_offset =
         views.garment_buffer_states[GarmentLayer::Upper].vertex_start_index;
-    views.collision_candidates.clear_normal_correction_sums(gl);
+    clear_normal_correction_sums(views.collision_candidates, gl);
 
     gl.glUseProgram(accumulate_.program);
     gl.glBindBufferBase(GL_SHADER_STORAGE_BUFFER,
@@ -275,7 +280,7 @@ void ClothClothCollisionSolver::solve_initial(const SimulationGpuView& views,
     const CollisionCandidateBuffer& collision_candidates = views.collision_candidates.cloth_cloth_vertex_face;
     const std::uint32_t upper_vertex_offset =
         views.garment_buffer_states[GarmentLayer::Upper].vertex_start_index;
-    views.collision_candidates.clear_normal_correction_sums(gl);
+    clear_normal_correction_sums(views.collision_candidates, gl);
 
     gl.glUseProgram(initial_accumulate_.program);
     gl.glBindBufferBase(GL_SHADER_STORAGE_BUFFER,

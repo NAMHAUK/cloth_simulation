@@ -6,14 +6,45 @@
 
 #include <array>
 #include <cassert>
+#include <cstddef>
 #include <cstdint>
 #include <stdexcept>
+
+#include <glm/vec4.hpp>
 
 namespace {
 constexpr std::uint32_t attachment_target_local_size = 128;
 constexpr std::uint32_t normal_update_local_size = 128;
 constexpr std::uint32_t cloth_normal_stride = 1;
 constexpr std::uint32_t character_normal_stride = 4;
+constexpr std::uint32_t dispatch_component_count = 3;
+constexpr std::uint32_t candidate_capacity_multiplier = 8;
+
+void create_buffer(GLuint& buffer, GLsizeiptr size, QOpenGLFunctions_4_5_Core& gl)
+{
+    gl.glCreateBuffers(1, &buffer);
+    gl.glNamedBufferData(buffer, size, nullptr, GL_DYNAMIC_DRAW);
+}
+
+void create_collision_candidate_buffer(CollisionCandidateBuffer& buffers,
+                                       std::uint32_t element_count,
+                                       QOpenGLFunctions_4_5_Core& gl)
+{
+    buffers.capacity = element_count * candidate_capacity_multiplier;
+    create_buffer(buffers.candidates, byte_size<glm::uvec2>(buffers.capacity), gl);
+    create_buffer(buffers.candidate_count, byte_size<std::uint32_t>(1u), gl);
+    create_buffer(buffers.dispatch_size, byte_size<std::uint32_t>(dispatch_component_count), gl);
+    create_buffer(buffers.overflow_count, byte_size<std::uint32_t>(1u), gl);
+}
+
+void delete_collision_candidate_buffer(CollisionCandidateBuffer& buffers, QOpenGLFunctions_4_5_Core& gl)
+{
+    gl.glDeleteBuffers(1, &buffers.candidates);
+    gl.glDeleteBuffers(1, &buffers.candidate_count);
+    gl.glDeleteBuffers(1, &buffers.dispatch_size);
+    gl.glDeleteBuffers(1, &buffers.overflow_count);
+    buffers = {};
+}
 }
 
 SceneGpuState::SceneGpuState() : character_gpu_state_updater_(character_gpu_state_, bvh_bounds_updater_)
@@ -118,13 +149,32 @@ void SceneGpuState::rebuild_garment_resources(const SceneState& scene,
 {
     assert(!scene.garments().empty());
 
-    const auto counts = cloth_gpu_state_.rebuild_buffers(scene.garments(), changed_layer, gl);
-    collision_candidate_buffers_.ensure_capacity(counts.vertex,
-                                                 counts.triangle,
-                                                 counts.stretch_constraint,
-                                                 static_cast<std::uint32_t>(scene.garments().size()),
-                                                 gl);
+    cloth_gpu_state_.rebuild_buffers(scene.garments(), changed_layer, gl);
     update_cloth_normals(gl);
+}
+
+void SceneGpuState::rebuild_collision_buffers(QOpenGLFunctions_4_5_Core& gl)
+{
+    release_collision_buffers(gl);
+
+    const auto topology = cloth_gpu_state_.mesh_topology_resources();
+    const auto stretch_constraints = cloth_gpu_state_.stretch_constraint_buffer_view();
+
+    create_collision_candidate_buffer(collision_buffers_.cloth_vertex_body_face, topology.vertex_count, gl);
+    create_collision_candidate_buffer(collision_buffers_.cloth_edge_body_edge,
+                                      stretch_constraints.constraint_count,
+                                      gl);
+    create_collision_candidate_buffer(collision_buffers_.cloth_face_body_vertex, topology.triangle_count, gl);
+    if (active_garment_count(cloth_gpu_state_.garment_buffer_states()) == 2u) {
+        create_collision_candidate_buffer(collision_buffers_.cloth_cloth_vertex_face,
+                                          topology.vertex_count,
+                                          gl);
+    }
+
+    const GLsizeiptr correction_bytes = byte_size<glm::ivec4>(topology.vertex_count);
+    create_buffer(collision_buffers_.normal_correction_sum_buffer, correction_bytes, gl);
+    create_buffer(collision_buffers_.friction_correction_sum_buffer, correction_bytes, gl);
+    create_buffer(collision_buffers_.contact_motion_delta_sum_buffer, correction_bytes, gl);
 }
 
 void SceneGpuState::upload_garment_placement(const GarmentObject& garment, QOpenGLFunctions_4_5_Core& gl)
@@ -165,7 +215,7 @@ void SceneGpuState::build_attachment_targets(GarmentLayer layer, QOpenGLFunction
     gl.glProgramUniform1ui(attachment_target_program_,
                            attachment_constraint_count_location_,
                            constraint_count);
-                           
+
     gl.glDispatchCompute(compute_group_count(constraint_count, attachment_target_local_size), 1, 1);
     gl.glMemoryBarrier(GL_SHADER_STORAGE_BARRIER_BIT);
 }
@@ -273,7 +323,7 @@ SimulationGpuView SceneGpuState::simulation_view() const
     views.body_triangle_bvh = character_gpu_state_.body_triangle_bvh_buffer_view();
     views.body_vertex_bvh = character_gpu_state_.body_vertex_bvh_buffer_view();
     views.body_edge_bvh = character_gpu_state_.body_edge_bvh_buffer_view();
-    views.collision_candidates = collision_candidate_buffers_.view();
+    views.collision_candidates = collision_buffers_;
     return views;
 }
 
@@ -310,6 +360,18 @@ void SceneGpuState::release(QOpenGLFunctions_4_5_Core& gl)
 
 void SceneGpuState::release_garment_resources(QOpenGLFunctions_4_5_Core& gl)
 {
-    collision_candidate_buffers_.release(gl);
+    release_collision_buffers(gl);
     cloth_gpu_state_.release(gl);
+}
+
+void SceneGpuState::release_collision_buffers(QOpenGLFunctions_4_5_Core& gl)
+{
+    delete_collision_candidate_buffer(collision_buffers_.cloth_vertex_body_face, gl);
+    delete_collision_candidate_buffer(collision_buffers_.cloth_edge_body_edge, gl);
+    delete_collision_candidate_buffer(collision_buffers_.cloth_face_body_vertex, gl);
+    delete_collision_candidate_buffer(collision_buffers_.cloth_cloth_vertex_face, gl);
+    gl.glDeleteBuffers(1, &collision_buffers_.normal_correction_sum_buffer);
+    gl.glDeleteBuffers(1, &collision_buffers_.friction_correction_sum_buffer);
+    gl.glDeleteBuffers(1, &collision_buffers_.contact_motion_delta_sum_buffer);
+    collision_buffers_ = {};
 }

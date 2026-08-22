@@ -4,7 +4,6 @@
 #include "gpu/character/CharacterGpuResources.h"
 #include "gpu/character/CharacterGpuStateUpdater.h"
 #include "gpu/cloth/ClothGpuResources.h"
-#include "gpu/scene/CollisionCandidateBuffers.h"
 #include "gpu/scene/SimulationGpuView.h"
 #include "scene/SceneState.h"
 
@@ -33,6 +32,7 @@ public:
     void rebuild_garment_resources(const SceneState& scene,
                                    QOpenGLFunctions_4_5_Core& gl,
                                    GarmentLayer changed_layer);
+    void rebuild_collision_buffers(QOpenGLFunctions_4_5_Core& gl);
     void upload_garment_placement(const GarmentObject& garment, QOpenGLFunctions_4_5_Core& gl);
     void initialize_garment_attachments(const GarmentObject& garment, QOpenGLFunctions_4_5_Core& gl);
     void capture_garment_base_positions(QOpenGLFunctions_4_5_Core& gl);
@@ -52,6 +52,7 @@ private:
                                               float surface_offset,
                                               QOpenGLFunctions_4_5_Core& gl);
     void build_attachment_targets(GarmentLayer layer, QOpenGLFunctions_4_5_Core& gl);
+    void release_collision_buffers(QOpenGLFunctions_4_5_Core& gl);
 
     void update_character_vertex_normals(QOpenGLFunctions_4_5_Core& gl);
 
@@ -59,7 +60,7 @@ private:
     BodyBvhBoundsUpdater bvh_bounds_updater_;
     CharacterGpuStateUpdater character_gpu_state_updater_;
     ClothGpuResources cloth_gpu_state_;
-    CollisionCandidateBuffers collision_candidate_buffers_;
+    CollisionBuffers collision_buffers_;
 
     GLuint triangle_normal_program_ = 0;
     GLuint vertex_normal_program_ = 0;

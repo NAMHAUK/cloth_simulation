@@ -120,15 +120,6 @@ bool ClothBodyCollisionDetector::can_detect(const SimulationGpuView& views) cons
            is_valid_bvh_buffer_view(views.body_vertex_bvh) &&
            is_valid_bvh_buffer_view(views.body_edge_bvh) &&
            is_valid_collision_candidate_buffer_view(views.collision_candidates) &&
-           views.collision_candidates.vertex_capacity >= views.cloth_motion.vertex_count &&
-           views.collision_candidates.cloth_vertex_body_face.capacity >=
-               views.cloth_motion.vertex_count * CollisionCandidateBuffers::candidate_capacity_multiplier &&
-           views.collision_candidates.cloth_edge_body_edge.capacity >=
-               views.stretch_constraints.constraint_count *
-                   CollisionCandidateBuffers::candidate_capacity_multiplier &&
-           views.collision_candidates.cloth_face_body_vertex.capacity >=
-               views.cloth_topology.triangle_count *
-                   CollisionCandidateBuffers::candidate_capacity_multiplier &&
            detection_distance_ > 0.0f;
 }
 
@@ -136,7 +127,10 @@ void ClothBodyCollisionDetector::detect(const SimulationGpuView& views, QOpenGLF
 {
     assert(can_detect(views));
 
-    views.collision_candidates.clear_cloth_body_candidate_counts(gl);
+    clear_collision_candidate_counts(views.collision_candidates.cloth_vertex_body_face, gl);
+    clear_collision_candidate_counts(views.collision_candidates.cloth_edge_body_edge, gl);
+    clear_collision_candidate_counts(views.collision_candidates.cloth_face_body_vertex, gl);
+    gl.glMemoryBarrier(GL_SHADER_STORAGE_BARRIER_BIT | GL_BUFFER_UPDATE_BARRIER_BIT);
     detect_cloth_vertex_body_face_collision_candidates(views.cloth_motion,
                                                        views.body_triangle_bvh,
                                                        views.collision_candidates.cloth_vertex_body_face,
