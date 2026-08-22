@@ -59,15 +59,18 @@ bool AttachmentTargetBuilder::can_build(const SimulationGpuView& views, GarmentL
            is_valid_bvh_buffer_view(views.body_triangle_bvh);
 }
 
-bool AttachmentTargetBuilder::build(const SimulationGpuView& views,
+void AttachmentTargetBuilder::build(const SimulationGpuView& views,
                                     GarmentLayer layer,
                                     QOpenGLFunctions_4_5_Core& gl) const
 {
+    const GarmentBufferState& garment_state = views.garment_buffer_states[layer];
+    if (garment_state.attachment_constraint_count == 0u) {
+        return;
+    }
     if (!can_build(views, layer)) {
-        return false;
+        throw std::runtime_error("Cannot build garment attachment targets because GPU buffers are missing.");
     }
 
-    const GarmentBufferState& garment_state = views.garment_buffer_states[layer];
     const auto& motion_view = views.cloth_motion;
     const auto& attachment_view = views.attachment_constraints;
     const auto& body_triangle_geometry = views.body_triangle_geometry;
@@ -99,7 +102,6 @@ bool AttachmentTargetBuilder::build(const SimulationGpuView& views,
         1,
         1);
     gl.glMemoryBarrier(GL_SHADER_STORAGE_BARRIER_BIT);
-    return true;
 }
 
 void AttachmentTargetBuilder::release(QOpenGLFunctions_4_5_Core& gl)

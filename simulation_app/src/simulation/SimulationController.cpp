@@ -241,7 +241,7 @@ void SimulationController::confirm_garment_placement()
         simulation_pipeline_.prefit_garments(gpu_state_, placement_garments, gl);
 
         for (const GarmentObject* garment : placement_garments) {
-            gpu_state_.build_garment_attachment_targets(scene_, garment->layer, gl);
+            gpu_state_.initialize_garment_attachments(*garment, gl);
         }
 
         reset_garment_placements();

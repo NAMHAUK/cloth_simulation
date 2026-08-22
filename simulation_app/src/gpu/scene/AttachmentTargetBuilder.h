@@ -19,7 +19,7 @@ public:
     void initialize(const std::filesystem::path& shader_dir,
                     float surface_offset,
                     QOpenGLFunctions_4_5_Core& gl);
-    bool build(const SimulationGpuView& views, GarmentLayer layer, QOpenGLFunctions_4_5_Core& gl) const;
+    void build(const SimulationGpuView& views, GarmentLayer layer, QOpenGLFunctions_4_5_Core& gl) const;
     void release(QOpenGLFunctions_4_5_Core& gl);
 
 private:

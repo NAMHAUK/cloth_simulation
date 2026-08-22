@@ -44,9 +44,7 @@ public:
                                    QOpenGLFunctions_4_5_Core& gl,
                                    GarmentLayer changed_layer);
     void upload_garment_placement(const GarmentObject& garment, QOpenGLFunctions_4_5_Core& gl);
-    void build_garment_attachment_targets(SceneState& scene,
-                                          GarmentLayer layer,
-                                          QOpenGLFunctions_4_5_Core& gl);
+    void initialize_garment_attachments(const GarmentObject& garment, QOpenGLFunctions_4_5_Core& gl);
     void capture_garment_base_positions(QOpenGLFunctions_4_5_Core& gl);
     void restore_garment_base_positions(QOpenGLFunctions_4_5_Core& gl);
     void clear_garment_base_positions(QOpenGLFunctions_4_5_Core& gl);

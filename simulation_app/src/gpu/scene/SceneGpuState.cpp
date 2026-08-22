@@ -149,28 +149,12 @@ void SceneGpuState::upload_garment_placement(const GarmentObject& garment, QOpen
     cloth_gpu_state_.upload_garment_placement(garment, gl);
 }
 
-void SceneGpuState::build_garment_attachment_targets(SceneState& scene,
-                                                     GarmentLayer layer,
-                                                     QOpenGLFunctions_4_5_Core& gl)
+void SceneGpuState::initialize_garment_attachments(const GarmentObject& garment,
+                                                   QOpenGLFunctions_4_5_Core& gl)
 {
-    GarmentObject* garment = scene.find_garment(layer);
-    if (garment == nullptr) {
-        throw std::runtime_error("Cannot build garment attachment targets because garment is missing.");
-    }
-
-    cloth_gpu_state_.upload_attachment_indices(*garment, gl);
-    const auto views = simulation_view();
-    const GarmentBufferState& garment_state = views.garment_buffer_states[layer];
-
-    if (garment_state.attachment_constraint_count == 0u) {
-        return;
-    }
-
-    if (!attachment_target_builder_.build(views, layer, gl)) {
-        throw std::runtime_error("Cannot build garment attachment targets because GPU buffers are missing.");
-    }
-
-    cloth_gpu_state_.activate_attachment_targets(layer);
+    cloth_gpu_state_.upload_attachment_indices(garment, gl);
+    attachment_target_builder_.build(simulation_view(), garment.layer, gl);
+    cloth_gpu_state_.activate_attachment_targets(garment.layer);
 }
 
 void SceneGpuState::capture_garment_base_positions(QOpenGLFunctions_4_5_Core& gl)
