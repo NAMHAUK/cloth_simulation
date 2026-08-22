@@ -5,10 +5,10 @@
 #include "gpu/character/CharacterGpuStateUpdater.h"
 #include "gpu/cloth/ClothGpuResources.h"
 #include "gpu/scene/CollisionCandidateBuffers.h"
-#include "gpu/scene/NormalUpdater.h"
 #include "gpu/scene/SimulationGpuView.h"
 #include "scene/SceneState.h"
 
+#include <cstdint>
 #include <filesystem>
 
 #include <QOpenGLFunctions_4_5_Core>
@@ -47,22 +47,25 @@ public:
     void release_garment_resources(QOpenGLFunctions_4_5_Core& gl);
 
 private:
-    // Initialization
-
+    void initialize_normal_programs(const std::filesystem::path& shader_dir, QOpenGLFunctions_4_5_Core& gl);
     void initialize_attachment_target_program(const std::filesystem::path& shader_dir,
                                               float surface_offset,
                                               QOpenGLFunctions_4_5_Core& gl);
-
-    // Garments
-
     void build_attachment_targets(GarmentLayer layer, QOpenGLFunctions_4_5_Core& gl);
+
+    void update_character_vertex_normals(QOpenGLFunctions_4_5_Core& gl);
 
     CharacterGpuResources character_gpu_state_;
     BodyBvhBoundsUpdater bvh_bounds_updater_;
-    NormalUpdater normal_updater_;
     CharacterGpuStateUpdater character_gpu_state_updater_;
     ClothGpuResources cloth_gpu_state_;
     CollisionCandidateBuffers collision_candidate_buffers_;
+
+    GLuint triangle_normal_program_ = 0;
+    GLuint vertex_normal_program_ = 0;
+    GLint triangle_count_location_ = -1;
+    GLint vertex_count_location_ = -1;
+    GLint triangle_normal_stride_location_ = -1;
 
     GLuint attachment_target_program_ = 0;
     GLint attachment_constraint_offset_location_ = -1;
