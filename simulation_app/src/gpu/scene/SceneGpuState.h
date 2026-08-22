@@ -21,25 +21,16 @@ public:
     SceneGpuState(const SceneGpuState&) = delete;
     SceneGpuState& operator=(const SceneGpuState&) = delete;
 
-    bool is_initialized() const;
     void initialize(const std::filesystem::path& shader_dir,
                     float attachment_surface_offset,
                     QOpenGLFunctions_4_5_Core& gl);
-    void release(QOpenGLFunctions_4_5_Core& gl);
+    void set_character_motion(const SceneState& scene,
+                              float body_detection_distance,
+                              QOpenGLFunctions_4_5_Core& gl);
     void update_character_pose(const SceneState& scene,
                                float frame_alpha,
                                float body_detection_distance,
                                QOpenGLFunctions_4_5_Core& gl);
-    void update_cloth_normals(QOpenGLFunctions_4_5_Core& gl);
-    SimulationGpuView simulation_view() const;
-
-    const CharacterGpuResources& character_gpu_state() const;
-    void set_character_motion(const SceneState& scene,
-                              float body_detection_distance,
-                              QOpenGLFunctions_4_5_Core& gl);
-
-    const ClothGpuResources& cloth_gpu_state() const;
-    void release_garment_resources(QOpenGLFunctions_4_5_Core& gl);
     void rebuild_garment_resources(const SceneState& scene,
                                    QOpenGLFunctions_4_5_Core& gl,
                                    GarmentLayer changed_layer);
@@ -48,6 +39,13 @@ public:
     void capture_garment_base_positions(QOpenGLFunctions_4_5_Core& gl);
     void restore_garment_base_positions(QOpenGLFunctions_4_5_Core& gl);
     void clear_garment_base_positions(QOpenGLFunctions_4_5_Core& gl);
+    void update_cloth_normals(QOpenGLFunctions_4_5_Core& gl);
+    bool is_initialized() const;
+    SimulationGpuView simulation_view() const;
+    const CharacterGpuResources& character_gpu_state() const;
+    const ClothGpuResources& cloth_gpu_state() const;
+    void release(QOpenGLFunctions_4_5_Core& gl);
+    void release_garment_resources(QOpenGLFunctions_4_5_Core& gl);
 
 private:
     CharacterGpuResources character_gpu_state_;
