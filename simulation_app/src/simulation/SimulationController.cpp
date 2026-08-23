@@ -172,7 +172,7 @@ void SimulationController::return_to_default_pose()
 
         reset_garment_placements();
         set_character_motion_state(default_character_motion_, gl);
-        gpu_state_.clear_base_positions(gl);
+        gpu_state_.clear_garment_base_positions(gl);
         is_default_pose_ = true;
     });
 
@@ -225,7 +225,7 @@ void SimulationController::confirm_garment_placement()
     assert(is_gpu_initialized());
 
     run_with_gl_context_([this](QOpenGLFunctions_4_5_Core& gl) {
-        std::vector<GarmentLayer> placement_layers;
+        std::vector<const GarmentObject*> placement_garments;
 
         for (GarmentLayer layer : {GarmentLayer::Lower, GarmentLayer::Upper}) {
             const auto& placement = garment_placement_states_[layer];
@@ -233,16 +233,16 @@ void SimulationController::confirm_garment_placement()
                 continue;
             }
 
-            placement_layers.push_back(layer);
-            const auto& garment =
-                scene_.apply_garment_placement(layer, placement->position_offset, placement->scale);
+            const auto& garment = scene_.place_garment(layer, placement->position_offset, placement->scale);
+            placement_garments.push_back(&garment);
             gpu_state_.upload_garment_placement(garment, gl);
         }
 
-        simulation_pipeline_.prefit_garments(gpu_state_, placement_layers, gl);
+        gpu_state_.rebuild_collision_buffers(gl);
+        simulation_pipeline_.prefit_garments(gpu_state_, placement_garments, gl);
 
-        for (GarmentLayer layer : placement_layers) {
-            gpu_state_.build_garment_attachment_targets(scene_, layer, gl);
+        for (const GarmentObject* garment : placement_garments) {
+            gpu_state_.initialize_garment_attachments(*garment, gl);
         }
 
         reset_garment_placements();

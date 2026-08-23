@@ -1,6 +1,5 @@
 #include "simulation/collision/ClothClothCollisionDetector.h"
 
-#include "gpu/scene/CollisionCandidateBuffers.h"
 #include "simulation/SimulationParams.h"
 #include "utils/BufferUtils.h"
 #include "utils/ShaderUtils.h"
@@ -94,14 +93,7 @@ bool ClothClothCollisionDetector::can_detect(const SimulationGpuView& views) con
         return true;
     }
 
-    std::uint32_t required_capacity = 0;
-    return CollisionCandidateBuffers::calculate_cloth_cloth_candidate_capacity(
-               views.cloth_motion.vertex_count,
-               garment_count,
-               required_capacity) &&
-           is_valid_cloth_cloth_candidate_buffer_view(views.collision_candidates) &&
-           views.collision_candidates.vertex_capacity >= views.cloth_motion.vertex_count &&
-           views.collision_candidates.cloth_cloth_vertex_face.capacity >= required_capacity;
+    return is_valid_cloth_cloth_candidate_buffer_view(views.collision_candidates);
 }
 
 void ClothClothCollisionDetector::detect(const SimulationGpuView& views, QOpenGLFunctions_4_5_Core& gl) const
@@ -124,14 +116,16 @@ void ClothClothCollisionDetector::detect(const SimulationGpuView& views,
     const CollisionCandidateBuffer& collision_candidates = views.collision_candidates.cloth_cloth_vertex_face;
     if (active_garment_count(views.garment_buffer_states) < 2u) {
         if (is_valid_collision_candidate_buffer(collision_candidates)) {
-            views.collision_candidates.clear_cloth_cloth_candidate_counts(gl);
+            clear_collision_candidate_counts(collision_candidates, gl);
+            gl.glMemoryBarrier(GL_SHADER_STORAGE_BARRIER_BIT | GL_BUFFER_UPDATE_BARRIER_BIT);
             build_dispatch_size(collision_candidates, gl);
         }
         return;
     }
 
     bounds_updater_.update(views, bounds_margin, gl);
-    views.collision_candidates.clear_cloth_cloth_candidate_counts(gl);
+    clear_collision_candidate_counts(collision_candidates, gl);
+    gl.glMemoryBarrier(GL_SHADER_STORAGE_BARRIER_BIT | GL_BUFFER_UPDATE_BARRIER_BIT);
 
     gl.glUseProgram(candidate_detect_.program);
     gl.glBindBufferBase(GL_SHADER_STORAGE_BUFFER,

@@ -278,7 +278,6 @@ CharacterNormalResources CharacterGpuResources::mesh_normal_resources() const
     CharacterNormalResources resources;
     resources.triangle_geometry_buffer = buffers_.triangle_geometry;
     resources.vertex_normal_buffer = buffers_.vertex_normal;
-    resources.triangle_count = triangle_count_;
     return resources;
 }
 

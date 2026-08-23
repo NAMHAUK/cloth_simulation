@@ -3,7 +3,6 @@
 #include "gpu/bvh/BodyBvhBoundsUpdater.h"
 #include "gpu/character/CharacterGpuDataTypes.h"
 #include "gpu/character/CharacterGpuResources.h"
-#include "gpu/scene/NormalUpdater.h"
 #include "utils/BufferUtils.h"
 #include "utils/ShaderUtils.h"
 
@@ -56,11 +55,9 @@ bool is_valid_triangle_geometry_input(const CharacterMeshTopologyResources& topo
 }
 
 CharacterGpuStateUpdater::CharacterGpuStateUpdater(CharacterGpuResources& character_gpu_state,
-                                                   BodyBvhBoundsUpdater& bvh_bounds_updater,
-                                                   NormalUpdater& normal_updater)
+                                                   BodyBvhBoundsUpdater& bvh_bounds_updater)
     : character_gpu_state_(character_gpu_state),
-      bvh_bounds_updater_(bvh_bounds_updater),
-      normal_updater_(normal_updater)
+      bvh_bounds_updater_(bvh_bounds_updater)
 {}
 
 bool CharacterGpuStateUpdater::is_initialized() const
@@ -235,7 +232,6 @@ void CharacterGpuStateUpdater::update_derived_pose_state(
                                body_edge_level_offsets,
                                detection_distance,
                                gl);
-    normal_updater_.update_character_normals(topology, character_gpu_state_.mesh_normal_resources(), gl);
 }
 
 void CharacterGpuStateUpdater::release(QOpenGLFunctions_4_5_Core& gl)

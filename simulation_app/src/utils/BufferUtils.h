@@ -3,7 +3,7 @@
 #include "gpu/bvh/BvhDataTypes.h"
 #include "gpu/character/CharacterGpuDataTypes.h"
 #include "gpu/cloth/ClothGpuDataTypes.h"
-#include "gpu/scene/CollisionCandidateBuffers.h"
+#include "gpu/scene/SimulationGpuView.h"
 
 #include <array>
 #include <cstddef>
@@ -107,22 +107,32 @@ inline bool is_valid_collision_candidate_buffer(const CollisionCandidateBuffer& 
            collision_candidate_buffer.capacity != 0;
 }
 
-inline bool is_valid_collision_candidate_buffer_view(
-    const CollisionCandidateBufferView& collision_candidate_view)
+inline bool is_valid_collision_candidate_buffer_view(const CollisionBuffers& collision_candidate_view)
 {
     return is_valid_collision_candidate_buffer(collision_candidate_view.cloth_vertex_body_face) &&
            is_valid_collision_candidate_buffer(collision_candidate_view.cloth_edge_body_edge) &&
            is_valid_collision_candidate_buffer(collision_candidate_view.cloth_face_body_vertex) &&
            collision_candidate_view.normal_correction_sum_buffer != 0 &&
            collision_candidate_view.friction_correction_sum_buffer != 0 &&
-           collision_candidate_view.contact_motion_delta_sum_buffer != 0 &&
-           collision_candidate_view.vertex_capacity != 0;
+           collision_candidate_view.contact_motion_delta_sum_buffer != 0;
 }
 
-inline bool is_valid_cloth_cloth_candidate_buffer_view(
-    const CollisionCandidateBufferView& collision_candidate_view)
+inline bool is_valid_cloth_cloth_candidate_buffer_view(const CollisionBuffers& collision_candidate_view)
 {
     return is_valid_collision_candidate_buffer(collision_candidate_view.cloth_cloth_vertex_face) &&
-           collision_candidate_view.normal_correction_sum_buffer != 0 &&
-           collision_candidate_view.vertex_capacity != 0;
+           collision_candidate_view.normal_correction_sum_buffer != 0;
+}
+
+inline void clear_collision_candidate_counts(const CollisionCandidateBuffer& buffers,
+                                             QOpenGLFunctions_4_5_Core& gl)
+{
+    const std::uint32_t zero_uint = 0;
+    gl.glClearNamedBufferData(buffers.candidate_count, GL_R32UI, GL_RED_INTEGER, GL_UNSIGNED_INT, &zero_uint);
+    gl.glClearNamedBufferData(buffers.overflow_count, GL_R32UI, GL_RED_INTEGER, GL_UNSIGNED_INT, &zero_uint);
+}
+
+inline void clear_collision_correction_sum(GLuint buffer, QOpenGLFunctions_4_5_Core& gl)
+{
+    const std::int32_t zero_int[4] = {};
+    gl.glClearNamedBufferData(buffer, GL_RGBA32I, GL_RGBA_INTEGER, GL_INT, zero_int);
 }

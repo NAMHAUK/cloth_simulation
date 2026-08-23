@@ -61,5 +61,4 @@ struct CharacterNormalResources final
 {
     GLuint triangle_geometry_buffer = 0;
     GLuint vertex_normal_buffer = 0;
-    std::uint32_t triangle_count = 0;
 };

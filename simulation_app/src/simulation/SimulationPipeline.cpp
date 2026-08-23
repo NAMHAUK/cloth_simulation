@@ -52,18 +52,17 @@ void SimulationPipeline::initialize(const std::filesystem::path& shader_dir, QOp
 
 // Simulation
 void SimulationPipeline::prefit_garments(SceneGpuState& gpu_state,
-                                         const std::vector<GarmentLayer>& unconfirmed_layers,
+                                         const std::vector<const GarmentObject*>& garments,
                                          QOpenGLFunctions_4_5_Core& gl)
 {
-    assert(initialized_);
-    assert(!unconfirmed_layers.empty());
+    assert(!garments.empty());
 
     const auto views = gpu_state.simulation_view();
 
     // Garment pre-fit
-    for (GarmentLayer layer : unconfirmed_layers) {
+    for (const GarmentObject* garment : garments) {
         for (std::uint32_t iteration = 0; iteration < params_.prefit.iteration_count; ++iteration) {
-            garment_prefit_solver_.solve(views, layer, gl);
+            garment_prefit_solver_.solve(views, garment->layer, gl);
         }
     }
     gpu_state.cloth_gpu_state().copy_current_positions_to_previous(gl);
@@ -79,7 +78,7 @@ void SimulationPipeline::prefit_garments(SceneGpuState& gpu_state,
         cloth_cloth_collision_solver_.update_body_surface_mapping(views, gl);
     }
 
-    gpu_state.update_mesh_normals(gl);
+    gpu_state.update_cloth_normals(gl);
 }
 
 void SimulationPipeline::step(SceneState& scene,
@@ -113,7 +112,7 @@ void SimulationPipeline::step(SceneState& scene,
         }
     }
 
-    gpu_state.update_mesh_normals(gl);
+    gpu_state.update_cloth_normals(gl);
 }
 
 void SimulationPipeline::step_character_only(const SceneState& scene,

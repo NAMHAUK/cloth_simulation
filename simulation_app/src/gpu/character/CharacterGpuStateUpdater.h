@@ -8,7 +8,6 @@
 
 class CharacterGpuResources;
 class BodyBvhBoundsUpdater;
-class NormalUpdater;
 struct CharacterMeshTopologyResources;
 struct CharacterVertexBufferView;
 struct TriangleGeometryResources;
@@ -17,8 +16,7 @@ class CharacterGpuStateUpdater final
 {
 public:
     CharacterGpuStateUpdater(CharacterGpuResources& character_gpu_state,
-                             BodyBvhBoundsUpdater& bvh_bounds_updater,
-                             NormalUpdater& normal_updater);
+                             BodyBvhBoundsUpdater& bvh_bounds_updater);
     CharacterGpuStateUpdater(const CharacterGpuStateUpdater&) = delete;
     CharacterGpuStateUpdater& operator=(const CharacterGpuStateUpdater&) = delete;
 
@@ -57,7 +55,6 @@ private:
 
     CharacterGpuResources& character_gpu_state_;
     BodyBvhBoundsUpdater& bvh_bounds_updater_;
-    NormalUpdater& normal_updater_;
 
     GLuint position_program_ = 0;
     GLuint triangle_geometry_program_ = 0;

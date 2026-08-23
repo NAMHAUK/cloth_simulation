@@ -1,6 +1,5 @@
 #pragma once
 
-#include "gpu/scene/CollisionCandidateBuffers.h"
 #include "gpu/scene/SimulationGpuView.h"
 
 #include <cstdint>

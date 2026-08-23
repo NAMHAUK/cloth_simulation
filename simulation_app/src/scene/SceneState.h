@@ -29,7 +29,7 @@ public:
     glm::vec3 character_root_position(std::uint32_t motion_frame_index) const;
 
     void set_garment(GarmentObject garment);
-    GarmentObject& apply_garment_placement(GarmentLayer layer, const glm::vec3& position_offset, float scale);
+    GarmentObject& place_garment(GarmentLayer layer, const glm::vec3& position_offset, float scale);
     void update_garment_color(GarmentLayer layer, const glm::vec3& color);
     bool remove_garment(GarmentLayer layer);
     void clear_garments();
