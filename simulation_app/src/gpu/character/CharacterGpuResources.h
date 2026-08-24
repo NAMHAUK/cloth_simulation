@@ -15,7 +15,7 @@ public:
     CharacterGpuResources(const CharacterGpuResources&) = delete;
     CharacterGpuResources& operator=(const CharacterGpuResources&) = delete;
 
-    bool is_initialized() const;
+    bool has_motion() const;
 
     // Mesh upload and playback
     void upload_character_mesh(const CharacterMotion& character_motion,
@@ -49,7 +49,6 @@ public:
     void release(QOpenGLFunctions_4_5_Core& gl);
 
 private:
-    bool has_gpu_objects() const;
     void initialize_gpu_resources(QOpenGLFunctions_4_5_Core& gl);
     void reset_resources() noexcept;
 

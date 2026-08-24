@@ -19,7 +19,6 @@ public:
     CharacterGpuStateUpdater(const CharacterGpuStateUpdater&) = delete;
     CharacterGpuStateUpdater& operator=(const CharacterGpuStateUpdater&) = delete;
 
-    bool is_initialized() const;
     void initialize(const std::filesystem::path& shader_dir, QOpenGLFunctions_4_5_Core& gl);
     void release(QOpenGLFunctions_4_5_Core& gl);
 

@@ -22,10 +22,8 @@ public:
     void initialize(const std::filesystem::path& shader_dir,
                     float attachment_surface_offset,
                     float body_detection_distance,
+                    const SceneState& scene,
                     QOpenGLFunctions_4_5_Core& gl);
-    void initialize_character_resources(const SceneState& scene,
-                                        const CharacterMotion& character_motion,
-                                        QOpenGLFunctions_4_5_Core& gl);
     void set_character_motion(const SceneState& scene, QOpenGLFunctions_4_5_Core& gl);
     void update_character_pose(const SceneState& scene, float frame_alpha, QOpenGLFunctions_4_5_Core& gl);
     void rebuild_garment_resources(const SceneState& scene,
@@ -50,6 +48,7 @@ private:
     void initialize_attachment_target_program(const std::filesystem::path& shader_dir,
                                               float surface_offset,
                                               QOpenGLFunctions_4_5_Core& gl);
+    void initialize_character_resources(const SceneState& scene, QOpenGLFunctions_4_5_Core& gl);
     void build_attachment_targets(GarmentLayer layer, QOpenGLFunctions_4_5_Core& gl);
     void release_collision_buffers(QOpenGLFunctions_4_5_Core& gl);
 

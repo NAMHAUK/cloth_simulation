@@ -37,11 +37,6 @@ std::pair<std::uint32_t, std::uint32_t> valid_or_empty_level(const std::vector<s
 }
 }
 
-bool BodyBvhBoundsUpdater::is_initialized() const
-{
-    return program_ != 0;
-}
-
 bool BodyBvhBoundsUpdater::can_update(const CharacterMeshTopologyResources& topology,
                                       const CharacterVertexBufferView& vertex_view,
                                       const BodyTriangleResources& body_triangles,
@@ -49,8 +44,7 @@ bool BodyBvhBoundsUpdater::can_update(const CharacterMeshTopologyResources& topo
                                       const BvhBufferView& body_vertex_bvh,
                                       const BvhBufferView& body_edge_bvh) const
 {
-    return is_initialized() &&
-           is_valid_character_mesh_topology_resource(topology) &&
+    return is_valid_character_mesh_topology_resource(topology) &&
            vertex_view.previous_position_buffer != 0 &&
            vertex_view.current_position_buffer != 0 &&
            vertex_view.vertex_count != 0 &&
@@ -60,9 +54,7 @@ bool BodyBvhBoundsUpdater::can_update(const CharacterMeshTopologyResources& topo
            is_valid_bvh_buffer_view(body_triangle_bvh) &&
            is_valid_bvh_buffer_view(body_vertex_bvh) &&
            is_valid_bvh_buffer_view(body_edge_bvh) &&
-           (!triangle_level_offsets_.empty() ||
-            !vertex_level_offsets_.empty() ||
-            !edge_level_offsets_.empty());
+           triangle_level_offsets_.size() > 1u;
 }
 
 void BodyBvhBoundsUpdater::initialize(const std::filesystem::path& shader_dir,

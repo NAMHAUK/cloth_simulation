@@ -20,35 +20,15 @@ std::size_t vertex_position_component_count(std::uint32_t vertex_count)
 {
     return static_cast<std::size_t>(vertex_count) * endpoint_position_components;
 }
-
-bool is_uploadable_motion(const CharacterMotion& character_motion)
-{
-    return character_motion.frame_count > 0 &&
-           character_motion.vertex_count > 0 &&
-           character_motion.triangle_count > 0 &&
-           character_motion.triangle_vertex_indices.size() ==
-               static_cast<std::size_t>(character_motion.triangle_count) * 3u &&
-           character_motion.vertices.size() >= frame_position_component_count(character_motion);
-}
 }
 
-bool CharacterGpuResources::is_initialized() const
+bool CharacterGpuResources::has_motion() const
 {
-    return has_gpu_objects() &&
-           frame_count_ > 0 &&
-           vertex_count_ > 0 &&
-           triangle_count_ > 0 &&
-           index_count_ > 0;
+    return frame_count_ > 0;
 }
 
 void CharacterGpuResources::initialize_gpu_resources(QOpenGLFunctions_4_5_Core& gl)
 {
-    if (has_gpu_objects()) {
-        return;
-    }
-
-    release(gl);
-
     // Create persistent OpenGL objects.
     gl.glCreateVertexArrays(1, &vao_);
     gl.glCreateBuffers(1, &buffers_.all_frame_position);
@@ -78,10 +58,6 @@ void CharacterGpuResources::upload_character_mesh(const CharacterMotion& charact
                                                   const Bvh& body_edge_bvh,
                                                   QOpenGLFunctions_4_5_Core& gl)
 {
-    if (!is_uploadable_motion(character_motion)) {
-        release(gl);
-        return;
-    }
     // 각 vertex에 인접한 triangle 정보 생성
     VertexTriangleAdjacency adjacency;
     if (!build_vertex_triangle_adjacency(character_motion.vertex_count,
@@ -163,15 +139,13 @@ void CharacterGpuResources::upload_character_mesh(const CharacterMotion& charact
     vertex_count_ = character_motion.vertex_count;
     triangle_count_ = adjacency.triangle_count;
     arm_triangle_ranges_ = body_triangle_bvh.arm_triangle_ranges;
-    current_frame_index_ = 0;
     index_count_ = static_cast<GLsizei>(body_triangle_bvh.indices.size());
 }
 
 void CharacterGpuResources::upload_motion(const CharacterMotion& character_motion,
                                           QOpenGLFunctions_4_5_Core& gl)
 {
-    if (!is_uploadable_motion(character_motion) ||
-        character_motion.vertex_count != vertex_count_ ||
+    if (character_motion.vertex_count != vertex_count_ ||
         character_motion.triangle_count != triangle_count_) {
         frame_count_ = 0;
         current_frame_index_ = 0;
@@ -190,7 +164,7 @@ void CharacterGpuResources::upload_motion(const CharacterMotion& character_motio
 
 void CharacterGpuResources::set_current_frame(std::uint32_t frame_index)
 {
-    if (!is_initialized() || frame_index >= frame_count_) {
+    if (!has_motion() || frame_index >= frame_count_) {
         return;
     }
 
@@ -231,7 +205,7 @@ std::uint32_t CharacterGpuResources::next_frame_index() const
 
 std::uint32_t CharacterGpuResources::frame_position_begin_index(std::uint32_t frame_index) const
 {
-    if (!is_initialized() || frame_index >= frame_count_) {
+    if (!has_motion() || frame_index >= frame_count_) {
         return 0;
     }
 
@@ -245,7 +219,7 @@ std::uint32_t CharacterGpuResources::vertex_count() const
 
 void CharacterGpuResources::draw(QOpenGLFunctions_4_5_Core& gl) const
 {
-    if (!is_initialized()) {
+    if (!has_motion()) {
         return;
     }
 
@@ -351,26 +325,4 @@ void CharacterGpuResources::reset_resources() noexcept
     arm_triangle_ranges_ = {};
     current_frame_index_ = 0;
     index_count_ = 0;
-}
-
-bool CharacterGpuResources::has_gpu_objects() const
-{
-    return vao_ != 0 &&
-           buffers_.all_frame_position != 0 &&
-           buffers_.previous_position != 0 &&
-           buffers_.current_position != 0 &&
-           buffers_.triangle_index != 0 &&
-           buffers_.body_triangle_bvh_node != 0 &&
-           buffers_.body_triangle_bounds != 0 &&
-           buffers_.body_vertex_bvh_node != 0 &&
-           buffers_.body_vertex_bvh_vertex_index != 0 &&
-           buffers_.body_vertex_bounds != 0 &&
-           buffers_.body_edge_bvh_node != 0 &&
-           buffers_.body_edge_index != 0 &&
-           buffers_.body_edge_bounds != 0 &&
-           buffers_.adjacent_triangle_offsets != 0 &&
-           buffers_.adjacent_triangle_indices != 0 &&
-           buffers_.triangle_position != 0 &&
-           buffers_.triangle_normal != 0 &&
-           buffers_.vertex_normal != 0;
 }

@@ -61,11 +61,6 @@ CharacterGpuStateUpdater::CharacterGpuStateUpdater(CharacterGpuResources& charac
       bvh_bounds_updater_(bvh_bounds_updater)
 {}
 
-bool CharacterGpuStateUpdater::is_initialized() const
-{
-    return position_program_ != 0 && triangle_geometry_program_ != 0;
-}
-
 void CharacterGpuStateUpdater::initialize(const std::filesystem::path& shader_dir,
                                           QOpenGLFunctions_4_5_Core& gl)
 {
@@ -94,7 +89,7 @@ void CharacterGpuStateUpdater::initialize(const std::filesystem::path& shader_di
 
 void CharacterGpuStateUpdater::initialize_character_pose_state(QOpenGLFunctions_4_5_Core& gl) const
 {
-    if (!is_initialized() || !character_gpu_state_.is_initialized()) {
+    if (!character_gpu_state_.has_motion()) {
         return;
     }
 
@@ -109,7 +104,7 @@ void CharacterGpuStateUpdater::update_character_pose_state(std::uint32_t frame_i
                                                            float frame_alpha,
                                                            QOpenGLFunctions_4_5_Core& gl) const
 {
-    if (!is_initialized() || !character_gpu_state_.is_initialized()) {
+    if (!character_gpu_state_.has_motion()) {
         return;
     }
 

@@ -15,7 +15,6 @@ public:
     BodyBvhBoundsUpdater(const BodyBvhBoundsUpdater&) = delete;
     BodyBvhBoundsUpdater& operator=(const BodyBvhBoundsUpdater&) = delete;
 
-    bool is_initialized() const;
     void initialize(const std::filesystem::path& shader_dir,
                     float detection_distance,
                     QOpenGLFunctions_4_5_Core& gl);

@@ -51,6 +51,7 @@ SceneGpuState::SceneGpuState() : character_gpu_state_updater_(character_gpu_stat
 void SceneGpuState::initialize(const std::filesystem::path& shader_dir,
                                float attachment_surface_offset,
                                float body_detection_distance,
+                               const SceneState& scene,
                                QOpenGLFunctions_4_5_Core& gl)
 {
     bvh_bounds_updater_.initialize(shader_dir, body_detection_distance, gl);
@@ -58,6 +59,8 @@ void SceneGpuState::initialize(const std::filesystem::path& shader_dir,
 
     initialize_normal_programs(shader_dir, gl);
     initialize_attachment_target_program(shader_dir, attachment_surface_offset, gl);
+    initialize_character_resources(scene, gl);
+    set_character_motion(scene, gl);
 
     initialized_ = true;
 }
@@ -99,6 +102,22 @@ void SceneGpuState::initialize_attachment_target_program(const std::filesystem::
     gl.glProgramUniform1f(program, surface_offset_location, surface_offset);
 }
 
+void SceneGpuState::initialize_character_resources(const SceneState& scene, QOpenGLFunctions_4_5_Core& gl)
+{
+    const Bvh& triangle_bvh = scene.default_body_triangle_bvh();
+    const Bvh& vertex_bvh = scene.default_body_vertex_bvh();
+    const Bvh& edge_bvh = scene.default_body_edge_bvh();
+
+    character_gpu_state_.upload_character_mesh(scene.character_motion(),
+                                               triangle_bvh,
+                                               vertex_bvh,
+                                               edge_bvh,
+                                               gl);
+    bvh_bounds_updater_.set_level_offsets(triangle_bvh.level_offsets,
+                                          vertex_bvh.level_offsets,
+                                          edge_bvh.level_offsets);
+}
+
 // Character
 
 void SceneGpuState::set_character_motion(const SceneState& scene, QOpenGLFunctions_4_5_Core& gl)
@@ -106,20 +125,6 @@ void SceneGpuState::set_character_motion(const SceneState& scene, QOpenGLFunctio
     character_gpu_state_.upload_motion(scene.character_motion(), gl);
     character_gpu_state_updater_.initialize_character_pose_state(gl);
     update_character_vertex_normals(gl);
-}
-
-void SceneGpuState::initialize_character_resources(const SceneState& scene,
-                                                   const CharacterMotion& character_motion,
-                                                   QOpenGLFunctions_4_5_Core& gl)
-{
-    const Bvh& triangle_bvh = scene.default_body_triangle_bvh();
-    const Bvh& vertex_bvh = scene.default_body_vertex_bvh();
-    const Bvh& edge_bvh = scene.default_body_edge_bvh();
-
-    character_gpu_state_.upload_character_mesh(character_motion, triangle_bvh, vertex_bvh, edge_bvh, gl);
-    bvh_bounds_updater_.set_level_offsets(triangle_bvh.level_offsets,
-                                          vertex_bvh.level_offsets,
-                                          edge_bvh.level_offsets);
 }
 
 void SceneGpuState::update_character_pose(const SceneState& scene,
