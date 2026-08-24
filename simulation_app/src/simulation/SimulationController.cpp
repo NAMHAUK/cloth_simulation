@@ -128,9 +128,14 @@ void SimulationController::tick_frame()
 }
 
 // Character
-void SimulationController::set_character_motion(CharacterMotion motion)
+bool SimulationController::set_character_motion(CharacterMotion motion)
 {
     assert(is_gpu_initialized());
+
+    if (motion.vertex_count != default_character_motion_.vertex_count ||
+        motion.triangle_vertex_indices != default_character_motion_.triangle_vertex_indices) {
+        return false;
+    }
 
     run_with_gl_context_([this, &motion](QOpenGLFunctions_4_5_Core& gl) {
         if (is_default_pose_) {
@@ -143,6 +148,7 @@ void SimulationController::set_character_motion(CharacterMotion motion)
     });
 
     Q_EMIT viewport_update_requested();
+    return true;
 }
 
 void SimulationController::reset_scene()

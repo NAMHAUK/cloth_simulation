@@ -44,7 +44,7 @@ public:
     void stop_simulation();
     void draw(const glm::mat4& mvp, float character_opacity, QOpenGLFunctions_4_5_Core& gl);
 
-    void set_character_motion(CharacterMotion motion);
+    bool set_character_motion(CharacterMotion motion);
     void reset_scene();
     void return_to_default_pose();
 

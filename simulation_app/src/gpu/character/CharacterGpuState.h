@@ -33,8 +33,6 @@ public:
     void bind_current_positions(GLuint binding_index, QOpenGLFunctions_4_5_Core& gl) const;
     void bind_vertex_normals(GLuint binding_index, QOpenGLFunctions_4_5_Core& gl) const;
 
-    bool has_motion() const;
-
     CharacterMeshTopologyResources mesh_topology_resources() const;
     CharacterVertexBufferView vertex_buffer_view() const;
     BodyTriangleResources body_triangle_resources() const;

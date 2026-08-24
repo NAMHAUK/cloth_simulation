@@ -13,6 +13,7 @@
 #include <utility>
 #include <vector>
 
+#include <QMessageBox>
 #include <QWidget>
 
 namespace {
@@ -144,7 +145,10 @@ void MainWindow::setup_asset_browser_callbacks()
         }
     });
     asset_browser_panel.set_motion_loaded_callback([this](CharacterMotion motion) {
-        simulation_controller_->set_character_motion(std::move(motion));
+        if (!simulation_controller_->set_character_motion(std::move(motion))) {
+            QMessageBox::warning(this, "Load Failed", "Motion topology does not match the character.");
+            return;
+        }
         simulation_controller_->start_simulation();
     });
     asset_browser_panel.set_garment_loaded_callback(

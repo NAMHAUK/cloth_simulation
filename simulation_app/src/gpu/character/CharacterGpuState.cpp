@@ -183,13 +183,6 @@ void CharacterGpuState::initialize_mesh(const CharacterMotion& character_motion,
 
 void CharacterGpuState::set_motion(const CharacterMotion& character_motion, QOpenGLFunctions_4_5_Core& gl)
 {
-    if (character_motion.vertex_count != vertex_count_ ||
-        character_motion.triangle_count != triangle_count_) {
-        frame_count_ = 0;
-        current_frame_index_ = 0;
-        return;
-    }
-
     const GLsizeiptr position_bytes = byte_size<float>(frame_position_component_count(character_motion));
     gl.glNamedBufferData(buffers_.all_frame_positions,
                          position_bytes,
@@ -198,10 +191,6 @@ void CharacterGpuState::set_motion(const CharacterMotion& character_motion, QOpe
 
     frame_count_ = character_motion.frame_count;
     current_frame_index_ = 0;
-
-    if (!has_motion()) {
-        return;
-    }
 
     // Initialization writes the selected pose to current, then mirrors it into previous.
     write_current_positions(0.0f, gl);
@@ -213,10 +202,6 @@ void CharacterGpuState::update_pose(std::uint32_t frame_index,
                                     float frame_alpha,
                                     QOpenGLFunctions_4_5_Core& gl)
 {
-    if (!has_motion()) {
-        return;
-    }
-
     if (frame_index < frame_count_) {
         current_frame_index_ = frame_index;
     }
@@ -298,10 +283,6 @@ void CharacterGpuState::update_triangle_geometry(QOpenGLFunctions_4_5_Core& gl) 
 
 void CharacterGpuState::draw(QOpenGLFunctions_4_5_Core& gl) const
 {
-    if (!has_motion()) {
-        return;
-    }
-
     gl.glBindVertexArray(vao_);
     gl.glDrawElements(GL_TRIANGLES, index_count_, GL_UNSIGNED_INT, nullptr);
 }
@@ -322,13 +303,6 @@ void CharacterGpuState::bind_vertex_normals(GLuint binding_index, QOpenGLFunctio
     }
 
     gl.glBindBufferBase(GL_SHADER_STORAGE_BUFFER, binding_index, buffers_.vertex_normal);
-}
-
-// State
-
-bool CharacterGpuState::has_motion() const
-{
-    return frame_count_ > 0;
 }
 
 // Accessors
