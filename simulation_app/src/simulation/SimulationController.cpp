@@ -50,8 +50,9 @@ void SimulationController::initialize(const std::filesystem::path& shader_dir,
                                       const std::vector<std::uint8_t>& triangle_part_labels,
                                       QOpenGLFunctions_4_5_Core& gl)
 {
+    load_default_character(std::move(character_motion), triangle_part_labels);
     initialize_gpu(shader_dir, gl);
-    load_default_character(std::move(character_motion), triangle_part_labels, gl);
+    Q_EMIT camera_reset_requested(scene_.character_root_position(0));
     frame_timer_.start(params_.step.tick_ms());
 }
 
@@ -62,14 +63,17 @@ void SimulationController::initialize_gpu(const std::filesystem::path& shader_di
         throw std::runtime_error("Simulation GPU state is already initialized.");
     }
 
-    gpu_state_.initialize(shader_dir, params_.constraints.attachment_surface_offset, gl);
+    gpu_state_.initialize(shader_dir,
+                          params_.constraints.attachment_surface_offset,
+                          params_.collisions.body.detection_distance,
+                          scene_,
+                          gl);
     simulation_pipeline_.initialize(shader_dir, gl);
     render_pipeline_.initialize(shader_dir, gl);
 }
 
 void SimulationController::load_default_character(CharacterMotion motion,
-                                                  const std::vector<std::uint8_t>& triangle_part_labels,
-                                                  QOpenGLFunctions_4_5_Core& gl)
+                                                  const std::vector<std::uint8_t>& triangle_part_labels)
 {
     MeshBvhBuilder body_bvh_builder(motion, triangle_part_labels);
     scene_.set_body_bvhs(body_bvh_builder.build_triangle_bvh(),
@@ -77,7 +81,7 @@ void SimulationController::load_default_character(CharacterMotion motion,
                          body_bvh_builder.build_edge_bvh());
 
     default_character_motion_ = std::move(motion);
-    set_character_motion_state(default_character_motion_, gl);
+    scene_.set_character_motion(default_character_motion_);
     is_default_pose_ = true;
 }
 
@@ -124,9 +128,14 @@ void SimulationController::tick_frame()
 }
 
 // Character
-void SimulationController::set_character_motion(CharacterMotion motion)
+bool SimulationController::set_character_motion(CharacterMotion motion)
 {
     assert(is_gpu_initialized());
+
+    if (motion.vertex_count != default_character_motion_.vertex_count ||
+        motion.triangle_vertex_indices != default_character_motion_.triangle_vertex_indices) {
+        return false;
+    }
 
     run_with_gl_context_([this, &motion](QOpenGLFunctions_4_5_Core& gl) {
         if (is_default_pose_) {
@@ -139,6 +148,7 @@ void SimulationController::set_character_motion(CharacterMotion motion)
     });
 
     Q_EMIT viewport_update_requested();
+    return true;
 }
 
 void SimulationController::reset_scene()
@@ -182,7 +192,7 @@ void SimulationController::return_to_default_pose()
 void SimulationController::set_character_motion_state(CharacterMotion motion, QOpenGLFunctions_4_5_Core& gl)
 {
     scene_.set_character_motion(std::move(motion));
-    gpu_state_.set_character_motion(scene_, params_.collisions.body.detection_distance, gl);
+    gpu_state_.set_character_motion(scene_, gl);
     motion_step_index_ = 0;
     Q_EMIT camera_reset_requested(scene_.character_root_position(0));
 }

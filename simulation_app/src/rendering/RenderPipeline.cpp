@@ -85,28 +85,26 @@ void RenderPipeline::draw(const SceneState& scene,
     }
 
     // character
-    const CharacterGpuResources& character_gpu_state = gpu_state.character_gpu_state();
-    if (character_gpu_state.is_initialized()) {
-        viewer_shader_.set_mvp(mvp, gl);
-        const bool character_transparent = character_opacity < 1.0f;
-        if (character_transparent) {
-            gl.glEnable(GL_BLEND);
-            gl.glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-            gl.glDepthMask(GL_FALSE);
-        }
+    const CharacterGpuState& character_gpu_state = gpu_state.character_gpu_state();
+    viewer_shader_.set_mvp(mvp, gl);
+    const bool character_transparent = character_opacity < 1.0f;
+    if (character_transparent) {
+        gl.glEnable(GL_BLEND);
+        gl.glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+        gl.glDepthMask(GL_FALSE);
+    }
 
-        character_gpu_state.bind_current_positions(character_position_binding, gl);
-        character_gpu_state.bind_vertex_normals(vertex_normal_binding, gl);
-        viewer_shader_.set_character_position_buffer_mode(gl);
-        viewer_shader_.set_vertex_color_mode(gl);
-        viewer_shader_.set_normal_lighting_enabled(true, gl);
-        viewer_shader_.set_opacity(character_opacity, gl);
-        character_gpu_state.draw(gl);
+    character_gpu_state.bind_current_positions(character_position_binding, gl);
+    character_gpu_state.bind_vertex_normals(vertex_normal_binding, gl);
+    viewer_shader_.set_character_position_buffer_mode(gl);
+    viewer_shader_.set_vertex_color_mode(gl);
+    viewer_shader_.set_normal_lighting_enabled(true, gl);
+    viewer_shader_.set_opacity(character_opacity, gl);
+    character_gpu_state.draw(gl);
 
-        if (character_transparent) {
-            gl.glDepthMask(GL_TRUE);
-            gl.glDisable(GL_BLEND);
-        }
+    if (character_transparent) {
+        gl.glDepthMask(GL_TRUE);
+        gl.glDisable(GL_BLEND);
     }
 }
 

@@ -124,10 +124,15 @@ void ClothGpuResources::rebuild_buffers(const std::vector<GarmentObject>& garmen
     BufferState rebuild_state{};
     assign_garment_buffer_states(garments, rebuild_state);
 
-    create_dynamic_buffers(garments, changed_layer, rebuild_state, gl);
-    create_topology_buffers(garments, rebuild_state, gl);
-    create_bvh_buffers(garments, rebuild_state, gl);
-    create_distance_constraint_buffers(garments, rebuild_state, gl);
+    try {
+        create_dynamic_buffers(garments, changed_layer, rebuild_state, gl);
+        create_topology_buffers(garments, rebuild_state, gl);
+        create_bvh_buffers(garments, rebuild_state, gl);
+        create_distance_constraint_buffers(garments, rebuild_state, gl);
+    } catch (...) {
+        delete_buffer_set(rebuild_state.buffers, gl);
+        throw;
+    }
 
     delete_buffer_set(state_.buffers, gl);
     clear_base_positions(gl);
@@ -262,11 +267,7 @@ void ClothGpuResources::create_topology_buffers(const std::vector<GarmentObject>
         }
     }
 
-    VertexTriangleAdjacency adjacency;
-    if (!build_vertex_triangle_adjacency(counts.vertex, triangle_vertex_indices, adjacency)) {
-        delete_buffer_set(rebuild_state.buffers, gl);
-        throw std::runtime_error("Failed to build cloth topology buffers.");
-    }
+    const auto adjacency = build_vertex_triangle_adjacency(counts.vertex, triangle_vertex_indices);
 
     gl.glCreateBuffers(1, &buffers.triangle_vertex_indices);
     gl.glNamedBufferData(buffers.triangle_vertex_indices,

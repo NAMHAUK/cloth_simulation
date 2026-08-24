@@ -53,9 +53,9 @@ add_executable(simulation_app
     src/simulation/collision/GarmentPrefitSolver.h
     src/asset/MeshGeometryUtils.cpp
     src/asset/MeshGeometryUtils.h
-    src/gpu/character/CharacterGpuResources.cpp
+    src/gpu/character/CharacterGpuState.cpp
     src/gpu/character/CharacterGpuDataTypes.h
-    src/gpu/character/CharacterGpuResources.h
+    src/gpu/character/CharacterGpuState.h
     src/gpu/bvh/BvhDataTypes.h
     src/gpu/bvh/MeshBvhBuilder.cpp
     src/gpu/bvh/MeshBvhBuilder.h
@@ -63,8 +63,6 @@ add_executable(simulation_app
     src/gpu/bvh/BodyBvhBoundsUpdater.h
     src/gpu/bvh/ClothBvhBoundsUpdater.cpp
     src/gpu/bvh/ClothBvhBoundsUpdater.h
-    src/gpu/character/CharacterGpuStateUpdater.cpp
-    src/gpu/character/CharacterGpuStateUpdater.h
     src/gpu/cloth/ClothGpuResources.cpp
     src/gpu/cloth/ClothGpuDataTypes.h
     src/gpu/cloth/ClothGpuResources.h

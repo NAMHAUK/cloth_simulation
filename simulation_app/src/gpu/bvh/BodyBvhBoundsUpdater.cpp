@@ -37,34 +37,9 @@ std::pair<std::uint32_t, std::uint32_t> valid_or_empty_level(const std::vector<s
 }
 }
 
-bool BodyBvhBoundsUpdater::is_initialized() const
-{
-    return program_ != 0;
-}
-
-bool BodyBvhBoundsUpdater::can_update(const CharacterMeshTopologyResources& topology,
-                                      const CharacterVertexBufferView& vertex_view,
-                                      const BodyTriangleResources& body_triangles,
-                                      const BvhBufferView& body_triangle_bvh,
-                                      const BvhBufferView& body_vertex_bvh,
-                                      const BvhBufferView& body_edge_bvh,
-                                      float detection_distance) const
-{
-    return is_initialized() &&
-           is_valid_character_mesh_topology_resource(topology) &&
-           vertex_view.previous_position_buffer != 0 &&
-           vertex_view.current_position_buffer != 0 &&
-           vertex_view.vertex_count != 0 &&
-           is_valid_body_triangle_resource(body_triangles) &&
-           topology.triangle_count == body_triangles.triangle_count &&
-           topology.vertex_count == vertex_view.vertex_count &&
-           is_valid_bvh_buffer_view(body_triangle_bvh) &&
-           is_valid_bvh_buffer_view(body_vertex_bvh) &&
-           is_valid_bvh_buffer_view(body_edge_bvh) &&
-           detection_distance > 0.0f;
-}
-
-void BodyBvhBoundsUpdater::initialize(const std::filesystem::path& shader_dir, QOpenGLFunctions_4_5_Core& gl)
+void BodyBvhBoundsUpdater::initialize(const std::filesystem::path& shader_dir,
+                                      float detection_distance,
+                                      QOpenGLFunctions_4_5_Core& gl)
 {
     program_ = load_compute_program(shader_dir / "body" / "body_bvh_bounds_update.comp",
                                     "Body BVH bounds update",
@@ -86,6 +61,17 @@ void BodyBvhBoundsUpdater::initialize(const std::filesystem::path& shader_dir, Q
         detection_distance_location_ < 0) {
         throw std::runtime_error("Body BVH bounds update compute shader missing required uniforms.");
     }
+
+    gl.glProgramUniform1f(program_, detection_distance_location_, detection_distance);
+}
+
+void BodyBvhBoundsUpdater::set_level_offsets(const std::vector<std::uint32_t>& triangle_level_offsets,
+                                             const std::vector<std::uint32_t>& vertex_level_offsets,
+                                             const std::vector<std::uint32_t>& edge_level_offsets)
+{
+    triangle_level_offsets_ = triangle_level_offsets;
+    vertex_level_offsets_ = vertex_level_offsets;
+    edge_level_offsets_ = edge_level_offsets;
 }
 
 void BodyBvhBoundsUpdater::update(const CharacterMeshTopologyResources& topology,
@@ -94,22 +80,8 @@ void BodyBvhBoundsUpdater::update(const CharacterMeshTopologyResources& topology
                                   const BvhBufferView& body_triangle_bvh,
                                   const BvhBufferView& body_vertex_bvh,
                                   const BvhBufferView& body_edge_bvh,
-                                  const std::vector<std::uint32_t>& triangle_level_offsets,
-                                  const std::vector<std::uint32_t>& vertex_level_offsets,
-                                  const std::vector<std::uint32_t>& edge_level_offsets,
-                                  float detection_distance,
                                   QOpenGLFunctions_4_5_Core& gl) const
 {
-    if (!can_update(topology,
-                    vertex_view,
-                    body_triangles,
-                    body_triangle_bvh,
-                    body_vertex_bvh,
-                    body_edge_bvh,
-                    detection_distance)) {
-        return;
-    }
-
     gl.glUseProgram(program_);
     gl.glBindBufferBase(GL_SHADER_STORAGE_BUFFER,
                         body_triangle_positions_binding,
@@ -140,18 +112,17 @@ void BodyBvhBoundsUpdater::update(const CharacterMeshTopologyResources& topology
     gl.glBindBufferBase(GL_SHADER_STORAGE_BUFFER, body_edge_indices_binding, topology.edge_index_buffer);
     gl.glBindBufferBase(GL_SHADER_STORAGE_BUFFER, body_edge_bvh_nodes_binding, body_edge_bvh.node_buffer);
     gl.glBindBufferBase(GL_SHADER_STORAGE_BUFFER, body_edge_bounds_binding, body_edge_bvh.bounds_buffer);
-    gl.glProgramUniform1f(program_, detection_distance_location_, detection_distance);
 
     const std::size_t level_count =
-        std::max({triangle_level_offsets.size(), vertex_level_offsets.size(), edge_level_offsets.size()}) -
+        std::max({triangle_level_offsets_.size(), vertex_level_offsets_.size(), edge_level_offsets_.size()}) -
         1u;
     for (std::size_t level_index = 0; level_index < level_count; ++level_index) {
         const auto [triangle_first_node_index, triangle_node_count] =
-            valid_or_empty_level(triangle_level_offsets, level_index);
+            valid_or_empty_level(triangle_level_offsets_, level_index);
         const auto [vertex_first_node_index, vertex_node_count] =
-            valid_or_empty_level(vertex_level_offsets, level_index);
+            valid_or_empty_level(vertex_level_offsets_, level_index);
         const auto [edge_first_node_index, edge_node_count] =
-            valid_or_empty_level(edge_level_offsets, level_index);
+            valid_or_empty_level(edge_level_offsets_, level_index);
 
         const std::uint32_t dispatch_node_count =
             std::max({triangle_node_count, vertex_node_count, edge_node_count});
@@ -182,4 +153,7 @@ void BodyBvhBoundsUpdater::release(QOpenGLFunctions_4_5_Core& gl)
     edge_first_node_index_location_ = -1;
     edge_node_count_location_ = -1;
     detection_distance_location_ = -1;
+    triangle_level_offsets_.clear();
+    vertex_level_offsets_.clear();
+    edge_level_offsets_.clear();
 }

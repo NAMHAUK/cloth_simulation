@@ -44,7 +44,7 @@ public:
     void stop_simulation();
     void draw(const glm::mat4& mvp, float character_opacity, QOpenGLFunctions_4_5_Core& gl);
 
-    void set_character_motion(CharacterMotion motion);
+    bool set_character_motion(CharacterMotion motion);
     void reset_scene();
     void return_to_default_pose();
 
@@ -68,8 +68,7 @@ Q_SIGNALS:
 private:
     void initialize_gpu(const std::filesystem::path& shader_dir, QOpenGLFunctions_4_5_Core& gl);
     void load_default_character(CharacterMotion motion,
-                                const std::vector<std::uint8_t>& triangle_part_labels,
-                                QOpenGLFunctions_4_5_Core& gl);
+                                const std::vector<std::uint8_t>& triangle_part_labels);
 
     void tick_frame();
     void set_character_motion_state(CharacterMotion motion, QOpenGLFunctions_4_5_Core& gl);

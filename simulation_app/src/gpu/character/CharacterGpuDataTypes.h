@@ -6,7 +6,7 @@
 
 struct CharacterBufferSet final
 {
-    GLuint all_frame_position = 0;
+    GLuint all_frame_positions = 0;
     GLuint previous_position = 0;
     GLuint current_position = 0;
     GLuint triangle_index = 0;
@@ -35,13 +35,6 @@ struct CharacterMeshTopologyResources final
 
     std::uint32_t vertex_count = 0;
     std::uint32_t triangle_count = 0;
-};
-
-struct CharacterAnimationBufferView final
-{
-    GLuint position_buffer = 0;
-    std::uint32_t frame_count = 0;
-    std::uint32_t vertex_count = 0;
 };
 
 struct CharacterVertexBufferView final

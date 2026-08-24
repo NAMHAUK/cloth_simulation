@@ -2,6 +2,7 @@
 
 #include <algorithm>
 #include <cstddef>
+#include <stdexcept>
 #include <utility>
 
 #include <glm/geometric.hpp>
@@ -213,31 +214,22 @@ glm::vec3 get_vertex_position(const std::vector<float>& vertices, std::uint32_t 
 }
 
 // vertex_triangle_adjacency //
-bool VertexTriangleAdjacency::is_valid(std::uint32_t vertex_count) const
-{
-    return triangle_count > 0 &&
-           offsets.size() == static_cast<std::size_t>(vertex_count) + 1u &&
-           !triangle_indices.empty();
-}
-
 // 각 vertex가 어떤 triangle들에 포함되는지 계산
-bool build_vertex_triangle_adjacency(std::uint32_t vertex_count,
-                                     const std::vector<std::uint32_t>& triangle_indices,
-                                     VertexTriangleAdjacency& adjacency)
+VertexTriangleAdjacency build_vertex_triangle_adjacency(std::uint32_t vertex_count,
+                                                        const std::vector<std::uint32_t>& triangle_indices)
 {
-    adjacency = {};
-
     if (vertex_count == 0 || triangle_indices.empty() || triangle_indices.size() % 3u != 0u) {
-        return false;
+        throw std::invalid_argument("Cannot build vertex-triangle adjacency from invalid topology.");
     }
 
     const std::uint32_t triangle_count = static_cast<std::uint32_t>(triangle_indices.size() / 3u);
+    VertexTriangleAdjacency adjacency;
     adjacency.offsets.resize(static_cast<std::size_t>(vertex_count) + 1u, 0);
 
     // 각 vetex가 전체 triangle에서 몇 번 나오는지 count
     for (std::uint32_t index : triangle_indices) {
         if (index >= vertex_count) {
-            return false;
+            throw std::invalid_argument("Cannot build vertex-triangle adjacency from invalid topology.");
         }
         ++adjacency.offsets[static_cast<std::size_t>(index) + 1u];
     }
@@ -263,7 +255,7 @@ bool build_vertex_triangle_adjacency(std::uint32_t vertex_count,
     }
 
     adjacency.triangle_count = triangle_count;
-    return adjacency.is_valid(vertex_count);
+    return adjacency;
 }
 
 // stretch constraint //

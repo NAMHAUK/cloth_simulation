@@ -1,8 +1,6 @@
 #pragma once
 
-#include "gpu/bvh/BodyBvhBoundsUpdater.h"
-#include "gpu/character/CharacterGpuResources.h"
-#include "gpu/character/CharacterGpuStateUpdater.h"
+#include "gpu/character/CharacterGpuState.h"
 #include "gpu/cloth/ClothGpuResources.h"
 #include "gpu/scene/SimulationGpuView.h"
 #include "scene/SceneState.h"
@@ -15,20 +13,17 @@
 class SceneGpuState final
 {
 public:
-    SceneGpuState();
+    SceneGpuState() = default;
     SceneGpuState(const SceneGpuState&) = delete;
     SceneGpuState& operator=(const SceneGpuState&) = delete;
 
     void initialize(const std::filesystem::path& shader_dir,
                     float attachment_surface_offset,
+                    float body_detection_distance,
+                    const SceneState& scene,
                     QOpenGLFunctions_4_5_Core& gl);
-    void set_character_motion(const SceneState& scene,
-                              float body_detection_distance,
-                              QOpenGLFunctions_4_5_Core& gl);
-    void update_character_pose(const SceneState& scene,
-                               float frame_alpha,
-                               float body_detection_distance,
-                               QOpenGLFunctions_4_5_Core& gl);
+    void set_character_motion(const SceneState& scene, QOpenGLFunctions_4_5_Core& gl);
+    void update_character_pose(const SceneState& scene, float frame_alpha, QOpenGLFunctions_4_5_Core& gl);
     void rebuild_garment_resources(const SceneState& scene,
                                    QOpenGLFunctions_4_5_Core& gl,
                                    GarmentLayer changed_layer);
@@ -41,7 +36,7 @@ public:
     void update_cloth_normals(QOpenGLFunctions_4_5_Core& gl);
     bool is_initialized() const;
     SimulationGpuView simulation_view() const;
-    const CharacterGpuResources& character_gpu_state() const;
+    const CharacterGpuState& character_gpu_state() const;
     const ClothGpuResources& cloth_gpu_state() const;
     void release(QOpenGLFunctions_4_5_Core& gl);
     void release_garment_resources(QOpenGLFunctions_4_5_Core& gl);
@@ -51,14 +46,13 @@ private:
     void initialize_attachment_target_program(const std::filesystem::path& shader_dir,
                                               float surface_offset,
                                               QOpenGLFunctions_4_5_Core& gl);
+    void initialize_character_resources(const SceneState& scene, QOpenGLFunctions_4_5_Core& gl);
     void build_attachment_targets(GarmentLayer layer, QOpenGLFunctions_4_5_Core& gl);
     void release_collision_buffers(QOpenGLFunctions_4_5_Core& gl);
 
     void update_character_vertex_normals(QOpenGLFunctions_4_5_Core& gl);
 
-    CharacterGpuResources character_gpu_state_;
-    BodyBvhBoundsUpdater bvh_bounds_updater_;
-    CharacterGpuStateUpdater character_gpu_state_updater_;
+    CharacterGpuState character_gpu_state_;
     ClothGpuResources cloth_gpu_state_;
     CollisionBuffers collision_buffers_;
 
