@@ -43,9 +43,6 @@ void delete_collision_candidate_buffer(CollisionCandidateBuffers& buffers, QOpen
 }
 }
 
-SceneGpuState::SceneGpuState() : character_gpu_state_updater_(character_gpu_state_, bvh_bounds_updater_)
-{}
-
 // Initialization
 
 void SceneGpuState::initialize(const std::filesystem::path& shader_dir,
@@ -54,8 +51,7 @@ void SceneGpuState::initialize(const std::filesystem::path& shader_dir,
                                const SceneState& scene,
                                QOpenGLFunctions_4_5_Core& gl)
 {
-    bvh_bounds_updater_.initialize(shader_dir, body_detection_distance, gl);
-    character_gpu_state_updater_.initialize(shader_dir, gl);
+    character_gpu_state_.initialize(shader_dir, body_detection_distance, gl);
 
     initialize_normal_programs(shader_dir, gl);
     initialize_attachment_target_program(shader_dir, attachment_surface_offset, gl);
@@ -108,22 +104,14 @@ void SceneGpuState::initialize_character_resources(const SceneState& scene, QOpe
     const Bvh& vertex_bvh = scene.default_body_vertex_bvh();
     const Bvh& edge_bvh = scene.default_body_edge_bvh();
 
-    character_gpu_state_.upload_character_mesh(scene.character_motion(),
-                                               triangle_bvh,
-                                               vertex_bvh,
-                                               edge_bvh,
-                                               gl);
-    bvh_bounds_updater_.set_level_offsets(triangle_bvh.level_offsets,
-                                          vertex_bvh.level_offsets,
-                                          edge_bvh.level_offsets);
+    character_gpu_state_.initialize_mesh(scene.character_motion(), triangle_bvh, vertex_bvh, edge_bvh, gl);
 }
 
 // Character
 
 void SceneGpuState::set_character_motion(const SceneState& scene, QOpenGLFunctions_4_5_Core& gl)
 {
-    character_gpu_state_.upload_motion(scene.character_motion(), gl);
-    character_gpu_state_updater_.initialize_character_pose_state(gl);
+    character_gpu_state_.set_motion(scene.character_motion(), gl);
     update_character_vertex_normals(gl);
 }
 
@@ -131,7 +119,7 @@ void SceneGpuState::update_character_pose(const SceneState& scene,
                                           float frame_alpha,
                                           QOpenGLFunctions_4_5_Core& gl)
 {
-    character_gpu_state_updater_.update_character_pose_state(scene.motion_frame_index(), frame_alpha, gl);
+    character_gpu_state_.update_pose(scene.motion_frame_index(), frame_alpha, gl);
     update_character_vertex_normals(gl);
 }
 
@@ -312,7 +300,7 @@ SimulationGpuView SceneGpuState::simulation_view() const
     views.bending_constraints = cloth_gpu_state_.bending_constraint_buffer_view();
     views.attachment_constraints = cloth_gpu_state_.attachment_constraint_buffer_view();
     views.body_topology = character_gpu_state_.mesh_topology_resources();
-    views.body_vertices = character_gpu_state_.character_vertex_buffer_view();
+    views.body_vertices = character_gpu_state_.vertex_buffer_view();
     views.body_triangles = character_gpu_state_.body_triangle_resources();
     views.body_triangle_bvh = character_gpu_state_.body_triangle_bvh_buffer_view();
     views.body_vertex_bvh = character_gpu_state_.body_vertex_bvh_buffer_view();
@@ -321,7 +309,7 @@ SimulationGpuView SceneGpuState::simulation_view() const
     return views;
 }
 
-const CharacterGpuResources& SceneGpuState::character_gpu_state() const
+const CharacterGpuState& SceneGpuState::character_gpu_state() const
 {
     return character_gpu_state_;
 }
@@ -337,8 +325,6 @@ void SceneGpuState::release(QOpenGLFunctions_4_5_Core& gl)
 {
     release_garment_resources(gl);
     character_gpu_state_.release(gl);
-    character_gpu_state_updater_.release(gl);
-    bvh_bounds_updater_.release(gl);
     gl.glDeleteProgram(vertex_normal_program_);
     gl.glDeleteProgram(triangle_normal_program_);
     gl.glDeleteProgram(attachment_target_program_);

@@ -1,8 +1,6 @@
 #pragma once
 
-#include "gpu/bvh/BodyBvhBoundsUpdater.h"
-#include "gpu/character/CharacterGpuResources.h"
-#include "gpu/character/CharacterGpuStateUpdater.h"
+#include "gpu/character/CharacterGpuState.h"
 #include "gpu/cloth/ClothGpuResources.h"
 #include "gpu/scene/SimulationGpuView.h"
 #include "scene/SceneState.h"
@@ -15,7 +13,7 @@
 class SceneGpuState final
 {
 public:
-    SceneGpuState();
+    SceneGpuState() = default;
     SceneGpuState(const SceneGpuState&) = delete;
     SceneGpuState& operator=(const SceneGpuState&) = delete;
 
@@ -38,7 +36,7 @@ public:
     void update_cloth_normals(QOpenGLFunctions_4_5_Core& gl);
     bool is_initialized() const;
     SimulationGpuView simulation_view() const;
-    const CharacterGpuResources& character_gpu_state() const;
+    const CharacterGpuState& character_gpu_state() const;
     const ClothGpuResources& cloth_gpu_state() const;
     void release(QOpenGLFunctions_4_5_Core& gl);
     void release_garment_resources(QOpenGLFunctions_4_5_Core& gl);
@@ -54,9 +52,7 @@ private:
 
     void update_character_vertex_normals(QOpenGLFunctions_4_5_Core& gl);
 
-    CharacterGpuResources character_gpu_state_;
-    BodyBvhBoundsUpdater bvh_bounds_updater_;
-    CharacterGpuStateUpdater character_gpu_state_updater_;
+    CharacterGpuState character_gpu_state_;
     ClothGpuResources cloth_gpu_state_;
     CollisionBuffers collision_buffers_;
 

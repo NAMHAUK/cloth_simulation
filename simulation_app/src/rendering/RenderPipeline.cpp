@@ -85,7 +85,7 @@ void RenderPipeline::draw(const SceneState& scene,
     }
 
     // character
-    const CharacterGpuResources& character_gpu_state = gpu_state.character_gpu_state();
+    const CharacterGpuState& character_gpu_state = gpu_state.character_gpu_state();
     if (character_gpu_state.has_motion()) {
         viewer_shader_.set_mvp(mvp, gl);
         const bool character_transparent = character_opacity < 1.0f;
