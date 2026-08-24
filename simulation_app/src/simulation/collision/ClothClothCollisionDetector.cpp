@@ -18,7 +18,6 @@ constexpr GLuint triangle_bounds = 2;
 constexpr GLuint bvh_nodes = 3;
 constexpr GLuint candidates = 4;
 constexpr GLuint candidate_count = 5;
-constexpr GLuint overflow_count = 6;
 }
 
 namespace dispatch_size_binding {
@@ -88,12 +87,11 @@ bool ClothClothCollisionDetector::can_detect(const SimulationGpuView& views) con
         return false;
     }
 
-    const std::uint32_t garment_count = active_garment_count(views.garment_buffer_states);
-    if (garment_count < 2u) {
+    if (!views.has_multiple_garments()) {
         return true;
     }
 
-    return is_valid_cloth_cloth_candidate_buffer_view(views.collision_candidates);
+    return is_valid_cloth_cloth_candidate_buffer_view(views.collision);
 }
 
 void ClothClothCollisionDetector::detect(const SimulationGpuView& views, QOpenGLFunctions_4_5_Core& gl) const
@@ -113,8 +111,8 @@ void ClothClothCollisionDetector::detect(const SimulationGpuView& views,
 {
     assert(can_detect(views));
 
-    const CollisionCandidateBuffer& collision_candidates = views.collision_candidates.cloth_cloth_vertex_face;
-    if (active_garment_count(views.garment_buffer_states) < 2u) {
+    const CollisionCandidateBuffers& collision_candidates = views.collision.cloth_cloth_vertex_face;
+    if (!views.has_multiple_garments()) {
         if (is_valid_collision_candidate_buffer(collision_candidates)) {
             clear_collision_candidate_counts(collision_candidates, gl);
             gl.glMemoryBarrier(GL_SHADER_STORAGE_BARRIER_BIT | GL_BUFFER_UPDATE_BARRIER_BIT);
@@ -142,16 +140,13 @@ void ClothClothCollisionDetector::detect(const SimulationGpuView& views,
                         views.cloth_bvh.node_buffer);
     gl.glBindBufferBase(GL_SHADER_STORAGE_BUFFER,
                         candidate_detect_binding::candidates,
-                        collision_candidates.candidates);
+                        collision_candidates.candidate_buffer);
     gl.glBindBufferBase(GL_SHADER_STORAGE_BUFFER,
                         candidate_detect_binding::candidate_count,
-                        collision_candidates.candidate_count);
-    gl.glBindBufferBase(GL_SHADER_STORAGE_BUFFER,
-                        candidate_detect_binding::overflow_count,
-                        collision_candidates.overflow_count);
+                        collision_candidates.count_buffer);
     gl.glProgramUniform1ui(candidate_detect_.program,
                            candidate_detect_.max_candidates,
-                           collision_candidates.capacity);
+                           collision_candidates.max_pairs);
 
     detect_pair(views, gl);
 
@@ -172,7 +167,7 @@ void ClothClothCollisionDetector::detect_pair(const SimulationGpuView& views,
 {
     const GarmentBufferState& upper_garment_state = views.garment_buffer_states[GarmentLayer::Upper];
     const GarmentBufferState& lower_garment_state = views.garment_buffer_states[GarmentLayer::Lower];
-    const CollisionCandidateBuffer& collision_candidates = views.collision_candidates.cloth_cloth_vertex_face;
+    const CollisionCandidateBuffers& collision_candidates = views.collision.cloth_cloth_vertex_face;
     gl.glProgramUniform1ui(candidate_detect_.program,
                            candidate_detect_.upper_vertex_offset,
                            upper_garment_state.vertex_start_index);
@@ -198,19 +193,19 @@ void ClothClothCollisionDetector::detect_pair(const SimulationGpuView& views,
     gl.glMemoryBarrier(GL_SHADER_STORAGE_BARRIER_BIT);
 }
 
-void ClothClothCollisionDetector::build_dispatch_size(const CollisionCandidateBuffer& collision_candidates,
+void ClothClothCollisionDetector::build_dispatch_size(const CollisionCandidateBuffers& collision_candidates,
                                                       QOpenGLFunctions_4_5_Core& gl) const
 {
     gl.glUseProgram(dispatch_size_.program);
     gl.glBindBufferBase(GL_SHADER_STORAGE_BUFFER,
                         dispatch_size_binding::candidate_count,
-                        collision_candidates.candidate_count);
+                        collision_candidates.count_buffer);
     gl.glBindBufferBase(GL_SHADER_STORAGE_BUFFER,
                         dispatch_size_binding::dispatch_size,
-                        collision_candidates.dispatch_size);
+                        collision_candidates.dispatch_size_buffer);
     gl.glProgramUniform1ui(dispatch_size_.program,
                            dispatch_size_.max_candidates,
-                           collision_candidates.capacity);
+                           collision_candidates.max_pairs);
     gl.glProgramUniform1ui(dispatch_size_.program,
                            dispatch_size_.local_size,
                            candidate_accumulate_local_size);

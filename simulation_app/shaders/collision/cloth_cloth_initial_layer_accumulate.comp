@@ -26,11 +26,15 @@ layout(std430, binding = 4) buffer NormalCorrectionSums {
 
 #include "../mesh/primitive_geometry.glsl"
 
-layout(std430, binding = 5) readonly buffer BodyTriangleGeometryBuffer {
-    TriangleGeometry triangle_geometry[];
+layout(std430, binding = 5) readonly buffer BodyTrianglePositions {
+    TrianglePositions body_triangle_positions[];
 };
 
-layout(std430, binding = 6) readonly buffer BodyTriangleBvhNodeBuffer {
+layout(std430, binding = 6) readonly buffer BodyTriangleNormals {
+    vec4 body_triangle_normals[];
+};
+
+layout(std430, binding = 7) readonly buffer BodyTriangleBvhNodeBuffer {
     BvhNode bvh_nodes[];
 };
 

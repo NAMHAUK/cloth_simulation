@@ -10,8 +10,9 @@
 
 namespace {
 constexpr GLuint current_positions_binding = 0;
-constexpr GLuint body_triangle_geometry_binding = 2;
-constexpr GLuint body_triangle_bvh_node_binding = 3;
+constexpr GLuint body_triangle_positions_binding = 2;
+constexpr GLuint body_triangle_normals_binding = 3;
+constexpr GLuint body_triangle_bvh_node_binding = 4;
 constexpr std::uint32_t garment_prefit_local_size = 128;
 }
 
@@ -50,7 +51,7 @@ bool GarmentPrefitSolver::can_solve(const SimulationGpuView& views, GarmentLayer
            is_valid_buffer_access(garment_state.vertex_start_index,
                                   garment_state.vertex_count,
                                   views.cloth_motion.vertex_count) &&
-           is_valid_triangle_geometry_resource(views.body_triangle_geometry) &&
+           is_valid_body_triangle_resource(views.body_triangles) &&
            is_valid_bvh_buffer_view(views.body_triangle_bvh) &&
            search_radius_ > 0.0f &&
            pushout_margin_ > 0.0f;
@@ -64,7 +65,7 @@ void GarmentPrefitSolver::solve(const SimulationGpuView& views,
 
     const GarmentBufferState& garment_state = views.garment_buffer_states[layer];
     const auto& motion_view = views.cloth_motion;
-    const auto& body_triangle_geometry = views.body_triangle_geometry;
+    const auto& body_triangles = views.body_triangles;
     const auto& body_triangle_bvh = views.body_triangle_bvh;
 
     gl.glUseProgram(program_);
@@ -72,8 +73,11 @@ void GarmentPrefitSolver::solve(const SimulationGpuView& views,
                         current_positions_binding,
                         motion_view.current_position_buffer);
     gl.glBindBufferBase(GL_SHADER_STORAGE_BUFFER,
-                        body_triangle_geometry_binding,
-                        body_triangle_geometry.triangle_geometry_buffer);
+                        body_triangle_positions_binding,
+                        body_triangles.position_buffer);
+    gl.glBindBufferBase(GL_SHADER_STORAGE_BUFFER,
+                        body_triangle_normals_binding,
+                        body_triangles.normal_buffer);
     gl.glBindBufferBase(GL_SHADER_STORAGE_BUFFER,
                         body_triangle_bvh_node_binding,
                         body_triangle_bvh.node_buffer);

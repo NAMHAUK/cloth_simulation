@@ -66,7 +66,6 @@ private:
     GLuint vertex_normal_program_ = 0;
     GLint triangle_count_location_ = -1;
     GLint vertex_count_location_ = -1;
-    GLint triangle_normal_stride_location_ = -1;
 
     GLuint attachment_target_program_ = 0;
     GLint attachment_constraint_offset_location_ = -1;

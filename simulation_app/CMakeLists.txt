@@ -135,7 +135,6 @@ add_executable(simulation_app
     shaders/collision/common/collision_geometry_common.glsl
     shaders/collision/common/collision_correction_common.glsl
     shaders/collision/common/collision_candidate_output.glsl
-    shaders/collision/common/cloth_cloth_candidate_output.glsl
     shaders/cloth/setup/garment_prefit.comp
     shaders/cloth/setup/garment_attachment_target_build.comp
     shaders/body/body_mesh_search.glsl

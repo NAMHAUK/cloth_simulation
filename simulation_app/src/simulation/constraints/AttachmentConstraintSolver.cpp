@@ -13,7 +13,8 @@ namespace {
 constexpr GLuint current_positions_binding = 0;
 constexpr GLuint attachment_indices_binding = 1;
 constexpr GLuint attachment_barycentric_offsets_binding = 2;
-constexpr GLuint body_triangle_geometry_binding = 3;
+constexpr GLuint body_triangle_positions_binding = 3;
+constexpr GLuint body_triangle_normals_binding = 4;
 constexpr std::uint32_t attachment_constraint_local_size = 128;
 
 bool has_attachment_constraints(const std::array<GarmentBufferState, 2>& garments)
@@ -61,7 +62,7 @@ bool AttachmentConstraintSolver::can_solve(const SimulationGpuView& views) const
     return is_initialized() &&
            is_valid_motion_view(views.cloth_motion) &&
            is_valid_attachment_constraint_view(views.attachment_constraints, views.garment_buffer_states) &&
-           is_valid_triangle_geometry_resource(views.body_triangle_geometry) &&
+           is_valid_body_triangle_resource(views.body_triangles) &&
            stiffness_ > 0.0f;
 }
 
@@ -75,7 +76,7 @@ void AttachmentConstraintSolver::solve(const SimulationGpuView& views, QOpenGLFu
     assert(can_solve(views));
 
     const auto& motion_view = views.cloth_motion;
-    const auto& body_triangle_geometry = views.body_triangle_geometry;
+    const auto& body_triangles = views.body_triangles;
     gl.glUseProgram(program_);
     gl.glBindBufferBase(GL_SHADER_STORAGE_BUFFER,
                         current_positions_binding,
@@ -87,8 +88,11 @@ void AttachmentConstraintSolver::solve(const SimulationGpuView& views, QOpenGLFu
                         attachment_barycentric_offsets_binding,
                         constraint_view.barycentric_offset_buffer);
     gl.glBindBufferBase(GL_SHADER_STORAGE_BUFFER,
-                        body_triangle_geometry_binding,
-                        body_triangle_geometry.triangle_geometry_buffer);
+                        body_triangle_positions_binding,
+                        body_triangles.position_buffer);
+    gl.glBindBufferBase(GL_SHADER_STORAGE_BUFFER,
+                        body_triangle_normals_binding,
+                        body_triangles.normal_buffer);
     gl.glProgramUniform1f(program_, stiffness_location_, std::clamp(stiffness_, 0.0f, 1.0f));
 
     for (const GarmentBufferState& garment_state : views.garment_buffer_states) {

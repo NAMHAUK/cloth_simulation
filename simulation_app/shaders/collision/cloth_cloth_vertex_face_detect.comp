@@ -28,10 +28,6 @@ layout(std430, binding = 5) buffer CandidateCount {
     uint candidate_count;
 };
 
-layout(std430, binding = 6) buffer OverflowCount {
-    uint overflow_count;
-};
-
 uniform uint uUpperVertexOffset;
 uniform uint uUpperVertexCount;
 uniform uint uUpperBvhRoot;
@@ -48,7 +44,7 @@ shared uint garment_roots_overlap;
 #define POSITION_IO_CLOTH_CURRENT
 #define POSITION_IO_CLOTH_PREVIOUS
 #include "../mesh/position_io.glsl"
-#include "common/cloth_cloth_candidate_output.glsl"
+#include "common/collision_candidate_output.glsl"
 
 bool roots_overlap()
 {

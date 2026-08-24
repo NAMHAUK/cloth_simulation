@@ -15,7 +15,8 @@ constexpr GLuint current_positions_binding = 1;
 
 constexpr GLuint triangle_position_binding = 0;
 constexpr GLuint triangle_indices_binding = 1;
-constexpr GLuint triangle_geometry_binding = 2;
+constexpr GLuint triangle_positions_binding = 2;
+constexpr GLuint triangle_normals_binding = 3;
 
 constexpr std::uint32_t position_update_local_size = 128;
 constexpr std::uint32_t triangle_geometry_local_size = 128;
@@ -41,7 +42,7 @@ bool is_valid_endpoint_copy_input(const CharacterVertexBufferView& vertex_view)
 
 bool is_valid_triangle_geometry_input(const CharacterMeshTopologyResources& topology,
                                       const CharacterVertexBufferView& vertex_view,
-                                      const TriangleGeometryResources& triangle_geometry)
+                                      const BodyTriangleResources& body_triangles)
 {
     return vertex_view.current_position_buffer != 0 &&
            vertex_view.vertex_count != 0 &&
@@ -49,8 +50,8 @@ bool is_valid_triangle_geometry_input(const CharacterMeshTopologyResources& topo
            topology.vertex_count != 0 &&
            topology.triangle_count != 0 &&
            topology.vertex_count == vertex_view.vertex_count &&
-           is_valid_triangle_geometry_resource(triangle_geometry) &&
-           triangle_geometry.triangle_count == topology.triangle_count;
+           is_valid_body_triangle_resource(body_triangles) &&
+           body_triangles.triangle_count == topology.triangle_count;
 }
 }
 
@@ -187,10 +188,10 @@ void CharacterGpuStateUpdater::copy_current_position_to_previous(const Character
 
 void CharacterGpuStateUpdater::update_triangle_geometry(const CharacterMeshTopologyResources& topology,
                                                         const CharacterVertexBufferView& vertex_view,
-                                                        const TriangleGeometryResources& triangle_geometry,
+                                                        const BodyTriangleResources& body_triangles,
                                                         QOpenGLFunctions_4_5_Core& gl) const
 {
-    if (!is_valid_triangle_geometry_input(topology, vertex_view, triangle_geometry)) {
+    if (!is_valid_triangle_geometry_input(topology, vertex_view, body_triangles)) {
         return;
     }
 
@@ -199,9 +200,8 @@ void CharacterGpuStateUpdater::update_triangle_geometry(const CharacterMeshTopol
                         triangle_position_binding,
                         vertex_view.current_position_buffer);
     gl.glBindBufferBase(GL_SHADER_STORAGE_BUFFER, triangle_indices_binding, topology.triangle_index_buffer);
-    gl.glBindBufferBase(GL_SHADER_STORAGE_BUFFER,
-                        triangle_geometry_binding,
-                        triangle_geometry.triangle_geometry_buffer);
+    gl.glBindBufferBase(GL_SHADER_STORAGE_BUFFER, triangle_positions_binding, body_triangles.position_buffer);
+    gl.glBindBufferBase(GL_SHADER_STORAGE_BUFFER, triangle_normals_binding, body_triangles.normal_buffer);
     gl.glProgramUniform1ui(triangle_geometry_program_, triangle_count_location_, topology.triangle_count);
 
     gl.glDispatchCompute(compute_group_count(topology.triangle_count, triangle_geometry_local_size), 1, 1);
@@ -217,13 +217,12 @@ void CharacterGpuStateUpdater::update_derived_pose_state(
 {
     const CharacterMeshTopologyResources topology = character_gpu_state_.mesh_topology_resources();
     const CharacterVertexBufferView vertex_view = character_gpu_state_.character_vertex_buffer_view();
-    const TriangleGeometryResources triangle_geometry =
-        character_gpu_state_.character_triangle_geometry_resources();
+    const BodyTriangleResources body_triangles = character_gpu_state_.body_triangle_resources();
 
-    update_triangle_geometry(topology, vertex_view, triangle_geometry, gl);
+    update_triangle_geometry(topology, vertex_view, body_triangles, gl);
     bvh_bounds_updater_.update(topology,
                                vertex_view,
-                               triangle_geometry,
+                               body_triangles,
                                character_gpu_state_.body_triangle_bvh_buffer_view(),
                                character_gpu_state_.body_vertex_bvh_buffer_view(),
                                character_gpu_state_.body_edge_bvh_buffer_view(),

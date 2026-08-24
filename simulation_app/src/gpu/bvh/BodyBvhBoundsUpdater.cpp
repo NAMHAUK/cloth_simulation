@@ -8,18 +8,19 @@
 #include <utility>
 
 namespace {
-constexpr GLuint body_triangle_geometry_binding = 0;
-constexpr GLuint body_triangle_indices_binding = 1;
-constexpr GLuint body_current_positions_binding = 2;
-constexpr GLuint body_previous_positions_binding = 3;
-constexpr GLuint body_triangle_bvh_node_binding = 4;
-constexpr GLuint body_triangle_bounds_binding = 5;
-constexpr GLuint body_vertex_indices_binding = 6;
-constexpr GLuint body_vertex_bvh_nodes_binding = 7;
-constexpr GLuint body_vertex_bounds_binding = 8;
-constexpr GLuint body_edge_indices_binding = 9;
-constexpr GLuint body_edge_bvh_nodes_binding = 10;
-constexpr GLuint body_edge_bounds_binding = 11;
+constexpr GLuint body_triangle_positions_binding = 0;
+constexpr GLuint body_triangle_normals_binding = 1;
+constexpr GLuint body_triangle_indices_binding = 2;
+constexpr GLuint body_current_positions_binding = 3;
+constexpr GLuint body_previous_positions_binding = 4;
+constexpr GLuint body_triangle_bvh_node_binding = 5;
+constexpr GLuint body_triangle_bounds_binding = 6;
+constexpr GLuint body_vertex_indices_binding = 7;
+constexpr GLuint body_vertex_bvh_nodes_binding = 8;
+constexpr GLuint body_vertex_bounds_binding = 9;
+constexpr GLuint body_edge_indices_binding = 10;
+constexpr GLuint body_edge_bvh_nodes_binding = 11;
+constexpr GLuint body_edge_bounds_binding = 12;
 constexpr std::uint32_t bvh_bounds_update_local_size = 128;
 
 std::pair<std::uint32_t, std::uint32_t> valid_or_empty_level(const std::vector<std::uint32_t>& level_offsets,
@@ -43,7 +44,7 @@ bool BodyBvhBoundsUpdater::is_initialized() const
 
 bool BodyBvhBoundsUpdater::can_update(const CharacterMeshTopologyResources& topology,
                                       const CharacterVertexBufferView& vertex_view,
-                                      const TriangleGeometryResources& body_triangle_geometry,
+                                      const BodyTriangleResources& body_triangles,
                                       const BvhBufferView& body_triangle_bvh,
                                       const BvhBufferView& body_vertex_bvh,
                                       const BvhBufferView& body_edge_bvh,
@@ -54,8 +55,8 @@ bool BodyBvhBoundsUpdater::can_update(const CharacterMeshTopologyResources& topo
            vertex_view.previous_position_buffer != 0 &&
            vertex_view.current_position_buffer != 0 &&
            vertex_view.vertex_count != 0 &&
-           is_valid_triangle_geometry_resource(body_triangle_geometry) &&
-           topology.triangle_count == body_triangle_geometry.triangle_count &&
+           is_valid_body_triangle_resource(body_triangles) &&
+           topology.triangle_count == body_triangles.triangle_count &&
            topology.vertex_count == vertex_view.vertex_count &&
            is_valid_bvh_buffer_view(body_triangle_bvh) &&
            is_valid_bvh_buffer_view(body_vertex_bvh) &&
@@ -89,7 +90,7 @@ void BodyBvhBoundsUpdater::initialize(const std::filesystem::path& shader_dir, Q
 
 void BodyBvhBoundsUpdater::update(const CharacterMeshTopologyResources& topology,
                                   const CharacterVertexBufferView& vertex_view,
-                                  const TriangleGeometryResources& body_triangle_geometry,
+                                  const BodyTriangleResources& body_triangles,
                                   const BvhBufferView& body_triangle_bvh,
                                   const BvhBufferView& body_vertex_bvh,
                                   const BvhBufferView& body_edge_bvh,
@@ -101,7 +102,7 @@ void BodyBvhBoundsUpdater::update(const CharacterMeshTopologyResources& topology
 {
     if (!can_update(topology,
                     vertex_view,
-                    body_triangle_geometry,
+                    body_triangles,
                     body_triangle_bvh,
                     body_vertex_bvh,
                     body_edge_bvh,
@@ -111,8 +112,11 @@ void BodyBvhBoundsUpdater::update(const CharacterMeshTopologyResources& topology
 
     gl.glUseProgram(program_);
     gl.glBindBufferBase(GL_SHADER_STORAGE_BUFFER,
-                        body_triangle_geometry_binding,
-                        body_triangle_geometry.triangle_geometry_buffer);
+                        body_triangle_positions_binding,
+                        body_triangles.position_buffer);
+    gl.glBindBufferBase(GL_SHADER_STORAGE_BUFFER,
+                        body_triangle_normals_binding,
+                        body_triangles.normal_buffer);
     gl.glBindBufferBase(GL_SHADER_STORAGE_BUFFER,
                         body_triangle_indices_binding,
                         topology.triangle_index_buffer);

@@ -5,7 +5,6 @@
 #include "gpu/cloth/ClothGpuDataTypes.h"
 #include "gpu/scene/SimulationGpuView.h"
 
-#include <array>
 #include <cstddef>
 #include <cstdint>
 
@@ -61,15 +60,6 @@ inline bool is_valid_body_triangle_index_view(
            body_triangle_index_view.vertex_count != 0;
 }
 
-inline std::uint32_t active_garment_count(const std::array<GarmentBufferState, 2>& garments)
-{
-    std::uint32_t count = 0u;
-    for (const GarmentBufferState& garment : garments) {
-        count += garment.vertex_count != 0u;
-    }
-    return count;
-}
-
 inline bool is_valid_bvh_buffer_view(const BvhBufferView& view)
 {
     return view.node_buffer != 0 && view.bounds_buffer != 0;
@@ -93,18 +83,19 @@ inline bool is_valid_distance_constraint_view(const DistanceConstraintBufferView
            !constraint_view.color_states->empty();
 }
 
-inline bool is_valid_triangle_geometry_resource(const TriangleGeometryResources& triangle_geometry)
+inline bool is_valid_body_triangle_resource(const BodyTriangleResources& body_triangles)
 {
-    return triangle_geometry.triangle_geometry_buffer != 0 && triangle_geometry.triangle_count != 0;
+    return body_triangles.position_buffer != 0 &&
+           body_triangles.normal_buffer != 0 &&
+           body_triangles.triangle_count != 0;
 }
 
-inline bool is_valid_collision_candidate_buffer(const CollisionCandidateBuffer& collision_candidate_buffer)
+inline bool is_valid_collision_candidate_buffer(const CollisionCandidateBuffers& collision_candidate_buffer)
 {
-    return collision_candidate_buffer.candidates != 0 &&
-           collision_candidate_buffer.candidate_count != 0 &&
-           collision_candidate_buffer.dispatch_size != 0 &&
-           collision_candidate_buffer.overflow_count != 0 &&
-           collision_candidate_buffer.capacity != 0;
+    return collision_candidate_buffer.candidate_buffer != 0 &&
+           collision_candidate_buffer.count_buffer != 0 &&
+           collision_candidate_buffer.dispatch_size_buffer != 0 &&
+           collision_candidate_buffer.max_pairs != 0;
 }
 
 inline bool is_valid_collision_candidate_buffer_view(const CollisionBuffers& collision_candidate_view)
@@ -123,12 +114,11 @@ inline bool is_valid_cloth_cloth_candidate_buffer_view(const CollisionBuffers& c
            collision_candidate_view.normal_correction_sum_buffer != 0;
 }
 
-inline void clear_collision_candidate_counts(const CollisionCandidateBuffer& buffers,
+inline void clear_collision_candidate_counts(const CollisionCandidateBuffers& buffers,
                                              QOpenGLFunctions_4_5_Core& gl)
 {
     const std::uint32_t zero_uint = 0;
-    gl.glClearNamedBufferData(buffers.candidate_count, GL_R32UI, GL_RED_INTEGER, GL_UNSIGNED_INT, &zero_uint);
-    gl.glClearNamedBufferData(buffers.overflow_count, GL_R32UI, GL_RED_INTEGER, GL_UNSIGNED_INT, &zero_uint);
+    gl.glClearNamedBufferData(buffers.count_buffer, GL_R32UI, GL_RED_INTEGER, GL_UNSIGNED_INT, &zero_uint);
 }
 
 inline void clear_collision_correction_sum(GLuint buffer, QOpenGLFunctions_4_5_Core& gl)
