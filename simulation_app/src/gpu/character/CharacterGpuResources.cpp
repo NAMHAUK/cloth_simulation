@@ -72,11 +72,11 @@ void CharacterGpuResources::initialize_gpu_resources(QOpenGLFunctions_4_5_Core& 
     gl.glVertexArrayElementBuffer(vao_, buffers_.triangle_index);
 }
 
-void CharacterGpuResources::upload_motion(const CharacterMotion& character_motion,
-                                          const Bvh& body_triangle_bvh,
-                                          const Bvh& body_vertex_bvh,
-                                          const Bvh& body_edge_bvh,
-                                          QOpenGLFunctions_4_5_Core& gl)
+void CharacterGpuResources::upload_character_mesh(const CharacterMotion& character_motion,
+                                                  const Bvh& body_triangle_bvh,
+                                                  const Bvh& body_vertex_bvh,
+                                                  const Bvh& body_edge_bvh,
+                                                  QOpenGLFunctions_4_5_Core& gl)
 {
     if (!is_uploadable_motion(character_motion)) {
         release(gl);
@@ -94,7 +94,6 @@ void CharacterGpuResources::upload_motion(const CharacterMotion& character_motio
     initialize_gpu_resources(gl);
 
     // GPU buffer 공간 생성 & 초기값 설정
-    const GLsizeiptr position_bytes = byte_size<float>(frame_position_component_count(character_motion));
     const GLsizeiptr endpoint_position_bytes =
         byte_size<float>(vertex_position_component_count(character_motion.vertex_count));
     const std::uint32_t collision_triangle_count = body_triangle_bvh.leaf_element_count();
@@ -119,10 +118,6 @@ void CharacterGpuResources::upload_motion(const CharacterMotion& character_motio
     const GLsizeiptr vertex_normals_bytes =
         byte_size<float>(static_cast<std::size_t>(character_motion.vertex_count) * 4u);
 
-    gl.glNamedBufferData(buffers_.all_frame_position,
-                         position_bytes,
-                         character_motion.vertices.data(),
-                         GL_STATIC_DRAW);
     gl.glNamedBufferData(buffers_.previous_position, endpoint_position_bytes, nullptr, GL_DYNAMIC_DRAW);
     gl.glNamedBufferData(buffers_.current_position, endpoint_position_bytes, nullptr, GL_DYNAMIC_DRAW);
     gl.glNamedBufferData(buffers_.triangle_index,
@@ -165,12 +160,32 @@ void CharacterGpuResources::upload_motion(const CharacterMotion& character_motio
     gl.glNamedBufferData(buffers_.vertex_normal, vertex_normals_bytes, nullptr, GL_DYNAMIC_DRAW);
 
     // 캐릭터 mesh GPU 초기값 설정
-    frame_count_ = character_motion.frame_count;
     vertex_count_ = character_motion.vertex_count;
     triangle_count_ = adjacency.triangle_count;
     arm_triangle_ranges_ = body_triangle_bvh.arm_triangle_ranges;
     current_frame_index_ = 0;
     index_count_ = static_cast<GLsizei>(body_triangle_bvh.indices.size());
+}
+
+void CharacterGpuResources::upload_motion(const CharacterMotion& character_motion,
+                                          QOpenGLFunctions_4_5_Core& gl)
+{
+    if (!is_uploadable_motion(character_motion) ||
+        character_motion.vertex_count != vertex_count_ ||
+        character_motion.triangle_count != triangle_count_) {
+        frame_count_ = 0;
+        current_frame_index_ = 0;
+        return;
+    }
+
+    const GLsizeiptr position_bytes = byte_size<float>(frame_position_component_count(character_motion));
+    gl.glNamedBufferData(buffers_.all_frame_position,
+                         position_bytes,
+                         character_motion.vertices.data(),
+                         GL_STATIC_DRAW);
+
+    frame_count_ = character_motion.frame_count;
+    current_frame_index_ = 0;
 }
 
 void CharacterGpuResources::set_current_frame(std::uint32_t frame_index)

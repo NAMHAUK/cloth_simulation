@@ -62,7 +62,10 @@ void SimulationController::initialize_gpu(const std::filesystem::path& shader_di
         throw std::runtime_error("Simulation GPU state is already initialized.");
     }
 
-    gpu_state_.initialize(shader_dir, params_.constraints.attachment_surface_offset, gl);
+    gpu_state_.initialize(shader_dir,
+                          params_.constraints.attachment_surface_offset,
+                          params_.collisions.body.detection_distance,
+                          gl);
     simulation_pipeline_.initialize(shader_dir, gl);
     render_pipeline_.initialize(shader_dir, gl);
 }
@@ -77,6 +80,7 @@ void SimulationController::load_default_character(CharacterMotion motion,
                          body_bvh_builder.build_edge_bvh());
 
     default_character_motion_ = std::move(motion);
+    gpu_state_.initialize_character_resources(scene_, default_character_motion_, gl);
     set_character_motion_state(default_character_motion_, gl);
     is_default_pose_ = true;
 }
@@ -182,7 +186,7 @@ void SimulationController::return_to_default_pose()
 void SimulationController::set_character_motion_state(CharacterMotion motion, QOpenGLFunctions_4_5_Core& gl)
 {
     scene_.set_character_motion(std::move(motion));
-    gpu_state_.set_character_motion(scene_, params_.collisions.body.detection_distance, gl);
+    gpu_state_.set_character_motion(scene_, gl);
     motion_step_index_ = 0;
     Q_EMIT camera_reset_requested(scene_.character_root_position(0));
 }

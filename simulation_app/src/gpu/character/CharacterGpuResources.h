@@ -4,9 +4,8 @@
 #include "gpu/bvh/BvhDataTypes.h"
 #include "gpu/character/CharacterGpuDataTypes.h"
 
-#include <cstdint>
-
 #include <QOpenGLFunctions_4_5_Core>
+#include <cstdint>
 
 class CharacterGpuResources final
 {
@@ -19,11 +18,12 @@ public:
     bool is_initialized() const;
 
     // Mesh upload and playback
-    void upload_motion(const CharacterMotion& character_motion,
-                       const Bvh& body_triangle_bvh,
-                       const Bvh& body_vertex_bvh,
-                       const Bvh& body_edge_bvh,
-                       QOpenGLFunctions_4_5_Core& gl);
+    void upload_character_mesh(const CharacterMotion& character_motion,
+                               const Bvh& body_triangle_bvh,
+                               const Bvh& body_vertex_bvh,
+                               const Bvh& body_edge_bvh,
+                               QOpenGLFunctions_4_5_Core& gl);
+    void upload_motion(const CharacterMotion& character_motion, QOpenGLFunctions_4_5_Core& gl);
     void set_current_frame(std::uint32_t frame_index);
     std::uint32_t current_frame_index() const;
     std::uint32_t next_frame_index() const;

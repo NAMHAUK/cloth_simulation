@@ -94,7 +94,7 @@ void SimulationPipeline::step(SceneState& scene,
             params_.step.motion_frame_position(motion_step_index, substep + 1u);
         const float frame_alpha = scene.motion_frame_alpha(motion_frame_position);
         scene.update_reference_frame_kinematics(frame_alpha, substep_dt_);
-        gpu_state.update_character_pose(scene, frame_alpha, params_.collisions.body.detection_distance, gl);
+        gpu_state.update_character_pose(scene, frame_alpha, gl);
 
         solve_external_forces(scene, views, external_acceleration, gl);
 
@@ -121,7 +121,7 @@ void SimulationPipeline::step_character_only(const SceneState& scene,
 {
     const float motion_frame_position = params_.step.motion_frame_position(motion_step_index + 1u, 0);
     const float frame_alpha = scene.motion_frame_alpha(motion_frame_position);
-    gpu_state.update_character_pose(scene, frame_alpha, params_.collisions.body.detection_distance, gl);
+    gpu_state.update_character_pose(scene, frame_alpha, gl);
 }
 
 void SimulationPipeline::solve_external_forces(const SceneState& scene,

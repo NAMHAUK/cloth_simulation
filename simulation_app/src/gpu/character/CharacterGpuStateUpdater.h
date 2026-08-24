@@ -2,7 +2,6 @@
 
 #include <cstdint>
 #include <filesystem>
-#include <vector>
 
 #include <QOpenGLFunctions_4_5_Core>
 
@@ -24,17 +23,9 @@ public:
     void initialize(const std::filesystem::path& shader_dir, QOpenGLFunctions_4_5_Core& gl);
     void release(QOpenGLFunctions_4_5_Core& gl);
 
-    void initialize_character_pose_state(float frame_alpha,
-                                         const std::vector<std::uint32_t>& body_triangle_level_offsets,
-                                         const std::vector<std::uint32_t>& body_vertex_level_offsets,
-                                         const std::vector<std::uint32_t>& body_edge_level_offsets,
-                                         float detection_distance,
-                                         QOpenGLFunctions_4_5_Core& gl) const;
-    void update_character_pose_state(float frame_alpha,
-                                     const std::vector<std::uint32_t>& body_triangle_level_offsets,
-                                     const std::vector<std::uint32_t>& body_vertex_level_offsets,
-                                     const std::vector<std::uint32_t>& body_edge_level_offsets,
-                                     float detection_distance,
+    void initialize_character_pose_state(QOpenGLFunctions_4_5_Core& gl) const;
+    void update_character_pose_state(std::uint32_t frame_index,
+                                     float frame_alpha,
                                      QOpenGLFunctions_4_5_Core& gl) const;
 
 private:
@@ -47,11 +38,7 @@ private:
                                   const CharacterVertexBufferView& vertex_view,
                                   const BodyTriangleResources& body_triangles,
                                   QOpenGLFunctions_4_5_Core& gl) const;
-    void update_derived_pose_state(const std::vector<std::uint32_t>& body_triangle_level_offsets,
-                                   const std::vector<std::uint32_t>& body_vertex_level_offsets,
-                                   const std::vector<std::uint32_t>& body_edge_level_offsets,
-                                   float detection_distance,
-                                   QOpenGLFunctions_4_5_Core& gl) const;
+    void update_derived_pose_state(QOpenGLFunctions_4_5_Core& gl) const;
 
     CharacterGpuResources& character_gpu_state_;
     BodyBvhBoundsUpdater& bvh_bounds_updater_;

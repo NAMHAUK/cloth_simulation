@@ -92,13 +92,7 @@ void CharacterGpuStateUpdater::initialize(const std::filesystem::path& shader_di
     }
 }
 
-void CharacterGpuStateUpdater::initialize_character_pose_state(
-    float frame_alpha,
-    const std::vector<std::uint32_t>& body_triangle_level_offsets,
-    const std::vector<std::uint32_t>& body_vertex_level_offsets,
-    const std::vector<std::uint32_t>& body_edge_level_offsets,
-    float detection_distance,
-    QOpenGLFunctions_4_5_Core& gl) const
+void CharacterGpuStateUpdater::initialize_character_pose_state(QOpenGLFunctions_4_5_Core& gl) const
 {
     if (!is_initialized() || !character_gpu_state_.is_initialized()) {
         return;
@@ -106,36 +100,25 @@ void CharacterGpuStateUpdater::initialize_character_pose_state(
 
     // Initialization writes the selected pose to current, then mirrors it into previous.
     const CharacterVertexBufferView vertex_view = character_gpu_state_.character_vertex_buffer_view();
-    write_current_position_buffer(frame_alpha, vertex_view, gl);
+    write_current_position_buffer(0.0f, vertex_view, gl);
     copy_current_position_to_previous(vertex_view, gl);
-    update_derived_pose_state(body_triangle_level_offsets,
-                              body_vertex_level_offsets,
-                              body_edge_level_offsets,
-                              detection_distance,
-                              gl);
+    update_derived_pose_state(gl);
 }
 
-void CharacterGpuStateUpdater::update_character_pose_state(
-    float frame_alpha,
-    const std::vector<std::uint32_t>& body_triangle_level_offsets,
-    const std::vector<std::uint32_t>& body_vertex_level_offsets,
-    const std::vector<std::uint32_t>& body_edge_level_offsets,
-    float detection_distance,
-    QOpenGLFunctions_4_5_Core& gl) const
+void CharacterGpuStateUpdater::update_character_pose_state(std::uint32_t frame_index,
+                                                           float frame_alpha,
+                                                           QOpenGLFunctions_4_5_Core& gl) const
 {
     if (!is_initialized() || !character_gpu_state_.is_initialized()) {
         return;
     }
 
     // Continuous update carries old current into previous before writing the new current pose.
+    character_gpu_state_.set_current_frame(frame_index);
     const CharacterVertexBufferView vertex_view = character_gpu_state_.character_vertex_buffer_view();
     copy_current_position_to_previous(vertex_view, gl);
     write_current_position_buffer(frame_alpha, vertex_view, gl);
-    update_derived_pose_state(body_triangle_level_offsets,
-                              body_vertex_level_offsets,
-                              body_edge_level_offsets,
-                              detection_distance,
-                              gl);
+    update_derived_pose_state(gl);
 }
 
 void CharacterGpuStateUpdater::write_current_position_buffer(float frame_alpha,
@@ -208,12 +191,7 @@ void CharacterGpuStateUpdater::update_triangle_geometry(const CharacterMeshTopol
     gl.glMemoryBarrier(GL_SHADER_STORAGE_BARRIER_BIT);
 }
 
-void CharacterGpuStateUpdater::update_derived_pose_state(
-    const std::vector<std::uint32_t>& body_triangle_level_offsets,
-    const std::vector<std::uint32_t>& body_vertex_level_offsets,
-    const std::vector<std::uint32_t>& body_edge_level_offsets,
-    float detection_distance,
-    QOpenGLFunctions_4_5_Core& gl) const
+void CharacterGpuStateUpdater::update_derived_pose_state(QOpenGLFunctions_4_5_Core& gl) const
 {
     const CharacterMeshTopologyResources topology = character_gpu_state_.mesh_topology_resources();
     const CharacterVertexBufferView vertex_view = character_gpu_state_.character_vertex_buffer_view();
@@ -226,10 +204,6 @@ void CharacterGpuStateUpdater::update_derived_pose_state(
                                character_gpu_state_.body_triangle_bvh_buffer_view(),
                                character_gpu_state_.body_vertex_bvh_buffer_view(),
                                character_gpu_state_.body_edge_bvh_buffer_view(),
-                               body_triangle_level_offsets,
-                               body_vertex_level_offsets,
-                               body_edge_level_offsets,
-                               detection_distance,
                                gl);
 }
 
