@@ -37,26 +37,6 @@ std::pair<std::uint32_t, std::uint32_t> valid_or_empty_level(const std::vector<s
 }
 }
 
-bool BodyBvhBoundsUpdater::can_update(const CharacterMeshTopologyResources& topology,
-                                      const CharacterVertexBufferView& vertex_view,
-                                      const BodyTriangleResources& body_triangles,
-                                      const BvhBufferView& body_triangle_bvh,
-                                      const BvhBufferView& body_vertex_bvh,
-                                      const BvhBufferView& body_edge_bvh) const
-{
-    return is_valid_character_mesh_topology_resource(topology) &&
-           vertex_view.previous_position_buffer != 0 &&
-           vertex_view.current_position_buffer != 0 &&
-           vertex_view.vertex_count != 0 &&
-           is_valid_body_triangle_resource(body_triangles) &&
-           topology.triangle_count == body_triangles.triangle_count &&
-           topology.vertex_count == vertex_view.vertex_count &&
-           is_valid_bvh_buffer_view(body_triangle_bvh) &&
-           is_valid_bvh_buffer_view(body_vertex_bvh) &&
-           is_valid_bvh_buffer_view(body_edge_bvh) &&
-           triangle_level_offsets_.size() > 1u;
-}
-
 void BodyBvhBoundsUpdater::initialize(const std::filesystem::path& shader_dir,
                                       float detection_distance,
                                       QOpenGLFunctions_4_5_Core& gl)
@@ -102,15 +82,6 @@ void BodyBvhBoundsUpdater::update(const CharacterMeshTopologyResources& topology
                                   const BvhBufferView& body_edge_bvh,
                                   QOpenGLFunctions_4_5_Core& gl) const
 {
-    if (!can_update(topology,
-                    vertex_view,
-                    body_triangles,
-                    body_triangle_bvh,
-                    body_vertex_bvh,
-                    body_edge_bvh)) {
-        return;
-    }
-
     gl.glUseProgram(program_);
     gl.glBindBufferBase(GL_SHADER_STORAGE_BUFFER,
                         body_triangle_positions_binding,

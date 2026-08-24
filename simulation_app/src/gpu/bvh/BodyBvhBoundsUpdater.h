@@ -31,13 +31,6 @@ public:
     void release(QOpenGLFunctions_4_5_Core& gl);
 
 private:
-    bool can_update(const CharacterMeshTopologyResources& topology,
-                    const CharacterVertexBufferView& vertex_view,
-                    const BodyTriangleResources& body_triangles,
-                    const BvhBufferView& body_triangle_bvh,
-                    const BvhBufferView& body_vertex_bvh,
-                    const BvhBufferView& body_edge_bvh) const;
-
     GLuint program_ = 0;
     GLint triangle_first_node_index_location_ = -1;
     GLint triangle_node_count_location_ = -1;

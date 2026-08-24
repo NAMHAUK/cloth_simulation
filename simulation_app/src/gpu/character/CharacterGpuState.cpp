@@ -202,9 +202,7 @@ void CharacterGpuState::update_pose(std::uint32_t frame_index,
                                     float frame_alpha,
                                     QOpenGLFunctions_4_5_Core& gl)
 {
-    if (frame_index < frame_count_) {
-        current_frame_index_ = frame_index;
-    }
+    current_frame_index_ = frame_index;
 
     // Continuous update carries old current into previous before writing the new current pose.
     copy_current_to_previous(gl);
@@ -214,10 +212,6 @@ void CharacterGpuState::update_pose(std::uint32_t frame_index,
 
 void CharacterGpuState::write_current_positions(float frame_alpha, QOpenGLFunctions_4_5_Core& gl) const
 {
-    if (buffers_.all_frame_positions == 0 || buffers_.current_position == 0 || vertex_count_ == 0) {
-        return;
-    }
-
     const std::uint32_t next_frame_index =
         current_frame_index_ + 1u < frame_count_ ? current_frame_index_ + 1u : current_frame_index_;
     const std::uint32_t current_frame_base = current_frame_index_ * vertex_count_ * 3u;
@@ -237,10 +231,6 @@ void CharacterGpuState::write_current_positions(float frame_alpha, QOpenGLFuncti
 
 void CharacterGpuState::copy_current_to_previous(QOpenGLFunctions_4_5_Core& gl) const
 {
-    if (buffers_.previous_position == 0 || buffers_.current_position == 0 || vertex_count_ == 0) {
-        return;
-    }
-
     const GLsizeiptr position_bytes = byte_size<float>(vertex_position_component_count(vertex_count_));
     gl.glCopyNamedBufferSubData(buffers_.current_position, buffers_.previous_position, 0, 0, position_bytes);
     gl.glMemoryBarrier(GL_SHADER_STORAGE_BARRIER_BIT | GL_BUFFER_UPDATE_BARRIER_BIT);
@@ -260,14 +250,6 @@ void CharacterGpuState::update_derived_pose(QOpenGLFunctions_4_5_Core& gl) const
 
 void CharacterGpuState::update_triangle_geometry(QOpenGLFunctions_4_5_Core& gl) const
 {
-    if (buffers_.current_position == 0 ||
-        buffers_.triangle_index == 0 ||
-        buffers_.triangle_position == 0 ||
-        buffers_.triangle_normal == 0 ||
-        triangle_count_ == 0) {
-        return;
-    }
-
     gl.glUseProgram(triangle_geometry_program_);
     gl.glBindBufferBase(GL_SHADER_STORAGE_BUFFER, triangle_position_binding, buffers_.current_position);
     gl.glBindBufferBase(GL_SHADER_STORAGE_BUFFER, triangle_indices_binding, buffers_.triangle_index);
@@ -289,19 +271,11 @@ void CharacterGpuState::draw(QOpenGLFunctions_4_5_Core& gl) const
 
 void CharacterGpuState::bind_current_positions(GLuint binding_index, QOpenGLFunctions_4_5_Core& gl) const
 {
-    if (buffers_.current_position == 0) {
-        return;
-    }
-
     gl.glBindBufferBase(GL_SHADER_STORAGE_BUFFER, binding_index, buffers_.current_position);
 }
 
 void CharacterGpuState::bind_vertex_normals(GLuint binding_index, QOpenGLFunctions_4_5_Core& gl) const
 {
-    if (buffers_.vertex_normal == 0) {
-        return;
-    }
-
     gl.glBindBufferBase(GL_SHADER_STORAGE_BUFFER, binding_index, buffers_.vertex_normal);
 }
 
