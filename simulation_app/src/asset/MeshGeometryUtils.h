@@ -7,9 +7,8 @@
 
 #include <glm/vec3.hpp>
 
-bool build_vertex_triangle_adjacency(std::uint32_t vertex_count,
-                                     const std::vector<std::uint32_t>& triangle_indices,
-                                     VertexTriangleAdjacency& adjacency);
+VertexTriangleAdjacency build_vertex_triangle_adjacency(std::uint32_t vertex_count,
+                                                        const std::vector<std::uint32_t>& triangle_indices);
 
 bool orient_triangle_winding_outward(std::uint32_t vertex_count,
                                      const std::vector<float>& vertices,

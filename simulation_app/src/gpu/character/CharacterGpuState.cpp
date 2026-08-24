@@ -75,20 +75,15 @@ void CharacterGpuState::initialize_gpu_resources(QOpenGLFunctions_4_5_Core& gl)
     gl.glVertexArrayElementBuffer(vao_, buffers_.triangle_index);
 }
 
-void CharacterGpuState::initialize_mesh(const CharacterMotion& character_motion,
+void CharacterGpuState::initialize_mesh(const CharacterMotion& motion,
                                         const Bvh& body_triangle_bvh,
                                         const Bvh& body_vertex_bvh,
                                         const Bvh& body_edge_bvh,
                                         QOpenGLFunctions_4_5_Core& gl)
 {
-    VertexTriangleAdjacency adjacency;
-    if (!build_vertex_triangle_adjacency(character_motion.vertex_count,
-                                         body_triangle_bvh.indices,
-                                         adjacency)) {
-        return;
-    }
+    const auto adjacency = build_vertex_triangle_adjacency(motion.vertex_count, body_triangle_bvh.indices);
 
-    const auto position_bytes = byte_size<glm::vec4>(character_motion.vertex_count);
+    const auto position_bytes = byte_size<glm::vec4>(motion.vertex_count);
 
     gl.glNamedBufferData(buffers_.previous_position, position_bytes, nullptr, GL_DYNAMIC_DRAW);
     gl.glNamedBufferData(buffers_.current_position, position_bytes, nullptr, GL_DYNAMIC_DRAW);
@@ -113,7 +108,7 @@ void CharacterGpuState::initialize_mesh(const CharacterMotion& character_motion,
                          body_vertex_bvh.indices.data(),
                          GL_STATIC_DRAW);
     gl.glNamedBufferData(buffers_.body_vertex_bounds,
-                         byte_size<Aabb>(character_motion.vertex_count),
+                         byte_size<Aabb>(motion.vertex_count),
                          nullptr,
                          GL_DYNAMIC_DRAW);
     gl.glNamedBufferData(buffers_.body_edge_bvh_node,
@@ -145,11 +140,11 @@ void CharacterGpuState::initialize_mesh(const CharacterMotion& character_motion,
                          nullptr,
                          GL_DYNAMIC_DRAW);
     gl.glNamedBufferData(buffers_.vertex_normal,
-                         byte_size<glm::vec4>(character_motion.vertex_count),
+                         byte_size<glm::vec4>(motion.vertex_count),
                          nullptr,
                          GL_DYNAMIC_DRAW);
 
-    vertex_count_ = character_motion.vertex_count;
+    vertex_count_ = motion.vertex_count;
     triangle_count_ = adjacency.triangle_count;
     arm_triangle_ranges_ = body_triangle_bvh.arm_triangle_ranges;
     index_count_ = static_cast<GLsizei>(body_triangle_bvh.indices.size());
@@ -160,14 +155,14 @@ void CharacterGpuState::initialize_mesh(const CharacterMotion& character_motion,
 
 // Motion update
 
-void CharacterGpuState::set_motion(const CharacterMotion& character_motion, QOpenGLFunctions_4_5_Core& gl)
+void CharacterGpuState::set_motion(const CharacterMotion& motion, QOpenGLFunctions_4_5_Core& gl)
 {
     gl.glNamedBufferData(buffers_.all_frame_positions,
-                         byte_size<float>(character_motion.vertices.size()),
-                         character_motion.vertices.data(),
+                         byte_size<float>(motion.vertices.size()),
+                         motion.vertices.data(),
                          GL_STATIC_DRAW);
 
-    frame_count_ = character_motion.frame_count;
+    frame_count_ = motion.frame_count;
     current_frame_index_ = 0;
 
     // Initialization writes the selected pose to current, then mirrors it into previous.

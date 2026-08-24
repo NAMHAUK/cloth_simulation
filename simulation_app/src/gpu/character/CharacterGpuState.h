@@ -20,13 +20,13 @@ public:
                     float body_detection_distance,
                     QOpenGLFunctions_4_5_Core& gl);
 
-    void initialize_mesh(const CharacterMotion& character_motion,
+    void initialize_mesh(const CharacterMotion& motion,
                          const Bvh& body_triangle_bvh,
                          const Bvh& body_vertex_bvh,
                          const Bvh& body_edge_bvh,
                          QOpenGLFunctions_4_5_Core& gl);
 
-    void set_motion(const CharacterMotion& character_motion, QOpenGLFunctions_4_5_Core& gl);
+    void set_motion(const CharacterMotion& motion, QOpenGLFunctions_4_5_Core& gl);
     void update_pose(std::uint32_t frame_index, float frame_alpha, QOpenGLFunctions_4_5_Core& gl);
 
     void draw(QOpenGLFunctions_4_5_Core& gl) const;

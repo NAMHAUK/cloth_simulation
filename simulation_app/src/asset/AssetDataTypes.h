@@ -15,8 +15,6 @@ struct VertexTriangleAdjacency final
     std::vector<std::uint32_t> offsets;
     std::vector<std::uint32_t> triangle_indices;
     std::uint32_t triangle_count = 0;
-
-    bool is_valid(std::uint32_t vertex_count) const;
 };
 
 struct MeshEdge final
