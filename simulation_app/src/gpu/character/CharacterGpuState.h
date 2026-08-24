@@ -56,7 +56,7 @@ private:
 
     BodyBvhBoundsUpdater bvh_bounds_updater_;
     GLuint position_program_ = 0;
-    GLuint triangle_geometry_program_ = 0;
+    GLuint triangle_update_program_ = 0;
     GLint position_current_frame_base_location_ = -1;
     GLint position_next_frame_base_location_ = -1;
     GLint position_frame_alpha_location_ = -1;
