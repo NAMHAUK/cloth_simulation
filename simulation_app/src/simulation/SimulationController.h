@@ -17,6 +17,7 @@
 #include <glm/mat4x4.hpp>
 #include <glm/vec3.hpp>
 
+#include <QDeadlineTimer>
 #include <QObject>
 #include <QTimer>
 
@@ -71,6 +72,7 @@ private:
                                 const std::vector<std::uint8_t>& triangle_part_labels);
 
     void tick_frame();
+    void update_frame_timer();
     void set_character_motion_state(CharacterMotion motion, QOpenGLFunctions_4_5_Core& gl);
 
     struct GarmentPlacementState final
@@ -96,6 +98,7 @@ private:
     bool simulation_running_ = false;
     bool is_default_pose_ = false;
     QTimer frame_timer_;
+    QDeadlineTimer next_frame_deadline_{Qt::PreciseTimer};
 
     std::function<void(GlContextTask)> run_with_gl_context_;
 };

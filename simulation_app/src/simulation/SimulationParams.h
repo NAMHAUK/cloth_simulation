@@ -17,7 +17,6 @@ struct SimulationStepParams final
         return (static_cast<float>(motion_step_index) + substep_fraction) / motion_stride();
     }
 
-    constexpr int tick_ms() const { return 1000 / static_cast<int>(fps); }
     constexpr float dt() const { return 1.0f / static_cast<float>(fps); }
 };
 

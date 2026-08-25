@@ -5,6 +5,7 @@
 
 #include <algorithm>
 #include <cassert>
+#include <chrono>
 #include <stdexcept>
 #include <utility>
 
@@ -53,7 +54,9 @@ void SimulationController::initialize(const std::filesystem::path& shader_dir,
     load_default_character(std::move(character_motion), triangle_part_labels);
     initialize_gpu(shader_dir, gl);
     Q_EMIT camera_reset_requested(scene_.character_root_position(0));
-    frame_timer_.start(params_.step.tick_ms());
+    frame_timer_.setSingleShot(true);
+    frame_timer_.setTimerType(Qt::PreciseTimer);
+    update_frame_timer();
 }
 
 void SimulationController::initialize_gpu(const std::filesystem::path& shader_dir,
@@ -109,6 +112,7 @@ void SimulationController::draw(const glm::mat4& mvp, float character_opacity, Q
 void SimulationController::tick_frame()
 {
     assert(is_gpu_initialized());
+    update_frame_timer();
 
     if (simulation_running_) {
         run_with_gl_context_([this](QOpenGLFunctions_4_5_Core& gl) {
@@ -125,6 +129,17 @@ void SimulationController::tick_frame()
     }
 
     Q_EMIT viewport_update_requested();
+}
+
+void SimulationController::update_frame_timer()
+{
+    const auto interval = std::chrono::nanoseconds{std::chrono::seconds{1}} / params_.step.fps;
+
+    next_frame_deadline_ += interval;
+    if (next_frame_deadline_.hasExpired()) {
+        next_frame_deadline_ = QDeadlineTimer(interval, Qt::PreciseTimer);
+    }
+    frame_timer_.start(next_frame_deadline_.remainingTime());
 }
 
 // Character
