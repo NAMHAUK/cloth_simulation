@@ -22,7 +22,6 @@ SimulationPipeline::SimulationPipeline(SimulationParams params)
       ground_collision_solver_(params.collisions.ground),
       cloth_body_collision_detector_(params.collisions.body.detection_distance),
       cloth_body_collision_solver_(params.collisions.body),
-      cloth_cloth_collision_detector_(params.collisions.cloth),
       cloth_cloth_collision_solver_(params.collisions.cloth),
       garment_prefit_solver_(params.prefit)
 {}
@@ -70,7 +69,8 @@ void SimulationPipeline::prefit_garments(SceneGpuState& gpu_state,
     // Initial cloth-cloth collision
     if (views.has_multiple_garments()) {
         for (std::uint32_t iteration = 0; iteration < params_.step.iteration_count; ++iteration) {
-            cloth_cloth_collision_detector_.detect_initial(views, gl);
+            gpu_state.update_cloth_bvh_bounds(views, params_.collisions.cloth.initial_detection_distance, gl);
+            cloth_cloth_collision_detector_.detect(views, gl);
             cloth_cloth_collision_solver_.solve_initial(views, gl);
             gpu_state.cloth_gpu_state().copy_current_positions_to_previous(gl);
         }
@@ -92,6 +92,7 @@ void SimulationPipeline::step(SceneState& scene,
         update_character_motion(scene, gpu_state, motion_step_index, substep + 1u, gl);
         integrate_cloth(scene, views, gl);
 
+        gpu_state.update_cloth_bvh_bounds(views, params_.collisions.cloth.detection_distance, gl);
         cloth_body_collision_detector_.detect(views, gl);
         cloth_cloth_collision_detector_.detect(views, gl);
 

@@ -51,7 +51,8 @@ void SceneGpuState::initialize(const std::filesystem::path& shader_dir,
                                const SceneState& scene,
                                QOpenGLFunctions_4_5_Core& gl)
 {
-    character_gpu_state_.initialize(shader_dir, body_detection_distance, gl);
+    bvh_bounds_updater_.initialize(shader_dir, body_detection_distance, gl);
+    character_gpu_state_.initialize(shader_dir, gl);
 
     initialize_normal_programs(shader_dir, gl);
     initialize_attachment_target_program(shader_dir, attachment_surface_offset, gl);
@@ -105,6 +106,9 @@ void SceneGpuState::initialize_character_resources(const SceneState& scene, QOpe
     const Bvh& edge_bvh = scene.default_body_edge_bvh();
 
     character_gpu_state_.initialize_mesh(scene.character_motion(), triangle_bvh, vertex_bvh, edge_bvh, gl);
+    bvh_bounds_updater_.set_body_level_offsets(triangle_bvh.level_offsets,
+                                               vertex_bvh.level_offsets,
+                                               edge_bvh.level_offsets);
 }
 
 // Character
@@ -112,6 +116,7 @@ void SceneGpuState::initialize_character_resources(const SceneState& scene, QOpe
 void SceneGpuState::set_character_motion(const SceneState& scene, QOpenGLFunctions_4_5_Core& gl)
 {
     character_gpu_state_.set_motion(scene.character_motion(), gl);
+    bvh_bounds_updater_.update_body_bvh(simulation_view(), gl);
     update_character_vertex_normals(gl);
 }
 
@@ -120,6 +125,7 @@ void SceneGpuState::update_character_pose(const SceneState& scene,
                                           QOpenGLFunctions_4_5_Core& gl)
 {
     character_gpu_state_.update_pose(scene.motion_frame_index(), frame_alpha, gl);
+    bvh_bounds_updater_.update_body_bvh(simulation_view(), gl);
     update_character_vertex_normals(gl);
 }
 
@@ -226,6 +232,15 @@ void SceneGpuState::clear_garment_base_positions(QOpenGLFunctions_4_5_Core& gl)
     cloth_gpu_state_.clear_base_positions(gl);
 }
 
+void SceneGpuState::update_cloth_bvh_bounds(const SimulationGpuView& views,
+                                            float bounds_margin,
+                                            QOpenGLFunctions_4_5_Core& gl)
+{
+    if (views.has_multiple_garments()) {
+        bvh_bounds_updater_.update_cloth_bvh(views, bounds_margin, gl);
+    }
+}
+
 // Normals
 
 void SceneGpuState::update_cloth_normals(QOpenGLFunctions_4_5_Core& gl)
@@ -325,6 +340,7 @@ void SceneGpuState::release(QOpenGLFunctions_4_5_Core& gl)
 {
     release_garment_resources(gl);
     character_gpu_state_.release(gl);
+    bvh_bounds_updater_.release(gl);
     gl.glDeleteProgram(vertex_normal_program_);
     gl.glDeleteProgram(triangle_normal_program_);
     gl.glDeleteProgram(attachment_target_program_);

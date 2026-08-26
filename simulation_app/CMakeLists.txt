@@ -56,10 +56,8 @@ add_executable(simulation_app
     src/gpu/character/CharacterGpuDataTypes.h
     src/gpu/character/CharacterGpuState.h
     src/gpu/bvh/BvhBufferView.h
-    src/gpu/bvh/BodyBvhBoundsUpdater.cpp
-    src/gpu/bvh/BodyBvhBoundsUpdater.h
-    src/gpu/bvh/ClothBvhBoundsUpdater.cpp
-    src/gpu/bvh/ClothBvhBoundsUpdater.h
+    src/gpu/bvh/BvhBoundsUpdater.cpp
+    src/gpu/bvh/BvhBoundsUpdater.h
     src/gpu/cloth/ClothGpuState.cpp
     src/gpu/cloth/ClothGpuDataTypes.h
     src/gpu/cloth/ClothGpuState.h

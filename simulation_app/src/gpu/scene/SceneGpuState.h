@@ -1,5 +1,6 @@
 #pragma once
 
+#include "gpu/bvh/BvhBoundsUpdater.h"
 #include "gpu/character/CharacterGpuState.h"
 #include "gpu/cloth/ClothGpuState.h"
 #include "gpu/scene/SimulationGpuView.h"
@@ -33,6 +34,9 @@ public:
     void capture_garment_base_positions(QOpenGLFunctions_4_5_Core& gl);
     void restore_garment_base_positions(QOpenGLFunctions_4_5_Core& gl);
     void clear_garment_base_positions(QOpenGLFunctions_4_5_Core& gl);
+    void update_cloth_bvh_bounds(const SimulationGpuView& views,
+                                 float bounds_margin,
+                                 QOpenGLFunctions_4_5_Core& gl);
     void update_cloth_normals(QOpenGLFunctions_4_5_Core& gl);
     bool is_initialized() const;
     SimulationGpuView simulation_view() const;
@@ -52,6 +56,7 @@ private:
 
     void update_character_vertex_normals(QOpenGLFunctions_4_5_Core& gl);
 
+    BvhBoundsUpdater bvh_bounds_updater_;
     CharacterGpuState character_gpu_state_;
     ClothGpuState cloth_gpu_state_;
     CollisionBuffers collision_buffers_;

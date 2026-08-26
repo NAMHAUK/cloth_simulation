@@ -1,7 +1,6 @@
 #pragma once
 
 #include "asset/AssetDataTypes.h"
-#include "gpu/bvh/BodyBvhBoundsUpdater.h"
 #include "gpu/bvh/BvhBufferView.h"
 #include "gpu/character/CharacterGpuDataTypes.h"
 #include "simulation/collision/Bvh.h"
@@ -17,9 +16,7 @@ public:
     CharacterGpuState(const CharacterGpuState&) = delete;
     CharacterGpuState& operator=(const CharacterGpuState&) = delete;
 
-    void initialize(const std::filesystem::path& shader_dir,
-                    float body_detection_distance,
-                    QOpenGLFunctions_4_5_Core& gl);
+    void initialize(const std::filesystem::path& shader_dir, QOpenGLFunctions_4_5_Core& gl);
 
     void initialize_mesh(const CharacterMotion& motion,
                          const Bvh& body_triangle_bvh,
@@ -49,13 +46,11 @@ private:
 
     void write_current_positions(float frame_alpha, QOpenGLFunctions_4_5_Core& gl) const;
     void copy_current_to_previous(QOpenGLFunctions_4_5_Core& gl) const;
-    void update_derived_pose(QOpenGLFunctions_4_5_Core& gl) const;
     void update_triangle_geometry(QOpenGLFunctions_4_5_Core& gl) const;
 
     void release_mesh_resources(QOpenGLFunctions_4_5_Core& gl);
     void reset_resources() noexcept;
 
-    BodyBvhBoundsUpdater bvh_bounds_updater_;
     GLuint position_program_ = 0;
     GLuint triangle_update_program_ = 0;
     GLint position_current_frame_base_location_ = -1;

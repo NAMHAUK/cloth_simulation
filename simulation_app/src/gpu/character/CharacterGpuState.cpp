@@ -22,12 +22,8 @@ constexpr std::size_t triangle_vertex_count = 3u;
 
 // Initialization
 
-void CharacterGpuState::initialize(const std::filesystem::path& shader_dir,
-                                   float body_detection_distance,
-                                   QOpenGLFunctions_4_5_Core& gl)
+void CharacterGpuState::initialize(const std::filesystem::path& shader_dir, QOpenGLFunctions_4_5_Core& gl)
 {
-    bvh_bounds_updater_.initialize(shader_dir, body_detection_distance, gl);
-
     const auto position_shader_path = shader_dir / "character" / "vertex_position_update.comp";
     const auto triangle_shader_path = shader_dir / "character" / "triangle_geometry_update.comp";
     position_program_ = load_compute_program(position_shader_path, "Character vertex position update", gl);
@@ -148,9 +144,6 @@ void CharacterGpuState::initialize_mesh(const CharacterMotion& motion,
     triangle_count_ = adjacency.triangle_count;
     arm_triangle_ranges_ = body_triangle_bvh.arm_triangle_ranges;
     index_count_ = static_cast<GLsizei>(body_triangle_bvh.indices.size());
-    bvh_bounds_updater_.set_level_offsets(body_triangle_bvh.level_offsets,
-                                          body_vertex_bvh.level_offsets,
-                                          body_edge_bvh.level_offsets);
 }
 
 // Motion update
@@ -168,7 +161,7 @@ void CharacterGpuState::set_motion(const CharacterMotion& motion, QOpenGLFunctio
     // Initialization writes the selected pose to current, then mirrors it into previous.
     write_current_positions(0.0f, gl);
     copy_current_to_previous(gl);
-    update_derived_pose(gl);
+    update_triangle_geometry(gl);
 }
 
 void CharacterGpuState::update_pose(std::uint32_t frame_index,
@@ -180,7 +173,7 @@ void CharacterGpuState::update_pose(std::uint32_t frame_index,
     // Continuous update carries old current into previous before writing the new current pose.
     copy_current_to_previous(gl);
     write_current_positions(frame_alpha, gl);
-    update_derived_pose(gl);
+    update_triangle_geometry(gl);
 }
 
 void CharacterGpuState::write_current_positions(float frame_alpha, QOpenGLFunctions_4_5_Core& gl) const
@@ -207,18 +200,6 @@ void CharacterGpuState::copy_current_to_previous(QOpenGLFunctions_4_5_Core& gl) 
     const auto position_bytes = byte_size<glm::vec4>(vertex_count_);
     gl.glCopyNamedBufferSubData(buffers_.current_position, buffers_.previous_position, 0, 0, position_bytes);
     gl.glMemoryBarrier(GL_SHADER_STORAGE_BARRIER_BIT | GL_BUFFER_UPDATE_BARRIER_BIT);
-}
-
-void CharacterGpuState::update_derived_pose(QOpenGLFunctions_4_5_Core& gl) const
-{
-    update_triangle_geometry(gl);
-    bvh_bounds_updater_.update(mesh_topology_resources(),
-                               vertex_buffer_view(),
-                               body_triangle_resources(),
-                               body_triangle_bvh_buffer_view(),
-                               body_vertex_bvh_buffer_view(),
-                               body_edge_bvh_buffer_view(),
-                               gl);
 }
 
 void CharacterGpuState::update_triangle_geometry(QOpenGLFunctions_4_5_Core& gl) const
@@ -314,7 +295,6 @@ BvhBufferView CharacterGpuState::body_edge_bvh_buffer_view() const
 void CharacterGpuState::release(QOpenGLFunctions_4_5_Core& gl)
 {
     release_mesh_resources(gl);
-    bvh_bounds_updater_.release(gl);
     gl.glDeleteProgram(triangle_update_program_);
     gl.glDeleteProgram(position_program_);
 
