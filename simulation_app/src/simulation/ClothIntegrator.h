@@ -1,13 +1,13 @@
 #pragma once
 
 #include "asset/AssetDataTypes.h"
-#include "simulation/Kinematics.h"
 
 #include <cstdint>
 #include <filesystem>
 
 #include <QOpenGLFunctions_4_5_Core>
 
+struct ReferenceFrameKinematics;
 struct SimulationGpuView;
 
 class ClothIntegrator final
@@ -25,7 +25,7 @@ public:
     void initialize(const std::filesystem::path& shader_dir, float dt, QOpenGLFunctions_4_5_Core& gl);
     void integrate(const SimulationGpuView& views,
                    GarmentLayer layer,
-                   const Kinematics& reference_frame_kinematics,
+                   const ReferenceFrameKinematics& reference_frame_kinematics,
                    QOpenGLFunctions_4_5_Core& gl) const;
     void release(QOpenGLFunctions_4_5_Core& gl);
 

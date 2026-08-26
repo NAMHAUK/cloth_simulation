@@ -2,13 +2,34 @@
 
 #include "asset/AssetDataTypes.h"
 #include "simulation/collision/Bvh.h"
-#include "simulation/Kinematics.h"
+#include "utils/NumericUtils.h"
 
 #include <cstddef>
 #include <cstdint>
 #include <vector>
 
+#include <glm/gtc/quaternion.hpp>
+#include <glm/mat3x3.hpp>
 #include <glm/vec3.hpp>
+
+struct ReferenceFrameKinematics final
+{
+    void reset(const glm::vec3& position, const glm::quat& orientation);
+    void update(const glm::vec3& position, const glm::quat& orientation, float dt);
+
+    glm::vec3 start_position{};
+    glm::vec3 end_position{};
+    glm::mat3 rotation_delta{1.0f};
+    glm::vec3 start_velocity{};
+    glm::vec3 acceleration{};
+    glm::vec3 start_angular_velocity{};
+    glm::vec3 angular_acceleration{};
+
+private:
+    glm::quat orientation_ = quat_xyzw(0.0f, 0.0f, 0.0f, 1.0f);
+    glm::vec3 velocity_{};
+    glm::vec3 angular_velocity_{};
+};
 
 struct GarmentObject
 {
@@ -41,20 +62,16 @@ public:
     const Bvh& default_body_vertex_bvh() const;
     const Bvh& default_body_edge_bvh() const;
     const std::vector<GarmentObject>& garments() const;
-    const Kinematics& reference_frame_kinematics(GarmentCategory category) const;
+    const ReferenceFrameKinematics& reference_frame_kinematics(GarmentCategory category) const;
     std::uint32_t motion_frame_index() const;
 
 private:
-    CharacterReferenceFrame interpolated_reference_frame(float motion_frame_alpha,
-                                                         GarmentCategory category) const;
-    CharacterReferenceFrame reference_frame(std::uint32_t motion_frame_index, GarmentCategory category) const;
-
     CharacterMotion character_motion_;
     Bvh default_body_triangle_bvh_;
     Bvh default_body_vertex_bvh_;
     Bvh default_body_edge_bvh_;
     std::vector<GarmentObject> garments_;
     std::uint32_t motion_frame_index_ = 0;
-    Kinematics pelvis_kinematics_;
-    Kinematics torso_kinematics_;
+    ReferenceFrameKinematics pelvis_kinematics_;
+    ReferenceFrameKinematics torso_kinematics_;
 };

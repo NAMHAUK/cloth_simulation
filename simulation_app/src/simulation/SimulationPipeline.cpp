@@ -128,9 +128,8 @@ void SimulationPipeline::integrate_cloth(const SceneState& scene,
         const GarmentBufferState& garment_state = views.garment_buffer_states[garment.layer];
         assert(garment_state.vertex_count != 0u);
 
-        const Kinematics& reference_frame_kinematics =
-            scene.reference_frame_kinematics(garment.mesh.garment_category);
-        cloth_integrator_.integrate(views, garment.layer, reference_frame_kinematics, gl);
+        const auto& kinematics = scene.reference_frame_kinematics(garment.mesh.garment_category);
+        cloth_integrator_.integrate(views, garment.layer, kinematics, gl);
     }
 }
 
