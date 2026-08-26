@@ -104,37 +104,37 @@ add_executable(simulation_app
     shaders/rendering/background.frag
     shaders/mesh/triangle_normal.comp
     shaders/mesh/vertex_normal.comp
-    shaders/character/character_vertex_position_update.comp
-    shaders/character/character_triangle_geometry_update.comp
-    shaders/body/body_bvh_bounds_update.comp
-    shaders/cloth/cloth_external_force.comp
-    shaders/cloth/cloth_bvh_bounds_update.comp
-    shaders/cloth/constraints/cloth_stretch_constraint.comp
-    shaders/cloth/constraints/cloth_bending_constraint.comp
-    shaders/cloth/constraints/cloth_attachment_constraint.comp
-    shaders/collision/cloth_ground_collision.comp
-    shaders/collision/collision_dispatch_size.comp
-    shaders/collision/cloth_cloth_vertex_face_detect.comp
-    shaders/collision/cloth_cloth_vertex_face_accumulate.comp
-    shaders/collision/cloth_cloth_initial_layer_accumulate.comp
-    shaders/cloth/setup/cloth_body_triangle_index_build.comp
-    shaders/collision/cloth_cloth_collision_apply.comp
-    shaders/collision/cloth_vertex_body_face_detect.comp
-    shaders/collision/cloth_vertex_body_face_accumulate.comp
-    shaders/collision/body_vertex_cloth_face_detect.comp
-    shaders/collision/body_vertex_cloth_face_accumulate.comp
-    shaders/collision/cloth_edge_body_edge_detect.comp
-    shaders/collision/cloth_edge_body_edge_accumulate.comp
-    shaders/collision/cloth_body_collision_apply.comp
-    shaders/mesh/bvh_common.glsl
+    shaders/character/vertex_position_update.comp
+    shaders/character/triangle_geometry_update.comp
+    shaders/bvh/body_bounds_update.comp
+    shaders/bvh/cloth_bounds_update.comp
+    shaders/cloth/external_force.comp
+    shaders/cloth/constraints/stretch.comp
+    shaders/cloth/constraints/bending.comp
+    shaders/cloth/constraints/attachment.comp
+    shaders/collision/ground.comp
+    shaders/collision/dispatch_size.comp
+    shaders/collision/cloth_cloth/vertex_face_detect.comp
+    shaders/collision/cloth_cloth/vertex_face_accumulate.comp
+    shaders/collision/cloth_cloth/initial_layer_accumulate.comp
+    shaders/collision/cloth_cloth/body_triangle_index_build.comp
+    shaders/collision/cloth_cloth/apply.comp
+    shaders/collision/cloth_body/cloth_vertex_body_face_detect.comp
+    shaders/collision/cloth_body/cloth_vertex_body_face_accumulate.comp
+    shaders/collision/cloth_body/body_vertex_cloth_face_detect.comp
+    shaders/collision/cloth_body/body_vertex_cloth_face_accumulate.comp
+    shaders/collision/cloth_body/cloth_edge_body_edge_detect.comp
+    shaders/collision/cloth_body/cloth_edge_body_edge_accumulate.comp
+    shaders/collision/cloth_body/apply.comp
+    shaders/bvh/bvh.glsl
     shaders/mesh/primitive_geometry.glsl
     shaders/mesh/position_io.glsl
-    shaders/collision/common/collision_geometry_common.glsl
-    shaders/collision/common/collision_correction_common.glsl
-    shaders/collision/common/collision_candidate_output.glsl
+    shaders/collision/contact_geometry.glsl
+    shaders/collision/correction.glsl
+    shaders/collision/candidate_output.glsl
     shaders/cloth/setup/garment_prefit.comp
-    shaders/cloth/setup/garment_attachment_target_build.comp
-    shaders/body/body_mesh_search.glsl
+    shaders/cloth/setup/attachment_target_build.comp
+    shaders/bvh/body_surface_search.glsl
 )
 
 qt_add_resources(simulation_app ui_icons

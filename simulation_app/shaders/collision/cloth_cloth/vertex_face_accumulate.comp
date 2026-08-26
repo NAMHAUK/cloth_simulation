@@ -2,7 +2,7 @@
 
 layout(local_size_x = 128) in;
 
-#include "../mesh/primitive_geometry.glsl"
+#include "../../mesh/primitive_geometry.glsl"
 
 // Buffer bindings
 layout(std430, binding = 0) readonly buffer ClothCurrentPositions {
@@ -47,12 +47,12 @@ uniform uint uUpperVertexOffset;
 // Shared dependencies
 #define POSITION_IO_CLOTH_CURRENT
 #define POSITION_IO_CLOTH_PREVIOUS
-#include "../mesh/position_io.glsl"
+#include "../../mesh/position_io.glsl"
 
-#include "common/collision_geometry_common.glsl"
+#include "../contact_geometry.glsl"
 
 #define COLLISION_CORRECTION_ACCUMULATE
-#include "common/collision_correction_common.glsl"
+#include "../correction.glsl"
 
 // Shader constants
 const float distance_delta_epsilon = 1.0e-8;

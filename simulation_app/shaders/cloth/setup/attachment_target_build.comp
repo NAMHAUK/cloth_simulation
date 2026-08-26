@@ -2,7 +2,7 @@
 
 layout(local_size_x = 128) in;
 
-#include "../../mesh/bvh_common.glsl"
+#include "../../bvh/bvh.glsl"
 
 layout(std430, binding = 0) readonly buffer CurrentPositions {
     vec4 cloth_current_positions[];
@@ -38,7 +38,7 @@ uniform float uSurfaceOffset;
 
 #define POSITION_IO_CLOTH_CURRENT
 #include "../../mesh/position_io.glsl"
-#include "../../body/body_mesh_search.glsl"
+#include "../../bvh/body_surface_search.glsl"
 
 vec3 barycentric_on_triangle(uint triangle_index, vec3 point)
 {

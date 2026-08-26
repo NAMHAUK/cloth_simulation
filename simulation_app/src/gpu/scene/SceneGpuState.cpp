@@ -81,7 +81,7 @@ void SceneGpuState::initialize_attachment_target_program(const std::filesystem::
                                                          float surface_offset,
                                                          QOpenGLFunctions_4_5_Core& gl)
 {
-    const auto shader_path = shader_dir / "cloth/setup/garment_attachment_target_build.comp";
+    const auto shader_path = shader_dir / "cloth/setup/attachment_target_build.comp";
     attachment_target_program_ = load_compute_program(shader_path, "Attachment target build", gl);
 
     const GLuint program = attachment_target_program_;

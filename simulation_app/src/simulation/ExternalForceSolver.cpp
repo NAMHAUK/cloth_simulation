@@ -48,8 +48,7 @@ void ExternalForceSolver::initialize(const std::filesystem::path& shader_dir,
         throw std::runtime_error("Cannot initialize external force solver with a non-positive time step.");
     }
 
-    program_ =
-        load_compute_program(shader_dir / "cloth" / "cloth_external_force.comp", "Cloth external force", gl);
+    program_ = load_compute_program(shader_dir / "cloth" / "external_force.comp", "Cloth external force", gl);
     // shader program 안의 uniform 변수들 위치 저장
     vertex_offset_location_ = gl.glGetUniformLocation(program_, "uVertexOffset");
     vertex_count_location_ = gl.glGetUniformLocation(program_, "uVertexCount");

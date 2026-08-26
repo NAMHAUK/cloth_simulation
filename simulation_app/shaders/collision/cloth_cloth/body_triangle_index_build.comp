@@ -2,7 +2,7 @@
 
 layout(local_size_x = 128) in;
 
-#include "../../mesh/bvh_common.glsl"
+#include "../../bvh/bvh.glsl"
 
 layout(std430, binding = 0) readonly buffer ClothCurrentPositions {
     vec4 cloth_current_positions[];
@@ -33,7 +33,7 @@ const uint invalid_triangle_index = 0xffffffffu;
 
 #define POSITION_IO_CLOTH_CURRENT
 #include "../../mesh/position_io.glsl"
-#include "../../body/body_mesh_search.glsl"
+#include "../../bvh/body_surface_search.glsl"
 
 void main()
 {

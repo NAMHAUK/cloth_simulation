@@ -65,14 +65,14 @@ uniform float uCollisionThickness;
 #define POSITION_IO_CLOTH_PREVIOUS
 #define POSITION_IO_BODY_CURRENT
 #define POSITION_IO_BODY_PREVIOUS
-#include "../mesh/position_io.glsl"
+#include "../../mesh/position_io.glsl"
 
-#include "common/collision_geometry_common.glsl"
+#include "../contact_geometry.glsl"
 
 #define COLLISION_CORRECTION_ACCUMULATE
 #define COLLISION_CONTACT_MOTION_ACCUMULATE
 #define COLLISION_CORRECTION_FRICTION_ACCUMULATE
-#include "common/collision_correction_common.glsl"
+#include "../correction.glsl"
 
 struct AcceptedContact {
     vec3 normal;

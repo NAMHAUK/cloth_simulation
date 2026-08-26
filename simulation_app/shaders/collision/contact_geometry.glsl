@@ -1,7 +1,7 @@
 #ifndef COLLISION_GEOMETRY_COMMON_GLSL
 #define COLLISION_GEOMETRY_COMMON_GLSL
 
-#include "../../mesh/primitive_geometry.glsl"
+#include "../mesh/primitive_geometry.glsl"
 
 const float triangle_area_sq_epsilon = 1.0e-20;
 const float triangle_edge_tolerance = -1.0e-6;
