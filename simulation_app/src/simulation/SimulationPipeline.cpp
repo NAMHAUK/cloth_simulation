@@ -113,16 +113,6 @@ void SimulationPipeline::step(SceneState& scene,
     gpu_state.update_cloth_normals(gl);
 }
 
-void SimulationPipeline::step_character_only(const SceneState& scene,
-                                             SceneGpuState& gpu_state,
-                                             std::uint32_t motion_step_index,
-                                             QOpenGLFunctions_4_5_Core& gl) const
-{
-    const float motion_frame_position = params_.step.motion_frame_position(motion_step_index + 1u, 0);
-    const float frame_alpha = scene.motion_frame_alpha(motion_frame_position);
-    gpu_state.update_character_pose(scene, frame_alpha, gl);
-}
-
 void SimulationPipeline::integrate_cloth(const SceneState& scene,
                                          const SimulationGpuView& views,
                                          QOpenGLFunctions_4_5_Core& gl) const
