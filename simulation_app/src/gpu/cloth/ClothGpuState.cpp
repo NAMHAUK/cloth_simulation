@@ -1,4 +1,4 @@
-#include "gpu/cloth/ClothGpuResources.h"
+#include "gpu/cloth/ClothGpuState.h"
 
 #include "asset/MeshGeometryUtils.h"
 #include "scene/SceneState.h"
@@ -117,9 +117,9 @@ void append_bvh_nodes(const Bvh& bvh, GarmentBufferState& garment_state, std::ve
 }
 
 // Buffer rebuild
-void ClothGpuResources::rebuild_buffers(const std::vector<GarmentObject>& garments,
-                                        GarmentLayer changed_layer,
-                                        QOpenGLFunctions_4_5_Core& gl)
+void ClothGpuState::rebuild_buffers(const std::vector<GarmentObject>& garments,
+                                    GarmentLayer changed_layer,
+                                    QOpenGLFunctions_4_5_Core& gl)
 {
     BufferState rebuild_state{};
     assign_garment_buffer_states(garments, rebuild_state);
@@ -140,8 +140,8 @@ void ClothGpuResources::rebuild_buffers(const std::vector<GarmentObject>& garmen
     configure_vao(gl);
 }
 
-void ClothGpuResources::assign_garment_buffer_states(const std::vector<GarmentObject>& garments,
-                                                     BufferState& state)
+void ClothGpuState::assign_garment_buffer_states(const std::vector<GarmentObject>& garments,
+                                                 BufferState& state)
 {
     const auto append_elements = [](std::uint32_t& total_count, std::uint32_t count) {
         const std::uint32_t start_index = total_count;
@@ -176,10 +176,10 @@ void ClothGpuResources::assign_garment_buffer_states(const std::vector<GarmentOb
     }
 }
 
-void ClothGpuResources::create_dynamic_buffers(const std::vector<GarmentObject>& garments,
-                                               GarmentLayer changed_layer,
-                                               BufferState& rebuild_state,
-                                               QOpenGLFunctions_4_5_Core& gl) const
+void ClothGpuState::create_dynamic_buffers(const std::vector<GarmentObject>& garments,
+                                           GarmentLayer changed_layer,
+                                           BufferState& rebuild_state,
+                                           QOpenGLFunctions_4_5_Core& gl) const
 {
     rebuild_state.buffers = create_dynamic_buffer_set(rebuild_state.element_counts, gl);
 
@@ -196,9 +196,9 @@ void ClothGpuResources::create_dynamic_buffers(const std::vector<GarmentObject>&
     }
 }
 
-void ClothGpuResources::copy_dynamic_state_buffers(GarmentLayer layer,
-                                                   const BufferState& rebuild_state,
-                                                   QOpenGLFunctions_4_5_Core& gl) const
+void ClothGpuState::copy_dynamic_state_buffers(GarmentLayer layer,
+                                               const BufferState& rebuild_state,
+                                               QOpenGLFunctions_4_5_Core& gl) const
 {
     const GarmentBufferState& source_state = state_.garments[layer];
     const GarmentBufferState& destination_state = rebuild_state.garments[layer];
@@ -225,9 +225,9 @@ void ClothGpuResources::copy_dynamic_state_buffers(GarmentLayer layer,
                                 byte_size<std::uint32_t>(destination_state.vertex_count));
 }
 
-void ClothGpuResources::copy_attachment_target_state(GarmentLayer layer,
-                                                     BufferState& rebuild_state,
-                                                     QOpenGLFunctions_4_5_Core& gl) const
+void ClothGpuState::copy_attachment_target_state(GarmentLayer layer,
+                                                 BufferState& rebuild_state,
+                                                 QOpenGLFunctions_4_5_Core& gl) const
 {
     const GarmentBufferState& source_state = state_.garments[layer];
     GarmentBufferState& destination_state = rebuild_state.garments[layer];
@@ -250,9 +250,9 @@ void ClothGpuResources::copy_attachment_target_state(GarmentLayer layer,
     destination_state.active_attachment_constraint_count = source_state.active_attachment_constraint_count;
 }
 
-void ClothGpuResources::create_topology_buffers(const std::vector<GarmentObject>& garments,
-                                                BufferState& rebuild_state,
-                                                QOpenGLFunctions_4_5_Core& gl)
+void ClothGpuState::create_topology_buffers(const std::vector<GarmentObject>& garments,
+                                            BufferState& rebuild_state,
+                                            QOpenGLFunctions_4_5_Core& gl)
 {
     ClothBufferSet& buffers = rebuild_state.buffers;
     const ClothBufferElementCounts& counts = rebuild_state.element_counts;
@@ -286,9 +286,9 @@ void ClothGpuResources::create_topology_buffers(const std::vector<GarmentObject>
                          GL_STATIC_DRAW);
 }
 
-void ClothGpuResources::create_bvh_buffers(const std::vector<GarmentObject>& garments,
-                                           BufferState& rebuild_state,
-                                           QOpenGLFunctions_4_5_Core& gl)
+void ClothGpuState::create_bvh_buffers(const std::vector<GarmentObject>& garments,
+                                       BufferState& rebuild_state,
+                                       QOpenGLFunctions_4_5_Core& gl)
 {
     std::vector<BvhNode> nodes;
 
@@ -311,9 +311,9 @@ void ClothGpuResources::create_bvh_buffers(const std::vector<GarmentObject>& gar
                          GL_DYNAMIC_DRAW);
 }
 
-void ClothGpuResources::create_distance_constraint_buffers(const std::vector<GarmentObject>& garments,
-                                                           BufferState& rebuild_state,
-                                                           QOpenGLFunctions_4_5_Core& gl)
+void ClothGpuState::create_distance_constraint_buffers(const std::vector<GarmentObject>& garments,
+                                                       BufferState& rebuild_state,
+                                                       QOpenGLFunctions_4_5_Core& gl)
 {
     const auto create_buffers = [&](GarmentDistanceConstraints GarmentMesh::* constraints_member,
                                     std::uint32_t constraint_count,
@@ -373,7 +373,7 @@ void ClothGpuResources::create_distance_constraint_buffers(const std::vector<Gar
                    rebuild_state.buffers.bending_rest_length);
 }
 
-void ClothGpuResources::configure_vao(QOpenGLFunctions_4_5_Core& gl)
+void ClothGpuState::configure_vao(QOpenGLFunctions_4_5_Core& gl)
 {
     constexpr GLuint position_attribute_location = 0;
     constexpr GLuint position_binding_index = 0;
@@ -396,7 +396,7 @@ void ClothGpuResources::configure_vao(QOpenGLFunctions_4_5_Core& gl)
 }
 
 // Garment updates
-void ClothGpuResources::upload_garment_placement(const GarmentObject& garment, QOpenGLFunctions_4_5_Core& gl)
+void ClothGpuState::upload_garment_placement(const GarmentObject& garment, QOpenGLFunctions_4_5_Core& gl)
 {
     const GarmentLayer layer = garment.layer;
     const GarmentBufferState& garment_state = state_.garments[layer];
@@ -404,7 +404,7 @@ void ClothGpuResources::upload_garment_placement(const GarmentObject& garment, Q
     upload_rest_lengths(state_.buffers, garment, garment_state, gl);
 }
 
-void ClothGpuResources::upload_attachment_indices(const GarmentObject& garment, QOpenGLFunctions_4_5_Core& gl)
+void ClothGpuState::upload_attachment_indices(const GarmentObject& garment, QOpenGLFunctions_4_5_Core& gl)
 {
     const GarmentLayer layer = garment.layer;
     GarmentBufferState& garment_state = state_.garments[layer];
@@ -425,13 +425,13 @@ void ClothGpuResources::upload_attachment_indices(const GarmentObject& garment, 
                             attachment_indices.data());
 }
 
-void ClothGpuResources::activate_attachment_targets(GarmentLayer layer)
+void ClothGpuState::activate_attachment_targets(GarmentLayer layer)
 {
     GarmentBufferState& garment_state = state_.garments[layer];
     garment_state.active_attachment_constraint_count = garment_state.attachment_constraint_count;
 }
 
-void ClothGpuResources::copy_current_positions_to_previous(QOpenGLFunctions_4_5_Core& gl) const
+void ClothGpuState::copy_current_positions_to_previous(QOpenGLFunctions_4_5_Core& gl) const
 {
     const GLsizeiptr position_bytes = byte_size<glm::vec4>(state_.element_counts.vertex);
 
@@ -446,7 +446,7 @@ void ClothGpuResources::copy_current_positions_to_previous(QOpenGLFunctions_4_5_
 }
 
 // Base Position Buffers
-void ClothGpuResources::capture_base_positions(QOpenGLFunctions_4_5_Core& gl)
+void ClothGpuState::capture_base_positions(QOpenGLFunctions_4_5_Core& gl)
 {
     clear_base_positions(gl);
 
@@ -461,7 +461,7 @@ void ClothGpuResources::capture_base_positions(QOpenGLFunctions_4_5_Core& gl)
     base_position_vertex_count_ = state_.element_counts.vertex;
 }
 
-void ClothGpuResources::restore_base_positions(QOpenGLFunctions_4_5_Core& gl) const
+void ClothGpuState::restore_base_positions(QOpenGLFunctions_4_5_Core& gl) const
 {
     if (base_positions_ == 0 || base_position_vertex_count_ != state_.element_counts.vertex) {
         throw std::runtime_error("Failed to restore garment base positions.");
@@ -476,7 +476,7 @@ void ClothGpuResources::restore_base_positions(QOpenGLFunctions_4_5_Core& gl) co
     gl.glMemoryBarrier(GL_SHADER_STORAGE_BARRIER_BIT | GL_BUFFER_UPDATE_BARRIER_BIT);
 }
 
-void ClothGpuResources::clear_base_positions(QOpenGLFunctions_4_5_Core& gl)
+void ClothGpuState::clear_base_positions(QOpenGLFunctions_4_5_Core& gl)
 {
     gl.glDeleteBuffers(1, &base_positions_);
 
@@ -485,12 +485,12 @@ void ClothGpuResources::clear_base_positions(QOpenGLFunctions_4_5_Core& gl)
 }
 
 // Rendering
-void ClothGpuResources::bind_vertex_normals(GLuint binding_index, QOpenGLFunctions_4_5_Core& gl) const
+void ClothGpuState::bind_vertex_normals(GLuint binding_index, QOpenGLFunctions_4_5_Core& gl) const
 {
     gl.glBindBufferBase(GL_SHADER_STORAGE_BUFFER, binding_index, state_.buffers.vertex_normal);
 }
 
-void ClothGpuResources::draw_garment(GarmentLayer layer, QOpenGLFunctions_4_5_Core& gl) const
+void ClothGpuState::draw_garment(GarmentLayer layer, QOpenGLFunctions_4_5_Core& gl) const
 {
     const GarmentBufferState& garment_state = state_.garments[layer];
     const auto index_offset_bytes =
@@ -503,7 +503,7 @@ void ClothGpuResources::draw_garment(GarmentLayer layer, QOpenGLFunctions_4_5_Co
 }
 
 // State
-bool ClothGpuResources::is_initialized() const
+bool ClothGpuState::is_initialized() const
 {
     return has_gpu_objects() &&
            std::any_of(
@@ -518,7 +518,7 @@ bool ClothGpuResources::is_initialized() const
            !state_.bending_color_states.empty();
 }
 
-bool ClothGpuResources::has_gpu_objects() const
+bool ClothGpuState::has_gpu_objects() const
 {
     return state_.buffers.vao != 0 &&
            state_.buffers.current_position != 0 &&
@@ -544,12 +544,12 @@ bool ClothGpuResources::has_gpu_objects() const
 
 // Accessors
 
-const std::array<GarmentBufferState, 2>& ClothGpuResources::garment_buffer_states() const
+const std::array<GarmentBufferState, 2>& ClothGpuState::garment_buffer_states() const
 {
     return state_.garments;
 }
 
-ClothMotionBufferView ClothGpuResources::motion_buffer_view() const
+ClothMotionBufferView ClothGpuState::motion_buffer_view() const
 {
     ClothMotionBufferView view;
     view.current_position_buffer = state_.buffers.current_position;
@@ -558,7 +558,7 @@ ClothMotionBufferView ClothGpuResources::motion_buffer_view() const
     return view;
 }
 
-ClothCollisionPushoutBufferView ClothGpuResources::collision_pushout_buffer_view() const
+ClothCollisionPushoutBufferView ClothGpuState::collision_pushout_buffer_view() const
 {
     ClothCollisionPushoutBufferView view;
     view.collision_pushout_buffer = state_.buffers.collision_pushout;
@@ -567,7 +567,7 @@ ClothCollisionPushoutBufferView ClothGpuResources::collision_pushout_buffer_view
     return view;
 }
 
-ClothContactMotionBufferView ClothGpuResources::contact_motion_buffer_view() const
+ClothContactMotionBufferView ClothGpuState::contact_motion_buffer_view() const
 {
     ClothContactMotionBufferView view;
     view.contact_motion_delta_buffer = state_.buffers.contact_motion_delta;
@@ -575,7 +575,7 @@ ClothContactMotionBufferView ClothGpuResources::contact_motion_buffer_view() con
     return view;
 }
 
-ClothBodyTriangleIndexBufferView ClothGpuResources::body_triangle_index_buffer_view() const
+ClothBodyTriangleIndexBufferView ClothGpuState::body_triangle_index_buffer_view() const
 {
     ClothBodyTriangleIndexBufferView view;
     view.body_triangle_index_buffer = state_.buffers.body_triangle_index;
@@ -583,7 +583,7 @@ ClothBodyTriangleIndexBufferView ClothGpuResources::body_triangle_index_buffer_v
     return view;
 }
 
-DistanceConstraintBufferView ClothGpuResources::stretch_constraint_buffer_view() const
+DistanceConstraintBufferView ClothGpuState::stretch_constraint_buffer_view() const
 {
     DistanceConstraintBufferView view;
     view.edge_index_buffer = state_.buffers.stretch_edge_index;
@@ -593,7 +593,7 @@ DistanceConstraintBufferView ClothGpuResources::stretch_constraint_buffer_view()
     return view;
 }
 
-DistanceConstraintBufferView ClothGpuResources::bending_constraint_buffer_view() const
+DistanceConstraintBufferView ClothGpuState::bending_constraint_buffer_view() const
 {
     DistanceConstraintBufferView view;
     view.edge_index_buffer = state_.buffers.bending_edge_index;
@@ -603,7 +603,7 @@ DistanceConstraintBufferView ClothGpuResources::bending_constraint_buffer_view()
     return view;
 }
 
-AttachmentConstraintBufferView ClothGpuResources::attachment_constraint_buffer_view() const
+AttachmentConstraintBufferView ClothGpuState::attachment_constraint_buffer_view() const
 {
     AttachmentConstraintBufferView view;
     view.attachment_index_buffer = state_.buffers.attachment_indices;
@@ -612,7 +612,7 @@ AttachmentConstraintBufferView ClothGpuResources::attachment_constraint_buffer_v
     return view;
 }
 
-ClothMeshTopologyResources ClothGpuResources::mesh_topology_resources() const
+ClothMeshTopologyResources ClothGpuState::mesh_topology_resources() const
 {
     ClothMeshTopologyResources topology;
     topology.position_buffer = state_.buffers.current_position;
@@ -624,7 +624,7 @@ ClothMeshTopologyResources ClothGpuResources::mesh_topology_resources() const
     return topology;
 }
 
-ClothNormalResources ClothGpuResources::mesh_normal_resources() const
+ClothNormalResources ClothGpuState::mesh_normal_resources() const
 {
     ClothNormalResources normals;
     normals.triangle_normal_buffer = state_.buffers.triangle_normal;
@@ -632,20 +632,20 @@ ClothNormalResources ClothGpuResources::mesh_normal_resources() const
     return normals;
 }
 
-BvhBufferView ClothGpuResources::cloth_bvh_buffer_view() const
+BvhBufferView ClothGpuState::cloth_bvh_buffer_view() const
 {
     return {state_.buffers.bvh_node, state_.buffers.triangle_bounds};
 }
 
 // Release
-void ClothGpuResources::release(QOpenGLFunctions_4_5_Core& gl)
+void ClothGpuState::release(QOpenGLFunctions_4_5_Core& gl)
 {
     delete_buffer_set(state_.buffers, gl);
     clear_base_positions(gl);
     reset_resources();
 }
 
-void ClothGpuResources::delete_buffer_set(ClothBufferSet& buffers, QOpenGLFunctions_4_5_Core& gl)
+void ClothGpuState::delete_buffer_set(ClothBufferSet& buffers, QOpenGLFunctions_4_5_Core& gl)
 {
     const GLuint buffer_ids[] = {
         buffers.current_position,
@@ -674,7 +674,7 @@ void ClothGpuResources::delete_buffer_set(ClothBufferSet& buffers, QOpenGLFuncti
     buffers = {};
 }
 
-void ClothGpuResources::reset_resources() noexcept
+void ClothGpuState::reset_resources() noexcept
 {
     state_ = {};
     base_positions_ = 0;

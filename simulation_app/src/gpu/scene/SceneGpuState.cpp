@@ -314,7 +314,7 @@ const CharacterGpuState& SceneGpuState::character_gpu_state() const
     return character_gpu_state_;
 }
 
-const ClothGpuResources& SceneGpuState::cloth_gpu_state() const
+const ClothGpuState& SceneGpuState::cloth_gpu_state() const
 {
     return cloth_gpu_state_;
 }

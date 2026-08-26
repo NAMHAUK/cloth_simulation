@@ -1,6 +1,6 @@
 #include "simulation/constraints/BendingConstraintSolver.h"
 
-#include "gpu/cloth/ClothGpuResources.h"
+#include "gpu/cloth/ClothGpuState.h"
 #include "gpu/scene/SimulationGpuView.h"
 #include "utils/BufferUtils.h"
 #include "utils/ShaderUtils.h"

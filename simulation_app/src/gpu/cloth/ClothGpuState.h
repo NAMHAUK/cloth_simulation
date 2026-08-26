@@ -20,14 +20,14 @@ struct ClothBufferElementCounts final
     std::uint32_t attachment_constraint = 0;
 };
 
-class ClothGpuResources final
+class ClothGpuState final
 {
 public:
-    ClothGpuResources() = default;
+    ClothGpuState() = default;
 
-    ClothGpuResources(const ClothGpuResources&) = delete;
-    ClothGpuResources& operator=(const ClothGpuResources&) = delete;
-    ClothGpuResources& operator=(ClothGpuResources&& other) noexcept = delete;
+    ClothGpuState(const ClothGpuState&) = delete;
+    ClothGpuState& operator=(const ClothGpuState&) = delete;
+    ClothGpuState& operator=(ClothGpuState&& other) noexcept = delete;
 
     void rebuild_buffers(const std::vector<GarmentObject>& garments,
                          GarmentLayer changed_layer,

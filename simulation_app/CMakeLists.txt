@@ -63,9 +63,9 @@ add_executable(simulation_app
     src/gpu/bvh/BodyBvhBoundsUpdater.h
     src/gpu/bvh/ClothBvhBoundsUpdater.cpp
     src/gpu/bvh/ClothBvhBoundsUpdater.h
-    src/gpu/cloth/ClothGpuResources.cpp
+    src/gpu/cloth/ClothGpuState.cpp
     src/gpu/cloth/ClothGpuDataTypes.h
-    src/gpu/cloth/ClothGpuResources.h
+    src/gpu/cloth/ClothGpuState.h
     src/rendering/BackgroundGradient.cpp
     src/rendering/BackgroundGradient.h
     src/rendering/GroundGridMesh.cpp
