@@ -3,7 +3,7 @@
 #include "gpu/character/CharacterGpuState.h"
 #include "gpu/cloth/ClothGpuState.h"
 #include "gpu/scene/SimulationGpuView.h"
-#include "scene/SceneState.h"
+#include "simulation/SceneState.h"
 
 #include <cstdint>
 #include <filesystem>

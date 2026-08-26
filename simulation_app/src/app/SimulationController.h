@@ -3,7 +3,7 @@
 #include "asset/AssetDataTypes.h"
 #include "gpu/scene/SceneGpuState.h"
 #include "rendering/RenderPipeline.h"
-#include "scene/SceneState.h"
+#include "simulation/SceneState.h"
 #include "simulation/SimulationPipeline.h"
 
 #include <array>

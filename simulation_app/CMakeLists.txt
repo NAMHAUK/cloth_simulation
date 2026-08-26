@@ -23,10 +23,10 @@ add_executable(simulation_app
     src/asset/AssetLoader.cpp
     src/asset/AssetLoader.h
     src/app/ProjectPaths.h
-    src/simulation/SimulationController.cpp
-    src/simulation/SimulationController.h
-    src/scene/Kinematics.cpp
-    src/scene/Kinematics.h
+    src/app/SimulationController.cpp
+    src/app/SimulationController.h
+    src/simulation/Kinematics.cpp
+    src/simulation/Kinematics.h
     src/simulation/forces/SimulationForceField.cpp
     src/simulation/forces/SimulationForceField.h
     src/gpu/scene/SimulationGpuView.h
@@ -41,6 +41,9 @@ add_executable(simulation_app
     src/simulation/constraints/AttachmentConstraintSolver.h
     src/simulation/collision/GroundCollisionSolver.cpp
     src/simulation/collision/GroundCollisionSolver.h
+    src/simulation/collision/Bvh.h
+    src/simulation/collision/MeshBvhBuilder.cpp
+    src/simulation/collision/MeshBvhBuilder.h
     src/simulation/collision/ClothBodyCollisionDetector.cpp
     src/simulation/collision/ClothBodyCollisionDetector.h
     src/simulation/collision/ClothBodyCollisionSolver.cpp
@@ -56,9 +59,7 @@ add_executable(simulation_app
     src/gpu/character/CharacterGpuState.cpp
     src/gpu/character/CharacterGpuDataTypes.h
     src/gpu/character/CharacterGpuState.h
-    src/gpu/bvh/BvhDataTypes.h
-    src/gpu/bvh/MeshBvhBuilder.cpp
-    src/gpu/bvh/MeshBvhBuilder.h
+    src/gpu/bvh/BvhBufferView.h
     src/gpu/bvh/BodyBvhBoundsUpdater.cpp
     src/gpu/bvh/BodyBvhBoundsUpdater.h
     src/gpu/bvh/ClothBvhBoundsUpdater.cpp
@@ -80,8 +81,8 @@ add_executable(simulation_app
     src/rendering/SceneRenderShader.h
     src/simulation/SimulationPipeline.cpp
     src/simulation/SimulationPipeline.h
-    src/scene/SceneState.cpp
-    src/scene/SceneState.h
+    src/simulation/SceneState.cpp
+    src/simulation/SceneState.h
     src/utils/QtUtils.h
     src/utils/BufferUtils.h
     src/utils/FileUtils.h

@@ -1,6 +1,6 @@
 #pragma once
 
-#include "gpu/bvh/BvhDataTypes.h"
+#include "gpu/bvh/BvhBufferView.h"
 #include "gpu/cloth/ClothGpuDataTypes.h"
 
 #include <array>

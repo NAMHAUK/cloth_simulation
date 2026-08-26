@@ -1,6 +1,6 @@
-#include "simulation/SimulationController.h"
+#include "app/SimulationController.h"
 
-#include "gpu/bvh/MeshBvhBuilder.h"
+#include "simulation/collision/MeshBvhBuilder.h"
 #include "simulation/SimulationParams.h"
 
 #include <algorithm>

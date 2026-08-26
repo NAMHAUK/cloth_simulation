@@ -1,7 +1,7 @@
 #include "rendering/RenderPipeline.h"
 
 #include "gpu/scene/SceneGpuState.h"
-#include "scene/SceneState.h"
+#include "simulation/SceneState.h"
 
 #include <glm/geometric.hpp>
 

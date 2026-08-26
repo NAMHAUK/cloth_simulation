@@ -1,8 +1,8 @@
 #pragma once
 
 #include "asset/AssetDataTypes.h"
-#include "gpu/bvh/BvhDataTypes.h"
-#include "scene/Kinematics.h"
+#include "simulation/collision/Bvh.h"
+#include "simulation/Kinematics.h"
 
 #include <cstddef>
 #include <cstdint>

@@ -1,7 +1,7 @@
 #include "simulation/SimulationPipeline.h"
 
 #include "gpu/scene/SceneGpuState.h"
-#include "scene/SceneState.h"
+#include "simulation/SceneState.h"
 #include "utils/BufferUtils.h"
 
 #include <cassert>

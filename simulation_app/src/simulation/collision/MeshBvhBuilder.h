@@ -1,7 +1,7 @@
 #pragma once
 
 #include "asset/AssetDataTypes.h"
-#include "gpu/bvh/BvhDataTypes.h"
+#include "simulation/collision/Bvh.h"
 
 #include <cstdint>
 #include <vector>

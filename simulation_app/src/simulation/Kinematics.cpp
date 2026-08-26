@@ -1,4 +1,4 @@
-#include "scene/Kinematics.h"
+#include "simulation/Kinematics.h"
 
 #include <algorithm>
 #include <cassert>

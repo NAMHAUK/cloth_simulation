@@ -1,4 +1,4 @@
-#include "scene/SceneState.h"
+#include "simulation/SceneState.h"
 #include "utils/NumericUtils.h"
 
 #include <glm/gtc/quaternion.hpp>

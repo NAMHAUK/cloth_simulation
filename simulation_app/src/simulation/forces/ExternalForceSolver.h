@@ -1,7 +1,7 @@
 #pragma once
 
 #include "asset/AssetDataTypes.h"
-#include "scene/Kinematics.h"
+#include "simulation/Kinematics.h"
 
 #include <cstdint>
 #include <filesystem>
