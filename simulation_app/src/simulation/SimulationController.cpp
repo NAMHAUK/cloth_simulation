@@ -5,6 +5,7 @@
 
 #include <algorithm>
 #include <cassert>
+#include <chrono>
 #include <stdexcept>
 #include <utility>
 
@@ -53,7 +54,9 @@ void SimulationController::initialize(const std::filesystem::path& shader_dir,
     load_default_character(std::move(character_motion), triangle_part_labels);
     initialize_gpu(shader_dir, gl);
     Q_EMIT camera_reset_requested(scene_.character_root_position(0));
-    frame_timer_.start(params_.step.tick_ms());
+    frame_timer_.setSingleShot(true);
+    frame_timer_.setTimerType(Qt::PreciseTimer);
+    update_frame_timer();
 }
 
 void SimulationController::initialize_gpu(const std::filesystem::path& shader_dir,
@@ -109,6 +112,7 @@ void SimulationController::draw(const glm::mat4& mvp, float character_opacity, Q
 void SimulationController::tick_frame()
 {
     assert(is_gpu_initialized());
+    update_frame_timer();
 
     if (simulation_running_) {
         run_with_gl_context_([this](QOpenGLFunctions_4_5_Core& gl) {
@@ -125,6 +129,17 @@ void SimulationController::tick_frame()
     }
 
     Q_EMIT viewport_update_requested();
+}
+
+void SimulationController::update_frame_timer()
+{
+    const auto interval = std::chrono::nanoseconds{std::chrono::seconds{1}} / params_.step.fps;
+
+    next_frame_deadline_ += interval;
+    if (next_frame_deadline_.hasExpired()) {
+        next_frame_deadline_ = QDeadlineTimer(interval, Qt::PreciseTimer);
+    }
+    frame_timer_.start(next_frame_deadline_.remainingTime());
 }
 
 // Character
@@ -147,7 +162,6 @@ bool SimulationController::set_character_motion(CharacterMotion motion)
         is_default_pose_ = false;
     });
 
-    Q_EMIT viewport_update_requested();
     return true;
 }
 
@@ -164,8 +178,6 @@ void SimulationController::reset_scene()
         set_character_motion_state(default_character_motion_, gl);
         is_default_pose_ = true;
     });
-
-    Q_EMIT viewport_update_requested();
 }
 
 void SimulationController::return_to_default_pose()
@@ -185,8 +197,6 @@ void SimulationController::return_to_default_pose()
         gpu_state_.clear_garment_base_positions(gl);
         is_default_pose_ = true;
     });
-
-    Q_EMIT viewport_update_requested();
 }
 
 void SimulationController::set_character_motion_state(CharacterMotion motion, QOpenGLFunctions_4_5_Core& gl)
@@ -210,8 +220,6 @@ void SimulationController::set_garment_mesh(GarmentLayer layer, GarmentMesh mesh
 
         garment_placement_states_[layer].emplace();
     });
-
-    Q_EMIT viewport_update_requested();
 }
 
 void SimulationController::set_garment_placement(GarmentLayer layer,
@@ -220,14 +228,11 @@ void SimulationController::set_garment_placement(GarmentLayer layer,
 {
     garment_placement_states_[layer]->position_offset = position_offset;
     garment_placement_states_[layer]->scale = scale;
-
-    Q_EMIT viewport_update_requested();
 }
 
 void SimulationController::set_garment_color(GarmentLayer layer, const glm::vec3& color)
 {
     scene_.update_garment_color(layer, color);
-    Q_EMIT viewport_update_requested();
 }
 
 void SimulationController::confirm_garment_placement()
@@ -257,8 +262,6 @@ void SimulationController::confirm_garment_placement()
 
         reset_garment_placements();
     });
-
-    Q_EMIT viewport_update_requested();
 }
 
 void SimulationController::discard_garment_placement(GarmentLayer layer)
@@ -271,8 +274,6 @@ void SimulationController::discard_garment_placement(GarmentLayer layer)
         }
         garment_placement_states_[layer].reset();
     });
-
-    Q_EMIT viewport_update_requested();
 }
 
 void SimulationController::cancel_placement_session()
@@ -291,8 +292,6 @@ void SimulationController::cancel_placement_session()
             gpu_state_.rebuild_garment_resources(scene_, gl, GarmentLayer::Upper);
         }
     });
-
-    Q_EMIT viewport_update_requested();
 }
 
 std::array<glm::mat4, 2> SimulationController::make_placement_matrices() const
