@@ -11,7 +11,6 @@
 
 SimulationPipeline::SimulationPipeline(SimulationParams params)
     : params_(params),
-      force_field_(params.external_force.gravity),
       external_force_solver_(params.external_force.velocity_damping,
                              params.external_force.reference_frame_inertia_scale,
                              params.external_force.reference_frame_max_acceleration,
@@ -88,7 +87,7 @@ void SimulationPipeline::step(SceneState& scene,
     const auto views = gpu_state.simulation_view();
     cloth_cloth_collision_solver_.update_body_surface_mapping(views, gl);
 
-    const glm::vec3 external_acceleration = force_field_.external_acceleration();
+    const glm::vec3 external_acceleration{0.0f, params_.external_force.gravity, 0.0f};
     for (std::uint32_t substep = 0; substep < params_.step.substep_count; ++substep) {
         const float motion_frame_position =
             params_.step.motion_frame_position(motion_step_index, substep + 1u);

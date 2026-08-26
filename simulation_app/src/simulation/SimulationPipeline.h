@@ -1,6 +1,7 @@
 #pragma once
 
 #include "gpu/scene/SimulationGpuView.h"
+#include "simulation/ExternalForceSolver.h"
 #include "simulation/SimulationParams.h"
 #include "simulation/collision/ClothBodyCollisionDetector.h"
 #include "simulation/collision/ClothBodyCollisionSolver.h"
@@ -11,8 +12,6 @@
 #include "simulation/constraints/AttachmentConstraintSolver.h"
 #include "simulation/constraints/BendingConstraintSolver.h"
 #include "simulation/constraints/StretchConstraintSolver.h"
-#include "simulation/forces/ExternalForceSolver.h"
-#include "simulation/forces/SimulationForceField.h"
 
 #include <cstdint>
 #include <filesystem>
@@ -56,7 +55,6 @@ public:
 
 private:
     SimulationParams params_;
-    SimulationForceField force_field_;
     ExternalForceSolver external_force_solver_;
     StretchConstraintSolver stretch_constraint_solver_;
     BendingConstraintSolver bending_constraint_solver_;

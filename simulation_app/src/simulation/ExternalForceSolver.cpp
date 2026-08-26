@@ -1,4 +1,4 @@
-#include "simulation/forces/ExternalForceSolver.h"
+#include "simulation/ExternalForceSolver.h"
 
 #include "gpu/cloth/ClothGpuState.h"
 #include "gpu/scene/SimulationGpuView.h"
