@@ -1,6 +1,6 @@
 #include "simulation/constraints/StretchConstraintSolver.h"
 
-#include "gpu/cloth/ClothGpuResources.h"
+#include "gpu/cloth/ClothGpuState.h"
 #include "gpu/scene/SimulationGpuView.h"
 #include "utils/BufferUtils.h"
 #include "utils/ShaderUtils.h"
@@ -27,9 +27,10 @@ bool StretchConstraintSolver::is_initialized() const
 void StretchConstraintSolver::initialize(const std::filesystem::path& shader_dir,
                                          QOpenGLFunctions_4_5_Core& gl)
 {
-    program_ = load_compute_program(shader_dir / "cloth" / "constraints" / "cloth_stretch_constraint.comp",
-                                    "Stretch constraint",
-                                    gl);
+    program_ = load_compute_program(
+        shader_dir / "cloth" / "constraints" / "stretch.comp",
+        "Stretch constraint",
+        gl);
     constraint_offset_location_ = gl.glGetUniformLocation(program_, "uConstraintOffset");
     constraint_count_location_ = gl.glGetUniformLocation(program_, "uConstraintCount");
     stiffness_location_ = gl.glGetUniformLocation(program_, "uStiffness");

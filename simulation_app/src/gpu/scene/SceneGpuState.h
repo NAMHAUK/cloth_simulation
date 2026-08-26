@@ -1,9 +1,9 @@
 #pragma once
 
 #include "gpu/character/CharacterGpuState.h"
-#include "gpu/cloth/ClothGpuResources.h"
+#include "gpu/cloth/ClothGpuState.h"
 #include "gpu/scene/SimulationGpuView.h"
-#include "scene/SceneState.h"
+#include "simulation/SceneState.h"
 
 #include <cstdint>
 #include <filesystem>
@@ -37,7 +37,7 @@ public:
     bool is_initialized() const;
     SimulationGpuView simulation_view() const;
     const CharacterGpuState& character_gpu_state() const;
-    const ClothGpuResources& cloth_gpu_state() const;
+    const ClothGpuState& cloth_gpu_state() const;
     void release(QOpenGLFunctions_4_5_Core& gl);
     void release_garment_resources(QOpenGLFunctions_4_5_Core& gl);
 
@@ -53,7 +53,7 @@ private:
     void update_character_vertex_normals(QOpenGLFunctions_4_5_Core& gl);
 
     CharacterGpuState character_gpu_state_;
-    ClothGpuResources cloth_gpu_state_;
+    ClothGpuState cloth_gpu_state_;
     CollisionBuffers collision_buffers_;
 
     GLuint triangle_normal_program_ = 0;

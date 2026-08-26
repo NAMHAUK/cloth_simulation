@@ -1,0 +1,165 @@
+#version 430 core
+
+layout(local_size_x = 128) in;
+
+layout(std430, binding = 0) readonly buffer ClothCurrentPositions {
+    vec4 cloth_current_positions[];
+};
+
+layout(std430, binding = 1) readonly buffer ClothPreviousPositions {
+    vec4 cloth_previous_positions[];
+};
+
+#include "../../mesh/primitive_geometry.glsl"
+
+layout(std430, binding = 2) readonly buffer BodyTrianglePositions {
+    TrianglePositions body_triangle_positions[];
+};
+
+layout(std430, binding = 3) readonly buffer BodyTriangleNormals {
+    vec4 body_triangle_normals[];
+};
+
+layout(std430, binding = 4) readonly buffer BodyPreviousPositions {
+    vec4 body_previous_positions[];
+};
+
+layout(std430, binding = 5) readonly buffer BodyTriangleIndices {
+    uint body_triangle_indices[];
+};
+
+layout(std430, binding = 6) readonly buffer Candidates {
+    uvec2 candidates[];
+};
+
+layout(std430, binding = 7) readonly buffer CandidateCount {
+    uint candidate_count;
+};
+
+layout(std430, binding = 8) buffer NormalCorrectionSums {
+    ivec4 normal_correction_sums[];
+};
+
+layout(std430, binding = 9) buffer FrictionCorrectionSums {
+    ivec4 friction_correction_sums[];
+};
+
+layout(std430, binding = 10) readonly buffer CollisionPushouts {
+    vec4 collision_pushouts[];
+};
+
+layout(std430, binding = 11) readonly buffer ClothClothPushouts {
+    vec4 cloth_cloth_pushouts[];
+};
+
+layout(std430, binding = 12) readonly buffer ContactMotionDeltas {
+    vec4 contact_motion_deltas[];
+};
+
+layout(std430, binding = 13) buffer ContactMotionDeltaSums {
+    ivec4 contact_motion_delta_sums[];
+};
+
+uniform uint uMaxCandidateCount;
+uniform float uCollisionThickness;
+
+#define POSITION_IO_CLOTH_CURRENT
+#define POSITION_IO_CLOTH_PREVIOUS
+#define POSITION_IO_BODY_PREVIOUS
+#include "../../mesh/position_io.glsl"
+
+#include "../contact_geometry.glsl"
+
+#define COLLISION_CORRECTION_ACCUMULATE
+#define COLLISION_CONTACT_MOTION_ACCUMULATE
+#define COLLISION_CORRECTION_FRICTION_ACCUMULATE
+#include "../correction.glsl"
+
+struct VertexFaceContact {
+    vec3 normal;
+    vec3 friction_correction;
+    vec3 contact_motion_delta;
+    float depth;
+};
+
+bool compute_vertex_triangle_contact(uint cloth_vertex_index,
+                                     uint triangle_index,
+                                     out VertexFaceContact contact)
+{
+    TrianglePositions body_triangle = body_triangle_positions[triangle_index];
+    vec3 current_cloth_position = read_cloth_current_position(cloth_vertex_index);
+    TrianglePositions current_body = body_triangle;
+    vec3 body_normal = body_triangle_normals[triangle_index].xyz;
+    uint body_triangle_index_base = triangle_index * 3u;
+    uvec3 body_triangle_vertices = uvec3(body_triangle_indices[body_triangle_index_base],
+                                         body_triangle_indices[body_triangle_index_base + 1u],
+                                         body_triangle_indices[body_triangle_index_base + 2u]);
+    TrianglePositions previous_body = read_body_previous_triangle(body_triangle_vertices);
+
+    float current_signed_distance = dot(current_cloth_position - current_body.a, body_normal);
+    float penetration_depth = uCollisionThickness - current_signed_distance - penetration_tolerance;
+    if (penetration_depth <= 0.0) {
+        return false;
+    }
+
+    vec3 previous_cloth_position = read_cloth_previous_position(cloth_vertex_index);
+    float previous_signed_distance = dot(previous_cloth_position - previous_body.a, body_normal);
+    vec3 barycentric;
+
+    bool has_swept_contact = false;
+    if (previous_signed_distance > uCollisionThickness) {
+        float signed_distance_delta = current_signed_distance - previous_signed_distance;
+        float hit_time = (uCollisionThickness - previous_signed_distance) / signed_distance_delta;
+        vec3 swept_cloth_position = mix(previous_cloth_position, current_cloth_position, hit_time);
+        TrianglePositions hit_body = interpolate_triangle_positions(previous_body, current_body, hit_time);
+        vec3 swept_surface_position = swept_cloth_position - body_normal * uCollisionThickness;
+        has_swept_contact = compute_barycentric_if_inside(swept_surface_position, hit_body, barycentric);
+    }
+
+    if (!has_swept_contact) {
+        vec3 current_surface_position = current_cloth_position - body_normal * current_signed_distance;
+        if (!compute_barycentric_if_inside(current_surface_position, current_body, barycentric)) {
+            return false;
+        }
+    }
+
+    vec3 previous_body_contact = interpolate_triangle_position(previous_body, barycentric);
+    vec3 current_body_contact = interpolate_triangle_position(current_body, barycentric);
+    vec3 friction_cloth_delta = current_cloth_position - previous_cloth_position - collision_pushouts[cloth_vertex_index].xyz;
+    vec3 cloth_delta = friction_cloth_delta - cloth_cloth_pushouts[cloth_vertex_index].xyz;
+    vec3 body_delta = current_body_contact - previous_body_contact;
+
+    contact.normal = body_normal;
+    contact.friction_correction = compute_friction_correction(body_normal, friction_cloth_delta, body_delta);
+    contact.contact_motion_delta = compute_required_contact_motion_delta(
+        body_normal,
+        cloth_delta,
+        body_delta,
+        contact_motion_deltas[cloth_vertex_index].xyz);
+    contact.depth = penetration_depth;
+    return true;
+}
+
+void accumulate_contact(uint cloth_vertex_index, VertexFaceContact contact)
+{
+    vec3 normal_correction = contact.normal * contact.depth;
+    accumulate_vertex_normal_correction(cloth_vertex_index, normal_correction);
+    atomicAdd(normal_correction_sums[cloth_vertex_index].w, 1);
+    accumulate_vertex_friction_correction(cloth_vertex_index, contact.friction_correction);
+    accumulate_vertex_contact_motion_delta(cloth_vertex_index, contact.contact_motion_delta);
+}
+
+void main()
+{
+    uint candidate_index = gl_GlobalInvocationID.x;
+    uint active_candidate_count = min(candidate_count, uMaxCandidateCount);
+    if (candidate_index >= active_candidate_count) {
+        return;
+    }
+
+    uvec2 candidate = candidates[candidate_index];
+    VertexFaceContact contact;
+    if (compute_vertex_triangle_contact(candidate.x, candidate.y, contact)) {
+        accumulate_contact(candidate.x, contact);
+    }
+}

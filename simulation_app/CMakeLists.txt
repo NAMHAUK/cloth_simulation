@@ -23,16 +23,14 @@ add_executable(simulation_app
     src/asset/AssetLoader.cpp
     src/asset/AssetLoader.h
     src/app/ProjectPaths.h
-    src/simulation/SimulationController.cpp
-    src/simulation/SimulationController.h
-    src/scene/Kinematics.cpp
-    src/scene/Kinematics.h
-    src/simulation/forces/SimulationForceField.cpp
-    src/simulation/forces/SimulationForceField.h
+    src/app/SimulationController.cpp
+    src/app/SimulationController.h
+    src/simulation/Kinematics.cpp
+    src/simulation/Kinematics.h
     src/gpu/scene/SimulationGpuView.h
     src/simulation/SimulationParams.h
-    src/simulation/forces/ExternalForceSolver.cpp
-    src/simulation/forces/ExternalForceSolver.h
+    src/simulation/ClothIntegrator.cpp
+    src/simulation/ClothIntegrator.h
     src/simulation/constraints/StretchConstraintSolver.cpp
     src/simulation/constraints/StretchConstraintSolver.h
     src/simulation/constraints/BendingConstraintSolver.cpp
@@ -41,6 +39,9 @@ add_executable(simulation_app
     src/simulation/constraints/AttachmentConstraintSolver.h
     src/simulation/collision/GroundCollisionSolver.cpp
     src/simulation/collision/GroundCollisionSolver.h
+    src/simulation/collision/Bvh.h
+    src/simulation/collision/MeshBvhBuilder.cpp
+    src/simulation/collision/MeshBvhBuilder.h
     src/simulation/collision/ClothBodyCollisionDetector.cpp
     src/simulation/collision/ClothBodyCollisionDetector.h
     src/simulation/collision/ClothBodyCollisionSolver.cpp
@@ -56,16 +57,14 @@ add_executable(simulation_app
     src/gpu/character/CharacterGpuState.cpp
     src/gpu/character/CharacterGpuDataTypes.h
     src/gpu/character/CharacterGpuState.h
-    src/gpu/bvh/BvhDataTypes.h
-    src/gpu/bvh/MeshBvhBuilder.cpp
-    src/gpu/bvh/MeshBvhBuilder.h
+    src/gpu/bvh/BvhBufferView.h
     src/gpu/bvh/BodyBvhBoundsUpdater.cpp
     src/gpu/bvh/BodyBvhBoundsUpdater.h
     src/gpu/bvh/ClothBvhBoundsUpdater.cpp
     src/gpu/bvh/ClothBvhBoundsUpdater.h
-    src/gpu/cloth/ClothGpuResources.cpp
+    src/gpu/cloth/ClothGpuState.cpp
     src/gpu/cloth/ClothGpuDataTypes.h
-    src/gpu/cloth/ClothGpuResources.h
+    src/gpu/cloth/ClothGpuState.h
     src/rendering/BackgroundGradient.cpp
     src/rendering/BackgroundGradient.h
     src/rendering/GroundGridMesh.cpp
@@ -80,8 +79,8 @@ add_executable(simulation_app
     src/rendering/SceneRenderShader.h
     src/simulation/SimulationPipeline.cpp
     src/simulation/SimulationPipeline.h
-    src/scene/SceneState.cpp
-    src/scene/SceneState.h
+    src/simulation/SceneState.cpp
+    src/simulation/SceneState.h
     src/utils/QtUtils.h
     src/utils/BufferUtils.h
     src/utils/FileUtils.h
@@ -105,51 +104,53 @@ add_executable(simulation_app
     shaders/rendering/background.frag
     shaders/mesh/triangle_normal.comp
     shaders/mesh/vertex_normal.comp
-    shaders/character/character_vertex_position_update.comp
-    shaders/character/character_triangle_geometry_update.comp
-    shaders/body/body_bvh_bounds_update.comp
-    shaders/cloth/cloth_external_force.comp
-    shaders/cloth/cloth_bvh_bounds_update.comp
-    shaders/cloth/constraints/cloth_stretch_constraint.comp
-    shaders/cloth/constraints/cloth_bending_constraint.comp
-    shaders/cloth/constraints/cloth_attachment_constraint.comp
-    shaders/collision/cloth_ground_collision.comp
-    shaders/collision/collision_dispatch_size.comp
-    shaders/collision/cloth_cloth_vertex_face_detect.comp
-    shaders/collision/cloth_cloth_vertex_face_accumulate.comp
-    shaders/collision/cloth_cloth_initial_layer_accumulate.comp
-    shaders/cloth/setup/cloth_body_triangle_index_build.comp
-    shaders/collision/cloth_cloth_collision_apply.comp
-    shaders/collision/cloth_vertex_body_face_detect.comp
-    shaders/collision/cloth_vertex_body_face_accumulate.comp
-    shaders/collision/body_vertex_cloth_face_detect.comp
-    shaders/collision/body_vertex_cloth_face_accumulate.comp
-    shaders/collision/cloth_edge_body_edge_detect.comp
-    shaders/collision/cloth_edge_body_edge_accumulate.comp
-    shaders/collision/cloth_body_collision_apply.comp
-    shaders/mesh/bvh_common.glsl
+    shaders/character/vertex_position_update.comp
+    shaders/character/triangle_geometry_update.comp
+    shaders/bvh/body_bounds_update.comp
+    shaders/bvh/cloth_bounds_update.comp
+    shaders/cloth/integrate_cloth.comp
+    shaders/cloth/constraints/stretch.comp
+    shaders/cloth/constraints/bending.comp
+    shaders/cloth/constraints/attachment.comp
+    shaders/collision/ground.comp
+    shaders/collision/dispatch_size.comp
+    shaders/collision/cloth_cloth/vertex_face_detect.comp
+    shaders/collision/cloth_cloth/vertex_face_accumulate.comp
+    shaders/collision/cloth_cloth/initial_layer_accumulate.comp
+    shaders/collision/cloth_cloth/body_triangle_index_build.comp
+    shaders/collision/cloth_cloth/apply.comp
+    shaders/collision/cloth_body/cloth_vertex_body_face_detect.comp
+    shaders/collision/cloth_body/cloth_vertex_body_face_accumulate.comp
+    shaders/collision/cloth_body/body_vertex_cloth_face_detect.comp
+    shaders/collision/cloth_body/body_vertex_cloth_face_accumulate.comp
+    shaders/collision/cloth_body/cloth_edge_body_edge_detect.comp
+    shaders/collision/cloth_body/cloth_edge_body_edge_accumulate.comp
+    shaders/collision/cloth_body/apply.comp
+    shaders/bvh/bvh.glsl
     shaders/mesh/primitive_geometry.glsl
     shaders/mesh/position_io.glsl
-    shaders/collision/common/collision_geometry_common.glsl
-    shaders/collision/common/collision_correction_common.glsl
-    shaders/collision/common/collision_candidate_output.glsl
+    shaders/collision/contact_geometry.glsl
+    shaders/collision/correction.glsl
+    shaders/collision/candidate_output.glsl
     shaders/cloth/setup/garment_prefit.comp
-    shaders/cloth/setup/garment_attachment_target_build.comp
-    shaders/body/body_mesh_search.glsl
+    shaders/cloth/setup/attachment_target_build.comp
+    shaders/bvh/body_surface_search.glsl
 )
 
 qt_add_resources(simulation_app ui_icons
     PREFIX "/icons"
-    BASE "${REPO_ROOT}/data/sources/icon"
+    BASE "${CMAKE_CURRENT_SOURCE_DIR}/resources/icons"
     FILES
-        ${REPO_ROOT}/data/sources/icon/play.svg
-        ${REPO_ROOT}/data/sources/icon/pause.svg
-        ${REPO_ROOT}/data/sources/icon/default-pose.svg
-        ${REPO_ROOT}/data/sources/icon/reset-scene.svg
-        ${REPO_ROOT}/data/sources/icon/close.svg
-        ${REPO_ROOT}/data/sources/icon/plus.svg
-        ${REPO_ROOT}/data/sources/icon/confirm.svg
-        ${REPO_ROOT}/data/sources/icon/file-import-solid-full.svg
+        ${CMAKE_CURRENT_SOURCE_DIR}/resources/icons/play.svg
+        ${CMAKE_CURRENT_SOURCE_DIR}/resources/icons/pause.svg
+        ${CMAKE_CURRENT_SOURCE_DIR}/resources/icons/default-pose.svg
+        ${CMAKE_CURRENT_SOURCE_DIR}/resources/icons/reset-scene.svg
+        ${CMAKE_CURRENT_SOURCE_DIR}/resources/icons/close.svg
+        ${CMAKE_CURRENT_SOURCE_DIR}/resources/icons/plus.svg
+        ${CMAKE_CURRENT_SOURCE_DIR}/resources/icons/confirm.svg
+        ${CMAKE_CURRENT_SOURCE_DIR}/resources/icons/file-import-solid-full.svg
+        ${CMAKE_CURRENT_SOURCE_DIR}/resources/icons/motion.png
+        ${CMAKE_CURRENT_SOURCE_DIR}/resources/icons/garment.png
 )
 
 qt_add_resources(simulation_app ui_styles

@@ -1,0 +1,96 @@
+#version 430 core
+
+layout(local_size_x = 128) in;
+
+#include "bvh.glsl"
+
+const float max_float = 3.402823e+38;
+
+layout(std430, binding = 0) readonly buffer ClothCurrentPositions {
+    vec4 cloth_current_positions[];
+};
+
+layout(std430, binding = 1) readonly buffer ClothPreviousPositions {
+    vec4 cloth_previous_positions[];
+};
+
+layout(std430, binding = 2) readonly buffer ClothTriangleIndices {
+    uint cloth_triangle_indices[];
+};
+
+layout(std430, binding = 3) buffer ClothBvhNodes {
+    BvhNode bvh_nodes[];
+};
+
+layout(std430, binding = 4) buffer ClothTriangleBounds {
+    Aabb triangle_bounds[];
+};
+
+uniform uint uLevelFirstNodeIndex;
+uniform uint uLevelNodeCount;
+uniform float uBoundsMargin;
+
+#define POSITION_IO_CLOTH_CURRENT
+#define POSITION_IO_CLOTH_PREVIOUS
+#include "../mesh/position_io.glsl"
+
+void update_leaf_bounds(uint node_index, BvhNode node)
+{
+    vec3 leaf_min_bounds = vec3(max_float);
+    vec3 leaf_max_bounds = vec3(-max_float);
+
+    for (uint triangle_offset = 0u; triangle_offset < node.element_count; ++triangle_offset) {
+        uint triangle_index = node.first_element_index + triangle_offset;
+        uint index_base = triangle_index * 3u;
+
+        uint vertex_a = cloth_triangle_indices[index_base];
+        uint vertex_b = cloth_triangle_indices[index_base + 1u];
+        uint vertex_c = cloth_triangle_indices[index_base + 2u];
+
+        vec3 current_a = read_cloth_current_position(vertex_a);
+        vec3 current_b = read_cloth_current_position(vertex_b);
+        vec3 current_c = read_cloth_current_position(vertex_c);
+        vec3 previous_a = read_cloth_previous_position(vertex_a);
+        vec3 previous_b = read_cloth_previous_position(vertex_b);
+        vec3 previous_c = read_cloth_previous_position(vertex_c);
+
+        vec3 triangle_min_bounds = min(min(current_a, min(current_b, current_c)),
+                                       min(previous_a, min(previous_b, previous_c))) - uBoundsMargin;
+        vec3 triangle_max_bounds = max(max(current_a, max(current_b, current_c)),
+                                       max(previous_a, max(previous_b, previous_c))) + uBoundsMargin;
+
+        triangle_bounds[triangle_index].min_bounds = vec4(triangle_min_bounds, 0.0);
+        triangle_bounds[triangle_index].max_bounds = vec4(triangle_max_bounds, 0.0);
+        leaf_min_bounds = min(leaf_min_bounds, triangle_min_bounds);
+        leaf_max_bounds = max(leaf_max_bounds, triangle_max_bounds);
+    }
+
+    bvh_nodes[node_index].bounds = Aabb(vec4(leaf_min_bounds, 0.0), vec4(leaf_max_bounds, 0.0));
+}
+
+void update_internal_bounds(uint node_index, BvhNode node)
+{
+    BvhNode left_child = bvh_nodes[node.left_child_index];
+    BvhNode right_child = bvh_nodes[node.right_child_index];
+    vec4 min_bounds = min(left_child.bounds.min_bounds, right_child.bounds.min_bounds);
+    vec4 max_bounds = max(left_child.bounds.max_bounds, right_child.bounds.max_bounds);
+
+    bvh_nodes[node_index].bounds = Aabb(min_bounds, max_bounds);
+}
+
+void main()
+{
+    uint level_node_offset = gl_GlobalInvocationID.x;
+    if (level_node_offset >= uLevelNodeCount) {
+        return;
+    }
+
+    uint node_index = uLevelFirstNodeIndex + level_node_offset;
+    BvhNode node = bvh_nodes[node_index];
+
+    if (is_leaf_node(node)) {
+        update_leaf_bounds(node_index, node);
+    } else {
+        update_internal_bounds(node_index, node);
+    }
+}

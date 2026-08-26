@@ -1,0 +1,190 @@
+#version 430 core
+
+layout(local_size_x = 128) in;
+
+layout(std430, binding = 0) readonly buffer ClothCurrentPositions {
+    vec4 cloth_current_positions[];
+};
+
+layout(std430, binding = 1) readonly buffer ClothPreviousPositions {
+    vec4 cloth_previous_positions[];
+};
+
+layout(std430, binding = 2) readonly buffer ClothTriangleIndices {
+    uint cloth_triangle_indices[];
+};
+
+layout(std430, binding = 3) readonly buffer BodyPreviousPositions {
+    vec4 body_previous_positions[];
+};
+
+layout(std430, binding = 4) readonly buffer BodyCurrentPositions {
+    vec4 body_current_positions[];
+};
+
+layout(std430, binding = 5) readonly buffer BodyVertexNormals {
+    vec4 body_vertex_normals[];
+};
+
+layout(std430, binding = 6) readonly buffer Candidates {
+    uvec2 candidates[];
+};
+
+layout(std430, binding = 7) readonly buffer CandidateCount {
+    uint candidate_count;
+};
+
+layout(std430, binding = 8) buffer NormalCorrectionSums {
+    ivec4 normal_correction_sums[];
+};
+
+layout(std430, binding = 9) buffer FrictionCorrectionSums {
+    ivec4 friction_correction_sums[];
+};
+
+layout(std430, binding = 10) readonly buffer CollisionPushouts {
+    vec4 collision_pushouts[];
+};
+
+layout(std430, binding = 11) readonly buffer ClothClothPushouts {
+    vec4 cloth_cloth_pushouts[];
+};
+
+layout(std430, binding = 12) readonly buffer ContactMotionDeltas {
+    vec4 contact_motion_deltas[];
+};
+
+layout(std430, binding = 13) buffer ContactMotionDeltaSums {
+    ivec4 contact_motion_delta_sums[];
+};
+
+uniform uint uMaxCandidateCount;
+uniform float uCollisionThickness;
+
+#define POSITION_IO_CLOTH_CURRENT
+#define POSITION_IO_CLOTH_PREVIOUS
+#define POSITION_IO_BODY_CURRENT
+#define POSITION_IO_BODY_PREVIOUS
+#include "../../mesh/position_io.glsl"
+
+#include "../contact_geometry.glsl"
+
+#define COLLISION_CORRECTION_ACCUMULATE
+#define COLLISION_CONTACT_MOTION_ACCUMULATE
+#define COLLISION_CORRECTION_FRICTION_ACCUMULATE
+#include "../correction.glsl"
+
+struct AcceptedContact {
+    vec3 normal;
+    vec3 barycentric;
+    vec3 friction_correction;
+    vec3 contact_motion_delta;
+    float depth;
+};
+
+bool compute_candidate_contact(uint candidate_index, out uvec3 cloth_vertices, out AcceptedContact contact)
+{
+    uvec2 candidate = candidates[candidate_index];
+    uint cloth_triangle_index = candidate.x;
+    uint body_vertex_index = candidate.y;
+
+    uint cloth_triangle_base = cloth_triangle_index * 3u;
+    cloth_vertices = uvec3(cloth_triangle_indices[cloth_triangle_base],
+                           cloth_triangle_indices[cloth_triangle_base + 1u],
+                           cloth_triangle_indices[cloth_triangle_base + 2u]);
+
+    TrianglePositions current_cloth = read_cloth_current_triangle(cloth_vertices);
+
+    vec3 cloth_normal;
+    if (!compute_triangle_normal(current_cloth, cloth_normal)) {
+        return false;
+    }
+
+    // Build swept body contact point
+    contact.normal = body_vertex_normals[body_vertex_index].xyz;
+
+    vec3 current_body_contact = read_body_current_position(body_vertex_index) + contact.normal * uCollisionThickness;
+
+    // Reject candidates without front-to-back crossing unless the vertex is already penetrating now.
+    float current_signed_distance = dot(current_body_contact - current_cloth.a, cloth_normal);
+
+    if (current_signed_distance > 0.0) {
+        return false;
+    }
+
+    TrianglePositions previous_cloth = read_cloth_previous_triangle(cloth_vertices);
+    vec3 previous_body_contact = read_body_previous_position(body_vertex_index) + contact.normal * uCollisionThickness;
+    float previous_signed_distance = dot(previous_body_contact - previous_cloth.a, cloth_normal);
+
+    if (previous_signed_distance <= 0.0) {
+        if (!compute_barycentric_if_inside(current_body_contact, current_cloth, contact.barycentric)) {
+            return false;
+        }
+    } else {
+        float hit_time = previous_signed_distance / (previous_signed_distance - current_signed_distance);
+
+        vec3 hit_body_contact = mix(previous_body_contact, current_body_contact, hit_time);
+        TrianglePositions hit_cloth = interpolate_triangle_positions(previous_cloth, current_cloth, hit_time);
+        if (!compute_barycentric_if_inside(hit_body_contact, hit_cloth, contact.barycentric)) {
+            return false;
+        }
+    }
+
+    // Compute current-pose pushout depth
+    vec3 current_cloth_contact = interpolate_triangle_position(current_cloth, contact.barycentric);
+    contact.depth = dot(current_body_contact - current_cloth_contact, contact.normal) - penetration_tolerance;
+    if (contact.depth <= 0.0) {
+        return false;
+    }
+
+    vec3 previous_cloth_contact = interpolate_triangle_position(previous_cloth, contact.barycentric);
+    vec3 cloth_collision_pushout = collision_pushouts[cloth_vertices.x].xyz * contact.barycentric.x
+                                 + collision_pushouts[cloth_vertices.y].xyz * contact.barycentric.y
+                                 + collision_pushouts[cloth_vertices.z].xyz * contact.barycentric.z;
+    vec3 cloth_cloth_pushout = cloth_cloth_pushouts[cloth_vertices.x].xyz * contact.barycentric.x
+                            + cloth_cloth_pushouts[cloth_vertices.y].xyz * contact.barycentric.y
+                            + cloth_cloth_pushouts[cloth_vertices.z].xyz * contact.barycentric.z;
+    vec3 retained_delta = contact_motion_deltas[cloth_vertices.x].xyz * contact.barycentric.x
+                        + contact_motion_deltas[cloth_vertices.y].xyz * contact.barycentric.y
+                        + contact_motion_deltas[cloth_vertices.z].xyz * contact.barycentric.z;
+    vec3 body_delta = current_body_contact - previous_body_contact;
+    vec3 friction_cloth_delta = current_cloth_contact - previous_cloth_contact - cloth_collision_pushout;
+    vec3 cloth_delta = friction_cloth_delta - cloth_cloth_pushout;
+    contact.friction_correction = compute_friction_correction(contact.normal, friction_cloth_delta, body_delta);
+    contact.contact_motion_delta = compute_required_contact_motion_delta(contact.normal, cloth_delta, body_delta, retained_delta);
+
+    return true;
+}
+
+void accumulate_contact_for_vertex(uint vertex_index, AcceptedContact contact, float vertex_weight, float inverse_denominator)
+{
+    if (vertex_weight <= 0.0) {
+        return;
+    }
+
+    float weight_scale = vertex_weight * inverse_denominator;
+    accumulate_vertex_normal_correction(vertex_index, contact.normal * contact.depth * weight_scale);
+    atomicAdd(normal_correction_sums[vertex_index].w, 1);
+    accumulate_vertex_friction_correction(vertex_index, contact.friction_correction * weight_scale);
+    accumulate_vertex_contact_motion_delta(vertex_index, contact.contact_motion_delta * weight_scale);
+}
+
+void main()
+{
+    uint candidate_index = gl_GlobalInvocationID.x;
+    uint active_candidate_count = min(candidate_count, uMaxCandidateCount);
+    if (candidate_index >= active_candidate_count) {
+        return;
+    }
+
+    uvec3 cloth_vertices;
+    AcceptedContact contact;
+    if (!compute_candidate_contact(candidate_index, cloth_vertices, contact)) {
+        return;
+    }
+
+    float inverse_denominator = 1.0 / dot(contact.barycentric, contact.barycentric);
+    accumulate_contact_for_vertex(cloth_vertices.x, contact, contact.barycentric.x, inverse_denominator);
+    accumulate_contact_for_vertex(cloth_vertices.y, contact, contact.barycentric.y, inverse_denominator);
+    accumulate_contact_for_vertex(cloth_vertices.z, contact, contact.barycentric.z, inverse_denominator);
+}

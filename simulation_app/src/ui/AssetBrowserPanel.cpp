@@ -206,10 +206,8 @@ void AssetBrowserPanel::setup_asset_buttons(QVBoxLayout& root_layout)
     button_layout->setContentsMargins(0, 0, 0, 0);
     button_layout->setSpacing(6);
 
-    const std::filesystem::path icon_dir = project_paths_.root / "data" / "sources" / "icon";
-
     motion_button_ = new QPushButton(this);
-    motion_button_->setIcon(QIcon(to_q_string(icon_dir / "motion.png")));
+    motion_button_->setIcon(QIcon{QStringLiteral(":/icons/motion.png")});
     motion_button_->setIconSize(QSize(76, 76));
     motion_button_->setToolTip("Motion");
     motion_button_->setCheckable(true);
@@ -217,7 +215,7 @@ void AssetBrowserPanel::setup_asset_buttons(QVBoxLayout& root_layout)
     motion_button_->setProperty("role", "assetButton");
 
     garment_button_ = new QPushButton(this);
-    garment_button_->setIcon(QIcon(to_q_string(icon_dir / "garment.png")));
+    garment_button_->setIcon(QIcon{QStringLiteral(":/icons/garment.png")});
     garment_button_->setIconSize(QSize(76, 76));
     garment_button_->setToolTip("Garment");
     garment_button_->setCheckable(true);

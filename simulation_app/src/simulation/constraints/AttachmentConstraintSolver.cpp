@@ -45,7 +45,7 @@ bool AttachmentConstraintSolver::is_initialized() const
 void AttachmentConstraintSolver::initialize(const std::filesystem::path& shader_dir,
                                             QOpenGLFunctions_4_5_Core& gl)
 {
-    program_ = load_compute_program(shader_dir / "cloth" / "constraints" / "cloth_attachment_constraint.comp",
+    program_ = load_compute_program(shader_dir / "cloth" / "constraints" / "attachment.comp",
                                     "Attachment constraint",
                                     gl);
     constraint_offset_location_ = gl.glGetUniformLocation(program_, "uConstraintOffset");

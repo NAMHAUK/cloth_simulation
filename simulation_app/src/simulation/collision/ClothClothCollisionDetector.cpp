@@ -41,10 +41,10 @@ void ClothClothCollisionDetector::initialize(const std::filesystem::path& shader
 {
     const std::filesystem::path collision_shader_dir = shader_dir / "collision";
     candidate_detect_.program =
-        load_compute_program(collision_shader_dir / "cloth_cloth_vertex_face_detect.comp",
+        load_compute_program(collision_shader_dir / "cloth_cloth" / "vertex_face_detect.comp",
                              "Cloth-cloth vertex-face candidate detection",
                              gl);
-    dispatch_size_.program = load_compute_program(collision_shader_dir / "collision_dispatch_size.comp",
+    dispatch_size_.program = load_compute_program(collision_shader_dir / "dispatch_size.comp",
                                                   "Cloth-cloth candidate dispatch size",
                                                   gl);
     candidate_detect_.upper_vertex_offset =

@@ -2,8 +2,9 @@
 
 #include "asset/AssetDataTypes.h"
 #include "gpu/bvh/BodyBvhBoundsUpdater.h"
-#include "gpu/bvh/BvhDataTypes.h"
+#include "gpu/bvh/BvhBufferView.h"
 #include "gpu/character/CharacterGpuDataTypes.h"
+#include "simulation/collision/Bvh.h"
 
 #include <QOpenGLFunctions_4_5_Core>
 #include <cstdint>

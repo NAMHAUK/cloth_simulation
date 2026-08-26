@@ -28,8 +28,8 @@ void CharacterGpuState::initialize(const std::filesystem::path& shader_dir,
 {
     bvh_bounds_updater_.initialize(shader_dir, body_detection_distance, gl);
 
-    const auto position_shader_path = shader_dir / "character" / "character_vertex_position_update.comp";
-    const auto triangle_shader_path = shader_dir / "character" / "character_triangle_geometry_update.comp";
+    const auto position_shader_path = shader_dir / "character" / "vertex_position_update.comp";
+    const auto triangle_shader_path = shader_dir / "character" / "triangle_geometry_update.comp";
     position_program_ = load_compute_program(position_shader_path, "Character vertex position update", gl);
     triangle_update_program_ = load_compute_program(triangle_shader_path, "Character triangle update", gl);
 

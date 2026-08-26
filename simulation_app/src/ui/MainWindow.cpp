@@ -1,7 +1,7 @@
 #include "ui/MainWindow.h"
 
 #include "asset/AssetIO.h"
-#include "simulation/SimulationController.h"
+#include "app/SimulationController.h"
 #include "ui/AssetBrowserPanel.h"
 #include "ui/PlacementController.h"
 #include "ui/Viewport.h"

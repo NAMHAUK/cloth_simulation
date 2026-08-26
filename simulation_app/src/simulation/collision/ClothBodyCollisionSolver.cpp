@@ -89,22 +89,23 @@ bool ClothBodyCollisionSolver::is_initialized() const
 void ClothBodyCollisionSolver::initialize(const std::filesystem::path& shader_dir,
                                           QOpenGLFunctions_4_5_Core& gl)
 {
-    const std::filesystem::path collision_shader_dir = shader_dir / "collision";
-    vf_accumulate_.program =
-        load_compute_program(collision_shader_dir / "cloth_vertex_body_face_accumulate.comp",
-                             "Cloth vertex/body face candidate accumulation",
-                             gl);
-    ee_accumulate_.program =
-        load_compute_program(collision_shader_dir / "cloth_edge_body_edge_accumulate.comp",
-                             "Cloth edge/body edge candidate accumulation",
-                             gl);
-    bf_accumulate_.program =
-        load_compute_program(collision_shader_dir / "body_vertex_cloth_face_accumulate.comp",
-                             "Body vertex/cloth face candidate accumulation",
-                             gl);
-    apply_.program = load_compute_program(collision_shader_dir / "cloth_body_collision_apply.comp",
-                                          "Cloth-body collision combined apply",
-                                          gl);
+    const std::filesystem::path cloth_body_shader_dir = shader_dir / "collision" / "cloth_body";
+    vf_accumulate_.program = load_compute_program(
+        cloth_body_shader_dir / "cloth_vertex_body_face_accumulate.comp",
+        "Cloth vertex/body face candidate accumulation",
+        gl);
+    ee_accumulate_.program = load_compute_program(
+        cloth_body_shader_dir / "cloth_edge_body_edge_accumulate.comp",
+        "Cloth edge/body edge candidate accumulation",
+        gl);
+    bf_accumulate_.program = load_compute_program(
+        cloth_body_shader_dir / "body_vertex_cloth_face_accumulate.comp",
+        "Body vertex/cloth face candidate accumulation",
+        gl);
+    apply_.program = load_compute_program(
+        cloth_body_shader_dir / "apply.comp",
+        "Cloth-body collision combined apply",
+        gl);
     vf_accumulate_.max_candidates = gl.glGetUniformLocation(vf_accumulate_.program, "uMaxCandidateCount");
     vf_accumulate_.thickness = gl.glGetUniformLocation(vf_accumulate_.program, "uCollisionThickness");
     ee_accumulate_.max_candidates = gl.glGetUniformLocation(ee_accumulate_.program, "uMaxCandidateCount");

@@ -30,9 +30,7 @@ bool GroundCollisionSolver::is_initialized() const
 
 void GroundCollisionSolver::initialize(const std::filesystem::path& shader_dir, QOpenGLFunctions_4_5_Core& gl)
 {
-    program_ = load_compute_program(shader_dir / "collision" / "cloth_ground_collision.comp",
-                                    "Ground collision",
-                                    gl);
+    program_ = load_compute_program(shader_dir / "collision" / "ground.comp", "Ground collision", gl);
     vertex_count_location_ = gl.glGetUniformLocation(program_, "uVertexCount");
     floor_height_location_ = gl.glGetUniformLocation(program_, "uFloorHeight");
     static_friction_location_ = gl.glGetUniformLocation(program_, "uStaticFriction");

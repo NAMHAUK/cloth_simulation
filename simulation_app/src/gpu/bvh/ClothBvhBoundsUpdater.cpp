@@ -21,9 +21,10 @@ constexpr std::uint32_t bvh_bounds_update_local_size = 128;
 
 void ClothBvhBoundsUpdater::initialize(const std::filesystem::path& shader_dir, QOpenGLFunctions_4_5_Core& gl)
 {
-    program_ = load_compute_program(shader_dir / "cloth" / "cloth_bvh_bounds_update.comp",
-                                    "Cloth BVH bounds update",
-                                    gl);
+    program_ = load_compute_program(
+        shader_dir / "bvh" / "cloth_bounds_update.comp",
+        "Cloth BVH bounds update",
+        gl);
     level_first_node_index_location_ = gl.glGetUniformLocation(program_, "uLevelFirstNodeIndex");
     level_node_count_location_ = gl.glGetUniformLocation(program_, "uLevelNodeCount");
     bounds_margin_location_ = gl.glGetUniformLocation(program_, "uBoundsMargin");

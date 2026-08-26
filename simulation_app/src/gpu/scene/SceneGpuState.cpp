@@ -1,6 +1,6 @@
 #include "gpu/scene/SceneGpuState.h"
 
-#include "scene/SceneState.h"
+#include "simulation/SceneState.h"
 #include "utils/BufferUtils.h"
 #include "utils/ShaderUtils.h"
 
@@ -81,7 +81,7 @@ void SceneGpuState::initialize_attachment_target_program(const std::filesystem::
                                                          float surface_offset,
                                                          QOpenGLFunctions_4_5_Core& gl)
 {
-    const auto shader_path = shader_dir / "cloth/setup/garment_attachment_target_build.comp";
+    const auto shader_path = shader_dir / "cloth/setup/attachment_target_build.comp";
     attachment_target_program_ = load_compute_program(shader_path, "Attachment target build", gl);
 
     const GLuint program = attachment_target_program_;
@@ -314,7 +314,7 @@ const CharacterGpuState& SceneGpuState::character_gpu_state() const
     return character_gpu_state_;
 }
 
-const ClothGpuResources& SceneGpuState::cloth_gpu_state() const
+const ClothGpuState& SceneGpuState::cloth_gpu_state() const
 {
     return cloth_gpu_state_;
 }

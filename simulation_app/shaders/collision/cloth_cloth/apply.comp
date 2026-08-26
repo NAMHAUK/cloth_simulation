@@ -1,0 +1,45 @@
+#version 430 core
+
+layout(local_size_x = 128) in;
+
+layout(std430, binding = 0) buffer ClothCurrentPositions {
+    vec4 cloth_current_positions[];
+};
+
+layout(std430, binding = 1) buffer CollisionPushouts {
+    vec4 collision_pushouts[];
+};
+
+layout(std430, binding = 2) readonly buffer NormalCorrectionSums {
+    ivec4 normal_correction_sums[];
+};
+
+uniform uint uVertexCount;
+uniform float uMaxCorrectionLength;
+
+#define POSITION_IO_CLOTH_CURRENT
+#define POSITION_IO_CLOTH_WRITE
+#include "../../mesh/position_io.glsl"
+
+#define COLLISION_CORRECTION_APPLY
+#include "../correction.glsl"
+
+void main()
+{
+    uint vertex_index = gl_GlobalInvocationID.x;
+    if (vertex_index >= uVertexCount) {
+        return;
+    }
+
+    ivec4 accumulated = normal_correction_sums[vertex_index];
+    if (accumulated.w <= 0) {
+        return;
+    }
+
+    vec3 correction_sum = vec3(accumulated.xyz) / correction_fixed_point_scale;
+    vec3 averaged_correction = correction_sum / float(accumulated.w);
+    vec3 final_correction = clamp_correction(averaged_correction);
+    vec3 corrected_position = read_cloth_current_position(vertex_index) + final_correction;
+    write_cloth_current_position(vertex_index, corrected_position);
+    collision_pushouts[vertex_index].xyz += final_correction;
+}

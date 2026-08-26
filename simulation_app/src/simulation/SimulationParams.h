@@ -20,7 +20,7 @@ struct SimulationStepParams final
     constexpr float dt() const { return 1.0f / static_cast<float>(fps); }
 };
 
-struct ExternalForceParams final
+struct ClothIntegrationParams final
 {
     float gravity = -9.8f;
     float velocity_damping = 0.99792f;
@@ -84,7 +84,7 @@ struct PrefitParams final
 struct SimulationParams final
 {
     SimulationStepParams step;
-    ExternalForceParams external_force;
+    ClothIntegrationParams integration;
     ConstraintParams constraints;
     CollisionParams collisions;
     PrefitParams prefit;
@@ -95,7 +95,7 @@ inline constexpr SimulationParams default_simulation_params{};
 constexpr bool is_valid_simulation_params(const SimulationParams& params)
 {
     const SimulationStepParams& step = params.step;
-    const ExternalForceParams& external_force = params.external_force;
+    const ClothIntegrationParams& integration = params.integration;
     const ConstraintParams& constraints = params.constraints;
     const GroundCollisionParams& ground = params.collisions.ground;
     const BodyCollisionParams& body = params.collisions.body;
@@ -107,12 +107,12 @@ constexpr bool is_valid_simulation_params(const SimulationParams& params)
            step.fps % step.motion_fps == 0 &&
            step.substep_count > 0 &&
            step.iteration_count > 0 &&
-           external_force.velocity_damping >= 0.0f &&
-           external_force.velocity_damping <= 1.0f &&
-           external_force.reference_frame_inertia_scale >= 0.0f &&
-           external_force.reference_frame_inertia_scale <= 1.0f &&
-           external_force.reference_frame_max_acceleration > 0.0f &&
-           external_force.reference_frame_max_angular_acceleration > 0.0f &&
+           integration.velocity_damping >= 0.0f &&
+           integration.velocity_damping <= 1.0f &&
+           integration.reference_frame_inertia_scale >= 0.0f &&
+           integration.reference_frame_inertia_scale <= 1.0f &&
+           integration.reference_frame_max_acceleration > 0.0f &&
+           integration.reference_frame_max_angular_acceleration > 0.0f &&
            constraints.stretch_stiffness >= 0.0f &&
            constraints.stretch_stiffness <= 1.0f &&
            constraints.bending_stiffness >= 0.0f &&

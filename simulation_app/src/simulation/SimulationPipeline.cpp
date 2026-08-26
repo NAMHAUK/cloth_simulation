@@ -1,7 +1,7 @@
 #include "simulation/SimulationPipeline.h"
 
 #include "gpu/scene/SceneGpuState.h"
-#include "scene/SceneState.h"
+#include "simulation/SceneState.h"
 #include "utils/BufferUtils.h"
 
 #include <cassert>
@@ -11,11 +11,11 @@
 
 SimulationPipeline::SimulationPipeline(SimulationParams params)
     : params_(params),
-      force_field_(params.external_force.gravity),
-      external_force_solver_(params.external_force.velocity_damping,
-                             params.external_force.reference_frame_inertia_scale,
-                             params.external_force.reference_frame_max_acceleration,
-                             params.external_force.reference_frame_max_angular_acceleration),
+      cloth_integrator_(params.integration.gravity,
+                        params.integration.velocity_damping,
+                        params.integration.reference_frame_inertia_scale,
+                        params.integration.reference_frame_max_acceleration,
+                        params.integration.reference_frame_max_angular_acceleration),
       stretch_constraint_solver_(params.constraints.stretch_stiffness),
       bending_constraint_solver_(params.constraints.bending_stiffness),
       attachment_constraint_solver_(params.constraints.attachment_stiffness),
@@ -36,7 +36,7 @@ void SimulationPipeline::initialize(const std::filesystem::path& shader_dir, QOp
 
     substep_dt_ = params_.step.dt() / static_cast<float>(params_.step.substep_count);
 
-    external_force_solver_.initialize(shader_dir, substep_dt_, gl);
+    cloth_integrator_.initialize(shader_dir, substep_dt_, gl);
     stretch_constraint_solver_.initialize(shader_dir, gl);
     bending_constraint_solver_.initialize(shader_dir, gl);
     attachment_constraint_solver_.initialize(shader_dir, gl);
@@ -88,7 +88,6 @@ void SimulationPipeline::step(SceneState& scene,
     const auto views = gpu_state.simulation_view();
     cloth_cloth_collision_solver_.update_body_surface_mapping(views, gl);
 
-    const glm::vec3 external_acceleration = force_field_.external_acceleration();
     for (std::uint32_t substep = 0; substep < params_.step.substep_count; ++substep) {
         const float motion_frame_position =
             params_.step.motion_frame_position(motion_step_index, substep + 1u);
@@ -96,7 +95,7 @@ void SimulationPipeline::step(SceneState& scene,
         scene.update_reference_frame_kinematics(frame_alpha, substep_dt_);
         gpu_state.update_character_pose(scene, frame_alpha, gl);
 
-        solve_external_forces(scene, views, external_acceleration, gl);
+        integrate_cloth(scene, views, gl);
 
         cloth_body_collision_detector_.detect(views, gl);
         cloth_cloth_collision_detector_.detect(views, gl);
@@ -124,10 +123,9 @@ void SimulationPipeline::step_character_only(const SceneState& scene,
     gpu_state.update_character_pose(scene, frame_alpha, gl);
 }
 
-void SimulationPipeline::solve_external_forces(const SceneState& scene,
-                                               const SimulationGpuView& views,
-                                               const glm::vec3& external_acceleration,
-                                               QOpenGLFunctions_4_5_Core& gl) const
+void SimulationPipeline::integrate_cloth(const SceneState& scene,
+                                         const SimulationGpuView& views,
+                                         QOpenGLFunctions_4_5_Core& gl) const
 {
     for (const GarmentObject& garment : scene.garments()) {
         const GarmentBufferState& garment_state = views.garment_buffer_states[garment.layer];
@@ -135,11 +133,7 @@ void SimulationPipeline::solve_external_forces(const SceneState& scene,
 
         const Kinematics& reference_frame_kinematics =
             scene.reference_frame_kinematics(garment.mesh.garment_category);
-        external_force_solver_.solve(views,
-                                     garment.layer,
-                                     external_acceleration,
-                                     reference_frame_kinematics,
-                                     gl);
+        cloth_integrator_.integrate(views, garment.layer, reference_frame_kinematics, gl);
     }
 }
 
@@ -161,7 +155,7 @@ void SimulationPipeline::release(QOpenGLFunctions_4_5_Core& gl)
     attachment_constraint_solver_.release(gl);
     bending_constraint_solver_.release(gl);
     stretch_constraint_solver_.release(gl);
-    external_force_solver_.release(gl);
+    cloth_integrator_.release(gl);
     substep_dt_ = 0.0f;
     initialized_ = false;
 }

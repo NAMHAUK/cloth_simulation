@@ -60,18 +60,18 @@ void ClothBodyCollisionDetector::initialize(const std::filesystem::path& shader_
 {
     const std::filesystem::path collision_shader_dir = shader_dir / "collision";
     cloth_vertex_body_face_.program =
-        load_compute_program(collision_shader_dir / "cloth_vertex_body_face_detect.comp",
+        load_compute_program(collision_shader_dir / "cloth_body" / "cloth_vertex_body_face_detect.comp",
                              "Cloth vertex/body face collision candidate detection",
                              gl);
     cloth_edge_body_edge_.program =
-        load_compute_program(collision_shader_dir / "cloth_edge_body_edge_detect.comp",
+        load_compute_program(collision_shader_dir / "cloth_body" / "cloth_edge_body_edge_detect.comp",
                              "Cloth edge/body edge collision candidate detection",
                              gl);
     cloth_face_body_vertex_.program =
-        load_compute_program(collision_shader_dir / "body_vertex_cloth_face_detect.comp",
+        load_compute_program(collision_shader_dir / "cloth_body" / "body_vertex_cloth_face_detect.comp",
                              "Cloth face/body vertex collision candidate detection",
                              gl);
-    dispatch_size_.program = load_compute_program(collision_shader_dir / "collision_dispatch_size.comp",
+    dispatch_size_.program = load_compute_program(collision_shader_dir / "dispatch_size.comp",
                                                   "Collision candidate dispatch size",
                                                   gl);
     cloth_vertex_body_face_.item_count =

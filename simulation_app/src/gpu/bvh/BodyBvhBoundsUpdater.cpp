@@ -41,9 +41,10 @@ void BodyBvhBoundsUpdater::initialize(const std::filesystem::path& shader_dir,
                                       float detection_distance,
                                       QOpenGLFunctions_4_5_Core& gl)
 {
-    program_ = load_compute_program(shader_dir / "body" / "body_bvh_bounds_update.comp",
-                                    "Body BVH bounds update",
-                                    gl);
+    program_ = load_compute_program(
+        shader_dir / "bvh" / "body_bounds_update.comp",
+        "Body BVH bounds update",
+        gl);
     triangle_first_node_index_location_ = gl.glGetUniformLocation(program_, "uTriangleFirstNodeIndex");
     triangle_node_count_location_ = gl.glGetUniformLocation(program_, "uTriangleNodeCount");
     vertex_first_node_index_location_ = gl.glGetUniformLocation(program_, "uVertexFirstNodeIndex");
