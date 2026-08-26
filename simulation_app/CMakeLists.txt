@@ -139,16 +139,18 @@ add_executable(simulation_app
 
 qt_add_resources(simulation_app ui_icons
     PREFIX "/icons"
-    BASE "${REPO_ROOT}/data/sources/icon"
+    BASE "${CMAKE_CURRENT_SOURCE_DIR}/resources/icons"
     FILES
-        ${REPO_ROOT}/data/sources/icon/play.svg
-        ${REPO_ROOT}/data/sources/icon/pause.svg
-        ${REPO_ROOT}/data/sources/icon/default-pose.svg
-        ${REPO_ROOT}/data/sources/icon/reset-scene.svg
-        ${REPO_ROOT}/data/sources/icon/close.svg
-        ${REPO_ROOT}/data/sources/icon/plus.svg
-        ${REPO_ROOT}/data/sources/icon/confirm.svg
-        ${REPO_ROOT}/data/sources/icon/file-import-solid-full.svg
+        ${CMAKE_CURRENT_SOURCE_DIR}/resources/icons/play.svg
+        ${CMAKE_CURRENT_SOURCE_DIR}/resources/icons/pause.svg
+        ${CMAKE_CURRENT_SOURCE_DIR}/resources/icons/default-pose.svg
+        ${CMAKE_CURRENT_SOURCE_DIR}/resources/icons/reset-scene.svg
+        ${CMAKE_CURRENT_SOURCE_DIR}/resources/icons/close.svg
+        ${CMAKE_CURRENT_SOURCE_DIR}/resources/icons/plus.svg
+        ${CMAKE_CURRENT_SOURCE_DIR}/resources/icons/confirm.svg
+        ${CMAKE_CURRENT_SOURCE_DIR}/resources/icons/file-import-solid-full.svg
+        ${CMAKE_CURRENT_SOURCE_DIR}/resources/icons/motion.png
+        ${CMAKE_CURRENT_SOURCE_DIR}/resources/icons/garment.png
 )
 
 qt_add_resources(simulation_app ui_styles
