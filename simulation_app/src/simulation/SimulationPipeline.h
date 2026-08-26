@@ -40,6 +40,11 @@ public:
               QOpenGLFunctions_4_5_Core& gl);
 
 private:
+    void update_character_motion(SceneState& scene,
+                                 SceneGpuState& gpu_state,
+                                 std::uint32_t motion_step_index,
+                                 std::uint32_t substep,
+                                 QOpenGLFunctions_4_5_Core& gl) const;
     void integrate_cloth(const SceneState& scene,
                          const SimulationGpuView& views,
                          QOpenGLFunctions_4_5_Core& gl) const;
