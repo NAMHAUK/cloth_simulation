@@ -29,8 +29,8 @@ add_executable(simulation_app
     src/simulation/Kinematics.h
     src/gpu/scene/SimulationGpuView.h
     src/simulation/SimulationParams.h
-    src/simulation/ExternalForceSolver.cpp
-    src/simulation/ExternalForceSolver.h
+    src/simulation/ClothIntegrator.cpp
+    src/simulation/ClothIntegrator.h
     src/simulation/constraints/StretchConstraintSolver.cpp
     src/simulation/constraints/StretchConstraintSolver.h
     src/simulation/constraints/BendingConstraintSolver.cpp
@@ -108,7 +108,7 @@ add_executable(simulation_app
     shaders/character/triangle_geometry_update.comp
     shaders/bvh/body_bounds_update.comp
     shaders/bvh/cloth_bounds_update.comp
-    shaders/cloth/external_force.comp
+    shaders/cloth/integrate_cloth.comp
     shaders/cloth/constraints/stretch.comp
     shaders/cloth/constraints/bending.comp
     shaders/cloth/constraints/attachment.comp

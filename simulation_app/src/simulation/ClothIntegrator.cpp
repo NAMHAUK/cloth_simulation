@@ -1,4 +1,4 @@
-#include "simulation/ExternalForceSolver.h"
+#include "simulation/ClothIntegrator.h"
 
 #include "gpu/cloth/ClothGpuState.h"
 #include "gpu/scene/SimulationGpuView.h"
@@ -16,7 +16,7 @@ constexpr GLuint previous_positions_binding = 1;
 constexpr GLuint collision_pushouts_binding = 3;
 constexpr GLuint cloth_cloth_pushouts_binding = 4;
 constexpr GLuint contact_motion_deltas_binding = 5;
-constexpr std::uint32_t external_force_local_size = 128;
+constexpr std::uint32_t integration_local_size = 128;
 
 glm::vec3 clamp_vector_length(const glm::vec3& value, float maximum_length)
 {
@@ -25,30 +25,32 @@ glm::vec3 clamp_vector_length(const glm::vec3& value, float maximum_length)
 }
 }
 
-ExternalForceSolver::ExternalForceSolver(float velocity_damping,
-                                         float reference_frame_inertia_scale,
-                                         float reference_frame_max_acceleration,
-                                         float reference_frame_max_angular_acceleration)
-    : velocity_damping_(velocity_damping),
+ClothIntegrator::ClothIntegrator(float gravity,
+                                 float velocity_damping,
+                                 float reference_frame_inertia_scale,
+                                 float reference_frame_max_acceleration,
+                                 float reference_frame_max_angular_acceleration)
+    : gravity_(gravity),
+      velocity_damping_(velocity_damping),
       reference_frame_inertia_scale_(reference_frame_inertia_scale),
       reference_frame_max_acceleration_(reference_frame_max_acceleration),
       reference_frame_max_angular_acceleration_(reference_frame_max_angular_acceleration)
 {}
 
-bool ExternalForceSolver::is_initialized() const
+bool ClothIntegrator::is_initialized() const
 {
     return program_ != 0;
 }
 
-void ExternalForceSolver::initialize(const std::filesystem::path& shader_dir,
-                                     float dt,
-                                     QOpenGLFunctions_4_5_Core& gl)
+void ClothIntegrator::initialize(const std::filesystem::path& shader_dir,
+                                 float dt,
+                                 QOpenGLFunctions_4_5_Core& gl)
 {
     if (dt <= 0.0f) {
-        throw std::runtime_error("Cannot initialize external force solver with a non-positive time step.");
+        throw std::runtime_error("Cannot initialize cloth integrator with a non-positive time step.");
     }
 
-    program_ = load_compute_program(shader_dir / "cloth" / "external_force.comp", "Cloth external force", gl);
+    program_ = load_compute_program(shader_dir / "cloth" / "integrate_cloth.comp", "Cloth integration", gl);
     // shader program 안의 uniform 변수들 위치 저장
     vertex_offset_location_ = gl.glGetUniformLocation(program_, "uVertexOffset");
     vertex_count_location_ = gl.glGetUniformLocation(program_, "uVertexCount");
@@ -79,7 +81,7 @@ void ExternalForceSolver::initialize(const std::filesystem::path& shader_dir,
         frame_start_angular_velocity_location_ < 0 ||
         frame_angular_acceleration_location_ < 0 ||
         frame_inertia_scale_location_ < 0) {
-        throw std::runtime_error("Cloth external force compute shader missing required uniforms.");
+        throw std::runtime_error("Cloth integration compute shader missing required uniforms.");
     }
 
     dt_ = dt;
@@ -87,9 +89,8 @@ void ExternalForceSolver::initialize(const std::filesystem::path& shader_dir,
 }
 
 // 외부 힘 계산 -> 힘에 따른 위치 변화 GPU에서 갱신
-void ExternalForceSolver::solve(const SimulationGpuView& views,
+void ClothIntegrator::integrate(const SimulationGpuView& views,
                                 GarmentLayer layer,
-                                const glm::vec3& external_acceleration,
                                 const Kinematics& reference_frame_kinematics,
                                 QOpenGLFunctions_4_5_Core& gl) const
 {
@@ -141,11 +142,7 @@ void ExternalForceSolver::solve(const SimulationGpuView& views,
     gl.glProgramUniform1ui(program_, vertex_count_location_, garment_state.vertex_count);
     gl.glProgramUniform1f(program_, delta_time_location_, dt_);
     gl.glProgramUniform1f(program_, inverse_delta_time_location_, inverse_dt_);
-    gl.glProgramUniform3f(program_,
-                          external_acceleration_location_,
-                          external_acceleration.x,
-                          external_acceleration.y,
-                          external_acceleration.z);
+    gl.glProgramUniform3f(program_, external_acceleration_location_, 0.0f, gravity_, 0.0f);
     gl.glProgramUniform1f(program_, velocity_damping_location_, velocity_damping_);
     gl.glProgramUniform3f(program_,
                           frame_start_position_location_,
@@ -185,11 +182,11 @@ void ExternalForceSolver::solve(const SimulationGpuView& views,
     gl.glProgramUniform1f(program_, frame_inertia_scale_location_, reference_frame_inertia_scale_);
 
     // shader가 외부 가속도에 따른 위치 변화량 계산 (GPU에서 바로 업데이트)
-    gl.glDispatchCompute(compute_group_count(garment_state.vertex_count, external_force_local_size), 1, 1);
+    gl.glDispatchCompute(compute_group_count(garment_state.vertex_count, integration_local_size), 1, 1);
     gl.glMemoryBarrier(GL_SHADER_STORAGE_BARRIER_BIT);
 }
 
-void ExternalForceSolver::release(QOpenGLFunctions_4_5_Core& gl)
+void ClothIntegrator::release(QOpenGLFunctions_4_5_Core& gl)
 {
     gl.glDeleteProgram(program_);
 

@@ -1,7 +1,7 @@
 #pragma once
 
 #include "gpu/scene/SimulationGpuView.h"
-#include "simulation/ExternalForceSolver.h"
+#include "simulation/ClothIntegrator.h"
 #include "simulation/SimulationParams.h"
 #include "simulation/collision/ClothBodyCollisionDetector.h"
 #include "simulation/collision/ClothBodyCollisionSolver.h"
@@ -18,7 +18,6 @@
 #include <vector>
 
 #include <QOpenGLFunctions_4_5_Core>
-#include <glm/vec3.hpp>
 
 class SceneGpuState;
 class SceneState;
@@ -45,17 +44,16 @@ public:
                              QOpenGLFunctions_4_5_Core& gl) const;
 
 private:
-    void solve_external_forces(const SceneState& scene,
-                               const SimulationGpuView& views,
-                               const glm::vec3& external_acceleration,
-                               QOpenGLFunctions_4_5_Core& gl) const;
+    void integrate_cloth(const SceneState& scene,
+                         const SimulationGpuView& views,
+                         QOpenGLFunctions_4_5_Core& gl) const;
 
 public:
     bool is_initialized() const;
 
 private:
     SimulationParams params_;
-    ExternalForceSolver external_force_solver_;
+    ClothIntegrator cloth_integrator_;
     StretchConstraintSolver stretch_constraint_solver_;
     BendingConstraintSolver bending_constraint_solver_;
     AttachmentConstraintSolver attachment_constraint_solver_;

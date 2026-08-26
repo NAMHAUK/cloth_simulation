@@ -7,27 +7,26 @@
 #include <filesystem>
 
 #include <QOpenGLFunctions_4_5_Core>
-#include <glm/vec3.hpp>
 
 struct SimulationGpuView;
 
-class ExternalForceSolver final
+class ClothIntegrator final
 {
 public:
-    ExternalForceSolver(float velocity_damping,
-                        float reference_frame_inertia_scale,
-                        float reference_frame_max_acceleration,
-                        float reference_frame_max_angular_acceleration);
-    ExternalForceSolver(const ExternalForceSolver&) = delete;
-    ExternalForceSolver& operator=(const ExternalForceSolver&) = delete;
+    ClothIntegrator(float gravity,
+                    float velocity_damping,
+                    float reference_frame_inertia_scale,
+                    float reference_frame_max_acceleration,
+                    float reference_frame_max_angular_acceleration);
+    ClothIntegrator(const ClothIntegrator&) = delete;
+    ClothIntegrator& operator=(const ClothIntegrator&) = delete;
 
     bool is_initialized() const;
     void initialize(const std::filesystem::path& shader_dir, float dt, QOpenGLFunctions_4_5_Core& gl);
-    void solve(const SimulationGpuView& views,
-               GarmentLayer layer,
-               const glm::vec3& external_acceleration,
-               const Kinematics& reference_frame_kinematics,
-               QOpenGLFunctions_4_5_Core& gl) const;
+    void integrate(const SimulationGpuView& views,
+                   GarmentLayer layer,
+                   const Kinematics& reference_frame_kinematics,
+                   QOpenGLFunctions_4_5_Core& gl) const;
     void release(QOpenGLFunctions_4_5_Core& gl);
 
 private:
@@ -48,6 +47,7 @@ private:
     GLint frame_inertia_scale_location_ = -1;
     float dt_ = 0.0f;
     float inverse_dt_ = 0.0f;
+    float gravity_ = 0.0f;
     float velocity_damping_ = 0.0f;
     float reference_frame_inertia_scale_ = 0.0f;
     float reference_frame_max_acceleration_ = 0.0f;
