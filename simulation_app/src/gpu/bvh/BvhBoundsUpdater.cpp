@@ -54,10 +54,8 @@ void BvhBoundsUpdater::initialize(const std::filesystem::path& shader_dir,
                                   float body_detection_distance,
                                   QOpenGLFunctions_4_5_Core& gl)
 {
-    body_program_ =
-        load_compute_program(shader_dir / "bvh" / "body_bounds_update.comp", "Body BVH bounds update", gl);
-    cloth_program_ =
-        load_compute_program(shader_dir / "bvh" / "cloth_bounds_update.comp", "Cloth BVH bounds update", gl);
+    body_program_ = load_compute_program(shader_dir / "bvh" / "body_bounds_update.comp", gl);
+    cloth_program_ = load_compute_program(shader_dir / "bvh" / "cloth_bounds_update.comp", gl);
 
     body_triangle_first_node_index_location_ =
         gl.glGetUniformLocation(body_program_, "uTriangleFirstNodeIndex");

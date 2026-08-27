@@ -67,8 +67,8 @@ void SceneGpuState::initialize_normal_programs(const std::filesystem::path& shad
 {
     const auto triangle_shader_path = shader_dir / "mesh" / "triangle_normal.comp";
     const auto vertex_shader_path = shader_dir / "mesh" / "vertex_normal.comp";
-    triangle_normal_program_ = load_compute_program(triangle_shader_path, "Triangle normal update", gl);
-    vertex_normal_program_ = load_compute_program(vertex_shader_path, "Vertex normal update", gl);
+    triangle_normal_program_ = load_compute_program(triangle_shader_path, gl);
+    vertex_normal_program_ = load_compute_program(vertex_shader_path, gl);
 
     triangle_count_location_ = gl.glGetUniformLocation(triangle_normal_program_, "uTriangleCount");
     vertex_count_location_ = gl.glGetUniformLocation(vertex_normal_program_, "uVertexCount");
@@ -83,7 +83,7 @@ void SceneGpuState::initialize_attachment_target_program(const std::filesystem::
                                                          QOpenGLFunctions_4_5_Core& gl)
 {
     const auto shader_path = shader_dir / "cloth/setup/attachment_target_build.comp";
-    attachment_target_program_ = load_compute_program(shader_path, "Attachment target build", gl);
+    attachment_target_program_ = load_compute_program(shader_path, gl);
 
     const GLuint program = attachment_target_program_;
     attachment_constraint_offset_location_ = gl.glGetUniformLocation(program, "uConstraintOffset");

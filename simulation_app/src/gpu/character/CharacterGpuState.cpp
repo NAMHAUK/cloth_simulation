@@ -26,8 +26,8 @@ void CharacterGpuState::initialize(const std::filesystem::path& shader_dir, QOpe
 {
     const auto position_shader_path = shader_dir / "character" / "vertex_position_update.comp";
     const auto triangle_shader_path = shader_dir / "character" / "triangle_geometry_update.comp";
-    position_program_ = load_compute_program(position_shader_path, "Character vertex position update", gl);
-    triangle_update_program_ = load_compute_program(triangle_shader_path, "Character triangle update", gl);
+    position_program_ = load_compute_program(position_shader_path, gl);
+    triangle_update_program_ = load_compute_program(triangle_shader_path, gl);
 
     position_current_frame_base_location_ = gl.glGetUniformLocation(position_program_, "uCurrentFrameBase");
     position_next_frame_base_location_ = gl.glGetUniformLocation(position_program_, "uNextFrameBase");

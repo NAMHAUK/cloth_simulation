@@ -28,10 +28,7 @@ bool BendingConstraintSolver::is_initialized() const
 void BendingConstraintSolver::initialize(const std::filesystem::path& shader_dir,
                                          QOpenGLFunctions_4_5_Core& gl)
 {
-    program_ = load_compute_program(
-        shader_dir / "cloth" / "constraints" / "bending.comp",
-        "Bending constraint",
-        gl);
+    program_ = load_compute_program(shader_dir / "cloth" / "constraints" / "bending.comp", gl);
     constraint_offset_location_ = gl.glGetUniformLocation(program_, "uConstraintOffset");
     constraint_count_location_ = gl.glGetUniformLocation(program_, "uConstraintCount");
     stiffness_location_ = gl.glGetUniformLocation(program_, "uStiffness");

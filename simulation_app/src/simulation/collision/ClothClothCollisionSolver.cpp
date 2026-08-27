@@ -92,22 +92,12 @@ void ClothClothCollisionSolver::initialize(const std::filesystem::path& shader_d
                                            QOpenGLFunctions_4_5_Core& gl)
 {
     const std::filesystem::path cloth_cloth_shader_dir = shader_dir / "collision" / "cloth_cloth";
-    accumulate_.program = load_compute_program(
-        cloth_cloth_shader_dir / "vertex_face_accumulate.comp",
-        "Cloth-cloth vertex-face candidate accumulation",
-        gl);
-    initial_accumulate_.program = load_compute_program(
-        cloth_cloth_shader_dir / "initial_layer_accumulate.comp",
-        "Initial cloth-cloth layer candidate accumulation",
-        gl);
-    body_triangle_index_build_.program = load_compute_program(
-        cloth_cloth_shader_dir / "body_triangle_index_build.comp",
-        "Cloth body triangle index build",
-        gl);
-    apply_.program = load_compute_program(
-        cloth_cloth_shader_dir / "apply.comp",
-        "Cloth-cloth collision apply",
-        gl);
+    accumulate_.program = load_compute_program(cloth_cloth_shader_dir / "vertex_face_accumulate.comp", gl);
+    initial_accumulate_.program =
+        load_compute_program(cloth_cloth_shader_dir / "initial_layer_accumulate.comp", gl);
+    body_triangle_index_build_.program =
+        load_compute_program(cloth_cloth_shader_dir / "body_triangle_index_build.comp", gl);
+    apply_.program = load_compute_program(cloth_cloth_shader_dir / "apply.comp", gl);
     accumulate_.max_candidates = gl.glGetUniformLocation(accumulate_.program, "uMaxCandidateCount");
     accumulate_.collision_thickness = gl.glGetUniformLocation(accumulate_.program, "uCollisionThickness");
     accumulate_.collision_stiffness = gl.glGetUniformLocation(accumulate_.program, "uCollisionStiffness");

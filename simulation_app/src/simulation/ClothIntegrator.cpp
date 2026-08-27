@@ -51,7 +51,7 @@ void ClothIntegrator::initialize(const std::filesystem::path& shader_dir,
         throw std::runtime_error("Cannot initialize cloth integrator with a non-positive time step.");
     }
 
-    program_ = load_compute_program(shader_dir / "cloth" / "integrate_cloth.comp", "Cloth integration", gl);
+    program_ = load_compute_program(shader_dir / "cloth" / "integrate_cloth.comp", gl);
     // shader program 안의 uniform 변수들 위치 저장
     vertex_offset_location_ = gl.glGetUniformLocation(program_, "uVertexOffset");
     vertex_count_location_ = gl.glGetUniformLocation(program_, "uVertexCount");

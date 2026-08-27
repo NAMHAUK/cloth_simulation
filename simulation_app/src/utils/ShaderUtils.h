@@ -17,7 +17,7 @@
 namespace {
 
 inline GLuint compile_compute_shader(const char* source,
-                                     const char* error_context,
+                                     const std::filesystem::path& shader_path,
                                      QOpenGLFunctions_4_5_Core& gl)
 {
     const GLuint shader = gl.glCreateShader(GL_COMPUTE_SHADER);
@@ -30,7 +30,7 @@ inline GLuint compile_compute_shader(const char* source,
         char log[1024] = {};
         gl.glGetShaderInfoLog(shader, sizeof(log), nullptr, log);
         gl.glDeleteShader(shader);
-        throw std::runtime_error(std::string(error_context) + " compute shader compile failed: " + log);
+        throw std::runtime_error("Failed to compile compute shader: " + shader_path.string() + "\n" + log);
     }
 
     return shader;
@@ -99,31 +99,28 @@ inline std::optional<std::string> load_shader_source(const std::filesystem::path
 
 }
 
-inline GLuint load_compute_program(const std::filesystem::path& shader_path,
-                                   const char* error_context,
-                                   QOpenGLFunctions_4_5_Core& gl)
+inline GLuint load_compute_program(const std::filesystem::path& shader_path, QOpenGLFunctions_4_5_Core& gl)
 {
     const auto shader_source = load_shader_source(shader_path, {});
     if (!shader_source) {
         throw std::runtime_error("Failed to load compute shader source: " + shader_path.string());
     }
 
-    const GLuint shader = compile_compute_shader(shader_source->c_str(), error_context, gl);
+    const GLuint shader = compile_compute_shader(shader_source->c_str(), shader_path, gl);
     const GLuint program = gl.glCreateProgram();
     gl.glAttachShader(program, shader);
     gl.glLinkProgram(program);
 
-    GLint success = 0;
-    gl.glGetProgramiv(program, GL_LINK_STATUS, &success);
-    if (!success) {
+    GLint linked = 0;
+    gl.glGetProgramiv(program, GL_LINK_STATUS, &linked);
+    gl.glDeleteShader(shader);
+    if (!linked) {
         char log[1024] = {};
         gl.glGetProgramInfoLog(program, sizeof(log), nullptr, log);
-        gl.glDeleteShader(shader);
         gl.glDeleteProgram(program);
-        throw std::runtime_error(std::string(error_context) + " compute program link failed: " + log);
+        throw std::runtime_error("Failed to link compute program: " + shader_path.string() + "\n" + log);
     }
 
-    gl.glDeleteShader(shader);
     return program;
 }
 

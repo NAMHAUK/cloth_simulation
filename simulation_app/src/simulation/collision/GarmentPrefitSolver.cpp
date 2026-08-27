@@ -28,8 +28,7 @@ bool GarmentPrefitSolver::is_initialized() const
 
 void GarmentPrefitSolver::initialize(const std::filesystem::path& shader_dir, QOpenGLFunctions_4_5_Core& gl)
 {
-    program_ =
-        load_compute_program(shader_dir / "cloth" / "setup" / "garment_prefit.comp", "Garment pre-fit", gl);
+    program_ = load_compute_program(shader_dir / "cloth" / "setup" / "garment_prefit.comp", gl);
     vertex_offset_location_ = gl.glGetUniformLocation(program_, "uVertexOffset");
     vertex_count_location_ = gl.glGetUniformLocation(program_, "uVertexCount");
     search_radius_squared_location_ = gl.glGetUniformLocation(program_, "uSearchRadiusSquared");
