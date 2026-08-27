@@ -9,7 +9,6 @@
 
 namespace {
 constexpr std::uint32_t candidate_detect_local_size = 128u;
-constexpr std::uint32_t candidate_accumulate_local_size = 128u;
 }
 
 // Initialization
@@ -67,7 +66,6 @@ void CollisionDetector::initialize(const std::filesystem::path& shader_dir, QOpe
         gl.glGetUniformLocation(cloth_cloth_vertex_face_.program, "uMaxCandidateCount");
 
     dispatch_size_.max_candidates = gl.glGetUniformLocation(dispatch_size_.program, "uMaxCandidateCount");
-    dispatch_size_.local_size = gl.glGetUniformLocation(dispatch_size_.program, "uLocalSize");
 
     if (cloth_vertex_body_face_.item_count < 0 ||
         cloth_vertex_body_face_.max_candidates < 0 ||
@@ -82,8 +80,7 @@ void CollisionDetector::initialize(const std::filesystem::path& shader_dir, QOpe
         cloth_cloth_vertex_face_.lower_vertex_count < 0 ||
         cloth_cloth_vertex_face_.lower_bvh_root < 0 ||
         cloth_cloth_vertex_face_.max_candidates < 0 ||
-        dispatch_size_.max_candidates < 0 ||
-        dispatch_size_.local_size < 0) {
+        dispatch_size_.max_candidates < 0) {
         throw std::runtime_error("Collision candidate detection compute shader missing required uniforms.");
     }
 }
@@ -249,7 +246,6 @@ void CollisionDetector::build_dispatch_size(const CollisionCandidateBuffers& col
     gl.glUseProgram(shader.program);
     gl.glBindBuffersBase(GL_SHADER_STORAGE_BUFFER, 0, buffers.size(), buffers.data());
     gl.glProgramUniform1ui(shader.program, shader.max_candidates, collision_candidates.max_pairs);
-    gl.glProgramUniform1ui(shader.program, shader.local_size, candidate_accumulate_local_size);
     gl.glDispatchCompute(1, 1, 1);
     gl.glMemoryBarrier(GL_SHADER_STORAGE_BARRIER_BIT | GL_COMMAND_BARRIER_BIT);
 }
@@ -258,26 +254,26 @@ void CollisionDetector::build_dispatch_size(const CollisionCandidateBuffers& col
 
 bool CollisionDetector::is_initialized() const
 {
-    return has_programs();
+    return cloth_vertex_body_face_.program != 0 &&
+           cloth_edge_body_edge_.program != 0 &&
+           cloth_face_body_vertex_.program != 0 &&
+           cloth_cloth_vertex_face_.program != 0 &&
+           dispatch_size_.program != 0;
 }
 
 bool CollisionDetector::can_detect(const SimulationGpuView& views) const
 {
-    if (!is_initialized() ||
-        !is_valid_motion_view(views.cloth_motion) ||
-        !is_valid_cloth_mesh_topology_resource(views.cloth_topology) ||
-        views.stretch_constraints.edge_index_buffer == 0 ||
-        views.stretch_constraints.constraint_count == 0 ||
-        !is_valid_character_mesh_topology_resource(views.body_topology) ||
-        !is_valid_character_vertex_buffer_view(views.body_vertices) ||
-        !is_valid_bvh_buffer_view(views.body_triangle_bvh) ||
-        !is_valid_bvh_buffer_view(views.body_vertex_bvh) ||
-        !is_valid_bvh_buffer_view(views.body_edge_bvh) ||
-        !is_valid_collision_candidate_buffer_view(views.collision)) {
-        return false;
-    }
-
-    return !views.has_multiple_garments() || can_detect_prefit(views);
+    return is_initialized() &&
+           is_valid_motion_view(views.cloth_motion) &&
+           is_valid_cloth_mesh_topology_resource(views.cloth_topology) &&
+           views.stretch_constraints.edge_index_buffer != 0 &&
+           views.stretch_constraints.constraint_count != 0 &&
+           views.body_topology.bvh_vertex_index_buffer != 0 &&
+           is_valid_bvh_buffer_view(views.body_triangle_bvh) &&
+           is_valid_bvh_buffer_view(views.body_vertex_bvh) &&
+           is_valid_bvh_buffer_view(views.body_edge_bvh) &&
+           is_valid_collision_candidate_buffer_view(views.collision) &&
+           (!views.has_multiple_garments() || can_detect_prefit(views));
 }
 
 bool CollisionDetector::can_detect_prefit(const SimulationGpuView& views) const
@@ -289,15 +285,6 @@ bool CollisionDetector::can_detect_prefit(const SimulationGpuView& views) const
            is_valid_bvh_buffer_view(views.cloth_bvh) &&
            views.cloth_topology.vertex_count == views.cloth_motion.vertex_count &&
            is_valid_cloth_cloth_candidate_buffer_view(views.collision);
-}
-
-bool CollisionDetector::has_programs() const
-{
-    return cloth_vertex_body_face_.program != 0 &&
-           cloth_edge_body_edge_.program != 0 &&
-           cloth_face_body_vertex_.program != 0 &&
-           cloth_cloth_vertex_face_.program != 0 &&
-           dispatch_size_.program != 0;
 }
 
 // Release

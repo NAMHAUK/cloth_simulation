@@ -35,7 +35,6 @@ private:
     {
         GLuint program = 0;
         GLint max_candidates = -1;
-        GLint local_size = -1;
     };
 
     struct ClothClothDetectionProgram final
@@ -58,7 +57,6 @@ private:
                              QOpenGLFunctions_4_5_Core& gl) const;
 
     bool can_detect_prefit(const SimulationGpuView& views) const;
-    bool has_programs() const;
 
     CandidateDetectionProgram cloth_vertex_body_face_;
     CandidateDetectionProgram cloth_edge_body_edge_;
