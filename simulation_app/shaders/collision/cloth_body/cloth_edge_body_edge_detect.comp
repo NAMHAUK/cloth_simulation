@@ -24,11 +24,11 @@ layout(std430, binding = 4) readonly buffer BvhNodes {
     BvhNode body_edge_bvh_nodes[];
 };
 
-layout(std430, binding = 7) buffer Candidates {
+layout(std430, binding = 5) buffer Candidates {
     uvec2 candidates[];
 };
 
-layout(std430, binding = 8) buffer CandidateCount {
+layout(std430, binding = 6) buffer CandidateCount {
     uint candidate_count;
 };
 
