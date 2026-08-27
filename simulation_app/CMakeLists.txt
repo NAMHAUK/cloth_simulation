@@ -40,12 +40,10 @@ add_executable(simulation_app
     src/simulation/collision/Bvh.h
     src/simulation/collision/MeshBvhBuilder.cpp
     src/simulation/collision/MeshBvhBuilder.h
-    src/simulation/collision/ClothBodyCollisionDetector.cpp
-    src/simulation/collision/ClothBodyCollisionDetector.h
+    src/simulation/collision/CollisionDetector.cpp
+    src/simulation/collision/CollisionDetector.h
     src/simulation/collision/ClothBodyCollisionSolver.cpp
     src/simulation/collision/ClothBodyCollisionSolver.h
-    src/simulation/collision/ClothClothCollisionDetector.cpp
-    src/simulation/collision/ClothClothCollisionDetector.h
     src/simulation/collision/ClothClothCollisionSolver.cpp
     src/simulation/collision/ClothClothCollisionSolver.h
     src/simulation/collision/GarmentPrefitSolver.cpp
