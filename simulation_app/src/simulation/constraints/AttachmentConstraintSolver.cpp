@@ -46,13 +46,9 @@ void AttachmentConstraintSolver::initialize(const std::filesystem::path& shader_
                                             QOpenGLFunctions_4_5_Core& gl)
 {
     program_ = load_compute_program(shader_dir / "cloth" / "constraints" / "attachment.comp", gl);
-    constraint_offset_location_ = gl.glGetUniformLocation(program_, "uConstraintOffset");
-    constraint_count_location_ = gl.glGetUniformLocation(program_, "uConstraintCount");
-    stiffness_location_ = gl.glGetUniformLocation(program_, "uStiffness");
-
-    if (constraint_offset_location_ < 0 || constraint_count_location_ < 0 || stiffness_location_ < 0) {
-        throw std::runtime_error("Attachment constraint compute shader missing required uniforms.");
-    }
+    constraint_offset_location_ = require_uniform_location(program_, "uConstraintOffset", gl);
+    constraint_count_location_ = require_uniform_location(program_, "uConstraintCount", gl);
+    stiffness_location_ = require_uniform_location(program_, "uStiffness", gl);
 }
 
 bool AttachmentConstraintSolver::can_solve(const SimulationGpuView& views) const

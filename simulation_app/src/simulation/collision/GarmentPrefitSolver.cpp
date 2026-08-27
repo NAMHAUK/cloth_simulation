@@ -29,17 +29,10 @@ bool GarmentPrefitSolver::is_initialized() const
 void GarmentPrefitSolver::initialize(const std::filesystem::path& shader_dir, QOpenGLFunctions_4_5_Core& gl)
 {
     program_ = load_compute_program(shader_dir / "cloth" / "setup" / "garment_prefit.comp", gl);
-    vertex_offset_location_ = gl.glGetUniformLocation(program_, "uVertexOffset");
-    vertex_count_location_ = gl.glGetUniformLocation(program_, "uVertexCount");
-    search_radius_squared_location_ = gl.glGetUniformLocation(program_, "uSearchRadiusSquared");
-    pushout_margin_location_ = gl.glGetUniformLocation(program_, "uPushoutMargin");
-
-    if (vertex_offset_location_ < 0 ||
-        vertex_count_location_ < 0 ||
-        search_radius_squared_location_ < 0 ||
-        pushout_margin_location_ < 0) {
-        throw std::runtime_error("Garment pre-fit compute shader missing required uniforms.");
-    }
+    vertex_offset_location_ = require_uniform_location(program_, "uVertexOffset", gl);
+    vertex_count_location_ = require_uniform_location(program_, "uVertexCount", gl);
+    search_radius_squared_location_ = require_uniform_location(program_, "uSearchRadiusSquared", gl);
+    pushout_margin_location_ = require_uniform_location(program_, "uPushoutMargin", gl);
 }
 
 bool GarmentPrefitSolver::can_solve(const SimulationGpuView& views, GarmentLayer layer) const

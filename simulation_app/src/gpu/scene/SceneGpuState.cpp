@@ -70,12 +70,8 @@ void SceneGpuState::initialize_normal_programs(const std::filesystem::path& shad
     triangle_normal_program_ = load_compute_program(triangle_shader_path, gl);
     vertex_normal_program_ = load_compute_program(vertex_shader_path, gl);
 
-    triangle_count_location_ = gl.glGetUniformLocation(triangle_normal_program_, "uTriangleCount");
-    vertex_count_location_ = gl.glGetUniformLocation(vertex_normal_program_, "uVertexCount");
-
-    if (triangle_count_location_ < 0 || vertex_count_location_ < 0) {
-        throw std::runtime_error("Normal update compute shader missing required uniforms.");
-    }
+    triangle_count_location_ = require_uniform_location(triangle_normal_program_, "uTriangleCount", gl);
+    vertex_count_location_ = require_uniform_location(vertex_normal_program_, "uVertexCount", gl);
 }
 
 void SceneGpuState::initialize_attachment_target_program(const std::filesystem::path& shader_dir,
@@ -86,15 +82,9 @@ void SceneGpuState::initialize_attachment_target_program(const std::filesystem::
     attachment_target_program_ = load_compute_program(shader_path, gl);
 
     const GLuint program = attachment_target_program_;
-    attachment_constraint_offset_location_ = gl.glGetUniformLocation(program, "uConstraintOffset");
-    attachment_constraint_count_location_ = gl.glGetUniformLocation(program, "uConstraintCount");
-    const GLint surface_offset_location = gl.glGetUniformLocation(program, "uSurfaceOffset");
-
-    if (attachment_constraint_offset_location_ < 0 ||
-        attachment_constraint_count_location_ < 0 ||
-        surface_offset_location < 0) {
-        throw std::runtime_error("Attachment target build compute shader missing required uniforms.");
-    }
+    attachment_constraint_offset_location_ = require_uniform_location(program, "uConstraintOffset", gl);
+    attachment_constraint_count_location_ = require_uniform_location(program, "uConstraintCount", gl);
+    const GLint surface_offset_location = require_uniform_location(program, "uSurfaceOffset", gl);
 
     gl.glProgramUniform1f(program, surface_offset_location, surface_offset);
 }

@@ -29,19 +29,12 @@ void CharacterGpuState::initialize(const std::filesystem::path& shader_dir, QOpe
     position_program_ = load_compute_program(position_shader_path, gl);
     triangle_update_program_ = load_compute_program(triangle_shader_path, gl);
 
-    position_current_frame_base_location_ = gl.glGetUniformLocation(position_program_, "uCurrentFrameBase");
-    position_next_frame_base_location_ = gl.glGetUniformLocation(position_program_, "uNextFrameBase");
-    position_frame_alpha_location_ = gl.glGetUniformLocation(position_program_, "uFrameAlpha");
-    position_vertex_count_location_ = gl.glGetUniformLocation(position_program_, "uVertexCount");
-    triangle_count_location_ = gl.glGetUniformLocation(triangle_update_program_, "uTriangleCount");
-
-    if (position_current_frame_base_location_ < 0 ||
-        position_next_frame_base_location_ < 0 ||
-        position_frame_alpha_location_ < 0 ||
-        position_vertex_count_location_ < 0 ||
-        triangle_count_location_ < 0) {
-        throw std::runtime_error("Character GPU state update compute shader missing required uniforms.");
-    }
+    position_current_frame_base_location_ =
+        require_uniform_location(position_program_, "uCurrentFrameBase", gl);
+    position_next_frame_base_location_ = require_uniform_location(position_program_, "uNextFrameBase", gl);
+    position_frame_alpha_location_ = require_uniform_location(position_program_, "uFrameAlpha", gl);
+    position_vertex_count_location_ = require_uniform_location(position_program_, "uVertexCount", gl);
+    triangle_count_location_ = require_uniform_location(triangle_update_program_, "uTriangleCount", gl);
 
     initialize_gpu_resources(gl);
 }

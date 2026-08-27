@@ -53,37 +53,22 @@ void ClothIntegrator::initialize(const std::filesystem::path& shader_dir,
 
     program_ = load_compute_program(shader_dir / "cloth" / "integrate_cloth.comp", gl);
     // shader program 안의 uniform 변수들 위치 저장
-    vertex_offset_location_ = gl.glGetUniformLocation(program_, "uVertexOffset");
-    vertex_count_location_ = gl.glGetUniformLocation(program_, "uVertexCount");
-    delta_time_location_ = gl.glGetUniformLocation(program_, "uDeltaTime");
-    inverse_delta_time_location_ = gl.glGetUniformLocation(program_, "uInverseDeltaTime");
-    external_acceleration_location_ = gl.glGetUniformLocation(program_, "uExternalAcceleration");
-    velocity_damping_location_ = gl.glGetUniformLocation(program_, "uVelocityDamping");
-    frame_start_position_location_ = gl.glGetUniformLocation(program_, "uFrameStartPosition");
-    frame_end_position_location_ = gl.glGetUniformLocation(program_, "uFrameEndPosition");
-    frame_rotation_delta_location_ = gl.glGetUniformLocation(program_, "uFrameRotationDelta");
-    frame_start_velocity_location_ = gl.glGetUniformLocation(program_, "uFrameStartVelocity");
-    frame_acceleration_location_ = gl.glGetUniformLocation(program_, "uFrameAcceleration");
-    frame_start_angular_velocity_location_ = gl.glGetUniformLocation(program_, "uFrameStartAngularVelocity");
-    frame_angular_acceleration_location_ = gl.glGetUniformLocation(program_, "uFrameAngularAcceleration");
-    frame_inertia_scale_location_ = gl.glGetUniformLocation(program_, "uFrameInertiaScale");
-
-    if (vertex_offset_location_ < 0 ||
-        vertex_count_location_ < 0 ||
-        delta_time_location_ < 0 ||
-        inverse_delta_time_location_ < 0 ||
-        external_acceleration_location_ < 0 ||
-        velocity_damping_location_ < 0 ||
-        frame_start_position_location_ < 0 ||
-        frame_end_position_location_ < 0 ||
-        frame_rotation_delta_location_ < 0 ||
-        frame_start_velocity_location_ < 0 ||
-        frame_acceleration_location_ < 0 ||
-        frame_start_angular_velocity_location_ < 0 ||
-        frame_angular_acceleration_location_ < 0 ||
-        frame_inertia_scale_location_ < 0) {
-        throw std::runtime_error("Cloth integration compute shader missing required uniforms.");
-    }
+    vertex_offset_location_ = require_uniform_location(program_, "uVertexOffset", gl);
+    vertex_count_location_ = require_uniform_location(program_, "uVertexCount", gl);
+    delta_time_location_ = require_uniform_location(program_, "uDeltaTime", gl);
+    inverse_delta_time_location_ = require_uniform_location(program_, "uInverseDeltaTime", gl);
+    external_acceleration_location_ = require_uniform_location(program_, "uExternalAcceleration", gl);
+    velocity_damping_location_ = require_uniform_location(program_, "uVelocityDamping", gl);
+    frame_start_position_location_ = require_uniform_location(program_, "uFrameStartPosition", gl);
+    frame_end_position_location_ = require_uniform_location(program_, "uFrameEndPosition", gl);
+    frame_rotation_delta_location_ = require_uniform_location(program_, "uFrameRotationDelta", gl);
+    frame_start_velocity_location_ = require_uniform_location(program_, "uFrameStartVelocity", gl);
+    frame_acceleration_location_ = require_uniform_location(program_, "uFrameAcceleration", gl);
+    frame_start_angular_velocity_location_ =
+        require_uniform_location(program_, "uFrameStartAngularVelocity", gl);
+    frame_angular_acceleration_location_ =
+        require_uniform_location(program_, "uFrameAngularAcceleration", gl);
+    frame_inertia_scale_location_ = require_uniform_location(program_, "uFrameInertiaScale", gl);
 
     dt_ = dt;
     inverse_dt_ = 1.0f / dt_;

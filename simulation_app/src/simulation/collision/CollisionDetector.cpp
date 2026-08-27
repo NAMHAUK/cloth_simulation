@@ -21,60 +21,43 @@ void CollisionDetector::initialize(const std::filesystem::path& shader_dir, QOpe
         const auto shader_path = collision_shader_dir / "cloth_body" / "cloth_vertex_body_face_detect.comp";
         auto& shader = cloth_vertex_body_face_;
         shader.program = load_compute_program(shader_path, gl);
-        shader.item_count = gl.glGetUniformLocation(shader.program, "uClothVertexCount");
-        shader.max_candidates = gl.glGetUniformLocation(shader.program, "uMaxCandidateCount");
+        shader.item_count = require_uniform_location(shader.program, "uClothVertexCount", gl);
+        shader.max_candidates = require_uniform_location(shader.program, "uMaxCandidateCount", gl);
     }
 
     {
         const auto shader_path = collision_shader_dir / "cloth_body" / "cloth_edge_body_edge_detect.comp";
         auto& shader = cloth_edge_body_edge_;
         shader.program = load_compute_program(shader_path, gl);
-        shader.item_count = gl.glGetUniformLocation(shader.program, "uEdgeCount");
-        shader.max_candidates = gl.glGetUniformLocation(shader.program, "uMaxCandidateCount");
+        shader.item_count = require_uniform_location(shader.program, "uEdgeCount", gl);
+        shader.max_candidates = require_uniform_location(shader.program, "uMaxCandidateCount", gl);
     }
 
     {
         const auto shader_path = collision_shader_dir / "cloth_body" / "body_vertex_cloth_face_detect.comp";
         auto& shader = cloth_face_body_vertex_;
         shader.program = load_compute_program(shader_path, gl);
-        shader.item_count = gl.glGetUniformLocation(shader.program, "uTriangleCount");
-        shader.max_candidates = gl.glGetUniformLocation(shader.program, "uMaxCandidateCount");
+        shader.item_count = require_uniform_location(shader.program, "uTriangleCount", gl);
+        shader.max_candidates = require_uniform_location(shader.program, "uMaxCandidateCount", gl);
     }
 
     {
         const auto shader_path = collision_shader_dir / "cloth_cloth" / "vertex_face_detect.comp";
         auto& shader = cloth_cloth_vertex_face_;
         shader.program = load_compute_program(shader_path, gl);
-        shader.upper_vertex_offset = gl.glGetUniformLocation(shader.program, "uUpperVertexOffset");
-        shader.upper_vertex_count = gl.glGetUniformLocation(shader.program, "uUpperVertexCount");
-        shader.upper_bvh_root = gl.glGetUniformLocation(shader.program, "uUpperBvhRoot");
-        shader.lower_vertex_offset = gl.glGetUniformLocation(shader.program, "uLowerVertexOffset");
-        shader.lower_vertex_count = gl.glGetUniformLocation(shader.program, "uLowerVertexCount");
-        shader.lower_bvh_root = gl.glGetUniformLocation(shader.program, "uLowerBvhRoot");
-        shader.max_candidates = gl.glGetUniformLocation(shader.program, "uMaxCandidateCount");
+        shader.upper_vertex_offset = require_uniform_location(shader.program, "uUpperVertexOffset", gl);
+        shader.upper_vertex_count = require_uniform_location(shader.program, "uUpperVertexCount", gl);
+        shader.upper_bvh_root = require_uniform_location(shader.program, "uUpperBvhRoot", gl);
+        shader.lower_vertex_offset = require_uniform_location(shader.program, "uLowerVertexOffset", gl);
+        shader.lower_vertex_count = require_uniform_location(shader.program, "uLowerVertexCount", gl);
+        shader.lower_bvh_root = require_uniform_location(shader.program, "uLowerBvhRoot", gl);
+        shader.max_candidates = require_uniform_location(shader.program, "uMaxCandidateCount", gl);
     }
 
     {
         auto& shader = dispatch_size_;
         shader.program = load_compute_program(collision_shader_dir / "dispatch_size.comp", gl);
-        shader.max_candidates = gl.glGetUniformLocation(shader.program, "uMaxCandidateCount");
-    }
-
-    if (cloth_vertex_body_face_.item_count < 0 ||
-        cloth_vertex_body_face_.max_candidates < 0 ||
-        cloth_edge_body_edge_.item_count < 0 ||
-        cloth_edge_body_edge_.max_candidates < 0 ||
-        cloth_face_body_vertex_.item_count < 0 ||
-        cloth_face_body_vertex_.max_candidates < 0 ||
-        cloth_cloth_vertex_face_.upper_vertex_offset < 0 ||
-        cloth_cloth_vertex_face_.upper_vertex_count < 0 ||
-        cloth_cloth_vertex_face_.upper_bvh_root < 0 ||
-        cloth_cloth_vertex_face_.lower_vertex_offset < 0 ||
-        cloth_cloth_vertex_face_.lower_vertex_count < 0 ||
-        cloth_cloth_vertex_face_.lower_bvh_root < 0 ||
-        cloth_cloth_vertex_face_.max_candidates < 0 ||
-        dispatch_size_.max_candidates < 0) {
-        throw std::runtime_error("Collision candidate detection compute shader missing required uniforms.");
+        shader.max_candidates = require_uniform_location(shader.program, "uMaxCandidateCount", gl);
     }
 }
 

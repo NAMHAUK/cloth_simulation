@@ -124,6 +124,15 @@ inline GLuint load_compute_program(const std::filesystem::path& shader_path, QOp
     return program;
 }
 
+inline GLint require_uniform_location(GLuint program, const char* name, QOpenGLFunctions_4_5_Core& gl)
+{
+    const GLint location = gl.glGetUniformLocation(program, name);
+    if (location < 0) {
+        throw std::runtime_error(std::string{"Missing required uniform: "} + name);
+    }
+    return location;
+}
+
 constexpr std::uint32_t compute_group_count(std::uint32_t item_count, std::uint32_t local_size)
 {
     return (item_count + local_size - 1u) / local_size;
