@@ -117,7 +117,9 @@ void SimulationController::tick_frame()
     if (simulation_running_) {
         run_with_gl_context_([this](QOpenGLFunctions_4_5_Core& gl) {
             if (scene_.garments().empty()) {
-                simulation_pipeline_.step_character_only(scene_, gpu_state_, motion_step_index_, gl);
+                const float frame_position = params_.step.motion_frame_position(motion_step_index_ + 1u, 0);
+                const float frame_alpha = scene_.motion_frame_alpha(frame_position);
+                gpu_state_.update_character_pose(scene_, frame_alpha, gl);
             } else {
                 simulation_pipeline_.step(scene_, gpu_state_, motion_step_index_, gl);
             }

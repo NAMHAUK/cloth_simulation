@@ -2,6 +2,7 @@
 
 #include "gpu/cloth/ClothGpuState.h"
 #include "gpu/scene/SimulationGpuView.h"
+#include "simulation/SceneState.h"
 #include "utils/BufferUtils.h"
 #include "utils/ShaderUtils.h"
 
@@ -91,7 +92,7 @@ void ClothIntegrator::initialize(const std::filesystem::path& shader_dir,
 // 외부 힘 계산 -> 힘에 따른 위치 변화 GPU에서 갱신
 void ClothIntegrator::integrate(const SimulationGpuView& views,
                                 GarmentLayer layer,
-                                const Kinematics& reference_frame_kinematics,
+                                const ReferenceFrameKinematics& reference_frame_kinematics,
                                 QOpenGLFunctions_4_5_Core& gl) const
 {
     const auto& motion_view = views.cloth_motion;

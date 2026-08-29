@@ -6,12 +6,13 @@
 
 #include <algorithm>
 #include <cassert>
+#include <cmath>
 #include <stdexcept>
 #include <utility>
 
-namespace {
-constexpr std::size_t quaternion_components = 4u;
+#include <glm/geometric.hpp>
 
+namespace {
 glm::vec3 frame_position(const std::vector<float>& positions, std::uint32_t frame_index)
 {
     const std::size_t base = frame_index * position_components;
@@ -20,11 +21,29 @@ glm::vec3 frame_position(const std::vector<float>& positions, std::uint32_t fram
 
 glm::quat frame_orientation(const std::vector<float>& orientations, std::uint32_t frame_index)
 {
-    const std::size_t base = frame_index * quaternion_components;
+    const std::size_t base = frame_index * 4u;
     return glm::normalize(quat_xyzw(orientations[base],
                                     orientations[base + 1u],
                                     orientations[base + 2u],
                                     orientations[base + 3u]));
+}
+
+glm::vec3 angular_velocity(const glm::quat& start_orientation, const glm::quat& end_orientation, float dt)
+{
+    glm::quat delta = glm::normalize(end_orientation * glm::conjugate(start_orientation));
+    if (delta.w < 0.0f) {
+        delta = -delta;
+    }
+
+    const glm::vec3 vector{delta.x, delta.y, delta.z};
+    const float vector_length = glm::length(vector);
+
+    if (vector_length <= 1.0e-8f) {
+        return glm::vec3{0.0f};
+    } else {
+        const float angle = 2.0f * std::atan2(vector_length, delta.w);
+        return vector * (angle / (vector_length * dt));
+    }
 }
 }
 
@@ -35,10 +54,10 @@ void SceneState::set_character_motion(CharacterMotion motion)
     character_motion_ = std::move(motion);
     motion_frame_index_ = 0;
 
-    const auto pelvis = reference_frame(0u, GarmentCategory::Bottom);
-    const auto torso = reference_frame(0u, GarmentCategory::Top);
-    pelvis_kinematics_.reset(pelvis);
-    torso_kinematics_.reset(torso);
+    pelvis_kinematics_.reset(frame_position(character_motion_.pelvis_positions, 0u),
+                             frame_orientation(character_motion_.pelvis_orientations, 0u));
+    torso_kinematics_.reset(frame_position(character_motion_.torso_positions, 0u),
+                            frame_orientation(character_motion_.torso_orientations, 0u));
 }
 
 void SceneState::set_body_bvhs(Bvh triangle_bvh, Bvh vertex_bvh, Bvh edge_bvh)
@@ -65,41 +84,54 @@ glm::vec3 SceneState::character_root_position(std::uint32_t motion_frame_index) 
     return frame_position(character_motion_.pelvis_positions, motion_frame_index);
 }
 
+// Reference Frame Kinematics
+
 void SceneState::update_reference_frame_kinematics(float motion_frame_alpha, float dt)
 {
-    const auto pelvis = interpolated_reference_frame(motion_frame_alpha, GarmentCategory::Bottom);
-    const auto torso = interpolated_reference_frame(motion_frame_alpha, GarmentCategory::Top);
+    const auto& motion = character_motion_;
+    const auto next_frame_index = std::min(motion_frame_index_ + 1u, motion.frame_count - 1u);
 
-    pelvis_kinematics_.update(pelvis, dt);
-    torso_kinematics_.update(torso, dt);
+    auto pelvis_position = glm::mix(frame_position(motion.pelvis_positions, motion_frame_index_),
+                                    frame_position(motion.pelvis_positions, next_frame_index),
+                                    motion_frame_alpha);
+    auto pelvis_orientation = glm::slerp(frame_orientation(motion.pelvis_orientations, motion_frame_index_),
+                                         frame_orientation(motion.pelvis_orientations, next_frame_index),
+                                         motion_frame_alpha);
+    auto torso_position = glm::mix(frame_position(motion.torso_positions, motion_frame_index_),
+                                   frame_position(motion.torso_positions, next_frame_index),
+                                   motion_frame_alpha);
+    auto torso_orientation = glm::slerp(frame_orientation(motion.torso_orientations, motion_frame_index_),
+                                        frame_orientation(motion.torso_orientations, next_frame_index),
+                                        motion_frame_alpha);
+
+    pelvis_kinematics_.update(pelvis_position, glm::normalize(pelvis_orientation), dt);
+    torso_kinematics_.update(torso_position, glm::normalize(torso_orientation), dt);
 }
 
-CharacterReferenceFrame SceneState::interpolated_reference_frame(float motion_frame_alpha,
-                                                                 GarmentCategory category) const
+void ReferenceFrameKinematics::reset(const glm::vec3& position, const glm::quat& orientation)
 {
-    const auto next_frame_index = std::min(motion_frame_index_ + 1u, character_motion_.frame_count - 1u);
-    const auto current = reference_frame(motion_frame_index_, category);
-    const auto next = reference_frame(next_frame_index, category);
-
-    return {glm::mix(current.position, next.position, motion_frame_alpha),
-            glm::normalize(glm::slerp(current.orientation, next.orientation, motion_frame_alpha))};
+    *this = {};
+    start_position = end_position = position;
+    orientation_ = orientation;
 }
 
-CharacterReferenceFrame SceneState::reference_frame(std::uint32_t motion_frame_index,
-                                                    GarmentCategory category) const
+void ReferenceFrameKinematics::update(const glm::vec3& position, const glm::quat& orientation, float dt)
 {
-    switch (category) {
-    case GarmentCategory::Top:
-        return {frame_position(character_motion_.torso_positions, motion_frame_index),
-                frame_orientation(character_motion_.torso_orientations, motion_frame_index)};
+    assert(dt > 0.0f);
 
-    case GarmentCategory::Bottom:
-    case GarmentCategory::FullBody:
-        return {frame_position(character_motion_.pelvis_positions, motion_frame_index),
-                frame_orientation(character_motion_.pelvis_orientations, motion_frame_index)};
-    }
+    start_position = end_position;
+    end_position = position;
+    rotation_delta = glm::mat3_cast(glm::normalize(orientation * glm::conjugate(orientation_)));
 
-    throw std::runtime_error("Unsupported garment category.");
+    start_velocity = velocity_;
+    velocity_ = (end_position - start_position) / dt;
+    acceleration = (velocity_ - start_velocity) / dt;
+
+    start_angular_velocity = angular_velocity_;
+    angular_velocity_ = angular_velocity(orientation_, orientation, dt);
+    angular_acceleration = (angular_velocity_ - start_angular_velocity) / dt;
+
+    orientation_ = orientation;
 }
 
 // Garments
@@ -213,7 +245,7 @@ const std::vector<GarmentObject>& SceneState::garments() const
     return garments_;
 }
 
-const Kinematics& SceneState::reference_frame_kinematics(GarmentCategory category) const
+const ReferenceFrameKinematics& SceneState::reference_frame_kinematics(GarmentCategory category) const
 {
     switch (category) {
     case GarmentCategory::Top:

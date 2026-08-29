@@ -25,8 +25,6 @@ add_executable(simulation_app
     src/app/ProjectPaths.h
     src/app/SimulationController.cpp
     src/app/SimulationController.h
-    src/simulation/Kinematics.cpp
-    src/simulation/Kinematics.h
     src/gpu/scene/SimulationGpuView.h
     src/simulation/SimulationParams.h
     src/simulation/ClothIntegrator.cpp
