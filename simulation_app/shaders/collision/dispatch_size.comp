@@ -15,12 +15,14 @@ layout(std430, binding = 1) buffer DispatchSize {
 };
 
 uniform uint uMaxCandidateCount;
-uniform uint uLocalSize;
+
+const uint candidate_accumulate_local_size = 128u;
 
 void main()
 {
     uint active_candidate_count = min(candidate_count, uMaxCandidateCount);
-    dispatch_size_x = (active_candidate_count + uLocalSize - 1u) / uLocalSize;
+    dispatch_size_x = (active_candidate_count + candidate_accumulate_local_size - 1u) /
+                      candidate_accumulate_local_size;
     dispatch_size_y = 1u;
     dispatch_size_z = 1u;
 }

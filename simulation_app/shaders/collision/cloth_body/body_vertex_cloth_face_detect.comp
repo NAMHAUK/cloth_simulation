@@ -28,11 +28,11 @@ layout(std430, binding = 5) readonly buffer BodyVertexBounds {
     Aabb body_vertex_bounds[];
 };
 
-layout(std430, binding = 7) buffer Candidates {
+layout(std430, binding = 6) buffer Candidates {
     uvec2 candidates[];
 };
 
-layout(std430, binding = 8) buffer CandidateCount {
+layout(std430, binding = 7) buffer CandidateCount {
     uint candidate_count;
 };
 

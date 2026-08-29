@@ -20,7 +20,6 @@ SimulationPipeline::SimulationPipeline(SimulationParams params)
       bending_constraint_solver_(params.constraints.bending_stiffness),
       attachment_constraint_solver_(params.constraints.attachment_stiffness),
       ground_collision_solver_(params.collisions.ground),
-      cloth_body_collision_detector_(params.collisions.body.detection_distance),
       cloth_body_collision_solver_(params.collisions.body),
       cloth_cloth_collision_solver_(params.collisions.cloth),
       garment_prefit_solver_(params.prefit)
@@ -40,9 +39,8 @@ void SimulationPipeline::initialize(const std::filesystem::path& shader_dir, QOp
     bending_constraint_solver_.initialize(shader_dir, gl);
     attachment_constraint_solver_.initialize(shader_dir, gl);
     ground_collision_solver_.initialize(shader_dir, gl);
-    cloth_body_collision_detector_.initialize(shader_dir, gl);
+    collision_detector_.initialize(shader_dir, gl);
     cloth_body_collision_solver_.initialize(shader_dir, gl);
-    cloth_cloth_collision_detector_.initialize(shader_dir, gl);
     cloth_cloth_collision_solver_.initialize(shader_dir, gl);
     garment_prefit_solver_.initialize(shader_dir, gl);
 
@@ -70,7 +68,7 @@ void SimulationPipeline::prefit_garments(SceneGpuState& gpu_state,
     if (views.has_multiple_garments()) {
         for (std::uint32_t iteration = 0; iteration < params_.step.iteration_count; ++iteration) {
             gpu_state.update_cloth_bvh_bounds(views, params_.collisions.cloth.initial_detection_distance, gl);
-            cloth_cloth_collision_detector_.detect(views, gl);
+            collision_detector_.detect_prefit(views, gl);
             cloth_cloth_collision_solver_.solve_initial(views, gl);
             gpu_state.cloth_gpu_state().copy_current_positions_to_previous(gl);
         }
@@ -93,8 +91,7 @@ void SimulationPipeline::step(SceneState& scene,
         integrate_cloth(scene, views, gl);
 
         gpu_state.update_cloth_bvh_bounds(views, params_.collisions.cloth.detection_distance, gl);
-        cloth_body_collision_detector_.detect(views, gl);
-        cloth_cloth_collision_detector_.detect(views, gl);
+        collision_detector_.detect(views, gl);
 
         for (std::uint32_t iteration = 0; iteration < params_.step.iteration_count; ++iteration) {
             stretch_constraint_solver_.solve(views, gl);
@@ -145,9 +142,8 @@ void SimulationPipeline::release(QOpenGLFunctions_4_5_Core& gl)
 {
     garment_prefit_solver_.release(gl);
     cloth_cloth_collision_solver_.release(gl);
-    cloth_cloth_collision_detector_.release(gl);
     cloth_body_collision_solver_.release(gl);
-    cloth_body_collision_detector_.release(gl);
+    collision_detector_.release(gl);
     ground_collision_solver_.release(gl);
     attachment_constraint_solver_.release(gl);
     bending_constraint_solver_.release(gl);
