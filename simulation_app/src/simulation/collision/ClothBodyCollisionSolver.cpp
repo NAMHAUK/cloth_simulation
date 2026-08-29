@@ -90,45 +90,26 @@ void ClothBodyCollisionSolver::initialize(const std::filesystem::path& shader_di
                                           QOpenGLFunctions_4_5_Core& gl)
 {
     const std::filesystem::path cloth_body_shader_dir = shader_dir / "collision" / "cloth_body";
-    vf_accumulate_.program = load_compute_program(
-        cloth_body_shader_dir / "cloth_vertex_body_face_accumulate.comp",
-        "Cloth vertex/body face candidate accumulation",
-        gl);
-    ee_accumulate_.program = load_compute_program(
-        cloth_body_shader_dir / "cloth_edge_body_edge_accumulate.comp",
-        "Cloth edge/body edge candidate accumulation",
-        gl);
-    bf_accumulate_.program = load_compute_program(
-        cloth_body_shader_dir / "body_vertex_cloth_face_accumulate.comp",
-        "Body vertex/cloth face candidate accumulation",
-        gl);
-    apply_.program = load_compute_program(
-        cloth_body_shader_dir / "apply.comp",
-        "Cloth-body collision combined apply",
-        gl);
-    vf_accumulate_.max_candidates = gl.glGetUniformLocation(vf_accumulate_.program, "uMaxCandidateCount");
-    vf_accumulate_.thickness = gl.glGetUniformLocation(vf_accumulate_.program, "uCollisionThickness");
-    ee_accumulate_.max_candidates = gl.glGetUniformLocation(ee_accumulate_.program, "uMaxCandidateCount");
-    ee_accumulate_.thickness = gl.glGetUniformLocation(ee_accumulate_.program, "uCollisionThickness");
-    bf_accumulate_.max_candidates = gl.glGetUniformLocation(bf_accumulate_.program, "uMaxCandidateCount");
-    bf_accumulate_.thickness = gl.glGetUniformLocation(bf_accumulate_.program, "uCollisionThickness");
-    apply_.vertex_count = gl.glGetUniformLocation(apply_.program, "uVertexCount");
-    apply_.max_correction = gl.glGetUniformLocation(apply_.program, "uMaxCorrectionLength");
-    apply_.static_friction = gl.glGetUniformLocation(apply_.program, "uStaticFriction");
-    apply_.dynamic_friction = gl.glGetUniformLocation(apply_.program, "uDynamicFriction");
-
-    if (vf_accumulate_.max_candidates < 0 ||
-        vf_accumulate_.thickness < 0 ||
-        ee_accumulate_.max_candidates < 0 ||
-        ee_accumulate_.thickness < 0 ||
-        bf_accumulate_.max_candidates < 0 ||
-        bf_accumulate_.thickness < 0 ||
-        apply_.vertex_count < 0 ||
-        apply_.max_correction < 0 ||
-        apply_.static_friction < 0 ||
-        apply_.dynamic_friction < 0) {
-        throw std::runtime_error("Cloth-body collision compute shader missing required uniforms.");
-    }
+    vf_accumulate_.program =
+        load_compute_program(cloth_body_shader_dir / "cloth_vertex_body_face_accumulate.comp", gl);
+    ee_accumulate_.program =
+        load_compute_program(cloth_body_shader_dir / "cloth_edge_body_edge_accumulate.comp", gl);
+    bf_accumulate_.program =
+        load_compute_program(cloth_body_shader_dir / "body_vertex_cloth_face_accumulate.comp", gl);
+    apply_.program = load_compute_program(cloth_body_shader_dir / "apply.comp", gl);
+    vf_accumulate_.max_candidates =
+        require_uniform_location(vf_accumulate_.program, "uMaxCandidateCount", gl);
+    vf_accumulate_.thickness = require_uniform_location(vf_accumulate_.program, "uCollisionThickness", gl);
+    ee_accumulate_.max_candidates =
+        require_uniform_location(ee_accumulate_.program, "uMaxCandidateCount", gl);
+    ee_accumulate_.thickness = require_uniform_location(ee_accumulate_.program, "uCollisionThickness", gl);
+    bf_accumulate_.max_candidates =
+        require_uniform_location(bf_accumulate_.program, "uMaxCandidateCount", gl);
+    bf_accumulate_.thickness = require_uniform_location(bf_accumulate_.program, "uCollisionThickness", gl);
+    apply_.vertex_count = require_uniform_location(apply_.program, "uVertexCount", gl);
+    apply_.max_correction = require_uniform_location(apply_.program, "uMaxCorrectionLength", gl);
+    apply_.static_friction = require_uniform_location(apply_.program, "uStaticFriction", gl);
+    apply_.dynamic_friction = require_uniform_location(apply_.program, "uDynamicFriction", gl);
 }
 
 bool ClothBodyCollisionSolver::can_solve(const SimulationGpuView& views) const

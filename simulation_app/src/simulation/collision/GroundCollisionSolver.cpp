@@ -30,18 +30,11 @@ bool GroundCollisionSolver::is_initialized() const
 
 void GroundCollisionSolver::initialize(const std::filesystem::path& shader_dir, QOpenGLFunctions_4_5_Core& gl)
 {
-    program_ = load_compute_program(shader_dir / "collision" / "ground.comp", "Ground collision", gl);
-    vertex_count_location_ = gl.glGetUniformLocation(program_, "uVertexCount");
-    floor_height_location_ = gl.glGetUniformLocation(program_, "uFloorHeight");
-    static_friction_location_ = gl.glGetUniformLocation(program_, "uStaticFriction");
-    dynamic_friction_location_ = gl.glGetUniformLocation(program_, "uDynamicFriction");
-
-    if (vertex_count_location_ < 0 ||
-        floor_height_location_ < 0 ||
-        static_friction_location_ < 0 ||
-        dynamic_friction_location_ < 0) {
-        throw std::runtime_error("Ground collision compute shader missing required uniforms.");
-    }
+    program_ = load_compute_program(shader_dir / "collision" / "ground.comp", gl);
+    vertex_count_location_ = require_uniform_location(program_, "uVertexCount", gl);
+    floor_height_location_ = require_uniform_location(program_, "uFloorHeight", gl);
+    static_friction_location_ = require_uniform_location(program_, "uStaticFriction", gl);
+    dynamic_friction_location_ = require_uniform_location(program_, "uDynamicFriction", gl);
 }
 
 bool GroundCollisionSolver::can_solve(const SimulationGpuView& views) const

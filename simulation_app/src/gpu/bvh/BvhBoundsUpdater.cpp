@@ -54,37 +54,22 @@ void BvhBoundsUpdater::initialize(const std::filesystem::path& shader_dir,
                                   float body_detection_distance,
                                   QOpenGLFunctions_4_5_Core& gl)
 {
-    body_program_ =
-        load_compute_program(shader_dir / "bvh" / "body_bounds_update.comp", "Body BVH bounds update", gl);
-    cloth_program_ =
-        load_compute_program(shader_dir / "bvh" / "cloth_bounds_update.comp", "Cloth BVH bounds update", gl);
+    body_program_ = load_compute_program(shader_dir / "bvh" / "body_bounds_update.comp", gl);
+    cloth_program_ = load_compute_program(shader_dir / "bvh" / "cloth_bounds_update.comp", gl);
 
     body_triangle_first_node_index_location_ =
-        gl.glGetUniformLocation(body_program_, "uTriangleFirstNodeIndex");
-    body_triangle_node_count_location_ = gl.glGetUniformLocation(body_program_, "uTriangleNodeCount");
-    body_vertex_first_node_index_location_ = gl.glGetUniformLocation(body_program_, "uVertexFirstNodeIndex");
-    body_vertex_node_count_location_ = gl.glGetUniformLocation(body_program_, "uVertexNodeCount");
-    body_edge_first_node_index_location_ = gl.glGetUniformLocation(body_program_, "uEdgeFirstNodeIndex");
-    body_edge_node_count_location_ = gl.glGetUniformLocation(body_program_, "uEdgeNodeCount");
-    body_detection_distance_location_ = gl.glGetUniformLocation(body_program_, "uDetectionDistance");
-    cloth_level_first_node_index_location_ = gl.glGetUniformLocation(cloth_program_, "uLevelFirstNodeIndex");
-    cloth_level_node_count_location_ = gl.glGetUniformLocation(cloth_program_, "uLevelNodeCount");
-    cloth_bounds_margin_location_ = gl.glGetUniformLocation(cloth_program_, "uBoundsMargin");
-
-    if (body_triangle_first_node_index_location_ < 0 ||
-        body_triangle_node_count_location_ < 0 ||
-        body_vertex_first_node_index_location_ < 0 ||
-        body_vertex_node_count_location_ < 0 ||
-        body_edge_first_node_index_location_ < 0 ||
-        body_edge_node_count_location_ < 0 ||
-        body_detection_distance_location_ < 0) {
-        throw std::runtime_error("Body BVH bounds update compute shader missing required uniforms.");
-    }
-    if (std::min({cloth_level_first_node_index_location_,
-                  cloth_level_node_count_location_,
-                  cloth_bounds_margin_location_}) < 0) {
-        throw std::runtime_error("Cloth BVH bounds update compute shader missing required uniforms.");
-    }
+        require_uniform_location(body_program_, "uTriangleFirstNodeIndex", gl);
+    body_triangle_node_count_location_ = require_uniform_location(body_program_, "uTriangleNodeCount", gl);
+    body_vertex_first_node_index_location_ =
+        require_uniform_location(body_program_, "uVertexFirstNodeIndex", gl);
+    body_vertex_node_count_location_ = require_uniform_location(body_program_, "uVertexNodeCount", gl);
+    body_edge_first_node_index_location_ = require_uniform_location(body_program_, "uEdgeFirstNodeIndex", gl);
+    body_edge_node_count_location_ = require_uniform_location(body_program_, "uEdgeNodeCount", gl);
+    body_detection_distance_location_ = require_uniform_location(body_program_, "uDetectionDistance", gl);
+    cloth_level_first_node_index_location_ =
+        require_uniform_location(cloth_program_, "uLevelFirstNodeIndex", gl);
+    cloth_level_node_count_location_ = require_uniform_location(cloth_program_, "uLevelNodeCount", gl);
+    cloth_bounds_margin_location_ = require_uniform_location(cloth_program_, "uBoundsMargin", gl);
 
     gl.glProgramUniform1f(body_program_, body_detection_distance_location_, body_detection_distance);
 }
