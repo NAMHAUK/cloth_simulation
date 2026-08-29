@@ -79,6 +79,7 @@ add_executable(simulation_app
     src/utils/BufferUtils.h
     src/utils/FileUtils.h
     src/utils/NumericUtils.h
+    src/utils/ShaderUtils.cpp
     src/utils/ShaderUtils.h
     src/ui/MainWindow.cpp
     src/ui/MainWindow.h
