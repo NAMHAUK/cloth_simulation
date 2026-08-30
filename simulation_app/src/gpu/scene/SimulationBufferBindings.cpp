@@ -6,14 +6,13 @@
 #include <algorithm>
 #include <array>
 #include <cstdint>
-#include <iostream>
 #include <stdexcept>
 #include <string>
 
 namespace {
 namespace binding {
 
-// Cloth: 0..18
+// Cloth: 0 ~ 18
 namespace cloth {
 constexpr GLuint current_positions = 0;
 constexpr GLuint previous_positions = 1;
@@ -39,7 +38,7 @@ constexpr GLuint end = triangle_bounds + 1;
 constexpr std::size_t count = end - start;
 }
 
-// Character: 19..35
+// Character: 19 ~ 35
 namespace character {
 constexpr GLuint all_frame_positions = 19;
 constexpr GLuint previous_positions = 20;
@@ -63,7 +62,7 @@ constexpr GLuint end = vertex_normals + 1;
 constexpr std::size_t count = end - start;
 }
 
-// Collision: 36..50
+// Collision: 36 ~ 50
 namespace collision {
 constexpr GLuint vertex_body_face_candidates = 36;
 constexpr GLuint vertex_body_face_count = 37;
@@ -89,100 +88,54 @@ constexpr std::size_t count = collision::end;
 
 static_assert(cloth::end == character::start);
 static_assert(character::end == collision::start);
-static_assert(collision::end == count);
 }
-
-constexpr GLint required_compute_blocks = 14;
-constexpr GLint required_vertex_blocks = 3;
 
 template <std::size_t Size>
-void require_complete_range(const std::array<GLuint, Size>& buffers, const char* owner)
+void bind_buffers(GLuint first,
+                  const std::array<GLuint, Size>& buffers,
+                  const char* owner,
+                  QOpenGLFunctions_4_5_Core& gl)
 {
     if (std::any_of(buffers.begin(), buffers.end(), [](GLuint buffer) { return buffer == 0; })) {
-        throw std::runtime_error(
-            std::string{"Cannot bind "} + owner + " SSBO range: buffer object is missing.");
+        throw std::runtime_error(std::string{"Cannot bind "} + owner + " buffer object is missing.");
     }
+
+    gl.glBindBuffersBase(GL_SHADER_STORAGE_BUFFER, first, buffers.size(), buffers.data());
 }
 
-void require_initialized(GLuint fallback_buffer)
+void bind_dummy_buffers(GLuint first, GLsizei count, GLuint dummy_buffer, QOpenGLFunctions_4_5_Core& gl)
 {
-    if (fallback_buffer == 0) {
-        throw std::runtime_error("Simulation SSBO bindings are not initialized.");
-    }
-}
-
-void bind_fallback_range(GLuint first, GLsizei count, GLuint fallback_buffer, QOpenGLFunctions_4_5_Core& gl)
-{
-    if (fallback_buffer == 0) {
-        return;
-    }
-
     std::array<GLuint, binding::count> buffers;
-    buffers.fill(fallback_buffer);
+    buffers.fill(dummy_buffer);
     gl.glBindBuffersBase(GL_SHADER_STORAGE_BUFFER, first, count, buffers.data());
 }
 
-bool has_complete_candidate_buffers(const CollisionCandidateBuffers& buffers)
-{
-    return buffers.candidate_buffer != 0 && buffers.count_buffer != 0 && buffers.dispatch_size_buffer != 0;
 }
-
-bool has_any_candidate_buffer(const CollisionCandidateBuffers& buffers)
-{
-    return buffers.candidate_buffer != 0 || buffers.count_buffer != 0 || buffers.dispatch_size_buffer != 0;
-}
-}
-
-// Lifecycle
 
 void SimulationBufferBindings::initialize(QOpenGLFunctions_4_5_Core& gl)
 {
     GLint max_bindings = 0;
-    GLint max_compute_blocks = 0;
-    GLint max_vertex_blocks = 0;
     gl.glGetIntegerv(GL_MAX_SHADER_STORAGE_BUFFER_BINDINGS, &max_bindings);
-    gl.glGetIntegerv(GL_MAX_COMPUTE_SHADER_STORAGE_BLOCKS, &max_compute_blocks);
-    gl.glGetIntegerv(GL_MAX_VERTEX_SHADER_STORAGE_BLOCKS, &max_vertex_blocks);
 
-    if (max_bindings < binding::count ||
-        max_compute_blocks < required_compute_blocks ||
-        max_vertex_blocks < required_vertex_blocks) {
-        throw std::runtime_error("Insufficient SSBO limits: bindings required=" +
+    if (max_bindings < binding::count) {
+        throw std::runtime_error("Insufficient SSBO bindings: required=" +
                                  std::to_string(binding::count) +
                                  ", reported=" +
                                  std::to_string(max_bindings) +
-                                 "; compute blocks required=" +
-                                 std::to_string(required_compute_blocks) +
-                                 ", reported=" +
-                                 std::to_string(max_compute_blocks) +
-                                 "; vertex blocks required=" +
-                                 std::to_string(required_vertex_blocks) +
-                                 ", reported=" +
-                                 std::to_string(max_vertex_blocks) +
                                  '.');
     }
 
-    std::cout << "SSBO limits: bindings=" << max_bindings << ", compute blocks=" << max_compute_blocks
-              << ", vertex blocks=" << max_vertex_blocks << std::endl;
-
-    constexpr std::array<std::uint32_t, 4> fallback_data{};
-    gl.glCreateBuffers(1, &fallback_buffer_);
-    gl.glNamedBufferData(fallback_buffer_, sizeof(fallback_data), fallback_data.data(), GL_STATIC_DRAW);
-    bind_fallback_range(0, binding::count, fallback_buffer_, gl);
+    constexpr std::array<std::uint32_t, 4> dummy_data{};
+    gl.glCreateBuffers(1, &dummy_buffer_);
+    gl.glNamedBufferData(dummy_buffer_, sizeof(dummy_data), dummy_data.data(), GL_STATIC_DRAW);
+    bind_dummy_buffers(0, binding::count, dummy_buffer_, gl);
 }
 
-void SimulationBufferBindings::release(QOpenGLFunctions_4_5_Core& gl)
-{
-    gl.glDeleteBuffers(1, &fallback_buffer_);
-    fallback_buffer_ = 0;
-}
-
-// Owner ranges
+// binding
 
 void SimulationBufferBindings::bind_character(const CharacterBufferSet& buffers,
                                               QOpenGLFunctions_4_5_Core& gl) const
 {
-    require_initialized(fallback_buffer_);
     const std::array<GLuint, binding::character::count> binding_buffers{
         buffers.all_frame_positions,
         buffers.previous_position,
@@ -202,16 +155,11 @@ void SimulationBufferBindings::bind_character(const CharacterBufferSet& buffers,
         buffers.triangle_normal,
         buffers.vertex_normal,
     };
-    require_complete_range(binding_buffers, "character");
-    gl.glBindBuffersBase(GL_SHADER_STORAGE_BUFFER,
-                         binding::character::start,
-                         binding_buffers.size(),
-                         binding_buffers.data());
+    bind_buffers(binding::character::start, binding_buffers, "character", gl);
 }
 
 void SimulationBufferBindings::bind_cloth(const ClothBufferSet& buffers, QOpenGLFunctions_4_5_Core& gl) const
 {
-    require_initialized(fallback_buffer_);
     const std::array<GLuint, binding::cloth::count> binding_buffers{
         buffers.current_position,
         buffers.previous_position,
@@ -233,29 +181,13 @@ void SimulationBufferBindings::bind_cloth(const ClothBufferSet& buffers, QOpenGL
         buffers.bvh_node,
         buffers.triangle_bounds,
     };
-    require_complete_range(binding_buffers, "cloth");
-    gl.glBindBuffersBase(GL_SHADER_STORAGE_BUFFER,
-                         binding::cloth::start,
-                         binding_buffers.size(),
-                         binding_buffers.data());
+    bind_buffers(binding::cloth::start, binding_buffers, "cloth", gl);
 }
 
 void SimulationBufferBindings::bind_collision(const CollisionBuffers& buffers,
+                                              bool cloth_cloth_active,
                                               QOpenGLFunctions_4_5_Core& gl) const
 {
-    require_initialized(fallback_buffer_);
-    const CollisionCandidateBuffers& cloth_cloth = buffers.cloth_cloth_vertex_face;
-    if (has_any_candidate_buffer(cloth_cloth) && !has_complete_candidate_buffers(cloth_cloth)) {
-        throw std::runtime_error(
-            "Cannot bind collision SSBO range: optional cloth-cloth buffers are incomplete.");
-    }
-
-    const GLuint cloth_cloth_candidate =
-        cloth_cloth.candidate_buffer != 0 ? cloth_cloth.candidate_buffer : fallback_buffer_;
-    const GLuint cloth_cloth_count =
-        cloth_cloth.count_buffer != 0 ? cloth_cloth.count_buffer : fallback_buffer_;
-    const GLuint cloth_cloth_dispatch =
-        cloth_cloth.dispatch_size_buffer != 0 ? cloth_cloth.dispatch_size_buffer : fallback_buffer_;
     const std::array<GLuint, binding::collision::count> binding_buffers{
         buffers.cloth_vertex_body_face.candidate_buffer,
         buffers.cloth_vertex_body_face.count_buffer,
@@ -266,33 +198,37 @@ void SimulationBufferBindings::bind_collision(const CollisionBuffers& buffers,
         buffers.cloth_face_body_vertex.candidate_buffer,
         buffers.cloth_face_body_vertex.count_buffer,
         buffers.cloth_face_body_vertex.dispatch_size_buffer,
-        cloth_cloth_candidate,
-        cloth_cloth_count,
-        cloth_cloth_dispatch,
+        cloth_cloth_active ? buffers.cloth_cloth_vertex_face.candidate_buffer : dummy_buffer_,
+        cloth_cloth_active ? buffers.cloth_cloth_vertex_face.count_buffer : dummy_buffer_,
+        cloth_cloth_active ? buffers.cloth_cloth_vertex_face.dispatch_size_buffer : dummy_buffer_,
         buffers.normal_correction_sum_buffer,
         buffers.friction_correction_sum_buffer,
         buffers.contact_motion_delta_sum_buffer,
     };
-    require_complete_range(binding_buffers, "collision");
-    gl.glBindBuffersBase(GL_SHADER_STORAGE_BUFFER,
-                         binding::collision::start,
-                         binding_buffers.size(),
-                         binding_buffers.data());
+    bind_buffers(binding::collision::start, binding_buffers, "collision", gl);
 }
 
-// Fallback restoration
+// Binding reset
 
-void SimulationBufferBindings::restore_character(QOpenGLFunctions_4_5_Core& gl) const
+void SimulationBufferBindings::reset_character_bindings(QOpenGLFunctions_4_5_Core& gl) const
 {
-    bind_fallback_range(binding::character::start, binding::character::count, fallback_buffer_, gl);
+    bind_dummy_buffers(binding::character::start, binding::character::count, dummy_buffer_, gl);
 }
 
-void SimulationBufferBindings::restore_cloth(QOpenGLFunctions_4_5_Core& gl) const
+void SimulationBufferBindings::reset_cloth_bindings(QOpenGLFunctions_4_5_Core& gl) const
 {
-    bind_fallback_range(binding::cloth::start, binding::cloth::count, fallback_buffer_, gl);
+    bind_dummy_buffers(binding::cloth::start, binding::cloth::count, dummy_buffer_, gl);
 }
 
-void SimulationBufferBindings::restore_collision(QOpenGLFunctions_4_5_Core& gl) const
+void SimulationBufferBindings::reset_collision_bindings(QOpenGLFunctions_4_5_Core& gl) const
 {
-    bind_fallback_range(binding::collision::start, binding::collision::count, fallback_buffer_, gl);
+    bind_dummy_buffers(binding::collision::start, binding::collision::count, dummy_buffer_, gl);
+}
+
+// release
+
+void SimulationBufferBindings::release(QOpenGLFunctions_4_5_Core& gl)
+{
+    gl.glDeleteBuffers(1, &dummy_buffer_);
+    dummy_buffer_ = 0;
 }
