@@ -3,6 +3,7 @@
 #include "gpu/bvh/BvhBoundsUpdater.h"
 #include "gpu/character/CharacterGpuState.h"
 #include "gpu/cloth/ClothGpuState.h"
+#include "gpu/scene/SimulationBufferBindings.h"
 #include "gpu/scene/SimulationGpuView.h"
 #include "simulation/SceneState.h"
 
@@ -57,6 +58,7 @@ private:
     void update_character_vertex_normals(QOpenGLFunctions_4_5_Core& gl);
 
     BvhBoundsUpdater bvh_bounds_updater_;
+    SimulationBufferBindings buffer_bindings_;
     CharacterGpuState character_gpu_state_;
     ClothGpuState cloth_gpu_state_;
     CollisionBuffers collision_buffers_;

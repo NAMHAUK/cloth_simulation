@@ -55,6 +55,7 @@ public:
     AttachmentConstraintBufferView attachment_constraint_buffer_view() const;
     ClothMeshTopologyResources mesh_topology_resources() const;
     ClothNormalResources mesh_normal_resources() const;
+    const ClothBufferSet& buffer_set() const;
     BvhBufferView cloth_bvh_buffer_view() const;
 
     void release(QOpenGLFunctions_4_5_Core& gl);

@@ -2,8 +2,11 @@
 
 #include <cstdint>
 #include <filesystem>
+#include <string>
 
 #include <QOpenGLFunctions_4_5_Core>
+
+std::string load_shader_source(const std::filesystem::path& shader_path);
 
 GLuint load_compute_program(const std::filesystem::path& shader_path, QOpenGLFunctions_4_5_Core& gl);
 

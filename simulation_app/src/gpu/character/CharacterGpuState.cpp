@@ -268,6 +268,11 @@ CharacterNormalResources CharacterGpuState::mesh_normal_resources() const
     return resources;
 }
 
+const CharacterBufferSet& CharacterGpuState::buffer_set() const
+{
+    return buffers_;
+}
+
 BvhBufferView CharacterGpuState::body_triangle_bvh_buffer_view() const
 {
     return {buffers_.body_triangle_bvh_node, buffers_.body_triangle_bounds, arm_triangle_ranges_};

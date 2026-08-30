@@ -633,6 +633,11 @@ ClothNormalResources ClothGpuState::mesh_normal_resources() const
     return normals;
 }
 
+const ClothBufferSet& ClothGpuState::buffer_set() const
+{
+    return state_.buffers;
+}
+
 BvhBufferView ClothGpuState::cloth_bvh_buffer_view() const
 {
     return {state_.buffers.bvh_node, state_.buffers.triangle_bounds};

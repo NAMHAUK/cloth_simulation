@@ -51,8 +51,10 @@ void SceneGpuState::initialize(const std::filesystem::path& shader_dir,
                                const SceneState& scene,
                                QOpenGLFunctions_4_5_Core& gl)
 {
+    buffer_bindings_.initialize(gl);
     bvh_bounds_updater_.initialize(shader_dir, body_detection_distance, gl);
     character_gpu_state_.initialize(shader_dir, gl);
+    buffer_bindings_.bind_character(character_gpu_state_.buffer_set(), gl);
 
     initialize_normal_programs(shader_dir, gl);
     initialize_attachment_target_program(shader_dir, attachment_surface_offset, gl);
@@ -128,6 +130,7 @@ void SceneGpuState::rebuild_garment_resources(const SceneState& scene,
     assert(!scene.garments().empty());
 
     cloth_gpu_state_.rebuild_buffers(scene.garments(), changed_layer, gl);
+    buffer_bindings_.bind_cloth(cloth_gpu_state_.buffer_set(), gl);
     update_cloth_normals(gl);
 }
 
@@ -154,6 +157,7 @@ void SceneGpuState::rebuild_collision_buffers(QOpenGLFunctions_4_5_Core& gl)
     create_buffer(collision_buffers_.normal_correction_sum_buffer, correction_bytes, gl);
     create_buffer(collision_buffers_.friction_correction_sum_buffer, correction_bytes, gl);
     create_buffer(collision_buffers_.contact_motion_delta_sum_buffer, correction_bytes, gl);
+    buffer_bindings_.bind_collision(collision_buffers_, gl);
 }
 
 void SceneGpuState::upload_garment_placement(const GarmentObject& garment, QOpenGLFunctions_4_5_Core& gl)
@@ -329,11 +333,13 @@ const ClothGpuState& SceneGpuState::cloth_gpu_state() const
 void SceneGpuState::release(QOpenGLFunctions_4_5_Core& gl)
 {
     release_garment_resources(gl);
+    buffer_bindings_.restore_character(gl);
     character_gpu_state_.release(gl);
     bvh_bounds_updater_.release(gl);
     gl.glDeleteProgram(vertex_normal_program_);
     gl.glDeleteProgram(triangle_normal_program_);
     gl.glDeleteProgram(attachment_target_program_);
+    buffer_bindings_.release(gl);
 
     triangle_normal_program_ = 0;
     vertex_normal_program_ = 0;
@@ -346,11 +352,13 @@ void SceneGpuState::release(QOpenGLFunctions_4_5_Core& gl)
 void SceneGpuState::release_garment_resources(QOpenGLFunctions_4_5_Core& gl)
 {
     release_collision_buffers(gl);
+    buffer_bindings_.restore_cloth(gl);
     cloth_gpu_state_.release(gl);
 }
 
 void SceneGpuState::release_collision_buffers(QOpenGLFunctions_4_5_Core& gl)
 {
+    buffer_bindings_.restore_collision(gl);
     delete_collision_candidate_buffer(collision_buffers_.cloth_vertex_body_face, gl);
     delete_collision_candidate_buffer(collision_buffers_.cloth_edge_body_edge, gl);
     delete_collision_candidate_buffer(collision_buffers_.cloth_face_body_vertex, gl);

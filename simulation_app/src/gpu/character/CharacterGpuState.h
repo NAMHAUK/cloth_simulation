@@ -35,6 +35,7 @@ public:
     CharacterVertexBufferView vertex_buffer_view() const;
     BodyTriangleResources body_triangle_resources() const;
     CharacterNormalResources mesh_normal_resources() const;
+    const CharacterBufferSet& buffer_set() const;
     BvhBufferView body_triangle_bvh_buffer_view() const;
     BvhBufferView body_vertex_bvh_buffer_view() const;
     BvhBufferView body_edge_bvh_buffer_view() const;

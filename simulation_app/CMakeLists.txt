@@ -26,6 +26,8 @@ add_executable(simulation_app
     src/app/SimulationController.cpp
     src/app/SimulationController.h
     src/gpu/scene/SimulationGpuView.h
+    src/gpu/scene/SimulationBufferBindings.cpp
+    src/gpu/scene/SimulationBufferBindings.h
     src/simulation/SimulationParams.h
     src/simulation/ClothIntegrator.cpp
     src/simulation/ClothIntegrator.h
@@ -95,6 +97,7 @@ add_executable(simulation_app
     src/ui/PlacementController.h
     shaders/rendering/viewer.vert
     shaders/rendering/viewer.frag
+    shaders/simulation_buffer_bindings.glsl
     shaders/rendering/background.vert
     shaders/rendering/background.frag
     shaders/mesh/triangle_normal.comp
