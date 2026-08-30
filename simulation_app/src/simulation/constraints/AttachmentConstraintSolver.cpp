@@ -1,6 +1,6 @@
 #include "simulation/constraints/AttachmentConstraintSolver.h"
 
-#include "gpu/scene/SimulationGpuView.h"
+#include "gpu/cloth/ClothGpuState.h"
 #include "utils/BufferUtils.h"
 #include "utils/ShaderUtils.h"
 
@@ -35,6 +35,7 @@ bool has_valid_attachment_ranges(const std::array<GarmentBufferState, 2>& garmen
                                        total_constraint_count));
     });
 }
+
 }
 
 AttachmentConstraintSolver::AttachmentConstraintSolver(float stiffness) : stiffness_(stiffness)
@@ -54,26 +55,28 @@ void AttachmentConstraintSolver::initialize(const std::filesystem::path& shader_
     stiffness_location_ = require_uniform_location(program_, "uStiffness", gl);
 }
 
-bool AttachmentConstraintSolver::can_solve(const SimulationGpuView& views) const
+bool AttachmentConstraintSolver::can_solve(const ClothGpuState& cloth_state) const
 {
+    const auto& garment_states = cloth_state.garment_buffer_states();
     return is_initialized() &&
-           has_attachment_constraints(views.garment_buffer_states) &&
-           has_valid_attachment_ranges(views.garment_buffer_states) &&
+           has_attachment_constraints(garment_states) &&
+           has_valid_attachment_ranges(garment_states) &&
            stiffness_ > 0.0f;
 }
 
-void AttachmentConstraintSolver::solve(const SimulationGpuView& views, QOpenGLFunctions_4_5_Core& gl) const
+void AttachmentConstraintSolver::solve(const ClothGpuState& cloth_state, QOpenGLFunctions_4_5_Core& gl) const
 {
-    if (!has_attachment_constraints(views.garment_buffer_states)) {
+    const auto& garment_states = cloth_state.garment_buffer_states();
+    if (!has_attachment_constraints(garment_states)) {
         return;
     }
 
-    assert(can_solve(views));
+    assert(can_solve(cloth_state));
 
     gl.glUseProgram(program_);
     gl.glProgramUniform1f(program_, stiffness_location_, std::clamp(stiffness_, 0.0f, 1.0f));
 
-    for (const GarmentBufferState& garment_state : views.garment_buffer_states) {
+    for (const GarmentBufferState& garment_state : garment_states) {
         if (garment_state.active_attachment_constraint_count == 0) {
             continue;
         }

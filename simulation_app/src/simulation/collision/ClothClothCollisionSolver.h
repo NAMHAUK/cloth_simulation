@@ -1,11 +1,11 @@
 #pragma once
 
-#include "gpu/scene/SimulationGpuView.h"
 #include <filesystem>
 
 #include <QOpenGLFunctions_4_5_Core>
 
 struct ClothCollisionParams;
+class SceneGpuState;
 
 class ClothClothCollisionSolver final
 {
@@ -16,12 +16,12 @@ public:
 
     bool is_initialized() const;
     void initialize(const std::filesystem::path& shader_dir, QOpenGLFunctions_4_5_Core& gl);
-    bool can_solve(const SimulationGpuView& views) const;
-    bool can_solve_initial(const SimulationGpuView& views) const;
-    bool can_update_body_surface_mapping(const SimulationGpuView& views) const;
-    void update_body_surface_mapping(const SimulationGpuView& views, QOpenGLFunctions_4_5_Core& gl) const;
-    void solve(const SimulationGpuView& views, QOpenGLFunctions_4_5_Core& gl) const;
-    void solve_initial(const SimulationGpuView& views, QOpenGLFunctions_4_5_Core& gl) const;
+    bool can_solve(const SceneGpuState& gpu_state) const;
+    bool can_solve_initial(const SceneGpuState& gpu_state) const;
+    bool can_update_body_surface_mapping(const SceneGpuState& gpu_state) const;
+    void update_body_surface_mapping(const SceneGpuState& gpu_state, QOpenGLFunctions_4_5_Core& gl) const;
+    void solve(const SceneGpuState& gpu_state, QOpenGLFunctions_4_5_Core& gl) const;
+    void solve_initial(const SceneGpuState& gpu_state, QOpenGLFunctions_4_5_Core& gl) const;
     void release(QOpenGLFunctions_4_5_Core& gl);
 
 private:
@@ -67,5 +67,5 @@ private:
     float max_correction_length_ = 0.0f;
     float surface_search_radius_ = 0.0f;
 
-    void apply_corrections(const SimulationGpuView& views, QOpenGLFunctions_4_5_Core& gl) const;
+    void apply_corrections(const SceneGpuState& gpu_state, QOpenGLFunctions_4_5_Core& gl) const;
 };

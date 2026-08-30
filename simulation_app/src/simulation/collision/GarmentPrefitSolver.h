@@ -7,7 +7,7 @@
 #include <QOpenGLFunctions_4_5_Core>
 
 struct PrefitParams;
-struct SimulationGpuView;
+class ClothGpuState;
 
 class GarmentPrefitSolver final
 {
@@ -18,8 +18,8 @@ public:
 
     bool is_initialized() const;
     void initialize(const std::filesystem::path& shader_dir, QOpenGLFunctions_4_5_Core& gl);
-    bool can_solve(const SimulationGpuView& views, GarmentLayer layer) const;
-    void solve(const SimulationGpuView& views, GarmentLayer layer, QOpenGLFunctions_4_5_Core& gl) const;
+    bool can_solve(const ClothGpuState& cloth_state, GarmentLayer layer) const;
+    void solve(const ClothGpuState& cloth_state, GarmentLayer layer, QOpenGLFunctions_4_5_Core& gl) const;
     void release(QOpenGLFunctions_4_5_Core& gl);
 
 private:

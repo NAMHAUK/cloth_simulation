@@ -1,7 +1,6 @@
 #include "simulation/constraints/StretchConstraintSolver.h"
 
 #include "gpu/cloth/ClothGpuState.h"
-#include "gpu/scene/SimulationGpuView.h"
 #include "utils/BufferUtils.h"
 #include "utils/ShaderUtils.h"
 
@@ -30,23 +29,22 @@ void StretchConstraintSolver::initialize(const std::filesystem::path& shader_dir
     stiffness_location_ = require_uniform_location(program_, "uStiffness", gl);
 }
 
-bool StretchConstraintSolver::can_solve(const SimulationGpuView& views) const
+bool StretchConstraintSolver::can_solve(const ClothGpuState& cloth_state) const
 {
+    const ClothBufferElementCounts& counts = cloth_state.element_counts();
     return is_initialized() &&
-           is_valid_distance_constraint_view(views.stretch_constraints) &&
+           has_valid_distance_constraints(counts.stretch_constraint, cloth_state.stretch_color_states()) &&
            stiffness_ > 0.0f;
 }
 
-void StretchConstraintSolver::solve(const SimulationGpuView& views, QOpenGLFunctions_4_5_Core& gl) const
+void StretchConstraintSolver::solve(const ClothGpuState& cloth_state, QOpenGLFunctions_4_5_Core& gl) const
 {
-    assert(can_solve(views));
-
-    const auto& constraint_view = views.stretch_constraints;
+    assert(can_solve(cloth_state));
 
     gl.glUseProgram(program_);
     gl.glProgramUniform1f(program_, stiffness_location_, std::clamp(stiffness_, 0.0f, 1.0f));
 
-    for (const ConstraintColorState& color_state : *constraint_view.color_states) {
+    for (const ConstraintColorState& color_state : cloth_state.stretch_color_states()) {
         if (color_state.count == 0) {
             continue;
         }

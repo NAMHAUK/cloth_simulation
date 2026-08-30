@@ -46,15 +46,3 @@ struct GarmentBufferState final
     std::uint32_t active_attachment_constraint_count = 0;
     std::vector<std::uint32_t> bvh_level_offsets;
 };
-
-struct ClothMeshTopologyResources final
-{
-    std::uint32_t vertex_count = 0;
-    std::uint32_t triangle_count = 0;
-};
-
-struct DistanceConstraintBufferView final
-{
-    std::uint32_t constraint_count = 0;
-    const std::vector<ConstraintColorState>* color_states = nullptr;
-};

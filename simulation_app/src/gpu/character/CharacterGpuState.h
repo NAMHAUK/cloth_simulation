@@ -30,7 +30,8 @@ public:
 
     void draw(QOpenGLFunctions_4_5_Core& gl) const;
 
-    CharacterMeshTopologyResources mesh_topology_resources() const;
+    std::uint32_t vertex_count() const;
+    std::uint32_t triangle_count() const;
     const CharacterBufferSet& buffer_set() const;
     glm::uvec4 body_arm_triangle_ranges() const;
 

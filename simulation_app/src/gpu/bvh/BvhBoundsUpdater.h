@@ -6,7 +6,7 @@
 
 #include <QOpenGLFunctions_4_5_Core>
 
-struct SimulationGpuView;
+class ClothGpuState;
 
 class BvhBoundsUpdater final
 {
@@ -23,14 +23,14 @@ public:
                                 const std::vector<std::uint32_t>& edge_level_offsets);
 
     void update_body_bvh(QOpenGLFunctions_4_5_Core& gl) const;
-    void update_cloth_bvh(const SimulationGpuView& views,
+    void update_cloth_bvh(const ClothGpuState& cloth_state,
                           float bounds_margin,
                           QOpenGLFunctions_4_5_Core& gl) const;
 
     void release(QOpenGLFunctions_4_5_Core& gl);
 
 private:
-    bool can_update_cloth(const SimulationGpuView& views, float bounds_margin) const;
+    bool can_update_cloth(const ClothGpuState& cloth_state, float bounds_margin) const;
 
     GLuint body_program_ = 0;
     GLint body_triangle_first_node_index_location_ = -1;

@@ -2,7 +2,6 @@
 
 #include "gpu/character/CharacterGpuDataTypes.h"
 #include "gpu/cloth/ClothGpuDataTypes.h"
-#include "gpu/scene/SimulationGpuView.h"
 
 #include <algorithm>
 #include <array>

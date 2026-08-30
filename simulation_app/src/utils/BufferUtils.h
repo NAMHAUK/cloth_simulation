@@ -1,9 +1,11 @@
 #pragma once
 
-#include "gpu/scene/SimulationGpuView.h"
+#include "asset/AssetDataTypes.h"
+#include "gpu/scene/SimulationBufferBindings.h"
 
 #include <cstddef>
 #include <cstdint>
+#include <vector>
 
 #include <QOpenGLFunctions_4_5_Core>
 
@@ -18,19 +20,18 @@ inline bool is_valid_buffer_access(std::uint32_t start_index, std::uint32_t coun
     return count != 0u && start_index <= total_count && count <= total_count - start_index;
 }
 
-inline bool is_valid_distance_constraint_view(const DistanceConstraintBufferView& constraint_view)
+inline bool has_valid_distance_constraints(std::uint32_t constraint_count,
+                                           const std::vector<ConstraintColorState>& color_states)
 {
-    return constraint_view.constraint_count != 0 &&
-           constraint_view.color_states != nullptr &&
-           !constraint_view.color_states->empty();
+    return constraint_count != 0u && !color_states.empty();
 }
 
-inline bool has_collision_candidate_capacity(const CollisionCandidateBufferView& buffers)
+inline bool has_collision_candidate_capacity(const CollisionCandidateBuffers& buffers)
 {
     return buffers.max_pairs != 0;
 }
 
-inline void clear_collision_candidate_counts(const CollisionCandidateBufferView& buffers,
+inline void clear_collision_candidate_counts(const CollisionCandidateBuffers& buffers,
                                              QOpenGLFunctions_4_5_Core& gl)
 {
     const std::uint32_t zero_uint = 0;

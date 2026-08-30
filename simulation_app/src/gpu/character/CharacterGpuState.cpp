@@ -206,12 +206,14 @@ void CharacterGpuState::draw(QOpenGLFunctions_4_5_Core& gl) const
 
 // Accessors
 
-CharacterMeshTopologyResources CharacterGpuState::mesh_topology_resources() const
+std::uint32_t CharacterGpuState::vertex_count() const
 {
-    CharacterMeshTopologyResources topology;
-    topology.vertex_count = vertex_count_;
-    topology.triangle_count = triangle_count_;
-    return topology;
+    return vertex_count_;
+}
+
+std::uint32_t CharacterGpuState::triangle_count() const
+{
+    return triangle_count_;
 }
 
 const CharacterBufferSet& CharacterGpuState::buffer_set() const

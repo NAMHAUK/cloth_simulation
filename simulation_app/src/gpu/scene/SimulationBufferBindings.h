@@ -1,10 +1,30 @@
 #pragma once
 
+#include <cstdint>
+
 #include <QOpenGLFunctions_4_5_Core>
 
 struct CharacterBufferSet;
 struct ClothBufferSet;
-struct CollisionBuffers;
+
+struct CollisionCandidateBuffers final
+{
+    GLuint candidate_buffer = 0;
+    GLuint count_buffer = 0;
+    GLuint dispatch_size_buffer = 0;
+    std::uint32_t max_pairs = 0;
+};
+
+struct CollisionBuffers final
+{
+    CollisionCandidateBuffers cloth_vertex_body_face;
+    CollisionCandidateBuffers cloth_edge_body_edge;
+    CollisionCandidateBuffers cloth_face_body_vertex;
+    CollisionCandidateBuffers cloth_cloth_vertex_face;
+    GLuint normal_correction_sum_buffer = 0;
+    GLuint friction_correction_sum_buffer = 0;
+    GLuint contact_motion_delta_sum_buffer = 0;
+};
 
 class SimulationBufferBindings final
 {

@@ -514,6 +514,12 @@ bool ClothGpuState::is_initialized() const
            !state_.bending_color_states.empty();
 }
 
+bool ClothGpuState::has_multiple_garments() const
+{
+    return state_.garments[GarmentLayer::Lower].vertex_count != 0u &&
+           state_.garments[GarmentLayer::Upper].vertex_count != 0u;
+}
+
 bool ClothGpuState::has_gpu_objects() const
 {
     return state_.buffers.vao != 0 &&
@@ -545,28 +551,19 @@ const std::array<GarmentBufferState, 2>& ClothGpuState::garment_buffer_states() 
     return state_.garments;
 }
 
-DistanceConstraintBufferView ClothGpuState::stretch_constraint_buffer_view() const
+const ClothBufferElementCounts& ClothGpuState::element_counts() const
 {
-    DistanceConstraintBufferView view;
-    view.constraint_count = state_.element_counts.stretch_constraint;
-    view.color_states = &state_.stretch_color_states;
-    return view;
+    return state_.element_counts;
 }
 
-DistanceConstraintBufferView ClothGpuState::bending_constraint_buffer_view() const
+const std::vector<ConstraintColorState>& ClothGpuState::stretch_color_states() const
 {
-    DistanceConstraintBufferView view;
-    view.constraint_count = state_.element_counts.bending_constraint;
-    view.color_states = &state_.bending_color_states;
-    return view;
+    return state_.stretch_color_states;
 }
 
-ClothMeshTopologyResources ClothGpuState::mesh_topology_resources() const
+const std::vector<ConstraintColorState>& ClothGpuState::bending_color_states() const
 {
-    ClothMeshTopologyResources topology;
-    topology.vertex_count = state_.element_counts.vertex;
-    topology.triangle_count = state_.element_counts.triangle;
-    return topology;
+    return state_.bending_color_states;
 }
 
 const ClothBufferSet& ClothGpuState::buffer_set() const

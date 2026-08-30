@@ -41,10 +41,6 @@ void delete_collision_candidate_buffer(CollisionCandidateBuffers& buffers, QOpen
     buffers = {};
 }
 
-CollisionCandidateBufferView collision_candidate_buffer_view(const CollisionCandidateBuffers& buffers)
-{
-    return {buffers.count_buffer, buffers.dispatch_size_buffer, buffers.max_pairs};
-}
 }
 
 // Initialization
@@ -144,22 +140,16 @@ void SceneGpuState::rebuild_collision_buffers(QOpenGLFunctions_4_5_Core& gl)
 {
     release_collision_buffers(gl);
 
-    const auto views = simulation_view();
-    const auto& topology = views.cloth_topology;
-    const auto& stretch_constraints = views.stretch_constraints;
+    const ClothBufferElementCounts& counts = cloth_gpu_state_.element_counts();
 
-    create_collision_candidate_buffer(collision_buffers_.cloth_vertex_body_face, topology.vertex_count, gl);
-    create_collision_candidate_buffer(collision_buffers_.cloth_edge_body_edge,
-                                      stretch_constraints.constraint_count,
-                                      gl);
-    create_collision_candidate_buffer(collision_buffers_.cloth_face_body_vertex, topology.triangle_count, gl);
-    if (views.has_multiple_garments()) {
-        create_collision_candidate_buffer(collision_buffers_.cloth_cloth_vertex_face,
-                                          topology.vertex_count,
-                                          gl);
+    create_collision_candidate_buffer(collision_buffers_.cloth_vertex_body_face, counts.vertex, gl);
+    create_collision_candidate_buffer(collision_buffers_.cloth_edge_body_edge, counts.stretch_constraint, gl);
+    create_collision_candidate_buffer(collision_buffers_.cloth_face_body_vertex, counts.triangle, gl);
+    if (cloth_gpu_state_.has_multiple_garments()) {
+        create_collision_candidate_buffer(collision_buffers_.cloth_cloth_vertex_face, counts.vertex, gl);
     }
 
-    const GLsizeiptr correction_bytes = byte_size<glm::ivec4>(topology.vertex_count);
+    const GLsizeiptr correction_bytes = byte_size<glm::ivec4>(counts.vertex);
     create_buffer(collision_buffers_.normal_correction_sum_buffer, correction_bytes, gl);
     create_buffer(collision_buffers_.friction_correction_sum_buffer, correction_bytes, gl);
     create_buffer(collision_buffers_.contact_motion_delta_sum_buffer, correction_bytes, gl);
@@ -181,8 +171,7 @@ void SceneGpuState::initialize_garment_attachments(const GarmentObject& garment,
 
 void SceneGpuState::build_attachment_targets(GarmentLayer layer, QOpenGLFunctions_4_5_Core& gl)
 {
-    const SimulationGpuView views = simulation_view();
-    const GarmentBufferState& garment_state = views.garment_buffer_states[layer];
+    const GarmentBufferState& garment_state = cloth_gpu_state_.garment_buffer_states()[layer];
     const std::uint32_t constraint_count = garment_state.attachment_constraint_count;
     if (constraint_count == 0u) {
         return;
@@ -222,12 +211,10 @@ void SceneGpuState::clear_garment_base_positions(QOpenGLFunctions_4_5_Core& gl)
     cloth_gpu_state_.clear_base_positions(gl);
 }
 
-void SceneGpuState::update_cloth_bvh_bounds(const SimulationGpuView& views,
-                                            float bounds_margin,
-                                            QOpenGLFunctions_4_5_Core& gl)
+void SceneGpuState::update_cloth_bvh_bounds(float bounds_margin, QOpenGLFunctions_4_5_Core& gl)
 {
-    if (views.has_multiple_garments()) {
-        bvh_bounds_updater_.update_cloth_bvh(views, bounds_margin, gl);
+    if (cloth_gpu_state_.has_multiple_garments()) {
+        bvh_bounds_updater_.update_cloth_bvh(cloth_gpu_state_, bounds_margin, gl);
     }
 }
 
@@ -235,30 +222,30 @@ void SceneGpuState::update_cloth_bvh_bounds(const SimulationGpuView& views,
 
 void SceneGpuState::update_cloth_normals(QOpenGLFunctions_4_5_Core& gl)
 {
-    const ClothMeshTopologyResources topology = cloth_gpu_state_.mesh_topology_resources();
+    const ClothBufferElementCounts& counts = cloth_gpu_state_.element_counts();
 
     // triangle normal update
     gl.glUseProgram(triangle_normal_program_);
-    gl.glProgramUniform1ui(triangle_normal_program_, triangle_count_location_, topology.triangle_count);
-    gl.glDispatchCompute(compute_group_count(topology.triangle_count, normal_update_local_size), 1, 1);
+    gl.glProgramUniform1ui(triangle_normal_program_, triangle_count_location_, counts.triangle);
+    gl.glDispatchCompute(compute_group_count(counts.triangle, normal_update_local_size), 1, 1);
     gl.glMemoryBarrier(GL_SHADER_STORAGE_BARRIER_BIT);
 
     // vertex normal update
     gl.glUseProgram(vertex_normal_program_);
-    gl.glProgramUniform1ui(vertex_normal_program_, vertex_count_location_, topology.vertex_count);
+    gl.glProgramUniform1ui(vertex_normal_program_, vertex_count_location_, counts.vertex);
     gl.glProgramUniform1i(vertex_normal_program_, use_character_buffers_location_, GL_FALSE);
-    gl.glDispatchCompute(compute_group_count(topology.vertex_count, normal_update_local_size), 1, 1);
+    gl.glDispatchCompute(compute_group_count(counts.vertex, normal_update_local_size), 1, 1);
     gl.glMemoryBarrier(GL_SHADER_STORAGE_BARRIER_BIT | GL_VERTEX_ATTRIB_ARRAY_BARRIER_BIT);
 }
 
 void SceneGpuState::update_character_vertex_normals(QOpenGLFunctions_4_5_Core& gl)
 {
-    const CharacterMeshTopologyResources topology = character_gpu_state_.mesh_topology_resources();
+    const std::uint32_t vertex_count = character_gpu_state_.vertex_count();
 
     gl.glUseProgram(vertex_normal_program_);
-    gl.glProgramUniform1ui(vertex_normal_program_, vertex_count_location_, topology.vertex_count);
+    gl.glProgramUniform1ui(vertex_normal_program_, vertex_count_location_, vertex_count);
     gl.glProgramUniform1i(vertex_normal_program_, use_character_buffers_location_, GL_TRUE);
-    gl.glDispatchCompute(compute_group_count(topology.vertex_count, normal_update_local_size), 1, 1);
+    gl.glDispatchCompute(compute_group_count(vertex_count, normal_update_local_size), 1, 1);
     gl.glMemoryBarrier(GL_SHADER_STORAGE_BARRIER_BIT | GL_VERTEX_ATTRIB_ARRAY_BARRIER_BIT);
 }
 
@@ -269,28 +256,6 @@ bool SceneGpuState::is_initialized() const
     return initialized_;
 }
 
-SimulationGpuView SceneGpuState::simulation_view() const
-{
-    SimulationGpuView views(cloth_gpu_state_.garment_buffer_states());
-    views.cloth_topology = cloth_gpu_state_.mesh_topology_resources();
-    views.stretch_constraints = cloth_gpu_state_.stretch_constraint_buffer_view();
-    views.bending_constraints = cloth_gpu_state_.bending_constraint_buffer_view();
-    views.body_topology = character_gpu_state_.mesh_topology_resources();
-    views.body_arm_triangle_ranges = character_gpu_state_.body_arm_triangle_ranges();
-    views.collision.cloth_vertex_body_face =
-        collision_candidate_buffer_view(collision_buffers_.cloth_vertex_body_face);
-    views.collision.cloth_edge_body_edge =
-        collision_candidate_buffer_view(collision_buffers_.cloth_edge_body_edge);
-    views.collision.cloth_face_body_vertex =
-        collision_candidate_buffer_view(collision_buffers_.cloth_face_body_vertex);
-    views.collision.cloth_cloth_vertex_face =
-        collision_candidate_buffer_view(collision_buffers_.cloth_cloth_vertex_face);
-    views.collision.normal_correction_sum_buffer = collision_buffers_.normal_correction_sum_buffer;
-    views.collision.friction_correction_sum_buffer = collision_buffers_.friction_correction_sum_buffer;
-    views.collision.contact_motion_delta_sum_buffer = collision_buffers_.contact_motion_delta_sum_buffer;
-    return views;
-}
-
 const CharacterGpuState& SceneGpuState::character_gpu_state() const
 {
     return character_gpu_state_;
@@ -299,6 +264,11 @@ const CharacterGpuState& SceneGpuState::character_gpu_state() const
 const ClothGpuState& SceneGpuState::cloth_gpu_state() const
 {
     return cloth_gpu_state_;
+}
+
+const CollisionBuffers& SceneGpuState::collision_buffers() const
+{
+    return collision_buffers_;
 }
 
 // Release

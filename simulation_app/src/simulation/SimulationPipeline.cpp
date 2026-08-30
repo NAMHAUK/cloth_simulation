@@ -110,25 +110,25 @@ void SimulationPipeline::prefit_garments(SceneGpuState& gpu_state,
     assert(is_initialized());
     assert(!garments.empty());
 
-    const auto views = gpu_state.simulation_view();
+    const ClothGpuState& cloth_state = gpu_state.cloth_gpu_state();
 
     // Garment pre-fit
     for (const GarmentObject* garment : garments) {
         for (std::uint32_t iteration = 0; iteration < params_.prefit.iteration_count; ++iteration) {
-            garment_prefit_solver_.solve(views, garment->layer, gl);
+            garment_prefit_solver_.solve(cloth_state, garment->layer, gl);
         }
     }
     gpu_state.cloth_gpu_state().copy_current_positions_to_previous(gl);
 
     // Initial cloth-cloth collision
-    if (views.has_multiple_garments()) {
+    if (cloth_state.has_multiple_garments()) {
         for (std::uint32_t iteration = 0; iteration < params_.step.iteration_count; ++iteration) {
-            gpu_state.update_cloth_bvh_bounds(views, params_.collisions.cloth.initial_detection_distance, gl);
-            collision_detector_.detect_prefit(views, gl);
-            cloth_cloth_collision_solver_.solve_initial(views, gl);
+            gpu_state.update_cloth_bvh_bounds(params_.collisions.cloth.initial_detection_distance, gl);
+            collision_detector_.detect_prefit(gpu_state, gl);
+            cloth_cloth_collision_solver_.solve_initial(gpu_state, gl);
             gpu_state.cloth_gpu_state().copy_current_positions_to_previous(gl);
         }
-        cloth_cloth_collision_solver_.update_body_surface_mapping(views, gl);
+        cloth_cloth_collision_solver_.update_body_surface_mapping(gpu_state, gl);
     }
 
     gpu_state.update_cloth_normals(gl);
@@ -159,28 +159,28 @@ void SimulationPipeline::step(SceneState& scene,
     }
 
     const auto step_start = CpuClock::now();
-    const auto views = gpu_state.simulation_view();
-    cloth_cloth_collision_solver_.update_body_surface_mapping(views, gl);
+    const ClothGpuState& cloth_state = gpu_state.cloth_gpu_state();
+    cloth_cloth_collision_solver_.update_body_surface_mapping(gpu_state, gl);
 
     double substep_cpu_ms = 0.0;
     double cloth_body_cpu_ms = 0.0;
     for (std::uint32_t substep = 0; substep < params_.step.substep_count; ++substep) {
         const auto substep_start = CpuClock::now();
         update_character_motion(scene, gpu_state, motion_step_index, substep + 1u, gl);
-        integrate_cloth(scene, views, gl);
+        integrate_cloth(scene, cloth_state, gl);
 
-        gpu_state.update_cloth_bvh_bounds(views, params_.collisions.cloth.detection_distance, gl);
-        collision_detector_.detect(views, gl);
+        gpu_state.update_cloth_bvh_bounds(params_.collisions.cloth.detection_distance, gl);
+        collision_detector_.detect(gpu_state, gl);
 
         for (std::uint32_t iteration = 0; iteration < params_.step.iteration_count; ++iteration) {
-            stretch_constraint_solver_.solve(views, gl);
-            bending_constraint_solver_.solve(views, gl);
-            attachment_constraint_solver_.solve(views, gl);
+            stretch_constraint_solver_.solve(cloth_state, gl);
+            bending_constraint_solver_.solve(cloth_state, gl);
+            attachment_constraint_solver_.solve(cloth_state, gl);
             const auto cloth_body_start = CpuClock::now();
-            cloth_body_collision_solver_.solve(views, gl);
+            cloth_body_collision_solver_.solve(gpu_state, gl);
             cloth_body_cpu_ms += measure_cpu_ms(cloth_body_start);
-            cloth_cloth_collision_solver_.solve(views, gl);
-            ground_collision_solver_.solve(views, gl);
+            cloth_cloth_collision_solver_.solve(gpu_state, gl);
+            ground_collision_solver_.solve(cloth_state, gl);
         }
         substep_cpu_ms += measure_cpu_ms(substep_start);
     }
@@ -210,15 +210,15 @@ void SimulationPipeline::update_character_motion(SceneState& scene,
 }
 
 void SimulationPipeline::integrate_cloth(const SceneState& scene,
-                                         const SimulationGpuView& views,
+                                         const ClothGpuState& cloth_state,
                                          QOpenGLFunctions_4_5_Core& gl) const
 {
     for (const GarmentObject& garment : scene.garments()) {
-        const GarmentBufferState& garment_state = views.garment_buffer_states[garment.layer];
+        const GarmentBufferState& garment_state = cloth_state.garment_buffer_states()[garment.layer];
         assert(garment_state.vertex_count != 0u);
 
         const auto& kinematics = scene.reference_frame_kinematics(garment.mesh.garment_category);
-        cloth_integrator_.integrate(views, garment.layer, kinematics, gl);
+        cloth_integrator_.integrate(cloth_state, garment.layer, kinematics, gl);
     }
 }
 

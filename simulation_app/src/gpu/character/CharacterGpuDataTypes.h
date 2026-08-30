@@ -24,9 +24,3 @@ struct CharacterBufferSet final
     GLuint triangle_normal = 0;
     GLuint vertex_normal = 0;
 };
-
-struct CharacterMeshTopologyResources final
-{
-    std::uint32_t vertex_count = 0;
-    std::uint32_t triangle_count = 0;
-};

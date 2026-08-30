@@ -1,7 +1,6 @@
 #include "simulation/ClothIntegrator.h"
 
 #include "gpu/cloth/ClothGpuState.h"
-#include "gpu/scene/SimulationGpuView.h"
 #include "simulation/SceneState.h"
 #include "utils/BufferUtils.h"
 #include "utils/ShaderUtils.h"
@@ -70,15 +69,15 @@ void ClothIntegrator::initialize(const std::filesystem::path& shader_dir,
 }
 
 // 외부 힘 계산 -> 힘에 따른 위치 변화 GPU에서 갱신
-void ClothIntegrator::integrate(const SimulationGpuView& views,
+void ClothIntegrator::integrate(const ClothGpuState& cloth_state,
                                 GarmentLayer layer,
                                 const ReferenceFrameKinematics& reference_frame_kinematics,
                                 QOpenGLFunctions_4_5_Core& gl) const
 {
-    const GarmentBufferState& garment_state = views.garment_buffer_states[layer];
+    const GarmentBufferState& garment_state = cloth_state.garment_buffer_states()[layer];
     const bool has_valid_vertices = is_valid_buffer_access(garment_state.vertex_start_index,
                                                            garment_state.vertex_count,
-                                                           views.cloth_topology.vertex_count);
+                                                           cloth_state.element_counts().vertex);
     if (!is_initialized() || !has_valid_vertices || dt_ <= 0.0f || inverse_dt_ <= 0.0f) {
         return;
     }

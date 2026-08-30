@@ -1,6 +1,6 @@
 #include "gpu/bvh/BvhBoundsUpdater.h"
 
-#include "gpu/scene/SimulationGpuView.h"
+#include "gpu/cloth/ClothGpuState.h"
 #include "utils/ShaderUtils.h"
 
 #include <algorithm>
@@ -101,24 +101,26 @@ void BvhBoundsUpdater::update_body_bvh(QOpenGLFunctions_4_5_Core& gl) const
     }
 }
 
-void BvhBoundsUpdater::update_cloth_bvh(const SimulationGpuView& views,
+void BvhBoundsUpdater::update_cloth_bvh(const ClothGpuState& cloth_state,
                                         float bounds_margin,
                                         QOpenGLFunctions_4_5_Core& gl) const
 {
-    assert(can_update_cloth(views, bounds_margin));
+    assert(can_update_cloth(cloth_state, bounds_margin));
+
+    const auto& garment_states = cloth_state.garment_buffer_states();
 
     gl.glUseProgram(cloth_program_);
     gl.glProgramUniform1f(cloth_program_, cloth_bounds_margin_location_, bounds_margin);
 
     std::size_t level_count = 0;
-    for (const GarmentBufferState& garment_state : views.garment_buffer_states) {
+    for (const GarmentBufferState& garment_state : garment_states) {
         if (!garment_state.bvh_level_offsets.empty()) {
             level_count = std::max(level_count, garment_state.bvh_level_offsets.size() - 1u);
         }
     }
 
     for (std::size_t level_index = 0; level_index < level_count; ++level_index) {
-        for (const GarmentBufferState& garment_state : views.garment_buffer_states) {
+        for (const GarmentBufferState& garment_state : garment_states) {
             const auto [first_node_index, node_count] =
                 valid_or_empty_level(garment_state.bvh_level_offsets, level_index);
             if (node_count == 0) {
@@ -136,17 +138,18 @@ void BvhBoundsUpdater::update_cloth_bvh(const SimulationGpuView& views,
 
 // Validation
 
-bool BvhBoundsUpdater::can_update_cloth(const SimulationGpuView& views, float bounds_margin) const
+bool BvhBoundsUpdater::can_update_cloth(const ClothGpuState& cloth_state, float bounds_margin) const
 {
-    const bool has_valid_bvh_levels = std::all_of(views.garment_buffer_states.begin(),
-                                                  views.garment_buffer_states.end(),
+    const auto& garment_states = cloth_state.garment_buffer_states();
+    const bool has_valid_bvh_levels = std::all_of(garment_states.begin(),
+                                                  garment_states.end(),
                                                   [](const GarmentBufferState& garment_state) {
                                                       return garment_state.vertex_count == 0u ||
                                                              garment_state.bvh_level_offsets.size() >= 2u;
                                                   });
     return cloth_program_ != 0 &&
-           views.cloth_topology.vertex_count != 0u &&
-           views.cloth_topology.triangle_count != 0u &&
+           cloth_state.element_counts().vertex != 0u &&
+           cloth_state.element_counts().triangle != 0u &&
            has_valid_bvh_levels &&
            std::isfinite(bounds_margin) &&
            bounds_margin >= 0.0f;

@@ -42,11 +42,12 @@ public:
     void draw_garment(GarmentLayer layer, QOpenGLFunctions_4_5_Core& gl) const;
 
     bool is_initialized() const;
+    bool has_multiple_garments() const;
 
     const std::array<GarmentBufferState, 2>& garment_buffer_states() const;
-    DistanceConstraintBufferView stretch_constraint_buffer_view() const;
-    DistanceConstraintBufferView bending_constraint_buffer_view() const;
-    ClothMeshTopologyResources mesh_topology_resources() const;
+    const ClothBufferElementCounts& element_counts() const;
+    const std::vector<ConstraintColorState>& stretch_color_states() const;
+    const std::vector<ConstraintColorState>& bending_color_states() const;
     const ClothBufferSet& buffer_set() const;
 
     void release(QOpenGLFunctions_4_5_Core& gl);

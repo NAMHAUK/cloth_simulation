@@ -1,12 +1,11 @@
 #pragma once
 
-#include "gpu/scene/SimulationGpuView.h"
-
 #include <filesystem>
 
 #include <QOpenGLFunctions_4_5_Core>
 
 struct BodyCollisionParams;
+class SceneGpuState;
 
 class ClothBodyCollisionSolver final
 {
@@ -17,8 +16,8 @@ public:
 
     bool is_initialized() const;
     void initialize(const std::filesystem::path& shader_dir, QOpenGLFunctions_4_5_Core& gl);
-    bool can_solve(const SimulationGpuView& views) const;
-    void solve(const SimulationGpuView& views, QOpenGLFunctions_4_5_Core& gl) const;
+    bool can_solve(const SceneGpuState& gpu_state) const;
+    void solve(const SceneGpuState& gpu_state, QOpenGLFunctions_4_5_Core& gl) const;
     void release(QOpenGLFunctions_4_5_Core& gl);
 
 private:
@@ -38,11 +37,11 @@ private:
         GLint dynamic_friction = -1;
     };
 
-    void clear_correction_sums(const SimulationGpuView& views, QOpenGLFunctions_4_5_Core& gl) const;
-    void vf_accumulate(const SimulationGpuView& views, QOpenGLFunctions_4_5_Core& gl) const;
-    void ee_accumulate(const SimulationGpuView& views, QOpenGLFunctions_4_5_Core& gl) const;
-    void bf_accumulate(const SimulationGpuView& views, QOpenGLFunctions_4_5_Core& gl) const;
-    void apply_combined_corrections(const SimulationGpuView& views, QOpenGLFunctions_4_5_Core& gl) const;
+    void clear_correction_sums(const SceneGpuState& gpu_state, QOpenGLFunctions_4_5_Core& gl) const;
+    void vf_accumulate(const SceneGpuState& gpu_state, QOpenGLFunctions_4_5_Core& gl) const;
+    void ee_accumulate(const SceneGpuState& gpu_state, QOpenGLFunctions_4_5_Core& gl) const;
+    void bf_accumulate(const SceneGpuState& gpu_state, QOpenGLFunctions_4_5_Core& gl) const;
+    void apply_combined_corrections(const SceneGpuState& gpu_state, QOpenGLFunctions_4_5_Core& gl) const;
 
     AccumulateStage vf_accumulate_;
     AccumulateStage ee_accumulate_;

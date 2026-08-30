@@ -1,6 +1,5 @@
 #pragma once
 
-#include "gpu/scene/SimulationGpuView.h"
 #include "simulation/ClothIntegrator.h"
 #include "simulation/SimulationParams.h"
 #include "simulation/collision/ClothBodyCollisionSolver.h"
@@ -22,6 +21,7 @@
 
 class SceneGpuState;
 class SceneState;
+class ClothGpuState;
 struct GarmentObject;
 class SimulationPipeline final
 {
@@ -47,7 +47,7 @@ private:
                                  std::uint32_t substep,
                                  QOpenGLFunctions_4_5_Core& gl) const;
     void integrate_cloth(const SceneState& scene,
-                         const SimulationGpuView& views,
+                         const ClothGpuState& cloth_state,
                          QOpenGLFunctions_4_5_Core& gl) const;
 
 public:

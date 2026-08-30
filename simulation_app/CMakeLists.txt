@@ -25,7 +25,6 @@ add_executable(simulation_app
     src/app/ProjectPaths.h
     src/app/SimulationController.cpp
     src/app/SimulationController.h
-    src/gpu/scene/SimulationGpuView.h
     src/gpu/scene/SimulationBufferBindings.cpp
     src/gpu/scene/SimulationBufferBindings.h
     src/simulation/SimulationParams.h
