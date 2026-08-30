@@ -40,7 +40,6 @@ public:
     void clear_base_positions(QOpenGLFunctions_4_5_Core& gl);
     void copy_current_positions_to_previous(QOpenGLFunctions_4_5_Core& gl) const;
 
-    void bind_vertex_normals(GLuint binding_index, QOpenGLFunctions_4_5_Core& gl) const;
     void draw_garment(GarmentLayer layer, QOpenGLFunctions_4_5_Core& gl) const;
 
     bool is_initialized() const;

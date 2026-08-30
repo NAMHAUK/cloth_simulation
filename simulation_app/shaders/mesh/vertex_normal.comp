@@ -1,24 +1,43 @@
 #version 430 core
 
+#include "../simulation_buffer_bindings.glsl"
+
 layout(local_size_x = 128) in;
 
-layout(std430, binding = 0) readonly buffer TriangleNormals {
-    vec4 triangle_normals[];
+layout(std430, binding = CLOTH_TRIANGLE_NORMALS) readonly buffer ClothTriangleNormals {
+    vec4 cloth_triangle_normals[];
 };
 
-layout(std430, binding = 1) readonly buffer AdjacentTriangleOffsets {
-    uint adjacent_triangle_offsets[];
+layout(std430, binding = CLOTH_ADJACENT_TRIANGLE_OFFSETS) readonly buffer ClothAdjacentTriangleOffsets {
+    uint cloth_adjacent_triangle_offsets[];
 };
 
-layout(std430, binding = 2) readonly buffer AdjacentTriangleIndices {
-    uint adjacent_triangle_indices[];
+layout(std430, binding = CLOTH_ADJACENT_TRIANGLE_INDICES) readonly buffer ClothAdjacentTriangleIndices {
+    uint cloth_adjacent_triangle_indices[];
 };
 
-layout(std430, binding = 3) writeonly buffer VertexNormals {
-    vec4 vertex_normals[];
+layout(std430, binding = CLOTH_VERTEX_NORMALS) writeonly buffer ClothVertexNormals {
+    vec4 cloth_vertex_normals[];
+};
+
+layout(std430, binding = BODY_TRIANGLE_NORMALS) readonly buffer CharacterTriangleNormals {
+    vec4 character_triangle_normals[];
+};
+
+layout(std430, binding = CHARACTER_ADJACENT_TRIANGLE_OFFSETS) readonly buffer CharacterAdjacentTriangleOffsets {
+    uint character_adjacent_triangle_offsets[];
+};
+
+layout(std430, binding = CHARACTER_ADJACENT_TRIANGLE_INDICES) readonly buffer CharacterAdjacentTriangleIndices {
+    uint character_adjacent_triangle_indices[];
+};
+
+layout(std430, binding = CHARACTER_VERTEX_NORMALS) writeonly buffer CharacterVertexNormals {
+    vec4 character_vertex_normals[];
 };
 
 uniform uint uVertexCount;
+uniform bool uUseCharacterBuffers;
 
 vec3 safe_normalize(vec3 normal)
 {
@@ -33,14 +52,24 @@ void main()
         return;
     }
 
-    uint begin = adjacent_triangle_offsets[vertex_index];
-    uint end = adjacent_triangle_offsets[vertex_index + 1u];
     vec3 normal_sum = vec3(0.0);
-    for (uint entry_index = begin; entry_index < end; ++entry_index) {
-        uint triangle_index = adjacent_triangle_indices[entry_index];
-        vec4 triangle_normal = triangle_normals[triangle_index];
-        normal_sum += triangle_normal.xyz * triangle_normal.w;
+    if (uUseCharacterBuffers) {
+        uint begin = character_adjacent_triangle_offsets[vertex_index];
+        uint end = character_adjacent_triangle_offsets[vertex_index + 1u];
+        for (uint entry_index = begin; entry_index < end; ++entry_index) {
+            uint triangle_index = character_adjacent_triangle_indices[entry_index];
+            vec4 triangle_normal = character_triangle_normals[triangle_index];
+            normal_sum += triangle_normal.xyz * triangle_normal.w;
+        }
+        character_vertex_normals[vertex_index] = vec4(safe_normalize(normal_sum), 0.0);
+    } else {
+        uint begin = cloth_adjacent_triangle_offsets[vertex_index];
+        uint end = cloth_adjacent_triangle_offsets[vertex_index + 1u];
+        for (uint entry_index = begin; entry_index < end; ++entry_index) {
+            uint triangle_index = cloth_adjacent_triangle_indices[entry_index];
+            vec4 triangle_normal = cloth_triangle_normals[triangle_index];
+            normal_sum += triangle_normal.xyz * triangle_normal.w;
+        }
+        cloth_vertex_normals[vertex_index] = vec4(safe_normalize(normal_sum), 0.0);
     }
-
-    vertex_normals[vertex_index] = vec4(safe_normalize(normal_sum), 0.0);
 }

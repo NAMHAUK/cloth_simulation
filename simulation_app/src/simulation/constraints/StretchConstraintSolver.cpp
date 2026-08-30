@@ -10,9 +10,6 @@
 #include <stdexcept>
 
 namespace {
-constexpr GLuint current_positions_binding = 0;
-constexpr GLuint edge_indices_binding = 1;
-constexpr GLuint rest_lengths_binding = 2;
 constexpr std::uint32_t stretch_constraint_local_size = 128;
 }
 
@@ -45,15 +42,9 @@ void StretchConstraintSolver::solve(const SimulationGpuView& views, QOpenGLFunct
 {
     assert(can_solve(views));
 
-    const auto& motion_view = views.cloth_motion;
     const auto& constraint_view = views.stretch_constraints;
 
     gl.glUseProgram(program_);
-    gl.glBindBufferBase(GL_SHADER_STORAGE_BUFFER,
-                        current_positions_binding,
-                        motion_view.current_position_buffer);
-    gl.glBindBufferBase(GL_SHADER_STORAGE_BUFFER, edge_indices_binding, constraint_view.edge_index_buffer);
-    gl.glBindBufferBase(GL_SHADER_STORAGE_BUFFER, rest_lengths_binding, constraint_view.rest_length_buffer);
     gl.glProgramUniform1f(program_, stiffness_location_, std::clamp(stiffness_, 0.0f, 1.0f));
 
     for (const ConstraintColorState& color_state : *constraint_view.color_states) {

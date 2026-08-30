@@ -486,11 +486,6 @@ void ClothGpuState::clear_base_positions(QOpenGLFunctions_4_5_Core& gl)
 }
 
 // Rendering
-void ClothGpuState::bind_vertex_normals(GLuint binding_index, QOpenGLFunctions_4_5_Core& gl) const
-{
-    gl.glBindBufferBase(GL_SHADER_STORAGE_BUFFER, binding_index, state_.buffers.vertex_normal);
-}
-
 void ClothGpuState::draw_garment(GarmentLayer layer, QOpenGLFunctions_4_5_Core& gl) const
 {
     const GarmentBufferState& garment_state = state_.garments[layer];

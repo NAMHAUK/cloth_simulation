@@ -24,6 +24,14 @@ public:
     void release(QOpenGLFunctions_4_5_Core& gl);
 
 private:
+    enum class CandidateKind : std::uint32_t
+    {
+        ClothVertexBodyFace = 0,
+        ClothEdgeBodyEdge = 1,
+        ClothFaceBodyVertex = 2,
+        ClothClothVertexFace = 3,
+    };
+
     struct CandidateDetectionProgram final
     {
         GLuint program = 0;
@@ -34,6 +42,7 @@ private:
     struct DispatchSizeProgram final
     {
         GLuint program = 0;
+        GLint candidate_kind = -1;
         GLint max_candidates = -1;
     };
 
@@ -53,7 +62,8 @@ private:
     void detect_cloth_edge_body_edge(const SimulationGpuView& views, QOpenGLFunctions_4_5_Core& gl) const;
     void detect_cloth_face_body_vertex(const SimulationGpuView& views, QOpenGLFunctions_4_5_Core& gl) const;
     void detect_cloth_cloth_vertex_face(const SimulationGpuView& views, QOpenGLFunctions_4_5_Core& gl) const;
-    void build_dispatch_size(const CollisionCandidateBuffers& collision_candidates,
+    void build_dispatch_size(CandidateKind candidate_kind,
+                             std::uint32_t max_candidates,
                              QOpenGLFunctions_4_5_Core& gl) const;
 
     bool can_detect_prefit(const SimulationGpuView& views) const;

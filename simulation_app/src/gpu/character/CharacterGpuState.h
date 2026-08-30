@@ -28,8 +28,6 @@ public:
     void update_pose(std::uint32_t frame_index, float frame_alpha, QOpenGLFunctions_4_5_Core& gl);
 
     void draw(QOpenGLFunctions_4_5_Core& gl) const;
-    void bind_current_positions(GLuint binding_index, QOpenGLFunctions_4_5_Core& gl) const;
-    void bind_vertex_normals(GLuint binding_index, QOpenGLFunctions_4_5_Core& gl) const;
 
     CharacterMeshTopologyResources mesh_topology_resources() const;
     CharacterVertexBufferView vertex_buffer_view() const;

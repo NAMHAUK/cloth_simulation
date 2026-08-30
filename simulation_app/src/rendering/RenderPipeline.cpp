@@ -6,9 +6,6 @@
 #include <glm/geometric.hpp>
 
 namespace {
-constexpr GLuint character_position_binding = 0;
-constexpr GLuint vertex_normal_binding = 1;
-
 const glm::vec3 light_direction_world = glm::normalize(glm::vec3{-0.4f, 0.8f, 0.3f});
 const glm::vec3 fill_light_direction_world = glm::normalize(glm::vec3{0.3f, 0.6f, -0.8f});
 constexpr float ambient_strength = 0.35f;
@@ -75,7 +72,6 @@ void RenderPipeline::draw(const SceneState& scene,
     viewer_shader_.set_normal_lighting_enabled(true, gl);
     const ClothGpuState& cloth_gpu_state = gpu_state.cloth_gpu_state();
     if (cloth_gpu_state.is_initialized()) {
-        cloth_gpu_state.bind_vertex_normals(vertex_normal_binding, gl);
         const std::vector<GarmentObject>& garments = scene.garments();
         for (const GarmentObject& garment : garments) {
             viewer_shader_.set_solid_color(garment.mesh.color, gl);
@@ -94,8 +90,6 @@ void RenderPipeline::draw(const SceneState& scene,
         gl.glDepthMask(GL_FALSE);
     }
 
-    character_gpu_state.bind_current_positions(character_position_binding, gl);
-    character_gpu_state.bind_vertex_normals(vertex_normal_binding, gl);
     viewer_shader_.set_character_position_buffer_mode(gl);
     viewer_shader_.set_vertex_color_mode(gl);
     viewer_shader_.set_normal_lighting_enabled(true, gl);

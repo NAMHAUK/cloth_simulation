@@ -9,11 +9,6 @@
 #include <stdexcept>
 
 namespace {
-constexpr GLuint current_positions_binding = 0;
-constexpr GLuint previous_positions_binding = 1;
-constexpr GLuint collision_pushouts_binding = 2;
-constexpr GLuint cloth_cloth_pushouts_binding = 3;
-constexpr GLuint contact_motion_deltas_binding = 4;
 constexpr std::uint32_t ground_collision_local_size = 128;
 }
 
@@ -54,26 +49,9 @@ void GroundCollisionSolver::solve(const SimulationGpuView& views, QOpenGLFunctio
     assert(can_solve(views));
 
     const auto& motion_view = views.cloth_motion;
-    const auto& collision_pushout_view = views.cloth_collision_pushout;
-    const auto& contact_motion_view = views.cloth_contact_motion;
 
     // shader & GPU 연결
     gl.glUseProgram(program_);
-    gl.glBindBufferBase(GL_SHADER_STORAGE_BUFFER,
-                        current_positions_binding,
-                        motion_view.current_position_buffer);
-    gl.glBindBufferBase(GL_SHADER_STORAGE_BUFFER,
-                        previous_positions_binding,
-                        motion_view.previous_position_buffer);
-    gl.glBindBufferBase(GL_SHADER_STORAGE_BUFFER,
-                        collision_pushouts_binding,
-                        collision_pushout_view.collision_pushout_buffer);
-    gl.glBindBufferBase(GL_SHADER_STORAGE_BUFFER,
-                        cloth_cloth_pushouts_binding,
-                        collision_pushout_view.cloth_cloth_pushout_buffer);
-    gl.glBindBufferBase(GL_SHADER_STORAGE_BUFFER,
-                        contact_motion_deltas_binding,
-                        contact_motion_view.contact_motion_delta_buffer);
 
     // shader에 값 전달
     gl.glProgramUniform1ui(program_, vertex_count_location_, motion_view.vertex_count);

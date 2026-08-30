@@ -4,7 +4,6 @@
 #include "utils/BufferUtils.h"
 #include "utils/ShaderUtils.h"
 
-#include <array>
 #include <cassert>
 #include <cstddef>
 #include <cstdint>
@@ -74,6 +73,8 @@ void SceneGpuState::initialize_normal_programs(const std::filesystem::path& shad
 
     triangle_count_location_ = require_uniform_location(triangle_normal_program_, "uTriangleCount", gl);
     vertex_count_location_ = require_uniform_location(vertex_normal_program_, "uVertexCount", gl);
+    use_character_buffers_location_ =
+        require_uniform_location(vertex_normal_program_, "uUseCharacterBuffers", gl);
 }
 
 void SceneGpuState::initialize_attachment_target_program(const std::filesystem::path& shader_dir,
@@ -182,17 +183,7 @@ void SceneGpuState::build_attachment_targets(GarmentLayer layer, QOpenGLFunction
         return;
     }
 
-    const std::array<GLuint, 6> buffers{
-        views.cloth_motion.current_position_buffer,
-        views.attachment_constraints.attachment_index_buffer,
-        views.attachment_constraints.barycentric_offset_buffer,
-        views.body_triangles.position_buffer,
-        views.body_triangles.normal_buffer,
-        views.body_triangle_bvh.node_buffer,
-    };
-
     gl.glUseProgram(attachment_target_program_);
-    gl.glBindBuffersBase(GL_SHADER_STORAGE_BUFFER, 0, buffers.size(), buffers.data());
     gl.glProgramUniform1ui(attachment_target_program_,
                            attachment_constraint_offset_location_,
                            garment_state.attachment_constraint_start_index);
@@ -240,32 +231,17 @@ void SceneGpuState::update_cloth_bvh_bounds(const SimulationGpuView& views,
 void SceneGpuState::update_cloth_normals(QOpenGLFunctions_4_5_Core& gl)
 {
     const ClothMeshTopologyResources topology = cloth_gpu_state_.mesh_topology_resources();
-    const ClothNormalResources normals = cloth_gpu_state_.mesh_normal_resources();
 
     // triangle normal update
-    const std::array<GLuint, 3> triangle_buffers{
-        topology.position_buffer,
-        topology.triangle_index_buffer,
-        normals.triangle_normal_buffer,
-    };
-
     gl.glUseProgram(triangle_normal_program_);
-    gl.glBindBuffersBase(GL_SHADER_STORAGE_BUFFER, 0, triangle_buffers.size(), triangle_buffers.data());
     gl.glProgramUniform1ui(triangle_normal_program_, triangle_count_location_, topology.triangle_count);
     gl.glDispatchCompute(compute_group_count(topology.triangle_count, normal_update_local_size), 1, 1);
     gl.glMemoryBarrier(GL_SHADER_STORAGE_BARRIER_BIT);
 
     // vertex normal update
-    const std::array<GLuint, 4> vertex_buffers{
-        normals.triangle_normal_buffer,
-        topology.adjacent_triangle_offsets_buffer,
-        topology.adjacent_triangle_indices_buffer,
-        normals.vertex_normal_buffer,
-    };
-
     gl.glUseProgram(vertex_normal_program_);
-    gl.glBindBuffersBase(GL_SHADER_STORAGE_BUFFER, 0, vertex_buffers.size(), vertex_buffers.data());
     gl.glProgramUniform1ui(vertex_normal_program_, vertex_count_location_, topology.vertex_count);
+    gl.glProgramUniform1i(vertex_normal_program_, use_character_buffers_location_, GL_FALSE);
     gl.glDispatchCompute(compute_group_count(topology.vertex_count, normal_update_local_size), 1, 1);
     gl.glMemoryBarrier(GL_SHADER_STORAGE_BARRIER_BIT | GL_VERTEX_ATTRIB_ARRAY_BARRIER_BIT);
 }
@@ -273,18 +249,10 @@ void SceneGpuState::update_cloth_normals(QOpenGLFunctions_4_5_Core& gl)
 void SceneGpuState::update_character_vertex_normals(QOpenGLFunctions_4_5_Core& gl)
 {
     const CharacterMeshTopologyResources topology = character_gpu_state_.mesh_topology_resources();
-    const CharacterNormalResources normals = character_gpu_state_.mesh_normal_resources();
-
-    const std::array<GLuint, 4> vertex_buffers{
-        normals.triangle_normal_buffer,
-        topology.adjacent_triangle_offsets_buffer,
-        topology.adjacent_triangle_indices_buffer,
-        normals.vertex_normal_buffer,
-    };
 
     gl.glUseProgram(vertex_normal_program_);
-    gl.glBindBuffersBase(GL_SHADER_STORAGE_BUFFER, 0, vertex_buffers.size(), vertex_buffers.data());
     gl.glProgramUniform1ui(vertex_normal_program_, vertex_count_location_, topology.vertex_count);
+    gl.glProgramUniform1i(vertex_normal_program_, use_character_buffers_location_, GL_TRUE);
     gl.glDispatchCompute(compute_group_count(topology.vertex_count, normal_update_local_size), 1, 1);
     gl.glMemoryBarrier(GL_SHADER_STORAGE_BARRIER_BIT | GL_VERTEX_ATTRIB_ARRAY_BARRIER_BIT);
 }
@@ -345,6 +313,7 @@ void SceneGpuState::release(QOpenGLFunctions_4_5_Core& gl)
     vertex_normal_program_ = 0;
     triangle_count_location_ = -1;
     vertex_count_location_ = -1;
+    use_character_buffers_location_ = -1;
     attachment_target_program_ = 0;
     initialized_ = false;
 }
