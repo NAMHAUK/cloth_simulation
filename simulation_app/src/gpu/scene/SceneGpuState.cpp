@@ -40,6 +40,11 @@ void delete_collision_candidate_buffer(CollisionCandidateBuffers& buffers, QOpen
     gl.glDeleteBuffers(1, &buffers.dispatch_size_buffer);
     buffers = {};
 }
+
+CollisionCandidateBufferView collision_candidate_buffer_view(const CollisionCandidateBuffers& buffers)
+{
+    return {buffers.count_buffer, buffers.dispatch_size_buffer, buffers.max_pairs};
+}
 }
 
 // Initialization
@@ -109,7 +114,7 @@ void SceneGpuState::initialize_character_resources(const SceneState& scene, QOpe
 void SceneGpuState::set_character_motion(const SceneState& scene, QOpenGLFunctions_4_5_Core& gl)
 {
     character_gpu_state_.set_motion(scene.character_motion(), gl);
-    bvh_bounds_updater_.update_body_bvh(simulation_view(), gl);
+    bvh_bounds_updater_.update_body_bvh(gl);
     update_character_vertex_normals(gl);
 }
 
@@ -118,7 +123,7 @@ void SceneGpuState::update_character_pose(const SceneState& scene,
                                           QOpenGLFunctions_4_5_Core& gl)
 {
     character_gpu_state_.update_pose(scene.motion_frame_index(), frame_alpha, gl);
-    bvh_bounds_updater_.update_body_bvh(simulation_view(), gl);
+    bvh_bounds_updater_.update_body_bvh(gl);
     update_character_vertex_normals(gl);
 }
 
@@ -267,22 +272,22 @@ bool SceneGpuState::is_initialized() const
 SimulationGpuView SceneGpuState::simulation_view() const
 {
     SimulationGpuView views(cloth_gpu_state_.garment_buffer_states());
-    views.cloth_motion = cloth_gpu_state_.motion_buffer_view();
-    views.cloth_collision_pushout = cloth_gpu_state_.collision_pushout_buffer_view();
-    views.cloth_contact_motion = cloth_gpu_state_.contact_motion_buffer_view();
-    views.cloth_body_triangle_indices = cloth_gpu_state_.body_triangle_index_buffer_view();
     views.cloth_topology = cloth_gpu_state_.mesh_topology_resources();
-    views.cloth_bvh = cloth_gpu_state_.cloth_bvh_buffer_view();
     views.stretch_constraints = cloth_gpu_state_.stretch_constraint_buffer_view();
     views.bending_constraints = cloth_gpu_state_.bending_constraint_buffer_view();
-    views.attachment_constraints = cloth_gpu_state_.attachment_constraint_buffer_view();
     views.body_topology = character_gpu_state_.mesh_topology_resources();
-    views.body_vertices = character_gpu_state_.vertex_buffer_view();
-    views.body_triangles = character_gpu_state_.body_triangle_resources();
-    views.body_triangle_bvh = character_gpu_state_.body_triangle_bvh_buffer_view();
-    views.body_vertex_bvh = character_gpu_state_.body_vertex_bvh_buffer_view();
-    views.body_edge_bvh = character_gpu_state_.body_edge_bvh_buffer_view();
-    views.collision = collision_buffers_;
+    views.body_arm_triangle_ranges = character_gpu_state_.body_arm_triangle_ranges();
+    views.collision.cloth_vertex_body_face =
+        collision_candidate_buffer_view(collision_buffers_.cloth_vertex_body_face);
+    views.collision.cloth_edge_body_edge =
+        collision_candidate_buffer_view(collision_buffers_.cloth_edge_body_edge);
+    views.collision.cloth_face_body_vertex =
+        collision_candidate_buffer_view(collision_buffers_.cloth_face_body_vertex);
+    views.collision.cloth_cloth_vertex_face =
+        collision_candidate_buffer_view(collision_buffers_.cloth_cloth_vertex_face);
+    views.collision.normal_correction_sum_buffer = collision_buffers_.normal_correction_sum_buffer;
+    views.collision.friction_correction_sum_buffer = collision_buffers_.friction_correction_sum_buffer;
+    views.collision.contact_motion_delta_sum_buffer = collision_buffers_.contact_motion_delta_sum_buffer;
     return views;
 }
 

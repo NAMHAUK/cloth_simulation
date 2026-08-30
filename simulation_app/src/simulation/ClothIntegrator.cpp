@@ -75,22 +75,11 @@ void ClothIntegrator::integrate(const SimulationGpuView& views,
                                 const ReferenceFrameKinematics& reference_frame_kinematics,
                                 QOpenGLFunctions_4_5_Core& gl) const
 {
-    const auto& motion_view = views.cloth_motion;
-    const auto& collision_pushout_view = views.cloth_collision_pushout;
-    const auto& contact_motion_view = views.cloth_contact_motion;
     const GarmentBufferState& garment_state = views.garment_buffer_states[layer];
     const bool has_valid_vertices = is_valid_buffer_access(garment_state.vertex_start_index,
                                                            garment_state.vertex_count,
-                                                           motion_view.vertex_count);
-    if (!is_initialized() ||
-        !is_valid_motion_view(motion_view) ||
-        !is_valid_collision_pushout_view(collision_pushout_view) ||
-        !is_valid_contact_motion_view(contact_motion_view) ||
-        motion_view.vertex_count != collision_pushout_view.vertex_count ||
-        motion_view.vertex_count != contact_motion_view.vertex_count ||
-        !has_valid_vertices ||
-        dt_ <= 0.0f ||
-        inverse_dt_ <= 0.0f) {
+                                                           views.cloth_topology.vertex_count);
+    if (!is_initialized() || !has_valid_vertices || dt_ <= 0.0f || inverse_dt_ <= 0.0f) {
         return;
     }
 

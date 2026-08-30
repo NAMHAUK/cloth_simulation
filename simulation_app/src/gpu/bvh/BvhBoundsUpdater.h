@@ -22,7 +22,7 @@ public:
                                 const std::vector<std::uint32_t>& vertex_level_offsets,
                                 const std::vector<std::uint32_t>& edge_level_offsets);
 
-    void update_body_bvh(const SimulationGpuView& views, QOpenGLFunctions_4_5_Core& gl) const;
+    void update_body_bvh(QOpenGLFunctions_4_5_Core& gl) const;
     void update_cloth_bvh(const SimulationGpuView& views,
                           float bounds_margin,
                           QOpenGLFunctions_4_5_Core& gl) const;

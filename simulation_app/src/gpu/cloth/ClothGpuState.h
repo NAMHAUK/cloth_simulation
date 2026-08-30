@@ -1,6 +1,5 @@
 #pragma once
 
-#include "gpu/bvh/BvhBufferView.h"
 #include "gpu/cloth/ClothGpuDataTypes.h"
 
 #include <array>
@@ -45,17 +44,10 @@ public:
     bool is_initialized() const;
 
     const std::array<GarmentBufferState, 2>& garment_buffer_states() const;
-    ClothMotionBufferView motion_buffer_view() const;
-    ClothCollisionPushoutBufferView collision_pushout_buffer_view() const;
-    ClothContactMotionBufferView contact_motion_buffer_view() const;
-    ClothBodyTriangleIndexBufferView body_triangle_index_buffer_view() const;
     DistanceConstraintBufferView stretch_constraint_buffer_view() const;
     DistanceConstraintBufferView bending_constraint_buffer_view() const;
-    AttachmentConstraintBufferView attachment_constraint_buffer_view() const;
     ClothMeshTopologyResources mesh_topology_resources() const;
-    ClothNormalResources mesh_normal_resources() const;
     const ClothBufferSet& buffer_set() const;
-    BvhBufferView cloth_bvh_buffer_view() const;
 
     void release(QOpenGLFunctions_4_5_Core& gl);
 

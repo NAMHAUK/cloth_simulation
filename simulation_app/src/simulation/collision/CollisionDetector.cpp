@@ -3,6 +3,7 @@
 #include "utils/BufferUtils.h"
 #include "utils/ShaderUtils.h"
 
+#include <algorithm>
 #include <cassert>
 #include <stdexcept>
 
@@ -116,9 +117,9 @@ void CollisionDetector::detect_cloth_vertex_body_face(const SimulationGpuView& v
     const auto& shader = cloth_vertex_body_face_;
     const auto& candidates = views.collision.cloth_vertex_body_face;
     gl.glUseProgram(shader.program);
-    gl.glProgramUniform1ui(shader.program, shader.item_count, views.cloth_motion.vertex_count);
+    gl.glProgramUniform1ui(shader.program, shader.item_count, views.cloth_topology.vertex_count);
     gl.glProgramUniform1ui(shader.program, shader.max_candidates, candidates.max_pairs);
-    gl.glDispatchCompute(compute_group_count(views.cloth_motion.vertex_count, candidate_detect_local_size),
+    gl.glDispatchCompute(compute_group_count(views.cloth_topology.vertex_count, candidate_detect_local_size),
                          1,
                          1);
     gl.glMemoryBarrier(GL_SHADER_STORAGE_BARRIER_BIT);
@@ -202,27 +203,34 @@ bool CollisionDetector::is_initialized() const
 bool CollisionDetector::can_detect(const SimulationGpuView& views) const
 {
     return is_initialized() &&
-           is_valid_motion_view(views.cloth_motion) &&
-           is_valid_cloth_mesh_topology_resource(views.cloth_topology) &&
-           views.stretch_constraints.edge_index_buffer != 0 &&
+           views.cloth_topology.vertex_count != 0u &&
+           views.cloth_topology.triangle_count != 0u &&
+           views.body_topology.vertex_count != 0u &&
+           views.body_topology.triangle_count != 0u &&
            views.stretch_constraints.constraint_count != 0 &&
-           views.body_topology.bvh_vertex_index_buffer != 0 &&
-           is_valid_bvh_buffer_view(views.body_triangle_bvh) &&
-           is_valid_bvh_buffer_view(views.body_vertex_bvh) &&
-           is_valid_bvh_buffer_view(views.body_edge_bvh) &&
-           is_valid_collision_candidate_buffer_view(views.collision) &&
+           has_collision_candidate_capacity(views.collision.cloth_vertex_body_face) &&
+           has_collision_candidate_capacity(views.collision.cloth_edge_body_edge) &&
+           has_collision_candidate_capacity(views.collision.cloth_face_body_vertex) &&
            (!views.has_multiple_garments() || can_detect_prefit(views));
 }
 
 bool CollisionDetector::can_detect_prefit(const SimulationGpuView& views) const
 {
-    return is_initialized() &&
-           views.has_multiple_garments() &&
-           is_valid_motion_view(views.cloth_motion) &&
-           is_valid_cloth_mesh_topology_resource(views.cloth_topology) &&
-           is_valid_bvh_buffer_view(views.cloth_bvh) &&
-           views.cloth_topology.vertex_count == views.cloth_motion.vertex_count &&
-           is_valid_cloth_cloth_candidate_buffer_view(views.collision);
+    if (!is_initialized() ||
+        !views.has_multiple_garments() ||
+        views.cloth_topology.vertex_count == 0u ||
+        !has_collision_candidate_capacity(views.collision.cloth_cloth_vertex_face)) {
+        return false;
+    }
+
+    return std::all_of(views.garment_buffer_states.begin(),
+                       views.garment_buffer_states.end(),
+                       [&views](const GarmentBufferState& garment_state) {
+                           return is_valid_buffer_access(garment_state.vertex_start_index,
+                                                         garment_state.vertex_count,
+                                                         views.cloth_topology.vertex_count) &&
+                                  !garment_state.bvh_level_offsets.empty();
+                       });
 }
 
 // Release

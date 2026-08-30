@@ -34,7 +34,6 @@ void BendingConstraintSolver::initialize(const std::filesystem::path& shader_dir
 bool BendingConstraintSolver::can_solve(const SimulationGpuView& views) const
 {
     return is_initialized() &&
-           is_valid_motion_view(views.cloth_motion) &&
            is_valid_distance_constraint_view(views.bending_constraints) &&
            stiffness_ > 0.0f;
 }

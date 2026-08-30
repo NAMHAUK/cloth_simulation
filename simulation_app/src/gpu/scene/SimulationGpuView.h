@@ -1,11 +1,12 @@
 #pragma once
 
-#include "gpu/bvh/BvhBufferView.h"
 #include "gpu/character/CharacterGpuDataTypes.h"
 #include "gpu/cloth/ClothGpuDataTypes.h"
 
 #include <array>
 #include <cstdint>
+
+#include <glm/vec4.hpp>
 
 #include <QOpenGLFunctions_4_5_Core>
 
@@ -28,6 +29,24 @@ struct CollisionBuffers final
     GLuint contact_motion_delta_sum_buffer = 0;
 };
 
+struct CollisionCandidateBufferView final
+{
+    GLuint count_buffer = 0;
+    GLuint dispatch_size_buffer = 0;
+    std::uint32_t max_pairs = 0;
+};
+
+struct CollisionBufferView final
+{
+    CollisionCandidateBufferView cloth_vertex_body_face;
+    CollisionCandidateBufferView cloth_edge_body_edge;
+    CollisionCandidateBufferView cloth_face_body_vertex;
+    CollisionCandidateBufferView cloth_cloth_vertex_face;
+    GLuint normal_correction_sum_buffer = 0;
+    GLuint friction_correction_sum_buffer = 0;
+    GLuint contact_motion_delta_sum_buffer = 0;
+};
+
 struct SimulationGpuView final
 {
     explicit SimulationGpuView(const std::array<GarmentBufferState, 2>& garment_states)
@@ -41,25 +60,15 @@ struct SimulationGpuView final
     }
 
     // Cloth state
-    ClothMotionBufferView cloth_motion;
-    ClothCollisionPushoutBufferView cloth_collision_pushout;
-    ClothContactMotionBufferView cloth_contact_motion;
-    ClothBodyTriangleIndexBufferView cloth_body_triangle_indices;
     ClothMeshTopologyResources cloth_topology;
-    BvhBufferView cloth_bvh;
     const std::array<GarmentBufferState, 2>& garment_buffer_states;
     DistanceConstraintBufferView stretch_constraints;
     DistanceConstraintBufferView bending_constraints;
-    AttachmentConstraintBufferView attachment_constraints;
 
     // Body collision state
     CharacterMeshTopologyResources body_topology;
-    CharacterVertexBufferView body_vertices;
-    BodyTriangleResources body_triangles;
-    BvhBufferView body_triangle_bvh;
-    BvhBufferView body_vertex_bvh;
-    BvhBufferView body_edge_bvh;
+    glm::uvec4 body_arm_triangle_ranges{};
 
     // Collision state
-    CollisionBuffers collision;
+    CollisionBufferView collision;
 };

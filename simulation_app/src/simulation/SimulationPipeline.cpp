@@ -107,6 +107,7 @@ void SimulationPipeline::prefit_garments(SceneGpuState& gpu_state,
                                          const std::vector<const GarmentObject*>& garments,
                                          QOpenGLFunctions_4_5_Core& gl)
 {
+    assert(is_initialized());
     assert(!garments.empty());
 
     const auto views = gpu_state.simulation_view();
@@ -138,6 +139,8 @@ void SimulationPipeline::step(SceneState& scene,
                               std::uint32_t motion_step_index,
                               QOpenGLFunctions_4_5_Core& gl)
 {
+    assert(is_initialized());
+
     const std::size_t gpu_query_index = gpu_time_query_index_;
     const GLuint gpu_query = gpu_time_queries_[gpu_query_index];
     bool is_gpu_query_active = !gpu_time_query_pending_[gpu_query_index];

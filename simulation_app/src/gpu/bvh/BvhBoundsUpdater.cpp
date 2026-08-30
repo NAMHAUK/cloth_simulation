@@ -1,7 +1,6 @@
 #include "gpu/bvh/BvhBoundsUpdater.h"
 
 #include "gpu/scene/SimulationGpuView.h"
-#include "utils/BufferUtils.h"
 #include "utils/ShaderUtils.h"
 
 #include <algorithm>
@@ -65,7 +64,7 @@ void BvhBoundsUpdater::set_body_level_offsets(const std::vector<std::uint32_t>& 
 
 // Bounds update
 
-void BvhBoundsUpdater::update_body_bvh(const SimulationGpuView&, QOpenGLFunctions_4_5_Core& gl) const
+void BvhBoundsUpdater::update_body_bvh(QOpenGLFunctions_4_5_Core& gl) const
 {
     gl.glUseProgram(body_program_);
 
@@ -139,11 +138,16 @@ void BvhBoundsUpdater::update_cloth_bvh(const SimulationGpuView& views,
 
 bool BvhBoundsUpdater::can_update_cloth(const SimulationGpuView& views, float bounds_margin) const
 {
+    const bool has_valid_bvh_levels = std::all_of(views.garment_buffer_states.begin(),
+                                                  views.garment_buffer_states.end(),
+                                                  [](const GarmentBufferState& garment_state) {
+                                                      return garment_state.vertex_count == 0u ||
+                                                             garment_state.bvh_level_offsets.size() >= 2u;
+                                                  });
     return cloth_program_ != 0 &&
-           is_valid_motion_view(views.cloth_motion) &&
-           is_valid_cloth_mesh_topology_resource(views.cloth_topology) &&
-           is_valid_bvh_buffer_view(views.cloth_bvh) &&
-           views.cloth_topology.vertex_count == views.cloth_motion.vertex_count &&
+           views.cloth_topology.vertex_count != 0u &&
+           views.cloth_topology.triangle_count != 0u &&
+           has_valid_bvh_levels &&
            std::isfinite(bounds_margin) &&
            bounds_margin >= 0.0f;
 }

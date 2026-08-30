@@ -27,33 +27,6 @@ struct CharacterBufferSet final
 
 struct CharacterMeshTopologyResources final
 {
-    GLuint triangle_index_buffer = 0;
-    GLuint adjacent_triangle_offsets_buffer = 0;
-    GLuint adjacent_triangle_indices_buffer = 0;
-    GLuint bvh_vertex_index_buffer = 0;
-    GLuint edge_index_buffer = 0;
-
     std::uint32_t vertex_count = 0;
     std::uint32_t triangle_count = 0;
-};
-
-struct CharacterVertexBufferView final
-{
-    GLuint previous_position_buffer = 0;
-    GLuint current_position_buffer = 0;
-    GLuint vertex_normal_buffer = 0;
-    std::uint32_t vertex_count = 0;
-};
-
-struct BodyTriangleResources final
-{
-    GLuint position_buffer = 0;
-    GLuint normal_buffer = 0;
-    std::uint32_t triangle_count = 0;
-};
-
-struct CharacterNormalResources final
-{
-    GLuint triangle_normal_buffer = 0;
-    GLuint vertex_normal_buffer = 0;
 };

@@ -35,12 +35,9 @@ bool GarmentPrefitSolver::can_solve(const SimulationGpuView& views, GarmentLayer
 {
     const GarmentBufferState& garment_state = views.garment_buffer_states[layer];
     return is_initialized() &&
-           is_valid_motion_view(views.cloth_motion) &&
            is_valid_buffer_access(garment_state.vertex_start_index,
                                   garment_state.vertex_count,
-                                  views.cloth_motion.vertex_count) &&
-           is_valid_body_triangle_resource(views.body_triangles) &&
-           is_valid_bvh_buffer_view(views.body_triangle_bvh) &&
+                                  views.cloth_topology.vertex_count) &&
            search_radius_ > 0.0f &&
            pushout_margin_ > 0.0f;
 }

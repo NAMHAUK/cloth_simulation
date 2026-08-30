@@ -209,41 +209,9 @@ void CharacterGpuState::draw(QOpenGLFunctions_4_5_Core& gl) const
 CharacterMeshTopologyResources CharacterGpuState::mesh_topology_resources() const
 {
     CharacterMeshTopologyResources topology;
-    topology.triangle_index_buffer = buffers_.triangle_index;
-    topology.adjacent_triangle_offsets_buffer = buffers_.adjacent_triangle_offsets;
-    topology.adjacent_triangle_indices_buffer = buffers_.adjacent_triangle_indices;
-    topology.bvh_vertex_index_buffer = buffers_.body_vertex_bvh_vertex_index;
-    topology.edge_index_buffer = buffers_.body_edge_index;
     topology.vertex_count = vertex_count_;
     topology.triangle_count = triangle_count_;
     return topology;
-}
-
-CharacterVertexBufferView CharacterGpuState::vertex_buffer_view() const
-{
-    CharacterVertexBufferView view;
-    view.previous_position_buffer = buffers_.previous_position;
-    view.current_position_buffer = buffers_.current_position;
-    view.vertex_normal_buffer = buffers_.vertex_normal;
-    view.vertex_count = vertex_count_;
-    return view;
-}
-
-BodyTriangleResources CharacterGpuState::body_triangle_resources() const
-{
-    BodyTriangleResources resources;
-    resources.position_buffer = buffers_.triangle_position;
-    resources.normal_buffer = buffers_.triangle_normal;
-    resources.triangle_count = triangle_count_;
-    return resources;
-}
-
-CharacterNormalResources CharacterGpuState::mesh_normal_resources() const
-{
-    CharacterNormalResources resources;
-    resources.triangle_normal_buffer = buffers_.triangle_normal;
-    resources.vertex_normal_buffer = buffers_.vertex_normal;
-    return resources;
 }
 
 const CharacterBufferSet& CharacterGpuState::buffer_set() const
@@ -251,19 +219,9 @@ const CharacterBufferSet& CharacterGpuState::buffer_set() const
     return buffers_;
 }
 
-BvhBufferView CharacterGpuState::body_triangle_bvh_buffer_view() const
+glm::uvec4 CharacterGpuState::body_arm_triangle_ranges() const
 {
-    return {buffers_.body_triangle_bvh_node, buffers_.body_triangle_bounds, arm_triangle_ranges_};
-}
-
-BvhBufferView CharacterGpuState::body_vertex_bvh_buffer_view() const
-{
-    return {buffers_.body_vertex_bvh_node, buffers_.body_vertex_bounds};
-}
-
-BvhBufferView CharacterGpuState::body_edge_bvh_buffer_view() const
-{
-    return {buffers_.body_edge_bvh_node, buffers_.body_edge_bounds};
+    return arm_triangle_ranges_;
 }
 
 // Release
