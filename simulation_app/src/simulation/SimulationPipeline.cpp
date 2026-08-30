@@ -5,9 +5,61 @@
 #include "utils/BufferUtils.h"
 
 #include <cassert>
+#include <chrono>
+#include <iostream>
 #include <stdexcept>
 
 #include <glm/vec3.hpp>
+
+namespace {
+using CpuClock = std::chrono::steady_clock;
+
+double measure_cpu_ms(CpuClock::time_point start)
+{
+    return std::chrono::duration<double, std::milli>(CpuClock::now() - start).count();
+}
+
+void report_cpu_timing(double step_ms, double substep_ms, double cloth_body_ms)
+{
+    constexpr std::uint32_t report_frame_count = 120;
+    static std::uint32_t frame_count = 0;
+    static double total_step_ms = 0.0;
+    static double total_substep_ms = 0.0;
+    static double total_cloth_body_ms = 0.0;
+
+    total_step_ms += step_ms;
+    total_substep_ms += substep_ms;
+    total_cloth_body_ms += cloth_body_ms;
+    if (++frame_count < report_frame_count) {
+        return;
+    }
+
+    std::cout << "Simulation CPU: step=" << total_step_ms / frame_count
+              << " ms, substep=" << total_substep_ms / frame_count
+              << " ms, cloth-body/substep=" << total_cloth_body_ms / frame_count << " ms\n";
+    frame_count = 0;
+    total_step_ms = 0.0;
+    total_substep_ms = 0.0;
+    total_cloth_body_ms = 0.0;
+}
+
+void report_gpu_timing(GLuint64 step_nanoseconds)
+{
+    constexpr std::uint32_t report_sample_count = 120;
+    constexpr double nanoseconds_per_millisecond = 1'000'000.0;
+    static std::uint32_t sample_count = 0;
+    static double total_step_ms = 0.0;
+
+    total_step_ms += static_cast<double>(step_nanoseconds) / nanoseconds_per_millisecond;
+    if (++sample_count < report_sample_count) {
+        return;
+    }
+
+    std::cout << "Simulation GPU: step=" << total_step_ms / sample_count << " ms\n";
+    sample_count = 0;
+    total_step_ms = 0.0;
+}
+}
 
 SimulationPipeline::SimulationPipeline(SimulationParams params)
     : params_(params),
@@ -43,6 +95,9 @@ void SimulationPipeline::initialize(const std::filesystem::path& shader_dir, QOp
     cloth_body_collision_solver_.initialize(shader_dir, gl);
     cloth_cloth_collision_solver_.initialize(shader_dir, gl);
     garment_prefit_solver_.initialize(shader_dir, gl);
+    gl.glCreateQueries(GL_TIME_ELAPSED,
+                       static_cast<GLsizei>(gpu_time_queries_.size()),
+                       gpu_time_queries_.data());
 
     initialized_ = true;
 }
@@ -83,10 +138,31 @@ void SimulationPipeline::step(SceneState& scene,
                               std::uint32_t motion_step_index,
                               QOpenGLFunctions_4_5_Core& gl)
 {
+    const std::size_t gpu_query_index = gpu_time_query_index_;
+    const GLuint gpu_query = gpu_time_queries_[gpu_query_index];
+    bool is_gpu_query_active = !gpu_time_query_pending_[gpu_query_index];
+    if (!is_gpu_query_active) {
+        GLint is_result_available = GL_FALSE;
+        gl.glGetQueryObjectiv(gpu_query, GL_QUERY_RESULT_AVAILABLE, &is_result_available);
+        if (is_result_available == GL_TRUE) {
+            GLuint64 step_nanoseconds = 0;
+            gl.glGetQueryObjectui64v(gpu_query, GL_QUERY_RESULT, &step_nanoseconds);
+            report_gpu_timing(step_nanoseconds);
+            is_gpu_query_active = true;
+        }
+    }
+    if (is_gpu_query_active) {
+        gl.glBeginQuery(GL_TIME_ELAPSED, gpu_query);
+    }
+
+    const auto step_start = CpuClock::now();
     const auto views = gpu_state.simulation_view();
     cloth_cloth_collision_solver_.update_body_surface_mapping(views, gl);
 
+    double substep_cpu_ms = 0.0;
+    double cloth_body_cpu_ms = 0.0;
     for (std::uint32_t substep = 0; substep < params_.step.substep_count; ++substep) {
+        const auto substep_start = CpuClock::now();
         update_character_motion(scene, gpu_state, motion_step_index, substep + 1u, gl);
         integrate_cloth(scene, views, gl);
 
@@ -97,13 +173,25 @@ void SimulationPipeline::step(SceneState& scene,
             stretch_constraint_solver_.solve(views, gl);
             bending_constraint_solver_.solve(views, gl);
             attachment_constraint_solver_.solve(views, gl);
+            const auto cloth_body_start = CpuClock::now();
             cloth_body_collision_solver_.solve(views, gl);
+            cloth_body_cpu_ms += measure_cpu_ms(cloth_body_start);
             cloth_cloth_collision_solver_.solve(views, gl);
             ground_collision_solver_.solve(views, gl);
         }
+        substep_cpu_ms += measure_cpu_ms(substep_start);
     }
 
+    const double substep_count = static_cast<double>(params_.step.substep_count);
     gpu_state.update_cloth_normals(gl);
+    const double step_cpu_ms = measure_cpu_ms(step_start);
+
+    if (is_gpu_query_active) {
+        gl.glEndQuery(GL_TIME_ELAPSED);
+        gpu_time_query_pending_[gpu_query_index] = true;
+    }
+    gpu_time_query_index_ = (gpu_query_index + 1) % gpu_time_queries_.size();
+    report_cpu_timing(step_cpu_ms, substep_cpu_ms / substep_count, cloth_body_cpu_ms / substep_count);
 }
 
 void SimulationPipeline::update_character_motion(SceneState& scene,
@@ -140,6 +228,10 @@ bool SimulationPipeline::is_initialized() const
 // Release
 void SimulationPipeline::release(QOpenGLFunctions_4_5_Core& gl)
 {
+    gl.glDeleteQueries(static_cast<GLsizei>(gpu_time_queries_.size()), gpu_time_queries_.data());
+    gpu_time_queries_.fill(0);
+    gpu_time_query_pending_.fill(false);
+    gpu_time_query_index_ = 0;
     garment_prefit_solver_.release(gl);
     cloth_cloth_collision_solver_.release(gl);
     cloth_body_collision_solver_.release(gl);
