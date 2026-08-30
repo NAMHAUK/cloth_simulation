@@ -11,8 +11,6 @@
 #include "simulation/constraints/BendingConstraintSolver.h"
 #include "simulation/constraints/StretchConstraintSolver.h"
 
-#include <array>
-#include <cstddef>
 #include <cstdint>
 #include <filesystem>
 #include <vector>
@@ -54,8 +52,6 @@ public:
     bool is_initialized() const;
 
 private:
-    static constexpr std::size_t gpu_time_query_count = 4;
-
     SimulationParams params_;
     ClothIntegrator cloth_integrator_;
     StretchConstraintSolver stretch_constraint_solver_;
@@ -66,9 +62,6 @@ private:
     ClothBodyCollisionSolver cloth_body_collision_solver_;
     ClothClothCollisionSolver cloth_cloth_collision_solver_;
     GarmentPrefitSolver garment_prefit_solver_;
-    std::array<GLuint, gpu_time_query_count> gpu_time_queries_{};
-    std::array<bool, gpu_time_query_count> gpu_time_query_pending_{};
-    std::size_t gpu_time_query_index_ = 0;
     float substep_dt_ = 0.0f;
     bool initialized_ = false;
 };
