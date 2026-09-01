@@ -297,6 +297,8 @@ void ClothGpuState::create_bvh_buffers(const std::vector<GarmentObject>& garment
         const Bvh& bvh = garment.triangle_bvh;
         GarmentBufferState& garment_state = rebuild_state.garments[garment.layer];
         garment_state.bvh_level_offsets = bvh.level_offsets;
+        rebuild_state.max_bvh_level_count =
+            std::max(rebuild_state.max_bvh_level_count, garment_state.bvh_level_offsets.size() - 1u);
 
         append_bvh_nodes(bvh, garment_state, nodes);
     }
@@ -554,6 +556,11 @@ const std::array<GarmentBufferState, 2>& ClothGpuState::garment_buffer_states() 
 const ClothBufferElementCounts& ClothGpuState::element_counts() const
 {
     return state_.element_counts;
+}
+
+std::size_t ClothGpuState::max_bvh_level_count() const
+{
+    return state_.max_bvh_level_count;
 }
 
 const std::vector<ConstraintColorState>& ClothGpuState::stretch_color_states() const

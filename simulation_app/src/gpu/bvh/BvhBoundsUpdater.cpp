@@ -107,12 +107,7 @@ void BvhBoundsUpdater::update_cloth_bvh(const ClothGpuState& cloth_state,
     gl.glUseProgram(cloth_program_);
     gl.glProgramUniform1f(cloth_program_, cloth_bounds_margin_loc_, bounds_margin);
 
-    std::size_t max_bvh_level_count = 0;
-    for (const GarmentBufferState& garment_state : garment_states) {
-        max_bvh_level_count = std::max(max_bvh_level_count, garment_state.bvh_level_offsets.size() - 1u);
-    }
-
-    for (std::size_t level_index = 0; level_index < max_bvh_level_count; ++level_index) {
+    for (std::size_t level_index = 0; level_index < cloth_state.max_bvh_level_count(); ++level_index) {
         for (const GarmentBufferState& garment_state : garment_states) {
             const auto level = level_range(garment_state.bvh_level_offsets, level_index);
 
