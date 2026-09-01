@@ -49,11 +49,11 @@ private:
 
     GLuint position_program_ = 0;
     GLuint triangle_update_program_ = 0;
-    GLint position_current_frame_base_location_ = -1;
-    GLint position_next_frame_base_location_ = -1;
-    GLint position_frame_alpha_location_ = -1;
-    GLint position_vertex_count_location_ = -1;
-    GLint triangle_count_location_ = -1;
+    GLint position_current_frame_base_loc_ = -1;
+    GLint position_next_frame_base_loc_ = -1;
+    GLint position_frame_alpha_loc_ = -1;
+    GLint position_vertex_count_loc_ = -1;
+    GLint triangle_count_loc_ = -1;
 
     GLuint vao_ = 0;
     GLsizei index_count_ = 0;
