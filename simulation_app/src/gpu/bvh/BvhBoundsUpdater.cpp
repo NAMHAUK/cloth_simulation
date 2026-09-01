@@ -11,7 +11,7 @@
 #include <utility>
 
 namespace {
-constexpr std::uint32_t bvh_bounds_update_local_size = 128;
+constexpr std::uint32_t local_size = 128;
 
 std::pair<std::uint32_t, std::uint32_t> valid_or_empty_level(const std::vector<std::uint32_t>& level_offsets,
                                                              std::size_t level_index)
@@ -36,21 +36,19 @@ void BvhBoundsUpdater::initialize(const std::filesystem::path& shader_dir,
     body_program_ = load_compute_program(shader_dir / "bvh" / "body_bounds_update.comp", gl);
     cloth_program_ = load_compute_program(shader_dir / "bvh" / "cloth_bounds_update.comp", gl);
 
-    body_triangle_first_node_index_location_ =
+    body_triangle_first_node_index_loc_ =
         require_uniform_location(body_program_, "uTriangleFirstNodeIndex", gl);
-    body_triangle_node_count_location_ = require_uniform_location(body_program_, "uTriangleNodeCount", gl);
-    body_vertex_first_node_index_location_ =
-        require_uniform_location(body_program_, "uVertexFirstNodeIndex", gl);
-    body_vertex_node_count_location_ = require_uniform_location(body_program_, "uVertexNodeCount", gl);
-    body_edge_first_node_index_location_ = require_uniform_location(body_program_, "uEdgeFirstNodeIndex", gl);
-    body_edge_node_count_location_ = require_uniform_location(body_program_, "uEdgeNodeCount", gl);
-    body_detection_distance_location_ = require_uniform_location(body_program_, "uDetectionDistance", gl);
-    cloth_level_first_node_index_location_ =
-        require_uniform_location(cloth_program_, "uLevelFirstNodeIndex", gl);
-    cloth_level_node_count_location_ = require_uniform_location(cloth_program_, "uLevelNodeCount", gl);
-    cloth_bounds_margin_location_ = require_uniform_location(cloth_program_, "uBoundsMargin", gl);
-
-    gl.glProgramUniform1f(body_program_, body_detection_distance_location_, body_detection_distance);
+    body_triangle_node_count_loc_ = require_uniform_location(body_program_, "uTriangleNodeCount", gl);
+    body_vertex_first_node_index_loc_ = require_uniform_location(body_program_, "uVertexFirstNodeIndex", gl);
+    body_vertex_node_count_loc_ = require_uniform_location(body_program_, "uVertexNodeCount", gl);
+    body_edge_first_node_index_loc_ = require_uniform_location(body_program_, "uEdgeFirstNodeIndex", gl);
+    body_edge_node_count_loc_ = require_uniform_location(body_program_, "uEdgeNodeCount", gl);
+    cloth_level_first_node_index_loc_ = require_uniform_location(cloth_program_, "uLevelFirstNodeIndex", gl);
+    cloth_level_node_count_loc_ = require_uniform_location(cloth_program_, "uLevelNodeCount", gl);
+    cloth_bounds_margin_loc_ = require_uniform_location(cloth_program_, "uBoundsMargin", gl);
+    const GLint body_detection_distance_loc =
+        require_uniform_location(body_program_, "uDetectionDistance", gl);
+    gl.glProgramUniform1f(body_program_, body_detection_distance_loc, body_detection_distance);
 }
 
 void BvhBoundsUpdater::set_body_level_offsets(const std::vector<std::uint32_t>& triangle_level_offsets,
@@ -86,17 +84,13 @@ void BvhBoundsUpdater::update_body_bvh(QOpenGLFunctions_4_5_Core& gl) const
             continue;
         }
 
-        gl.glProgramUniform1ui(body_program_,
-                               body_triangle_first_node_index_location_,
-                               triangle_first_node_index);
-        gl.glProgramUniform1ui(body_program_, body_triangle_node_count_location_, triangle_node_count);
-        gl.glProgramUniform1ui(body_program_,
-                               body_vertex_first_node_index_location_,
-                               vertex_first_node_index);
-        gl.glProgramUniform1ui(body_program_, body_vertex_node_count_location_, vertex_node_count);
-        gl.glProgramUniform1ui(body_program_, body_edge_first_node_index_location_, edge_first_node_index);
-        gl.glProgramUniform1ui(body_program_, body_edge_node_count_location_, edge_node_count);
-        gl.glDispatchCompute(compute_group_count(dispatch_node_count, bvh_bounds_update_local_size), 1, 1);
+        gl.glProgramUniform1ui(body_program_, body_triangle_first_node_index_loc_, triangle_first_node_index);
+        gl.glProgramUniform1ui(body_program_, body_triangle_node_count_loc_, triangle_node_count);
+        gl.glProgramUniform1ui(body_program_, body_vertex_first_node_index_loc_, vertex_first_node_index);
+        gl.glProgramUniform1ui(body_program_, body_vertex_node_count_loc_, vertex_node_count);
+        gl.glProgramUniform1ui(body_program_, body_edge_first_node_index_loc_, edge_first_node_index);
+        gl.glProgramUniform1ui(body_program_, body_edge_node_count_loc_, edge_node_count);
+        gl.glDispatchCompute(compute_group_count(dispatch_node_count, local_size), 1, 1);
         gl.glMemoryBarrier(GL_SHADER_STORAGE_BARRIER_BIT);
     }
 }
@@ -110,7 +104,7 @@ void BvhBoundsUpdater::update_cloth_bvh(const ClothGpuState& cloth_state,
     const auto& garment_states = cloth_state.garment_buffer_states();
 
     gl.glUseProgram(cloth_program_);
-    gl.glProgramUniform1f(cloth_program_, cloth_bounds_margin_location_, bounds_margin);
+    gl.glProgramUniform1f(cloth_program_, cloth_bounds_margin_loc_, bounds_margin);
 
     std::size_t level_count = 0;
     for (const GarmentBufferState& garment_state : garment_states) {
@@ -127,9 +121,9 @@ void BvhBoundsUpdater::update_cloth_bvh(const ClothGpuState& cloth_state,
                 continue;
             }
 
-            gl.glProgramUniform1ui(cloth_program_, cloth_level_first_node_index_location_, first_node_index);
-            gl.glProgramUniform1ui(cloth_program_, cloth_level_node_count_location_, node_count);
-            gl.glDispatchCompute(compute_group_count(node_count, bvh_bounds_update_local_size), 1, 1);
+            gl.glProgramUniform1ui(cloth_program_, cloth_level_first_node_index_loc_, first_node_index);
+            gl.glProgramUniform1ui(cloth_program_, cloth_level_node_count_loc_, node_count);
+            gl.glDispatchCompute(compute_group_count(node_count, local_size), 1, 1);
         }
 
         gl.glMemoryBarrier(GL_SHADER_STORAGE_BARRIER_BIT);
@@ -163,18 +157,17 @@ void BvhBoundsUpdater::release(QOpenGLFunctions_4_5_Core& gl)
     gl.glDeleteProgram(body_program_);
 
     body_program_ = 0;
-    body_triangle_first_node_index_location_ = -1;
-    body_triangle_node_count_location_ = -1;
-    body_vertex_first_node_index_location_ = -1;
-    body_vertex_node_count_location_ = -1;
-    body_edge_first_node_index_location_ = -1;
-    body_edge_node_count_location_ = -1;
-    body_detection_distance_location_ = -1;
+    body_triangle_first_node_index_loc_ = -1;
+    body_triangle_node_count_loc_ = -1;
+    body_vertex_first_node_index_loc_ = -1;
+    body_vertex_node_count_loc_ = -1;
+    body_edge_first_node_index_loc_ = -1;
+    body_edge_node_count_loc_ = -1;
     body_triangle_level_offsets_.clear();
     body_vertex_level_offsets_.clear();
     body_edge_level_offsets_.clear();
     cloth_program_ = 0;
-    cloth_level_first_node_index_location_ = -1;
-    cloth_level_node_count_location_ = -1;
-    cloth_bounds_margin_location_ = -1;
+    cloth_level_first_node_index_loc_ = -1;
+    cloth_level_node_count_loc_ = -1;
+    cloth_bounds_margin_loc_ = -1;
 }
