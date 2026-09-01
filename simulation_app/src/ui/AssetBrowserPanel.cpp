@@ -7,6 +7,7 @@
 #include "utils/QtUtils.h"
 
 #include <algorithm>
+#include <exception>
 #include <optional>
 #include <string>
 
@@ -461,13 +462,12 @@ void AssetBrowserPanel::load_motion(const std::filesystem::path& asset_path)
 
 void AssetBrowserPanel::load_garment(const std::filesystem::path& asset_path)
 {
-    GarmentMesh mesh;
-    if (!asset_io::read_garment_mesh(asset_path, mesh)) {
+    try {
+        GarmentMesh mesh = asset_io::read_garment_mesh(asset_path);
+        garment_loaded_callback_(asset_path, std::move(mesh));
+    } catch (const std::exception&) {
         QMessageBox::warning(this, "Load Failed", "Failed to load garment:\n" + to_q_string(asset_path));
-        return;
     }
-
-    garment_loaded_callback_(asset_path, std::move(mesh));
 }
 
 void AssetBrowserPanel::request_garment_conversion()

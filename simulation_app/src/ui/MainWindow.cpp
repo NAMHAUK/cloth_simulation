@@ -1,7 +1,7 @@
 #include "ui/MainWindow.h"
 
-#include "asset/AssetIO.h"
 #include "app/SimulationController.h"
+#include "asset/AssetIO.h"
 #include "ui/AssetBrowserPanel.h"
 #include "ui/PlacementController.h"
 #include "ui/Viewport.h"
@@ -9,7 +9,6 @@
 
 #include <cstdint>
 #include <memory>
-#include <stdexcept>
 #include <utility>
 #include <vector>
 
@@ -103,11 +102,9 @@ void MainWindow::initialize_scene(QOpenGLFunctions_4_5_Core& gl)
 {
     CharacterMotion character_motion;
     std::vector<std::uint8_t> triangle_part_labels;
-    if (!asset_io::read_default_character(project_paths_.default_character_path,
-                                          character_motion,
-                                          triangle_part_labels)) {
-        throw std::runtime_error("Failed to load the default character asset.");
-    }
+    asset_io::read_default_character(project_paths_.default_character_path,
+                                     character_motion,
+                                     triangle_part_labels);
 
     simulation_controller_->initialize(project_paths_.shader_dir,
                                        std::move(character_motion),

@@ -78,18 +78,16 @@ void add_triangle_edge_use(std::vector<TriangleEdgeUse>& edge_uses,
 
 }
 
-bool orient_triangle_winding_outward(std::uint32_t vertex_count,
-                                     const std::vector<float>& vertices,
-                                     const glm::vec3& reference_point,
-                                     std::vector<std::uint32_t>& triangle_indices,
-                                     std::uint32_t& flipped_triangle_count)
+std::uint32_t orient_triangle_winding_outward(std::uint32_t vertex_count,
+                                              const std::vector<float>& vertices,
+                                              const glm::vec3& reference_point,
+                                              std::vector<std::uint32_t>& triangle_indices)
 {
-    flipped_triangle_count = 0u;
     if (vertex_count == 0u ||
         vertices.size() != vertex_count * position_components ||
         triangle_indices.empty() ||
         triangle_indices.size() % 3u != 0u) {
-        return false;
+        throw std::invalid_argument("Cannot orient triangle winding from invalid mesh data.");
     }
 
     const auto triangle_count = static_cast<std::uint32_t>(triangle_indices.size() / 3u);
@@ -106,7 +104,7 @@ bool orient_triangle_winding_outward(std::uint32_t vertex_count,
             vertex_a == vertex_b ||
             vertex_b == vertex_c ||
             vertex_c == vertex_a) {
-            return false;
+            throw std::invalid_argument("Cannot orient triangle winding from invalid mesh data.");
         }
 
         add_triangle_edge_use(edge_uses, triangle_index, vertex_a, vertex_b);
@@ -163,7 +161,7 @@ bool orient_triangle_winding_outward(std::uint32_t vertex_count,
                     should_flip[neighbor.triangle_index] = required_flip;
                     stack.push_back(neighbor.triangle_index);
                 } else if (should_flip[neighbor.triangle_index] != required_flip) {
-                    return false;
+                    throw std::runtime_error("Cannot orient triangle winding consistently.");
                 }
             }
         }
@@ -190,6 +188,7 @@ bool orient_triangle_winding_outward(std::uint32_t vertex_count,
         }
     }
 
+    std::uint32_t flipped_triangle_count = 0u;
     for (std::uint32_t triangle_index = 0u; triangle_index < triangle_count; ++triangle_index) {
         if (should_flip[triangle_index] == 0) {
             continue;
@@ -199,7 +198,7 @@ bool orient_triangle_winding_outward(std::uint32_t vertex_count,
         std::swap(triangle_indices[index_base + 1u], triangle_indices[index_base + 2u]);
         ++flipped_triangle_count;
     }
-    return true;
+    return flipped_triangle_count;
 }
 
 // vertex position //

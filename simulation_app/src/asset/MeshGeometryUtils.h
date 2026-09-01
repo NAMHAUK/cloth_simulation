@@ -10,11 +10,10 @@
 VertexTriangleAdjacency build_vertex_triangle_adjacency(std::uint32_t vertex_count,
                                                         const std::vector<std::uint32_t>& triangle_indices);
 
-bool orient_triangle_winding_outward(std::uint32_t vertex_count,
-                                     const std::vector<float>& vertices,
-                                     const glm::vec3& reference_point,
-                                     std::vector<std::uint32_t>& triangle_indices,
-                                     std::uint32_t& flipped_triangle_count);
+std::uint32_t orient_triangle_winding_outward(std::uint32_t vertex_count,
+                                              const std::vector<float>& vertices,
+                                              const glm::vec3& reference_point,
+                                              std::vector<std::uint32_t>& triangle_indices);
 
 glm::vec3 get_vertex_position(const std::vector<float>& vertices, std::uint32_t vertex_index);
 

@@ -4,7 +4,5 @@
 
 #include <filesystem>
 
-bool read_garment_obj(const std::filesystem::path& obj_path,
-                      GarmentCategory garment_category,
-                      GarmentMesh& garment_mesh);
-bool write_garment_asset(const std::filesystem::path& garment_asset_path, const GarmentMesh& garment_mesh);
+GarmentMesh read_garment_obj(const std::filesystem::path& obj_path, GarmentCategory garment_category);
+void write_garment_asset(const std::filesystem::path& garment_asset_path, const GarmentMesh& garment_mesh);

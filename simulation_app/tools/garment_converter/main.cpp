@@ -1,5 +1,6 @@
 #include "GarmentConverter.h"
 
+#include <exception>
 #include <filesystem>
 #include <iostream>
 #include <optional>
@@ -67,30 +68,27 @@ bool has_help_argument(int argc, char** argv)
 
 int main(int argc, char** argv)
 {
-    if (has_help_argument(argc, argv)) {
-        print_usage();
+    try {
+        if (has_help_argument(argc, argv)) {
+            print_usage();
+            return 0;
+        }
+
+        const std::optional<std::filesystem::path> input_path = find_argument_path(argc, argv, "--input");
+        const std::optional<std::filesystem::path> output_path = find_argument_path(argc, argv, "--output");
+        const std::optional<GarmentCategory> garment_category = parse_garment_category(argc, argv);
+        if (!input_path || !output_path || !garment_category) {
+            print_usage();
+            return 1;
+        }
+
+        const GarmentMesh garment_mesh = read_garment_obj(*input_path, *garment_category);
+        write_garment_asset(*output_path, garment_mesh);
+
+        std::cout << "Garment conversion succeeded.\n";
         return 0;
-    }
-
-    const std::optional<std::filesystem::path> input_path = find_argument_path(argc, argv, "--input");
-    const std::optional<std::filesystem::path> output_path = find_argument_path(argc, argv, "--output");
-    const std::optional<GarmentCategory> garment_category = parse_garment_category(argc, argv);
-    if (!input_path || !output_path || !garment_category) {
-        print_usage();
+    } catch (const std::exception& error) {
+        std::cerr << "Garment conversion failed: " << error.what() << '\n';
         return 1;
     }
-
-    GarmentMesh garment_mesh;
-    if (!read_garment_obj(*input_path, *garment_category, garment_mesh)) {
-        std::cerr << "Garment OBJ conversion failed.\n";
-        return 1;
-    }
-
-    if (!write_garment_asset(*output_path, garment_mesh)) {
-        std::cerr << "Garment asset write failed.\n";
-        return 1;
-    }
-
-    std::cout << "Garment conversion succeeded.\n";
-    return 0;
 }
