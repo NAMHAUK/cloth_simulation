@@ -13,9 +13,7 @@ public:
     AttachmentConstraintSolver(const AttachmentConstraintSolver&) = delete;
     AttachmentConstraintSolver& operator=(const AttachmentConstraintSolver&) = delete;
 
-    bool is_initialized() const;
     void initialize(const std::filesystem::path& shader_dir, QOpenGLFunctions_4_5_Core& gl);
-    bool can_solve(const ClothGpuState& cloth_state) const;
     void solve(const ClothGpuState& cloth_state, QOpenGLFunctions_4_5_Core& gl) const;
     void release(QOpenGLFunctions_4_5_Core& gl);
 

@@ -4,8 +4,6 @@
 #include "utils/BufferUtils.h"
 #include "utils/ShaderUtils.h"
 
-#include <algorithm>
-#include <cassert>
 #include <stdexcept>
 
 namespace {
@@ -67,8 +65,6 @@ void CollisionDetector::initialize(const std::filesystem::path& shader_dir, QOpe
 
 void CollisionDetector::detect(const SceneGpuState& gpu_state, QOpenGLFunctions_4_5_Core& gl) const
 {
-    assert(can_detect(gpu_state));
-
     const ClothGpuState& cloth_state = gpu_state.cloth_gpu_state();
     const CollisionBuffers& collision = gpu_state.collision_buffers();
 
@@ -99,8 +95,6 @@ void CollisionDetector::detect(const SceneGpuState& gpu_state, QOpenGLFunctions_
 
 void CollisionDetector::detect_prefit(const SceneGpuState& gpu_state, QOpenGLFunctions_4_5_Core& gl) const
 {
-    assert(can_detect_prefit(gpu_state));
-
     const CollisionCandidateBuffers& candidates = gpu_state.collision_buffers().cloth_cloth_vertex_face;
 
     clear_collision_candidate_counts(candidates, gl);
@@ -183,57 +177,6 @@ void CollisionDetector::build_dispatch_size(CandidateKind candidate_kind,
     gl.glProgramUniform1ui(shader.program, shader.max_candidates, max_candidates);
     gl.glDispatchCompute(1, 1, 1);
     gl.glMemoryBarrier(GL_SHADER_STORAGE_BARRIER_BIT | GL_COMMAND_BARRIER_BIT);
-}
-
-// Validation
-
-bool CollisionDetector::is_initialized() const
-{
-    return cloth_vertex_body_face_.program != 0 &&
-           cloth_edge_body_edge_.program != 0 &&
-           cloth_face_body_vertex_.program != 0 &&
-           cloth_cloth_vertex_face_.program != 0 &&
-           dispatch_size_.program != 0;
-}
-
-bool CollisionDetector::can_detect(const SceneGpuState& gpu_state) const
-{
-    const ClothGpuState& cloth_state = gpu_state.cloth_gpu_state();
-    const ClothBufferElementCounts& counts = cloth_state.element_counts();
-    const CharacterGpuState& character_state = gpu_state.character_gpu_state();
-    const CollisionBuffers& collision = gpu_state.collision_buffers();
-    return is_initialized() &&
-           counts.vertex != 0u &&
-           counts.triangle != 0u &&
-           character_state.vertex_count() != 0u &&
-           character_state.triangle_count() != 0u &&
-           counts.stretch_constraint != 0u &&
-           has_collision_candidate_capacity(collision.cloth_vertex_body_face) &&
-           has_collision_candidate_capacity(collision.cloth_edge_body_edge) &&
-           has_collision_candidate_capacity(collision.cloth_face_body_vertex) &&
-           (!cloth_state.has_multiple_garments() || can_detect_prefit(gpu_state));
-}
-
-bool CollisionDetector::can_detect_prefit(const SceneGpuState& gpu_state) const
-{
-    const ClothGpuState& cloth_state = gpu_state.cloth_gpu_state();
-    const std::uint32_t vertex_count = cloth_state.element_counts().vertex;
-    if (!is_initialized() ||
-        !cloth_state.has_multiple_garments() ||
-        vertex_count == 0u ||
-        !has_collision_candidate_capacity(gpu_state.collision_buffers().cloth_cloth_vertex_face)) {
-        return false;
-    }
-
-    const auto& garment_states = cloth_state.garment_buffer_states();
-    return std::all_of(garment_states.begin(),
-                       garment_states.end(),
-                       [vertex_count](const GarmentBufferState& garment_state) {
-                           return is_valid_buffer_access(garment_state.vertex_start_index,
-                                                         garment_state.vertex_count,
-                                                         vertex_count) &&
-                                  !garment_state.bvh_level_offsets.empty();
-                       });
 }
 
 // Release

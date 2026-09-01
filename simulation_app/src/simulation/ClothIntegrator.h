@@ -21,7 +21,6 @@ public:
     ClothIntegrator(const ClothIntegrator&) = delete;
     ClothIntegrator& operator=(const ClothIntegrator&) = delete;
 
-    bool is_initialized() const;
     void initialize(const std::filesystem::path& shader_dir, float dt, QOpenGLFunctions_4_5_Core& gl);
     void integrate(const ClothGpuState& cloth_state,
                    GarmentLayer layer,

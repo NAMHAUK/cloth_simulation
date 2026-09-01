@@ -2,10 +2,8 @@
 
 #include "gpu/cloth/ClothGpuState.h"
 #include "simulation/SimulationParams.h"
-#include "utils/BufferUtils.h"
 #include "utils/ShaderUtils.h"
 
-#include <cassert>
 #include <stdexcept>
 
 namespace {
@@ -17,11 +15,6 @@ GarmentPrefitSolver::GarmentPrefitSolver(const PrefitParams& params)
       pushout_margin_(params.pushout_margin)
 {}
 
-bool GarmentPrefitSolver::is_initialized() const
-{
-    return program_ != 0;
-}
-
 void GarmentPrefitSolver::initialize(const std::filesystem::path& shader_dir, QOpenGLFunctions_4_5_Core& gl)
 {
     program_ = load_compute_program(shader_dir / "cloth" / "setup" / "garment_prefit.comp", gl);
@@ -31,23 +24,10 @@ void GarmentPrefitSolver::initialize(const std::filesystem::path& shader_dir, QO
     pushout_margin_location_ = require_uniform_location(program_, "uPushoutMargin", gl);
 }
 
-bool GarmentPrefitSolver::can_solve(const ClothGpuState& cloth_state, GarmentLayer layer) const
-{
-    const GarmentBufferState& garment_state = cloth_state.garment_buffer_states()[layer];
-    return is_initialized() &&
-           is_valid_buffer_access(garment_state.vertex_start_index,
-                                  garment_state.vertex_count,
-                                  cloth_state.element_counts().vertex) &&
-           search_radius_ > 0.0f &&
-           pushout_margin_ > 0.0f;
-}
-
 void GarmentPrefitSolver::solve(const ClothGpuState& cloth_state,
                                 GarmentLayer layer,
                                 QOpenGLFunctions_4_5_Core& gl) const
 {
-    assert(can_solve(cloth_state, layer));
-
     const GarmentBufferState& garment_state = cloth_state.garment_buffer_states()[layer];
 
     gl.glUseProgram(program_);

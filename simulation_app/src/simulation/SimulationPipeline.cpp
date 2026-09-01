@@ -2,7 +2,6 @@
 
 #include "gpu/scene/SceneGpuState.h"
 #include "simulation/SceneState.h"
-#include "utils/BufferUtils.h"
 
 #include <cassert>
 #include <stdexcept>
@@ -53,7 +52,6 @@ void SimulationPipeline::prefit_garments(SceneGpuState& gpu_state,
                                          QOpenGLFunctions_4_5_Core& gl)
 {
     assert(is_initialized());
-    assert(!garments.empty());
 
     const ClothGpuState& cloth_state = gpu_state.cloth_gpu_state();
 

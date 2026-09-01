@@ -2,7 +2,6 @@
 
 #include "gpu/cloth/ClothGpuState.h"
 #include "simulation/SceneState.h"
-#include "utils/BufferUtils.h"
 #include "utils/ShaderUtils.h"
 
 #include <glm/geometric.hpp>
@@ -31,11 +30,6 @@ ClothIntegrator::ClothIntegrator(float gravity,
       reference_frame_max_acceleration_(reference_frame_max_acceleration),
       reference_frame_max_angular_acceleration_(reference_frame_max_angular_acceleration)
 {}
-
-bool ClothIntegrator::is_initialized() const
-{
-    return program_ != 0;
-}
 
 void ClothIntegrator::initialize(const std::filesystem::path& shader_dir,
                                  float dt,
@@ -75,13 +69,6 @@ void ClothIntegrator::integrate(const ClothGpuState& cloth_state,
                                 QOpenGLFunctions_4_5_Core& gl) const
 {
     const GarmentBufferState& garment_state = cloth_state.garment_buffer_states()[layer];
-    const bool has_valid_vertices = is_valid_buffer_access(garment_state.vertex_start_index,
-                                                           garment_state.vertex_count,
-                                                           cloth_state.element_counts().vertex);
-    if (!is_initialized() || !has_valid_vertices || dt_ <= 0.0f || inverse_dt_ <= 0.0f) {
-        return;
-    }
-
     const glm::vec3 frame_acceleration =
         clamp_vector_length(reference_frame_kinematics.acceleration, reference_frame_max_acceleration_);
     const glm::vec3 frame_angular_acceleration =

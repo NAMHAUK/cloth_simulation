@@ -14,10 +14,8 @@ public:
     CollisionDetector(const CollisionDetector&) = delete;
     CollisionDetector& operator=(const CollisionDetector&) = delete;
 
-    bool is_initialized() const;
     void initialize(const std::filesystem::path& shader_dir, QOpenGLFunctions_4_5_Core& gl);
 
-    bool can_detect(const SceneGpuState& gpu_state) const;
     void detect(const SceneGpuState& gpu_state, QOpenGLFunctions_4_5_Core& gl) const;
     void detect_prefit(const SceneGpuState& gpu_state, QOpenGLFunctions_4_5_Core& gl) const;
 
@@ -65,8 +63,6 @@ private:
     void build_dispatch_size(CandidateKind candidate_kind,
                              std::uint32_t max_candidates,
                              QOpenGLFunctions_4_5_Core& gl) const;
-
-    bool can_detect_prefit(const SceneGpuState& gpu_state) const;
 
     CandidateDetectionProgram cloth_vertex_body_face_;
     CandidateDetectionProgram cloth_edge_body_edge_;

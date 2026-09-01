@@ -2,10 +2,8 @@
 
 #include "gpu/cloth/ClothGpuState.h"
 #include "simulation/SimulationParams.h"
-#include "utils/BufferUtils.h"
 #include "utils/ShaderUtils.h"
 
-#include <cassert>
 #include <stdexcept>
 
 namespace {
@@ -18,11 +16,6 @@ GroundCollisionSolver::GroundCollisionSolver(const GroundCollisionParams& params
       dynamic_friction_(params.dynamic_friction)
 {}
 
-bool GroundCollisionSolver::is_initialized() const
-{
-    return program_ != 0;
-}
-
 void GroundCollisionSolver::initialize(const std::filesystem::path& shader_dir, QOpenGLFunctions_4_5_Core& gl)
 {
     program_ = load_compute_program(shader_dir / "collision" / "ground.comp", gl);
@@ -32,18 +25,8 @@ void GroundCollisionSolver::initialize(const std::filesystem::path& shader_dir, 
     dynamic_friction_location_ = require_uniform_location(program_, "uDynamicFriction", gl);
 }
 
-bool GroundCollisionSolver::can_solve(const ClothGpuState& cloth_state) const
-{
-    return is_initialized() &&
-           cloth_state.element_counts().vertex != 0u &&
-           dynamic_friction_ >= 0.0f &&
-           static_friction_ >= dynamic_friction_;
-}
-
 void GroundCollisionSolver::solve(const ClothGpuState& cloth_state, QOpenGLFunctions_4_5_Core& gl) const
 {
-    assert(can_solve(cloth_state));
-
     const std::uint32_t vertex_count = cloth_state.element_counts().vertex;
 
     // shader & GPU 연결

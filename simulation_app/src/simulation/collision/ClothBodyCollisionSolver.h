@@ -14,9 +14,7 @@ public:
     ClothBodyCollisionSolver(const ClothBodyCollisionSolver&) = delete;
     ClothBodyCollisionSolver& operator=(const ClothBodyCollisionSolver&) = delete;
 
-    bool is_initialized() const;
     void initialize(const std::filesystem::path& shader_dir, QOpenGLFunctions_4_5_Core& gl);
-    bool can_solve(const SceneGpuState& gpu_state) const;
     void solve(const SceneGpuState& gpu_state, QOpenGLFunctions_4_5_Core& gl) const;
     void release(QOpenGLFunctions_4_5_Core& gl);
 

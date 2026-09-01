@@ -5,7 +5,6 @@
 #include "utils/BufferUtils.h"
 #include "utils/ShaderUtils.h"
 
-#include <cassert>
 #include <stdexcept>
 
 namespace {
@@ -18,14 +17,6 @@ ClothBodyCollisionSolver::ClothBodyCollisionSolver(const BodyCollisionParams& pa
       static_friction_(params.static_friction),
       dynamic_friction_(params.dynamic_friction)
 {}
-
-bool ClothBodyCollisionSolver::is_initialized() const
-{
-    return vf_accumulate_.program != 0 &&
-           ee_accumulate_.program != 0 &&
-           bf_accumulate_.program != 0 &&
-           apply_.program != 0;
-}
 
 void ClothBodyCollisionSolver::initialize(const std::filesystem::path& shader_dir,
                                           QOpenGLFunctions_4_5_Core& gl)
@@ -53,29 +44,8 @@ void ClothBodyCollisionSolver::initialize(const std::filesystem::path& shader_di
     apply_.dynamic_friction = require_uniform_location(apply_.program, "uDynamicFriction", gl);
 }
 
-bool ClothBodyCollisionSolver::can_solve(const SceneGpuState& gpu_state) const
-{
-    const ClothBufferElementCounts& counts = gpu_state.cloth_gpu_state().element_counts();
-    const CharacterGpuState& character_state = gpu_state.character_gpu_state();
-    const CollisionBuffers& collision = gpu_state.collision_buffers();
-    return is_initialized() &&
-           counts.vertex != 0u &&
-           character_state.vertex_count() != 0u &&
-           character_state.triangle_count() != 0u &&
-           counts.stretch_constraint != 0u &&
-           has_collision_candidate_capacity(collision.cloth_vertex_body_face) &&
-           has_collision_candidate_capacity(collision.cloth_edge_body_edge) &&
-           has_collision_candidate_capacity(collision.cloth_face_body_vertex) &&
-           collision_thickness_ > 0.0f &&
-           max_correction_length_ > 0.0f &&
-           dynamic_friction_ >= 0.0f &&
-           static_friction_ >= dynamic_friction_;
-}
-
 void ClothBodyCollisionSolver::solve(const SceneGpuState& gpu_state, QOpenGLFunctions_4_5_Core& gl) const
 {
-    assert(can_solve(gpu_state));
-
     clear_correction_sums(gpu_state, gl);
     vf_accumulate(gpu_state, gl);
     apply_combined_corrections(gpu_state, gl);

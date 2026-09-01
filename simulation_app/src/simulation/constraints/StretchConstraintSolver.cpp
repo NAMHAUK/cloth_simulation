@@ -1,11 +1,9 @@
 #include "simulation/constraints/StretchConstraintSolver.h"
 
 #include "gpu/cloth/ClothGpuState.h"
-#include "utils/BufferUtils.h"
 #include "utils/ShaderUtils.h"
 
 #include <algorithm>
-#include <cassert>
 #include <stdexcept>
 
 namespace {
@@ -14,11 +12,6 @@ constexpr std::uint32_t stretch_constraint_local_size = 128;
 
 StretchConstraintSolver::StretchConstraintSolver(float stiffness) : stiffness_(stiffness)
 {}
-
-bool StretchConstraintSolver::is_initialized() const
-{
-    return program_ != 0;
-}
 
 void StretchConstraintSolver::initialize(const std::filesystem::path& shader_dir,
                                          QOpenGLFunctions_4_5_Core& gl)
@@ -29,18 +22,8 @@ void StretchConstraintSolver::initialize(const std::filesystem::path& shader_dir
     stiffness_location_ = require_uniform_location(program_, "uStiffness", gl);
 }
 
-bool StretchConstraintSolver::can_solve(const ClothGpuState& cloth_state) const
-{
-    const ClothBufferElementCounts& counts = cloth_state.element_counts();
-    return is_initialized() &&
-           has_valid_distance_constraints(counts.stretch_constraint, cloth_state.stretch_color_states()) &&
-           stiffness_ > 0.0f;
-}
-
 void StretchConstraintSolver::solve(const ClothGpuState& cloth_state, QOpenGLFunctions_4_5_Core& gl) const
 {
-    assert(can_solve(cloth_state));
-
     gl.glUseProgram(program_);
     gl.glProgramUniform1f(program_, stiffness_location_, std::clamp(stiffness_, 0.0f, 1.0f));
 

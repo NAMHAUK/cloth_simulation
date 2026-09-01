@@ -5,37 +5,11 @@
 #include "utils/BufferUtils.h"
 #include "utils/ShaderUtils.h"
 
-#include <algorithm>
-#include <cassert>
 #include <stdexcept>
 
 namespace {
 constexpr std::uint32_t apply_local_size = 128u;
 constexpr std::uint32_t body_triangle_index_build_local_size = 128u;
-
-bool has_valid_common_solve_metadata(const SceneGpuState& gpu_state)
-{
-    const ClothGpuState& cloth_state = gpu_state.cloth_gpu_state();
-    const ClothBufferElementCounts& counts = cloth_state.element_counts();
-    if (counts.vertex == 0u || counts.triangle == 0u) {
-        return false;
-    }
-    if (!cloth_state.has_multiple_garments()) {
-        return true;
-    }
-
-    const auto& garment_states = cloth_state.garment_buffer_states();
-    return gpu_state.character_gpu_state().triangle_count() != 0u &&
-           has_collision_candidate_capacity(gpu_state.collision_buffers().cloth_cloth_vertex_face) &&
-           std::all_of(garment_states.begin(),
-                       garment_states.end(),
-                       [vertex_count = counts.vertex](const GarmentBufferState& garment_state) {
-                           return is_valid_buffer_access(garment_state.vertex_start_index,
-                                                         garment_state.vertex_count,
-                                                         vertex_count) &&
-                                  !garment_state.bvh_level_offsets.empty();
-                       });
-}
 
 void clear_normal_correction_sums(const CollisionBuffers& buffers, QOpenGLFunctions_4_5_Core& gl)
 {
@@ -50,14 +24,6 @@ ClothClothCollisionSolver::ClothClothCollisionSolver(const ClothCollisionParams&
       max_correction_length_(params.max_correction_length),
       surface_search_radius_(params.body_search_radius)
 {}
-
-bool ClothClothCollisionSolver::is_initialized() const
-{
-    return accumulate_.program != 0 &&
-           initial_accumulate_.program != 0 &&
-           body_triangle_index_build_.program != 0 &&
-           apply_.program != 0;
-}
 
 void ClothClothCollisionSolver::initialize(const std::filesystem::path& shader_dir,
                                            QOpenGLFunctions_4_5_Core& gl)
@@ -96,35 +62,9 @@ void ClothClothCollisionSolver::initialize(const std::filesystem::path& shader_d
     apply_.max_correction = require_uniform_location(apply_.program, "uMaxCorrectionLength", gl);
 }
 
-bool ClothClothCollisionSolver::can_solve(const SceneGpuState& gpu_state) const
-{
-    return is_initialized() &&
-           has_valid_common_solve_metadata(gpu_state) &&
-           collision_thickness_ > 0.0f &&
-           collision_stiffness_ > 0.0f &&
-           max_correction_length_ > 0.0f;
-}
-
-bool ClothClothCollisionSolver::can_solve_initial(const SceneGpuState& gpu_state) const
-{
-    return is_initialized() &&
-           has_valid_common_solve_metadata(gpu_state) &&
-           collision_thickness_ > 0.0f &&
-           collision_stiffness_ > 0.0f &&
-           max_correction_length_ > 0.0f &&
-           surface_search_radius_ > 0.0f;
-}
-
-bool ClothClothCollisionSolver::can_update_body_surface_mapping(const SceneGpuState& gpu_state) const
-{
-    return is_initialized() && has_valid_common_solve_metadata(gpu_state) && surface_search_radius_ > 0.0f;
-}
-
 void ClothClothCollisionSolver::update_body_surface_mapping(const SceneGpuState& gpu_state,
                                                             QOpenGLFunctions_4_5_Core& gl) const
 {
-    assert(can_update_body_surface_mapping(gpu_state));
-
     const ClothGpuState& cloth_state = gpu_state.cloth_gpu_state();
     if (!cloth_state.has_multiple_garments()) {
         return;
@@ -152,8 +92,6 @@ void ClothClothCollisionSolver::update_body_surface_mapping(const SceneGpuState&
 
 void ClothClothCollisionSolver::solve(const SceneGpuState& gpu_state, QOpenGLFunctions_4_5_Core& gl) const
 {
-    assert(can_solve(gpu_state));
-
     const ClothGpuState& cloth_state = gpu_state.cloth_gpu_state();
     if (!cloth_state.has_multiple_garments()) {
         return;
@@ -183,8 +121,6 @@ void ClothClothCollisionSolver::solve(const SceneGpuState& gpu_state, QOpenGLFun
 void ClothClothCollisionSolver::solve_initial(const SceneGpuState& gpu_state,
                                               QOpenGLFunctions_4_5_Core& gl) const
 {
-    assert(can_solve_initial(gpu_state));
-
     const ClothGpuState& cloth_state = gpu_state.cloth_gpu_state();
     if (!cloth_state.has_multiple_garments()) {
         return;
