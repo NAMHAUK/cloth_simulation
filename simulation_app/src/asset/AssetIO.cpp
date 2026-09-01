@@ -3,7 +3,6 @@
 #include "utils/NumericUtils.h"
 
 #include <algorithm>
-#include <array>
 #include <cmath>
 #include <cstddef>
 #include <cstdint>
@@ -15,8 +14,6 @@
 #include <vector>
 
 namespace {
-constexpr std::array<char, 8> motion_asset_signature_v1 = {'S', 'M', 'P', 'L', 'M', 'O', 'T', 'N'};
-constexpr std::array<char, 8> motion_asset_signature_v2 = {'S', 'M', 'P', 'L', 'M', 'O', 'T', '2'};
 constexpr std::uint8_t left_hand_part_label = 6u;
 constexpr std::uint8_t right_hand_part_label = 7u;
 constexpr std::uint8_t max_body_part_label = 7u;
@@ -106,19 +103,8 @@ void read_garment_asset_data(std::ifstream& input,
 
 void read_motion_asset_header(std::ifstream& input,
                               const std::filesystem::path& path,
-                              CharacterMotion& motion,
-                              bool& has_reference_transforms)
+                              CharacterMotion& motion)
 {
-    std::array<char, motion_asset_signature_v2.size()> signature{};
-    input.read(signature.data(), static_cast<std::streamsize>(signature.size()));
-
-    const bool is_v1 = signature == motion_asset_signature_v1;
-    const bool is_v2 = signature == motion_asset_signature_v2;
-    if (!is_v1 && !is_v2) {
-        throw std::runtime_error("Invalid motion asset signature: " + path.string());
-    }
-
-    has_reference_transforms = is_v2;
     read_binary_value(input, motion.fps);
     read_binary_value(input, motion.frame_count);
     read_binary_value(input, motion.vertex_count);
@@ -133,7 +119,6 @@ void read_motion_asset_header(std::ifstream& input,
 
 void read_motion_asset_file_sizes(const std::filesystem::path& motion_asset_path,
                                   const CharacterMotion& character_motion,
-                                  bool has_reference_transforms,
                                   bool is_default)
 {
     const std::size_t reference_position_count = character_motion.frame_count * position_components;
@@ -143,18 +128,14 @@ void read_motion_asset_file_sizes(const std::filesystem::path& motion_asset_path
         static_cast<std::uintmax_t>(character_motion.triangle_count) * 3u;
 
     const std::uintmax_t base_file_size =
-        motion_asset_signature_v2.size() +
         sizeof(float) +
         sizeof(std::uint32_t) * 3u +
         triangle_vertex_index_count * sizeof(std::uint32_t) +
-        static_cast<std::uintmax_t>(reference_position_count) * sizeof(float) +
+        static_cast<std::uintmax_t>(reference_position_count) * sizeof(float) * 2u +
+        static_cast<std::uintmax_t>(orientation_count) * sizeof(float) * 2u +
         static_cast<std::uintmax_t>(vertex_position_count) * sizeof(float);
 
     std::uintmax_t expected_file_size = base_file_size;
-    if (has_reference_transforms) {
-        expected_file_size += static_cast<std::uintmax_t>(orientation_count) * sizeof(float) * 2u;
-        expected_file_size += static_cast<std::uintmax_t>(reference_position_count) * sizeof(float);
-    }
     if (is_default) {
         expected_file_size += sizeof(std::uint32_t);
         expected_file_size += static_cast<std::uintmax_t>(character_motion.triangle_count);
@@ -167,7 +148,6 @@ void read_motion_asset_file_sizes(const std::filesystem::path& motion_asset_path
 
 void read_motion_asset_data(const std::filesystem::path& motion_asset_path,
                             CharacterMotion& character_motion,
-                            bool has_reference_transforms,
                             std::ifstream& input)
 {
     const std::size_t reference_position_count = character_motion.frame_count * position_components;
@@ -178,22 +158,10 @@ void read_motion_asset_data(const std::filesystem::path& motion_asset_path,
 
     read_binary_values(input, character_motion.triangle_vertex_indices, triangle_vertex_index_count);
     read_binary_values(input, character_motion.pelvis_positions, reference_position_count);
-    if (has_reference_transforms) {
-        read_binary_values(input, character_motion.pelvis_orientations, orientation_count);
-        read_binary_values(input, character_motion.torso_positions, reference_position_count);
-        read_binary_values(input, character_motion.torso_orientations, orientation_count);
-    }
+    read_binary_values(input, character_motion.pelvis_orientations, orientation_count);
+    read_binary_values(input, character_motion.torso_positions, reference_position_count);
+    read_binary_values(input, character_motion.torso_orientations, orientation_count);
     read_binary_values(input, character_motion.vertices, vertex_position_count);
-
-    if (!has_reference_transforms) {
-        character_motion.pelvis_orientations.assign(orientation_count, 0.0f);
-        character_motion.torso_positions = character_motion.pelvis_positions;
-        character_motion.torso_orientations.assign(orientation_count, 0.0f);
-        for (std::size_t index = 3u; index < orientation_count; index += quaternion_components) {
-            character_motion.pelvis_orientations[index] = 1.0f;
-            character_motion.torso_orientations[index] = 1.0f;
-        }
-    }
 
     if (!is_finite_values(character_motion.pelvis_positions) ||
         !is_finite_values(character_motion.pelvis_orientations) ||
@@ -388,10 +356,9 @@ bool read_character_motion(const std::filesystem::path& motion_asset_path, Chara
         input.exceptions(std::ios::failbit | std::ios::badbit);
         input.open(motion_asset_path, std::ios::binary);
 
-        bool has_reference_transforms = false;
-        read_motion_asset_header(input, motion_asset_path, character_motion, has_reference_transforms);
-        read_motion_asset_file_sizes(motion_asset_path, character_motion, has_reference_transforms, false);
-        read_motion_asset_data(motion_asset_path, character_motion, has_reference_transforms, input);
+        read_motion_asset_header(input, motion_asset_path, character_motion);
+        read_motion_asset_file_sizes(motion_asset_path, character_motion, false);
+        read_motion_asset_data(motion_asset_path, character_motion, input);
         if (!is_valid_vertex_indices(character_motion.triangle_vertex_indices,
                                      character_motion.vertex_count) ||
             !has_distinct_triangle_vertices(character_motion.triangle_vertex_indices)) {
@@ -418,10 +385,9 @@ void read_default_character(const std::filesystem::path& motion_asset_path,
     input.exceptions(std::ios::failbit | std::ios::badbit);
     input.open(motion_asset_path, std::ios::binary);
 
-    bool has_reference_transforms = false;
-    read_motion_asset_header(input, motion_asset_path, character_motion, has_reference_transforms);
-    read_motion_asset_file_sizes(motion_asset_path, character_motion, has_reference_transforms, true);
-    read_motion_asset_data(motion_asset_path, character_motion, has_reference_transforms, input);
+    read_motion_asset_header(input, motion_asset_path, character_motion);
+    read_motion_asset_file_sizes(motion_asset_path, character_motion, true);
+    read_motion_asset_data(motion_asset_path, character_motion, input);
     if (!is_valid_vertex_indices(character_motion.triangle_vertex_indices, character_motion.vertex_count) ||
         !has_distinct_triangle_vertices(character_motion.triangle_vertex_indices)) {
         throw std::runtime_error("Default motion asset contains invalid triangle indices: " +
