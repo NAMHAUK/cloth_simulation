@@ -38,15 +38,15 @@ private:
     GLuint compile_shader(GLenum type, const char* source, QOpenGLFunctions_4_5_Core& gl);
 
     GLuint program_ = 0;
-    GLint mvp_location_ = -1;
-    GLint solid_mode_location_ = -1;
-    GLint solid_color_location_ = -1;
-    GLint opacity_location_ = -1;
-    GLint position_buffer_mode_location_ = -1;
-    GLint normal_lighting_mode_location_ = -1;
-    GLint light_direction_location_ = -1;
-    GLint fill_light_direction_location_ = -1;
-    GLint ambient_strength_location_ = -1;
-    GLint diffuse_strength_location_ = -1;
-    GLint fill_diffuse_strength_location_ = -1;
+    GLint mvp_loc_ = -1;
+    GLint solid_mode_loc_ = -1;
+    GLint solid_color_loc_ = -1;
+    GLint opacity_loc_ = -1;
+    GLint position_buffer_mode_loc_ = -1;
+    GLint normal_lighting_mode_loc_ = -1;
+    GLint light_direction_loc_ = -1;
+    GLint fill_light_direction_loc_ = -1;
+    GLint ambient_strength_loc_ = -1;
+    GLint diffuse_strength_loc_ = -1;
+    GLint fill_diffuse_strength_loc_ = -1;
 };

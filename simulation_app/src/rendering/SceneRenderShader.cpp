@@ -51,17 +51,17 @@ void SceneRenderShader::load(const std::filesystem::path& shader_dir, QOpenGLFun
     gl.glDeleteShader(vertex_shader);
     gl.glDeleteShader(fragment_shader);
 
-    mvp_location_ = gl.glGetUniformLocation(program_, "uMVP");
-    solid_mode_location_ = gl.glGetUniformLocation(program_, "uUseSolidColor");
-    solid_color_location_ = gl.glGetUniformLocation(program_, "uSolidColor");
-    opacity_location_ = gl.glGetUniformLocation(program_, "uOpacity");
-    position_buffer_mode_location_ = gl.glGetUniformLocation(program_, "uUsePositionBuffer");
-    normal_lighting_mode_location_ = gl.glGetUniformLocation(program_, "uUseNormalLighting");
-    light_direction_location_ = gl.glGetUniformLocation(program_, "uLightDirectionWorld");
-    fill_light_direction_location_ = gl.glGetUniformLocation(program_, "uFillLightDirectionWorld");
-    ambient_strength_location_ = gl.glGetUniformLocation(program_, "uAmbientStrength");
-    diffuse_strength_location_ = gl.glGetUniformLocation(program_, "uDiffuseStrength");
-    fill_diffuse_strength_location_ = gl.glGetUniformLocation(program_, "uFillDiffuseStrength");
+    mvp_loc_ = gl.glGetUniformLocation(program_, "uMVP");
+    solid_mode_loc_ = gl.glGetUniformLocation(program_, "uUseSolidColor");
+    solid_color_loc_ = gl.glGetUniformLocation(program_, "uSolidColor");
+    opacity_loc_ = gl.glGetUniformLocation(program_, "uOpacity");
+    position_buffer_mode_loc_ = gl.glGetUniformLocation(program_, "uUsePositionBuffer");
+    normal_lighting_mode_loc_ = gl.glGetUniformLocation(program_, "uUseNormalLighting");
+    light_direction_loc_ = gl.glGetUniformLocation(program_, "uLightDirectionWorld");
+    fill_light_direction_loc_ = gl.glGetUniformLocation(program_, "uFillLightDirectionWorld");
+    ambient_strength_loc_ = gl.glGetUniformLocation(program_, "uAmbientStrength");
+    diffuse_strength_loc_ = gl.glGetUniformLocation(program_, "uDiffuseStrength");
+    fill_diffuse_strength_loc_ = gl.glGetUniformLocation(program_, "uFillDiffuseStrength");
 }
 
 void SceneRenderShader::bind(QOpenGLFunctions_4_5_Core& gl) const
@@ -71,29 +71,29 @@ void SceneRenderShader::bind(QOpenGLFunctions_4_5_Core& gl) const
 
 void SceneRenderShader::set_mvp(const glm::mat4& mvp, QOpenGLFunctions_4_5_Core& gl) const
 {
-    if (!is_initialized() || mvp_location_ < 0) {
+    if (!is_initialized() || mvp_loc_ < 0) {
         return;
     }
 
-    gl.glProgramUniformMatrix4fv(program_, mvp_location_, 1, GL_FALSE, glm::value_ptr(mvp));
+    gl.glProgramUniformMatrix4fv(program_, mvp_loc_, 1, GL_FALSE, glm::value_ptr(mvp));
 }
 
 void SceneRenderShader::set_attribute_position_mode(QOpenGLFunctions_4_5_Core& gl) const
 {
-    if (!is_initialized() || position_buffer_mode_location_ < 0) {
+    if (!is_initialized() || position_buffer_mode_loc_ < 0) {
         return;
     }
 
-    gl.glProgramUniform1i(program_, position_buffer_mode_location_, 0);
+    gl.glProgramUniform1i(program_, position_buffer_mode_loc_, 0);
 }
 
 void SceneRenderShader::set_character_position_buffer_mode(QOpenGLFunctions_4_5_Core& gl) const
 {
-    if (!is_initialized() || position_buffer_mode_location_ < 0) {
+    if (!is_initialized() || position_buffer_mode_loc_ < 0) {
         return;
     }
 
-    gl.glProgramUniform1i(program_, position_buffer_mode_location_, 1);
+    gl.glProgramUniform1i(program_, position_buffer_mode_loc_, 1);
 }
 
 void SceneRenderShader::set_solid_color(const glm::vec3& color, QOpenGLFunctions_4_5_Core& gl) const
@@ -101,30 +101,30 @@ void SceneRenderShader::set_solid_color(const glm::vec3& color, QOpenGLFunctions
     if (!is_initialized()) {
         return;
     }
-    if (solid_mode_location_ >= 0) {
-        gl.glProgramUniform1i(program_, solid_mode_location_, 1);
+    if (solid_mode_loc_ >= 0) {
+        gl.glProgramUniform1i(program_, solid_mode_loc_, 1);
     }
-    if (solid_color_location_ >= 0) {
-        gl.glProgramUniform3f(program_, solid_color_location_, color.r, color.g, color.b);
+    if (solid_color_loc_ >= 0) {
+        gl.glProgramUniform3f(program_, solid_color_loc_, color.r, color.g, color.b);
     }
 }
 
 void SceneRenderShader::set_vertex_color_mode(QOpenGLFunctions_4_5_Core& gl) const
 {
-    if (!is_initialized() || solid_mode_location_ < 0) {
+    if (!is_initialized() || solid_mode_loc_ < 0) {
         return;
     }
 
-    gl.glProgramUniform1i(program_, solid_mode_location_, 0);
+    gl.glProgramUniform1i(program_, solid_mode_loc_, 0);
 }
 
 void SceneRenderShader::set_opacity(float opacity, QOpenGLFunctions_4_5_Core& gl) const
 {
-    if (!is_initialized() || opacity_location_ < 0) {
+    if (!is_initialized() || opacity_loc_ < 0) {
         return;
     }
 
-    gl.glProgramUniform1f(program_, opacity_location_, opacity);
+    gl.glProgramUniform1f(program_, opacity_loc_, opacity);
 }
 
 void SceneRenderShader::set_lighting(const glm::vec3& light_direction_world,
@@ -137,38 +137,38 @@ void SceneRenderShader::set_lighting(const glm::vec3& light_direction_world,
     if (!is_initialized()) {
         return;
     }
-    if (light_direction_location_ >= 0) {
+    if (light_direction_loc_ >= 0) {
         gl.glProgramUniform3f(program_,
-                              light_direction_location_,
+                              light_direction_loc_,
                               light_direction_world.x,
                               light_direction_world.y,
                               light_direction_world.z);
     }
-    if (fill_light_direction_location_ >= 0) {
+    if (fill_light_direction_loc_ >= 0) {
         gl.glProgramUniform3f(program_,
-                              fill_light_direction_location_,
+                              fill_light_direction_loc_,
                               fill_light_direction_world.x,
                               fill_light_direction_world.y,
                               fill_light_direction_world.z);
     }
-    if (ambient_strength_location_ >= 0) {
-        gl.glProgramUniform1f(program_, ambient_strength_location_, ambient_strength);
+    if (ambient_strength_loc_ >= 0) {
+        gl.glProgramUniform1f(program_, ambient_strength_loc_, ambient_strength);
     }
-    if (diffuse_strength_location_ >= 0) {
-        gl.glProgramUniform1f(program_, diffuse_strength_location_, diffuse_strength);
+    if (diffuse_strength_loc_ >= 0) {
+        gl.glProgramUniform1f(program_, diffuse_strength_loc_, diffuse_strength);
     }
-    if (fill_diffuse_strength_location_ >= 0) {
-        gl.glProgramUniform1f(program_, fill_diffuse_strength_location_, fill_diffuse_strength);
+    if (fill_diffuse_strength_loc_ >= 0) {
+        gl.glProgramUniform1f(program_, fill_diffuse_strength_loc_, fill_diffuse_strength);
     }
 }
 
 void SceneRenderShader::set_normal_lighting_enabled(bool enabled, QOpenGLFunctions_4_5_Core& gl) const
 {
-    if (!is_initialized() || normal_lighting_mode_location_ < 0) {
+    if (!is_initialized() || normal_lighting_mode_loc_ < 0) {
         return;
     }
 
-    gl.glProgramUniform1i(program_, normal_lighting_mode_location_, enabled ? 1 : 0);
+    gl.glProgramUniform1i(program_, normal_lighting_mode_loc_, enabled ? 1 : 0);
 }
 
 void SceneRenderShader::release(QOpenGLFunctions_4_5_Core& gl)
@@ -176,17 +176,17 @@ void SceneRenderShader::release(QOpenGLFunctions_4_5_Core& gl)
     gl.glDeleteProgram(program_);
 
     program_ = 0;
-    mvp_location_ = -1;
-    solid_mode_location_ = -1;
-    solid_color_location_ = -1;
-    opacity_location_ = -1;
-    position_buffer_mode_location_ = -1;
-    normal_lighting_mode_location_ = -1;
-    light_direction_location_ = -1;
-    fill_light_direction_location_ = -1;
-    ambient_strength_location_ = -1;
-    diffuse_strength_location_ = -1;
-    fill_diffuse_strength_location_ = -1;
+    mvp_loc_ = -1;
+    solid_mode_loc_ = -1;
+    solid_color_loc_ = -1;
+    opacity_loc_ = -1;
+    position_buffer_mode_loc_ = -1;
+    normal_lighting_mode_loc_ = -1;
+    light_direction_loc_ = -1;
+    fill_light_direction_loc_ = -1;
+    ambient_strength_loc_ = -1;
+    diffuse_strength_loc_ = -1;
+    fill_diffuse_strength_loc_ = -1;
 }
 
 GLuint SceneRenderShader::compile_shader(GLenum type, const char* source, QOpenGLFunctions_4_5_Core& gl)
