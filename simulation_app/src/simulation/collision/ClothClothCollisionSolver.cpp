@@ -29,52 +29,55 @@ void ClothClothCollisionSolver::initialize(const std::filesystem::path& shader_d
                                            QOpenGLFunctions_4_5_Core& gl)
 {
     const auto collision_dir = shader_dir / "collision" / "cloth_cloth";
-    accumulate_.program = load_compute_program(collision_dir / "vertex_face_accumulate.comp", gl);
-    initial_accumulate_.program = load_compute_program(collision_dir / "initial_layer_accumulate.comp", gl);
-    body_triangle_index_build_.program =
-        load_compute_program(collision_dir / "body_triangle_index_build.comp", gl);
-    apply_.program = load_compute_program(collision_dir / "apply.comp", gl);
 
-    accumulate_.max_candidates_loc = require_uniform_location(accumulate_.program, "uMaxCandidateCount", gl);
-    accumulate_.body_triangle_count_loc =
-        require_uniform_location(accumulate_.program, "uBodyTriangleCount", gl);
-    accumulate_.upper_vertex_offset_loc =
-        require_uniform_location(accumulate_.program, "uUpperVertexOffset", gl);
-    initial_accumulate_.max_candidates_loc =
-        require_uniform_location(initial_accumulate_.program, "uMaxCandidateCount", gl);
-    initial_accumulate_.upper_vertex_offset_loc =
-        require_uniform_location(initial_accumulate_.program, "uUpperVertexOffset", gl);
-    body_triangle_index_build_.vertex_count_loc =
-        require_uniform_location(body_triangle_index_build_.program, "uVertexCount", gl);
-    body_triangle_index_build_.arm_triangle_ranges_loc =
-        require_uniform_location(body_triangle_index_build_.program, "uArmTriangleRanges", gl);
-    apply_.vertex_count_loc = require_uniform_location(apply_.program, "uVertexCount", gl);
+    {
+        auto& shader = accumulate_;
+        shader.program = load_compute_program(collision_dir / "vertex_face_accumulate.comp", gl);
 
-    const GLint accumulate_collision_thickness_loc =
-        require_uniform_location(accumulate_.program, "uCollisionThickness", gl);
-    const GLint accumulate_collision_stiffness_loc =
-        require_uniform_location(accumulate_.program, "uCollisionStiffness", gl);
-    const GLint initial_collision_thickness_loc =
-        require_uniform_location(initial_accumulate_.program, "uCollisionThickness", gl);
-    const GLint initial_collision_stiffness_loc =
-        require_uniform_location(initial_accumulate_.program, "uCollisionStiffness", gl);
-    const GLint initial_search_radius_squared_loc =
-        require_uniform_location(initial_accumulate_.program, "uSearchRadiusSquared", gl);
-    const GLint body_search_radius_squared_loc =
-        require_uniform_location(body_triangle_index_build_.program, "uSearchRadiusSquared", gl);
-    const GLint max_correction_loc = require_uniform_location(apply_.program, "uMaxCorrectionLength", gl);
+        shader.max_candidates_loc = require_uniform_location(shader.program, "uMaxCandidateCount", gl);
+        shader.body_triangle_count_loc = require_uniform_location(shader.program, "uBodyTriangleCount", gl);
+        shader.upper_vertex_offset_loc = require_uniform_location(shader.program, "uUpperVertexOffset", gl);
+        const GLint thickness_loc = require_uniform_location(shader.program, "uCollisionThickness", gl);
+        const GLint stiffness_loc = require_uniform_location(shader.program, "uCollisionStiffness", gl);
+        gl.glProgramUniform1f(shader.program, thickness_loc, collision_thickness_);
+        gl.glProgramUniform1f(shader.program, stiffness_loc, collision_stiffness_);
+    }
 
-    gl.glProgramUniform1f(accumulate_.program, accumulate_collision_thickness_loc, collision_thickness_);
-    gl.glProgramUniform1f(accumulate_.program, accumulate_collision_stiffness_loc, collision_stiffness_);
-    gl.glProgramUniform1f(initial_accumulate_.program, initial_collision_thickness_loc, collision_thickness_);
-    gl.glProgramUniform1f(initial_accumulate_.program, initial_collision_stiffness_loc, collision_stiffness_);
-    gl.glProgramUniform1f(initial_accumulate_.program,
-                          initial_search_radius_squared_loc,
-                          surface_search_radius_ * surface_search_radius_);
-    gl.glProgramUniform1f(body_triangle_index_build_.program,
-                          body_search_radius_squared_loc,
-                          surface_search_radius_ * surface_search_radius_);
-    gl.glProgramUniform1f(apply_.program, max_correction_loc, max_correction_length_);
+    {
+        auto& shader = initial_accumulate_;
+        shader.program = load_compute_program(collision_dir / "initial_layer_accumulate.comp", gl);
+
+        shader.max_candidates_loc = require_uniform_location(shader.program, "uMaxCandidateCount", gl);
+        shader.upper_vertex_offset_loc = require_uniform_location(shader.program, "uUpperVertexOffset", gl);
+        const GLint thickness_loc = require_uniform_location(shader.program, "uCollisionThickness", gl);
+        const GLint stiffness_loc = require_uniform_location(shader.program, "uCollisionStiffness", gl);
+        const GLint search_radius_loc = require_uniform_location(shader.program, "uSearchRadiusSquared", gl);
+        gl.glProgramUniform1f(shader.program, thickness_loc, collision_thickness_);
+        gl.glProgramUniform1f(shader.program, stiffness_loc, collision_stiffness_);
+        gl.glProgramUniform1f(shader.program,
+                              search_radius_loc,
+                              surface_search_radius_ * surface_search_radius_);
+    }
+
+    {
+        auto& shader = body_triangle_index_build_;
+        shader.program = load_compute_program(collision_dir / "body_triangle_index_build.comp", gl);
+
+        shader.vertex_count_loc = require_uniform_location(shader.program, "uVertexCount", gl);
+        shader.arm_triangle_ranges_loc = require_uniform_location(shader.program, "uArmTriangleRanges", gl);
+        const GLint search_radius_loc = require_uniform_location(shader.program, "uSearchRadiusSquared", gl);
+        gl.glProgramUniform1f(shader.program,
+                              search_radius_loc,
+                              surface_search_radius_ * surface_search_radius_);
+    }
+
+    {
+        auto& shader = apply_;
+        shader.program = load_compute_program(collision_dir / "apply.comp", gl);
+        shader.vertex_count_loc = require_uniform_location(shader.program, "uVertexCount", gl);
+        const GLint max_correction_loc = require_uniform_location(shader.program, "uMaxCorrectionLength", gl);
+        gl.glProgramUniform1f(shader.program, max_correction_loc, max_correction_length_);
+    }
 }
 
 void ClothClothCollisionSolver::update_body_surface_mapping(const SceneGpuState& gpu_state,
