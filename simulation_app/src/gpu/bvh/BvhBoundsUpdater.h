@@ -1,5 +1,6 @@
 #pragma once
 
+#include <cstddef>
 #include <cstdint>
 #include <filesystem>
 #include <vector>
@@ -30,8 +31,6 @@ public:
     void release(QOpenGLFunctions_4_5_Core& gl);
 
 private:
-    bool can_update_cloth(const ClothGpuState& cloth_state, float bounds_margin) const;
-
     GLuint body_program_ = 0;
     GLint body_triangle_first_node_index_loc_ = -1;
     GLint body_triangle_node_count_loc_ = -1;
@@ -39,6 +38,7 @@ private:
     GLint body_vertex_node_count_loc_ = -1;
     GLint body_edge_first_node_index_loc_ = -1;
     GLint body_edge_node_count_loc_ = -1;
+    std::size_t body_bvh_level_count_ = 0;
     std::vector<std::uint32_t> body_triangle_level_offsets_;
     std::vector<std::uint32_t> body_vertex_level_offsets_;
     std::vector<std::uint32_t> body_edge_level_offsets_;

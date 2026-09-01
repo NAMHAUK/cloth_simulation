@@ -3,6 +3,7 @@
 #include "gpu/cloth/ClothGpuDataTypes.h"
 
 #include <array>
+#include <cstddef>
 #include <cstdint>
 #include <vector>
 
@@ -44,8 +45,9 @@ public:
     bool is_initialized() const;
     bool has_multiple_garments() const;
 
-    const std::array<GarmentBufferState, 2>& garment_buffer_states() const;
+    const std::array<GarmentBufferState, 2>& garment_states() const;
     const ClothBufferElementCounts& element_counts() const;
+    std::size_t max_bvh_level_count() const;
     const std::vector<ConstraintColorState>& stretch_color_states() const;
     const std::vector<ConstraintColorState>& bending_color_states() const;
     const ClothBufferSet& buffer_set() const;
@@ -60,6 +62,7 @@ private:
         std::vector<ConstraintColorState> stretch_color_states;
         std::vector<ConstraintColorState> bending_color_states;
         ClothBufferElementCounts element_counts;
+        std::size_t max_bvh_level_count = 0;
     };
 
     static void assign_garment_buffer_states(const std::vector<GarmentObject>& garments, BufferState& state);

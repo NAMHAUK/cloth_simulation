@@ -149,7 +149,7 @@ void CollisionDetector::detect_cloth_cloth_vertex_face(const SceneGpuState& gpu_
 {
     const auto& shader = cloth_cloth_vertex_face_;
     const auto& candidates = gpu_state.collision_buffers().cloth_cloth_vertex_face;
-    const auto& garment_states = gpu_state.cloth_gpu_state().garment_buffer_states();
+    const auto& garment_states = gpu_state.cloth_gpu_state().garment_states();
     const GarmentBufferState& upper = garment_states[GarmentLayer::Upper];
     const GarmentBufferState& lower = garment_states[GarmentLayer::Lower];
     gl.glUseProgram(shader.program);
