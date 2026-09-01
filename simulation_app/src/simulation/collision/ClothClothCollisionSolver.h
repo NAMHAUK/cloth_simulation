@@ -24,37 +24,30 @@ private:
     struct AccumulateStage final
     {
         GLuint program = 0;
-        GLint max_candidates = -1;
-        GLint collision_thickness = -1;
-        GLint collision_stiffness = -1;
-        GLint body_triangle_count = -1;
-        GLint upper_vertex_offset = -1;
+        GLint max_candidates_loc = -1;
+        GLint body_triangle_count_loc = -1;
+        GLint upper_vertex_offset_loc = -1;
     };
 
     struct BodyTriangleIndexBuildStage final
     {
         GLuint program = 0;
-        GLint vertex_count = -1;
-        GLint search_radius_squared = -1;
-        GLint arm_triangle_ranges = -1;
+        GLint vertex_count_loc = -1;
+        GLint arm_triangle_ranges_loc = -1;
     };
 
     struct ApplyStage final
     {
         GLuint program = 0;
-        GLint vertex_count = -1;
-        GLint max_correction = -1;
+        GLint vertex_count_loc = -1;
     };
 
     AccumulateStage accumulate_;
     struct InitialAccumulateStage final
     {
         GLuint program = 0;
-        GLint max_candidates = -1;
-        GLint collision_thickness = -1;
-        GLint collision_stiffness = -1;
-        GLint search_radius_squared = -1;
-        GLint upper_vertex_offset = -1;
+        GLint max_candidates_loc = -1;
+        GLint upper_vertex_offset_loc = -1;
     } initial_accumulate_;
     BodyTriangleIndexBuildStage body_triangle_index_build_;
     ApplyStage apply_;
