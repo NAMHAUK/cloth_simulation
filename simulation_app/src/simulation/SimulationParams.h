@@ -25,7 +25,7 @@ struct ClothIntegrationParams final
     float gravity = -9.8f;
     float velocity_damping = 0.99792f;
     float reference_frame_inertia_scale = 0.5f;
-    float reference_frame_max_acceleration = 30.0f;
+    float reference_frame_max_linear_acceleration = 30.0f;
     float reference_frame_max_angular_acceleration = 60.0f;
 };
 
@@ -111,7 +111,7 @@ constexpr bool is_valid_simulation_params(const SimulationParams& params)
            integration.velocity_damping <= 1.0f &&
            integration.reference_frame_inertia_scale >= 0.0f &&
            integration.reference_frame_inertia_scale <= 1.0f &&
-           integration.reference_frame_max_acceleration > 0.0f &&
+           integration.reference_frame_max_linear_acceleration > 0.0f &&
            integration.reference_frame_max_angular_acceleration > 0.0f &&
            constraints.stretch_stiffness >= 0.0f &&
            constraints.stretch_stiffness <= 1.0f &&

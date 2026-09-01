@@ -33,8 +33,8 @@ uniform float uVelocityDamping;
 uniform vec3 uFrameStartPosition;
 uniform vec3 uFrameEndPosition;
 uniform mat3 uFrameRotationDelta;
-uniform vec3 uFrameStartVelocity;
-uniform vec3 uFrameAcceleration;
+uniform vec3 uFrameStartLinearVelocity;
+uniform vec3 uFrameLinearAcceleration;
 uniform vec3 uFrameStartAngularVelocity;
 uniform vec3 uFrameAngularAcceleration;
 uniform float uFrameInertiaScale;
@@ -80,7 +80,7 @@ void main()
      
     // update pos
     vec3 frame_offset = current - uFrameStartPosition;
-    vec3 frame_velocity = uFrameStartVelocity + cross(uFrameStartAngularVelocity, frame_offset);
+    vec3 frame_velocity = uFrameStartLinearVelocity + cross(uFrameStartAngularVelocity, frame_offset);
     vec3 relative_velocity = solved_velocity - frame_velocity;
     vec3 rotational_acceleration =
         cross(uFrameAngularAcceleration, frame_offset) +
@@ -88,7 +88,7 @@ void main()
         2.0 * cross(uFrameStartAngularVelocity, relative_velocity);
     vec3 relative_acceleration =
         uExternalAcceleration -
-        (uFrameAcceleration + rotational_acceleration) * uFrameInertiaScale;
+        (uFrameLinearAcceleration + rotational_acceleration) * uFrameInertiaScale;
     relative_velocity = relative_velocity * uVelocityDamping + relative_acceleration * uDeltaTime;
     vec3 predicted_position =
         uFrameEndPosition + uFrameRotationDelta * (frame_offset + relative_velocity * uDeltaTime);

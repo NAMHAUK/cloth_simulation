@@ -23,19 +23,17 @@ void CharacterGpuState::initialize(const std::filesystem::path& shader_dir, QOpe
     position_program_ = load_compute_program(position_shader_path, gl);
     triangle_update_program_ = load_compute_program(triangle_shader_path, gl);
 
-    position_current_frame_base_location_ =
-        require_uniform_location(position_program_, "uCurrentFrameBase", gl);
-    position_next_frame_base_location_ = require_uniform_location(position_program_, "uNextFrameBase", gl);
-    position_frame_alpha_location_ = require_uniform_location(position_program_, "uFrameAlpha", gl);
-    position_vertex_count_location_ = require_uniform_location(position_program_, "uVertexCount", gl);
-    triangle_count_location_ = require_uniform_location(triangle_update_program_, "uTriangleCount", gl);
+    position_current_frame_base_loc_ = require_uniform_location(position_program_, "uCurrentFrameBase", gl);
+    position_next_frame_base_loc_ = require_uniform_location(position_program_, "uNextFrameBase", gl);
+    position_frame_alpha_loc_ = require_uniform_location(position_program_, "uFrameAlpha", gl);
+    position_vertex_count_loc_ = require_uniform_location(position_program_, "uVertexCount", gl);
+    triangle_count_loc_ = require_uniform_location(triangle_update_program_, "uTriangleCount", gl);
 
     initialize_gpu_resources(gl);
 }
 
 void CharacterGpuState::initialize_gpu_resources(QOpenGLFunctions_4_5_Core& gl)
 {
-    // Create persistent OpenGL objects.
     gl.glCreateVertexArrays(1, &vao_);
     gl.glCreateBuffers(1, &buffers_.all_frame_positions);
     gl.glCreateBuffers(1, &buffers_.previous_position);
@@ -145,7 +143,6 @@ void CharacterGpuState::set_motion(const CharacterMotion& motion, QOpenGLFunctio
     frame_count_ = motion.frame_count;
     current_frame_index_ = 0;
 
-    // Initialization writes the selected pose to current, then mirrors it into previous.
     write_current_positions(0.0f, gl);
     copy_current_to_previous(gl);
     update_triangle_geometry(gl);
@@ -157,7 +154,6 @@ void CharacterGpuState::update_pose(std::uint32_t frame_index,
 {
     current_frame_index_ = frame_index;
 
-    // Continuous update carries old current into previous before writing the new current pose.
     copy_current_to_previous(gl);
     write_current_positions(frame_alpha, gl);
     update_triangle_geometry(gl);
@@ -171,10 +167,10 @@ void CharacterGpuState::write_current_positions(float frame_alpha, QOpenGLFuncti
     const std::uint32_t next_frame_base = next_frame_index * vertex_count_ * 3u;
 
     gl.glUseProgram(position_program_);
-    gl.glProgramUniform1ui(position_program_, position_current_frame_base_location_, current_frame_base);
-    gl.glProgramUniform1ui(position_program_, position_next_frame_base_location_, next_frame_base);
-    gl.glProgramUniform1f(position_program_, position_frame_alpha_location_, frame_alpha);
-    gl.glProgramUniform1ui(position_program_, position_vertex_count_location_, vertex_count_);
+    gl.glProgramUniform1ui(position_program_, position_current_frame_base_loc_, current_frame_base);
+    gl.glProgramUniform1ui(position_program_, position_next_frame_base_loc_, next_frame_base);
+    gl.glProgramUniform1f(position_program_, position_frame_alpha_loc_, frame_alpha);
+    gl.glProgramUniform1ui(position_program_, position_vertex_count_loc_, vertex_count_);
 
     gl.glDispatchCompute(compute_group_count(vertex_count_, position_update_local_size), 1, 1);
     gl.glMemoryBarrier(GL_SHADER_STORAGE_BARRIER_BIT);
@@ -190,7 +186,7 @@ void CharacterGpuState::copy_current_to_previous(QOpenGLFunctions_4_5_Core& gl) 
 void CharacterGpuState::update_triangle_geometry(QOpenGLFunctions_4_5_Core& gl) const
 {
     gl.glUseProgram(triangle_update_program_);
-    gl.glProgramUniform1ui(triangle_update_program_, triangle_count_location_, triangle_count_);
+    gl.glProgramUniform1ui(triangle_update_program_, triangle_count_loc_, triangle_count_);
 
     gl.glDispatchCompute(compute_group_count(triangle_count_, triangle_geometry_local_size), 1, 1);
     gl.glMemoryBarrier(GL_SHADER_STORAGE_BARRIER_BIT);
@@ -236,11 +232,11 @@ void CharacterGpuState::release(QOpenGLFunctions_4_5_Core& gl)
 
     position_program_ = 0;
     triangle_update_program_ = 0;
-    position_current_frame_base_location_ = -1;
-    position_next_frame_base_location_ = -1;
-    position_frame_alpha_location_ = -1;
-    position_vertex_count_location_ = -1;
-    triangle_count_location_ = -1;
+    position_current_frame_base_loc_ = -1;
+    position_next_frame_base_loc_ = -1;
+    position_frame_alpha_loc_ = -1;
+    position_vertex_count_loc_ = -1;
+    triangle_count_loc_ = -1;
 }
 
 void CharacterGpuState::release_mesh_resources(QOpenGLFunctions_4_5_Core& gl)

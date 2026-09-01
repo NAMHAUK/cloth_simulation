@@ -8,7 +8,7 @@
 #include <stdexcept>
 
 namespace {
-constexpr std::uint32_t apply_local_size = 128;
+constexpr std::uint32_t local_size = 128;
 }
 
 ClothBodyCollisionSolver::ClothBodyCollisionSolver(const BodyCollisionParams& params)
@@ -29,19 +29,30 @@ void ClothBodyCollisionSolver::initialize(const std::filesystem::path& shader_di
     bf_accumulate_.program =
         load_compute_program(cloth_body_shader_dir / "body_vertex_cloth_face_accumulate.comp", gl);
     apply_.program = load_compute_program(cloth_body_shader_dir / "apply.comp", gl);
-    vf_accumulate_.max_candidates =
+    vf_accumulate_.max_candidates_loc =
         require_uniform_location(vf_accumulate_.program, "uMaxCandidateCount", gl);
-    vf_accumulate_.thickness = require_uniform_location(vf_accumulate_.program, "uCollisionThickness", gl);
-    ee_accumulate_.max_candidates =
+    ee_accumulate_.max_candidates_loc =
         require_uniform_location(ee_accumulate_.program, "uMaxCandidateCount", gl);
-    ee_accumulate_.thickness = require_uniform_location(ee_accumulate_.program, "uCollisionThickness", gl);
-    bf_accumulate_.max_candidates =
+    bf_accumulate_.max_candidates_loc =
         require_uniform_location(bf_accumulate_.program, "uMaxCandidateCount", gl);
-    bf_accumulate_.thickness = require_uniform_location(bf_accumulate_.program, "uCollisionThickness", gl);
-    apply_.vertex_count = require_uniform_location(apply_.program, "uVertexCount", gl);
-    apply_.max_correction = require_uniform_location(apply_.program, "uMaxCorrectionLength", gl);
-    apply_.static_friction = require_uniform_location(apply_.program, "uStaticFriction", gl);
-    apply_.dynamic_friction = require_uniform_location(apply_.program, "uDynamicFriction", gl);
+    apply_.vertex_count_loc = require_uniform_location(apply_.program, "uVertexCount", gl);
+
+    const GLint vf_thickness_loc =
+        require_uniform_location(vf_accumulate_.program, "uCollisionThickness", gl);
+    const GLint ee_thickness_loc =
+        require_uniform_location(ee_accumulate_.program, "uCollisionThickness", gl);
+    const GLint bf_thickness_loc =
+        require_uniform_location(bf_accumulate_.program, "uCollisionThickness", gl);
+    const GLint max_correction_loc = require_uniform_location(apply_.program, "uMaxCorrectionLength", gl);
+    const GLint static_friction_loc = require_uniform_location(apply_.program, "uStaticFriction", gl);
+    const GLint dynamic_friction_loc = require_uniform_location(apply_.program, "uDynamicFriction", gl);
+
+    gl.glProgramUniform1f(vf_accumulate_.program, vf_thickness_loc, collision_thickness_);
+    gl.glProgramUniform1f(ee_accumulate_.program, ee_thickness_loc, collision_thickness_);
+    gl.glProgramUniform1f(bf_accumulate_.program, bf_thickness_loc, collision_thickness_);
+    gl.glProgramUniform1f(apply_.program, max_correction_loc, max_correction_length_);
+    gl.glProgramUniform1f(apply_.program, static_friction_loc, static_friction_);
+    gl.glProgramUniform1f(apply_.program, dynamic_friction_loc, dynamic_friction_);
 }
 
 void ClothBodyCollisionSolver::solve(const SceneGpuState& gpu_state, QOpenGLFunctions_4_5_Core& gl) const
@@ -89,9 +100,8 @@ void ClothBodyCollisionSolver::vf_accumulate(const SceneGpuState& gpu_state,
         gpu_state.collision_buffers().cloth_vertex_body_face;
     gl.glUseProgram(vf_accumulate_.program);
     gl.glProgramUniform1ui(vf_accumulate_.program,
-                           vf_accumulate_.max_candidates,
+                           vf_accumulate_.max_candidates_loc,
                            collision_candidates.max_pairs);
-    gl.glProgramUniform1f(vf_accumulate_.program, vf_accumulate_.thickness, collision_thickness_);
     gl.glBindBuffer(GL_DISPATCH_INDIRECT_BUFFER, collision_candidates.dispatch_size_buffer);
     gl.glDispatchComputeIndirect(0);
     gl.glBindBuffer(GL_DISPATCH_INDIRECT_BUFFER, 0);
@@ -104,9 +114,8 @@ void ClothBodyCollisionSolver::ee_accumulate(const SceneGpuState& gpu_state,
     const auto& collision_candidates = gpu_state.collision_buffers().cloth_edge_body_edge;
     gl.glUseProgram(ee_accumulate_.program);
     gl.glProgramUniform1ui(ee_accumulate_.program,
-                           ee_accumulate_.max_candidates,
+                           ee_accumulate_.max_candidates_loc,
                            collision_candidates.max_pairs);
-    gl.glProgramUniform1f(ee_accumulate_.program, ee_accumulate_.thickness, collision_thickness_);
     gl.glBindBuffer(GL_DISPATCH_INDIRECT_BUFFER, collision_candidates.dispatch_size_buffer);
     gl.glDispatchComputeIndirect(0);
     gl.glBindBuffer(GL_DISPATCH_INDIRECT_BUFFER, 0);
@@ -119,9 +128,8 @@ void ClothBodyCollisionSolver::bf_accumulate(const SceneGpuState& gpu_state,
     const auto& collision_candidates = gpu_state.collision_buffers().cloth_face_body_vertex;
     gl.glUseProgram(bf_accumulate_.program);
     gl.glProgramUniform1ui(bf_accumulate_.program,
-                           bf_accumulate_.max_candidates,
+                           bf_accumulate_.max_candidates_loc,
                            collision_candidates.max_pairs);
-    gl.glProgramUniform1f(bf_accumulate_.program, bf_accumulate_.thickness, collision_thickness_);
     gl.glBindBuffer(GL_DISPATCH_INDIRECT_BUFFER, collision_candidates.dispatch_size_buffer);
     gl.glDispatchComputeIndirect(0);
     gl.glBindBuffer(GL_DISPATCH_INDIRECT_BUFFER, 0);
@@ -133,10 +141,7 @@ void ClothBodyCollisionSolver::apply_combined_corrections(const SceneGpuState& g
 {
     const std::uint32_t vertex_count = gpu_state.cloth_gpu_state().element_counts().vertex;
     gl.glUseProgram(apply_.program);
-    gl.glProgramUniform1ui(apply_.program, apply_.vertex_count, vertex_count);
-    gl.glProgramUniform1f(apply_.program, apply_.max_correction, max_correction_length_);
-    gl.glProgramUniform1f(apply_.program, apply_.static_friction, static_friction_);
-    gl.glProgramUniform1f(apply_.program, apply_.dynamic_friction, dynamic_friction_);
-    gl.glDispatchCompute(compute_group_count(vertex_count, apply_local_size), 1, 1);
+    gl.glProgramUniform1ui(apply_.program, apply_.vertex_count_loc, vertex_count);
+    gl.glDispatchCompute(compute_group_count(vertex_count, local_size), 1, 1);
     gl.glMemoryBarrier(GL_SHADER_STORAGE_BARRIER_BIT);
 }

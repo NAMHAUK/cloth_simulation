@@ -20,10 +20,7 @@ public:
 
 private:
     GLuint program_ = 0;
-    GLint vertex_count_location_ = -1;
-    GLint floor_height_location_ = -1;
-    GLint static_friction_location_ = -1;
-    GLint dynamic_friction_location_ = -1;
+    GLint vertex_count_loc_ = -1;
     float floor_height_ = 0.0f;
     float static_friction_ = 0.0f;
     float dynamic_friction_ = 0.0f;

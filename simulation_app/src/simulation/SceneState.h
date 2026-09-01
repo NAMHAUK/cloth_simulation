@@ -20,14 +20,14 @@ struct ReferenceFrameKinematics final
     glm::vec3 start_position{};
     glm::vec3 end_position{};
     glm::mat3 rotation_delta{1.0f};
-    glm::vec3 start_velocity{};
-    glm::vec3 acceleration{};
+    glm::vec3 start_linear_velocity{};
+    glm::vec3 linear_acceleration{};
     glm::vec3 start_angular_velocity{};
     glm::vec3 angular_acceleration{};
 
 private:
     glm::quat orientation_ = quat_xyzw(0.0f, 0.0f, 0.0f, 1.0f);
-    glm::vec3 velocity_{};
+    glm::vec3 linear_velocity_{};
     glm::vec3 angular_velocity_{};
 };
 

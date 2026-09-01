@@ -33,18 +33,14 @@ void BackgroundGradient::initialize(const std::filesystem::path& shader_dir, QOp
         2.0f,
     };
 
-    top_color_location_ = gl.glGetUniformLocation(program_, "uTopColor");
-    bottom_color_location_ = gl.glGetUniformLocation(program_, "uBottomColor");
+    top_color_loc_ = gl.glGetUniformLocation(program_, "uTopColor");
+    bottom_color_loc_ = gl.glGetUniformLocation(program_, "uBottomColor");
 
-    if (top_color_location_ >= 0) {
-        gl.glProgramUniform3f(program_, top_color_location_, top_color_.r, top_color_.g, top_color_.b);
+    if (top_color_loc_ >= 0) {
+        gl.glProgramUniform3f(program_, top_color_loc_, top_color_.r, top_color_.g, top_color_.b);
     }
-    if (bottom_color_location_ >= 0) {
-        gl.glProgramUniform3f(program_,
-                              bottom_color_location_,
-                              bottom_color_.r,
-                              bottom_color_.g,
-                              bottom_color_.b);
+    if (bottom_color_loc_ >= 0) {
+        gl.glProgramUniform3f(program_, bottom_color_loc_, bottom_color_.r, bottom_color_.g, bottom_color_.b);
     }
 
     gl.glCreateVertexArrays(1, &vao_);
@@ -56,23 +52,23 @@ void BackgroundGradient::initialize(const std::filesystem::path& shader_dir, QOp
 
     constexpr GLsizei stride = 4 * static_cast<GLsizei>(sizeof(float));
     constexpr GLuint vertex_binding_index = 0;
-    constexpr GLuint position_attribute_location = 0;
-    constexpr GLuint uv_attribute_location = 1;
+    constexpr GLuint position_attribute_loc = 0;
+    constexpr GLuint uv_attribute_loc = 1;
     constexpr GLuint position_relative_offset = 0;
     constexpr GLuint uv_relative_offset = 2 * sizeof(float);
 
     gl.glVertexArrayVertexBuffer(vao_, vertex_binding_index, vertex_buffer_, 0, stride);
-    gl.glEnableVertexArrayAttrib(vao_, position_attribute_location);
+    gl.glEnableVertexArrayAttrib(vao_, position_attribute_loc);
     gl.glVertexArrayAttribFormat(vao_,
-                                 position_attribute_location,
+                                 position_attribute_loc,
                                  2,
                                  GL_FLOAT,
                                  GL_FALSE,
                                  position_relative_offset);
-    gl.glVertexArrayAttribBinding(vao_, position_attribute_location, vertex_binding_index);
-    gl.glEnableVertexArrayAttrib(vao_, uv_attribute_location);
-    gl.glVertexArrayAttribFormat(vao_, uv_attribute_location, 2, GL_FLOAT, GL_FALSE, uv_relative_offset);
-    gl.glVertexArrayAttribBinding(vao_, uv_attribute_location, vertex_binding_index);
+    gl.glVertexArrayAttribBinding(vao_, position_attribute_loc, vertex_binding_index);
+    gl.glEnableVertexArrayAttrib(vao_, uv_attribute_loc);
+    gl.glVertexArrayAttribFormat(vao_, uv_attribute_loc, 2, GL_FLOAT, GL_FALSE, uv_relative_offset);
+    gl.glVertexArrayAttribBinding(vao_, uv_attribute_loc, vertex_binding_index);
 }
 
 void BackgroundGradient::draw(QOpenGLFunctions_4_5_Core& gl) const
@@ -95,8 +91,8 @@ void BackgroundGradient::release(QOpenGLFunctions_4_5_Core& gl)
     program_ = 0;
     vao_ = 0;
     vertex_buffer_ = 0;
-    top_color_location_ = -1;
-    bottom_color_location_ = -1;
+    top_color_loc_ = -1;
+    bottom_color_loc_ = -1;
 }
 
 GLuint BackgroundGradient::load_program(const std::filesystem::path& vertex_shader_path,

@@ -62,13 +62,13 @@ private:
 
     GLuint triangle_normal_program_ = 0;
     GLuint vertex_normal_program_ = 0;
-    GLint triangle_count_location_ = -1;
-    GLint vertex_count_location_ = -1;
-    GLint use_character_buffers_location_ = -1;
+    GLint triangle_count_loc_ = -1;
+    GLint vertex_count_loc_ = -1;
+    GLint use_character_buffers_loc_ = -1;
 
     GLuint attachment_target_program_ = 0;
-    GLint attachment_constraint_offset_location_ = -1;
-    GLint attachment_constraint_count_location_ = -1;
+    GLint attachment_constraint_offset_loc_ = -1;
+    GLint attachment_constraint_count_loc_ = -1;
 
     bool initialized_ = false;
 };

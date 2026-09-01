@@ -19,8 +19,7 @@ public:
 
 private:
     GLuint program_ = 0;
-    GLint constraint_offset_location_ = -1;
-    GLint constraint_count_location_ = -1;
-    GLint stiffness_location_ = -1;
+    GLint constraint_offset_loc_ = -1;
+    GLint constraint_count_loc_ = -1;
     float stiffness_ = 0.0f;
 };
