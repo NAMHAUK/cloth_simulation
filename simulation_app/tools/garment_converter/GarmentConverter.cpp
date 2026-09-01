@@ -31,27 +31,6 @@ constexpr float waistband_attachment_band_height = 0.03f;
 
 using MeshEdgeBuilder = std::vector<MeshEdge> (*)(std::uint32_t, const std::vector<std::uint32_t>&);
 
-MeshEdge make_sorted_edge(std::uint32_t vertex_a, std::uint32_t vertex_b)
-{
-    if (vertex_a < vertex_b) {
-        return {vertex_a, vertex_b};
-    }
-    return {vertex_b, vertex_a};
-}
-
-bool is_less_edge(const MeshEdge& lhs, const MeshEdge& rhs)
-{
-    if (lhs.vertex_a != rhs.vertex_a) {
-        return lhs.vertex_a < rhs.vertex_a;
-    }
-    return lhs.vertex_b < rhs.vertex_b;
-}
-
-bool is_same_edge(const MeshEdge& lhs, const MeshEdge& rhs)
-{
-    return lhs.vertex_a == rhs.vertex_a && lhs.vertex_b == rhs.vertex_b;
-}
-
 GarmentDistanceConstraints build_distance_constraints(const std::vector<std::uint32_t>& triangle_indices,
                                                       const std::vector<float>& vertices,
                                                       MeshEdgeBuilder build_edges)
@@ -78,104 +57,6 @@ GarmentDistanceConstraints build_bending_constraints(const std::vector<std::uint
                                                      const std::vector<float>& vertices)
 {
     return build_distance_constraints(triangle_indices, vertices, build_unique_bending_edges);
-}
-
-std::vector<MeshEdge> build_boundary_edges(const std::vector<std::uint32_t>& triangle_indices,
-                                           std::uint32_t vertex_count)
-{
-    if (vertex_count == 0u || triangle_indices.empty() || triangle_indices.size() % 3u != 0u) {
-        return {};
-    }
-
-    std::vector<MeshEdge> edges;
-    edges.reserve(triangle_indices.size());
-    for (std::size_t index = 0; index < triangle_indices.size(); index += 3u) {
-        const std::uint32_t vertex_a = triangle_indices[index];
-        const std::uint32_t vertex_b = triangle_indices[index + 1u];
-        const std::uint32_t vertex_c = triangle_indices[index + 2u];
-        if (vertex_a >= vertex_count || vertex_b >= vertex_count || vertex_c >= vertex_count) {
-            return {};
-        }
-
-        edges.push_back(make_sorted_edge(vertex_a, vertex_b));
-        edges.push_back(make_sorted_edge(vertex_b, vertex_c));
-        edges.push_back(make_sorted_edge(vertex_c, vertex_a));
-    }
-
-    std::sort(edges.begin(), edges.end(), is_less_edge);
-
-    std::vector<MeshEdge> boundary_edges;
-    for (std::size_t edge_begin = 0; edge_begin < edges.size();) {
-        std::size_t edge_end = edge_begin + 1u;
-        while (edge_end < edges.size() && is_same_edge(edges[edge_begin], edges[edge_end])) {
-            ++edge_end;
-        }
-
-        if (edge_end - edge_begin == 1u) {
-            boundary_edges.push_back(edges[edge_begin]);
-        }
-
-        edge_begin = edge_end;
-    }
-
-    return boundary_edges;
-}
-
-std::vector<std::vector<std::uint32_t>> find_boundary_loops(const GarmentMesh& garment_mesh)
-{
-    const auto vertex_count = static_cast<std::uint32_t>(garment_mesh.vertices.size() / position_components);
-    const std::vector<MeshEdge> boundary_edges =
-        build_boundary_edges(garment_mesh.triangle_vertex_indices, vertex_count);
-    if (boundary_edges.empty()) {
-        return {};
-    }
-
-    std::vector<std::vector<std::uint32_t>> neighbors(vertex_count);
-    for (const MeshEdge& edge : boundary_edges) {
-        neighbors[edge.vertex_a].push_back(edge.vertex_b);
-        neighbors[edge.vertex_b].push_back(edge.vertex_a);
-    }
-
-    std::vector<std::uint8_t> visited(vertex_count, 0u);
-    std::vector<std::vector<std::uint32_t>> loops;
-    for (std::uint32_t vertex_index = 0; vertex_index < vertex_count; ++vertex_index) {
-        if (visited[vertex_index] != 0u || neighbors[vertex_index].empty()) {
-            continue;
-        }
-
-        std::vector<std::uint32_t> loop_vertices;
-        std::vector<std::uint32_t> stack{vertex_index};
-        visited[vertex_index] = 1u;
-        while (!stack.empty()) {
-            const std::uint32_t current_vertex = stack.back();
-            stack.pop_back();
-            loop_vertices.push_back(current_vertex);
-
-            for (std::uint32_t next_vertex : neighbors[current_vertex]) {
-                if (visited[next_vertex] != 0u) {
-                    continue;
-                }
-
-                visited[next_vertex] = 1u;
-                stack.push_back(next_vertex);
-            }
-        }
-
-        if (!loop_vertices.empty()) {
-            loops.push_back(std::move(loop_vertices));
-        }
-    }
-
-    return loops;
-}
-
-float average_loop_y(const std::vector<std::uint32_t>& loop_vertices, const std::vector<float>& vertices)
-{
-    float y_sum = 0.0f;
-    for (std::uint32_t vertex_index : loop_vertices) {
-        y_sum += get_vertex_position(vertices, vertex_index).y;
-    }
-    return y_sum / static_cast<float>(loop_vertices.size());
 }
 
 std::vector<std::uint32_t> build_waistband_attachment_vertex_indices(const GarmentMesh& garment_mesh)
