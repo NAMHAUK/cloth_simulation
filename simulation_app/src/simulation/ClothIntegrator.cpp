@@ -10,7 +10,7 @@
 #include <stdexcept>
 
 namespace {
-constexpr std::uint32_t integration_local_size = 128;
+constexpr std::uint32_t local_size = 128;
 
 glm::vec3 clamp_vector_length(const glm::vec3& value, float maximum_length)
 {
@@ -40,29 +40,30 @@ void ClothIntegrator::initialize(const std::filesystem::path& shader_dir,
     }
 
     program_ = load_compute_program(shader_dir / "cloth" / "integrate_cloth.comp", gl);
-    // shader program 안의 uniform 변수들 위치 저장
-    vertex_offset_location_ = require_uniform_location(program_, "uVertexOffset", gl);
-    vertex_count_location_ = require_uniform_location(program_, "uVertexCount", gl);
-    delta_time_location_ = require_uniform_location(program_, "uDeltaTime", gl);
-    inverse_delta_time_location_ = require_uniform_location(program_, "uInverseDeltaTime", gl);
-    external_acceleration_location_ = require_uniform_location(program_, "uExternalAcceleration", gl);
-    velocity_damping_location_ = require_uniform_location(program_, "uVelocityDamping", gl);
-    frame_start_position_location_ = require_uniform_location(program_, "uFrameStartPosition", gl);
-    frame_end_position_location_ = require_uniform_location(program_, "uFrameEndPosition", gl);
-    frame_rotation_delta_location_ = require_uniform_location(program_, "uFrameRotationDelta", gl);
-    frame_start_velocity_location_ = require_uniform_location(program_, "uFrameStartVelocity", gl);
-    frame_acceleration_location_ = require_uniform_location(program_, "uFrameAcceleration", gl);
-    frame_start_angular_velocity_location_ =
-        require_uniform_location(program_, "uFrameStartAngularVelocity", gl);
-    frame_angular_acceleration_location_ =
-        require_uniform_location(program_, "uFrameAngularAcceleration", gl);
-    frame_inertia_scale_location_ = require_uniform_location(program_, "uFrameInertiaScale", gl);
 
-    dt_ = dt;
-    inverse_dt_ = 1.0f / dt_;
+    vertex_offset_loc_ = require_uniform_location(program_, "uVertexOffset", gl);
+    vertex_count_loc_ = require_uniform_location(program_, "uVertexCount", gl);
+    frame_start_position_loc_ = require_uniform_location(program_, "uFrameStartPosition", gl);
+    frame_end_position_loc_ = require_uniform_location(program_, "uFrameEndPosition", gl);
+    frame_rotation_delta_loc_ = require_uniform_location(program_, "uFrameRotationDelta", gl);
+    frame_start_velocity_loc_ = require_uniform_location(program_, "uFrameStartVelocity", gl);
+    frame_acceleration_loc_ = require_uniform_location(program_, "uFrameAcceleration", gl);
+    frame_start_angular_velocity_loc_ = require_uniform_location(program_, "uFrameStartAngularVelocity", gl);
+    frame_angular_acceleration_loc_ = require_uniform_location(program_, "uFrameAngularAcceleration", gl);
+
+    const GLint delta_time_loc = require_uniform_location(program_, "uDeltaTime", gl);
+    const GLint inverse_delta_time_loc = require_uniform_location(program_, "uInverseDeltaTime", gl);
+    const GLint external_acceleration_loc = require_uniform_location(program_, "uExternalAcceleration", gl);
+    const GLint velocity_damping_loc = require_uniform_location(program_, "uVelocityDamping", gl);
+    const GLint frame_inertia_scale_loc = require_uniform_location(program_, "uFrameInertiaScale", gl);
+
+    gl.glProgramUniform1f(program_, delta_time_loc, dt);
+    gl.glProgramUniform1f(program_, inverse_delta_time_loc, 1.0f / dt);
+    gl.glProgramUniform3f(program_, external_acceleration_loc, 0.0f, gravity_, 0.0f);
+    gl.glProgramUniform1f(program_, velocity_damping_loc, velocity_damping_);
+    gl.glProgramUniform1f(program_, frame_inertia_scale_loc, reference_frame_inertia_scale_);
 }
 
-// 외부 힘 계산 -> 힘에 따른 위치 변화 GPU에서 갱신
 void ClothIntegrator::integrate(const ClothGpuState& cloth_state,
                                 GarmentLayer layer,
                                 const ReferenceFrameKinematics& reference_frame_kinematics,
@@ -75,55 +76,47 @@ void ClothIntegrator::integrate(const ClothGpuState& cloth_state,
         clamp_vector_length(reference_frame_kinematics.angular_acceleration,
                             reference_frame_max_angular_acceleration_);
 
-    // shader & GPU 연결
     gl.glUseProgram(program_);
 
-    // shader에 값 전달
-    gl.glProgramUniform1ui(program_, vertex_offset_location_, garment_state.vertex_start_index);
-    gl.glProgramUniform1ui(program_, vertex_count_location_, garment_state.vertex_count);
-    gl.glProgramUniform1f(program_, delta_time_location_, dt_);
-    gl.glProgramUniform1f(program_, inverse_delta_time_location_, inverse_dt_);
-    gl.glProgramUniform3f(program_, external_acceleration_location_, 0.0f, gravity_, 0.0f);
-    gl.glProgramUniform1f(program_, velocity_damping_location_, velocity_damping_);
+    gl.glProgramUniform1ui(program_, vertex_offset_loc_, garment_state.vertex_start_index);
+    gl.glProgramUniform1ui(program_, vertex_count_loc_, garment_state.vertex_count);
     gl.glProgramUniform3f(program_,
-                          frame_start_position_location_,
+                          frame_start_position_loc_,
                           reference_frame_kinematics.start_position.x,
                           reference_frame_kinematics.start_position.y,
                           reference_frame_kinematics.start_position.z);
     gl.glProgramUniform3f(program_,
-                          frame_end_position_location_,
+                          frame_end_position_loc_,
                           reference_frame_kinematics.end_position.x,
                           reference_frame_kinematics.end_position.y,
                           reference_frame_kinematics.end_position.z);
     gl.glProgramUniformMatrix3fv(program_,
-                                 frame_rotation_delta_location_,
+                                 frame_rotation_delta_loc_,
                                  1,
                                  GL_FALSE,
                                  glm::value_ptr(reference_frame_kinematics.rotation_delta));
     gl.glProgramUniform3f(program_,
-                          frame_start_velocity_location_,
+                          frame_start_velocity_loc_,
                           reference_frame_kinematics.start_velocity.x,
                           reference_frame_kinematics.start_velocity.y,
                           reference_frame_kinematics.start_velocity.z);
     gl.glProgramUniform3f(program_,
-                          frame_acceleration_location_,
+                          frame_acceleration_loc_,
                           frame_acceleration.x,
                           frame_acceleration.y,
                           frame_acceleration.z);
     gl.glProgramUniform3f(program_,
-                          frame_start_angular_velocity_location_,
+                          frame_start_angular_velocity_loc_,
                           reference_frame_kinematics.start_angular_velocity.x,
                           reference_frame_kinematics.start_angular_velocity.y,
                           reference_frame_kinematics.start_angular_velocity.z);
     gl.glProgramUniform3f(program_,
-                          frame_angular_acceleration_location_,
+                          frame_angular_acceleration_loc_,
                           frame_angular_acceleration.x,
                           frame_angular_acceleration.y,
                           frame_angular_acceleration.z);
-    gl.glProgramUniform1f(program_, frame_inertia_scale_location_, reference_frame_inertia_scale_);
 
-    // shader가 외부 가속도에 따른 위치 변화량 계산 (GPU에서 바로 업데이트)
-    gl.glDispatchCompute(compute_group_count(garment_state.vertex_count, integration_local_size), 1, 1);
+    gl.glDispatchCompute(compute_group_count(garment_state.vertex_count, local_size), 1, 1);
     gl.glMemoryBarrier(GL_SHADER_STORAGE_BARRIER_BIT);
 }
 
@@ -132,20 +125,13 @@ void ClothIntegrator::release(QOpenGLFunctions_4_5_Core& gl)
     gl.glDeleteProgram(program_);
 
     program_ = 0;
-    vertex_offset_location_ = -1;
-    vertex_count_location_ = -1;
-    delta_time_location_ = -1;
-    inverse_delta_time_location_ = -1;
-    external_acceleration_location_ = -1;
-    velocity_damping_location_ = -1;
-    frame_start_position_location_ = -1;
-    frame_end_position_location_ = -1;
-    frame_rotation_delta_location_ = -1;
-    frame_start_velocity_location_ = -1;
-    frame_acceleration_location_ = -1;
-    frame_start_angular_velocity_location_ = -1;
-    frame_angular_acceleration_location_ = -1;
-    frame_inertia_scale_location_ = -1;
-    dt_ = 0.0f;
-    inverse_dt_ = 0.0f;
+    vertex_offset_loc_ = -1;
+    vertex_count_loc_ = -1;
+    frame_start_position_loc_ = -1;
+    frame_end_position_loc_ = -1;
+    frame_rotation_delta_loc_ = -1;
+    frame_start_velocity_loc_ = -1;
+    frame_acceleration_loc_ = -1;
+    frame_start_angular_velocity_loc_ = -1;
+    frame_angular_acceleration_loc_ = -1;
 }
