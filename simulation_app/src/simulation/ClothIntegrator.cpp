@@ -69,7 +69,7 @@ void ClothIntegrator::integrate(const ClothGpuState& cloth_state,
                                 const ReferenceFrameKinematics& kinematics,
                                 QOpenGLFunctions_4_5_Core& gl) const
 {
-    const GarmentBufferState& garment_state = cloth_state.garment_buffer_states()[layer];
+    const GarmentBufferState& garment_state = cloth_state.garment_states()[layer];
     const glm::vec3 frame_linear_acceleration =
         clamp_vector_length(kinematics.linear_acceleration, reference_frame_max_linear_acceleration_);
     const glm::vec3 frame_angular_acceleration =

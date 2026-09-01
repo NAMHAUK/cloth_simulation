@@ -124,7 +124,7 @@ void SimulationPipeline::integrate_cloth(const SceneState& scene,
                                          QOpenGLFunctions_4_5_Core& gl) const
 {
     for (const GarmentObject& garment : scene.garments()) {
-        const GarmentBufferState& garment_state = cloth_state.garment_buffer_states()[garment.layer];
+        const GarmentBufferState& garment_state = cloth_state.garment_states()[garment.layer];
         assert(garment_state.vertex_count != 0u);
 
         const auto& kinematics = scene.reference_frame_kinematics(garment.mesh.garment_category);

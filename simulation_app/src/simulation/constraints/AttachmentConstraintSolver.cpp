@@ -28,7 +28,7 @@ void AttachmentConstraintSolver::solve(const ClothGpuState& cloth_state, QOpenGL
 {
     gl.glUseProgram(program_);
 
-    for (const GarmentBufferState& garment_state : cloth_state.garment_buffer_states()) {
+    for (const GarmentBufferState& garment_state : cloth_state.garment_states()) {
         const std::uint32_t attachment_count = garment_state.active_attachment_constraint_count;
         if (attachment_count == 0) {
             continue;

@@ -45,7 +45,7 @@ public:
     bool is_initialized() const;
     bool has_multiple_garments() const;
 
-    const std::array<GarmentBufferState, 2>& garment_buffer_states() const;
+    const std::array<GarmentBufferState, 2>& garment_states() const;
     const ClothBufferElementCounts& element_counts() const;
     std::size_t max_bvh_level_count() const;
     const std::vector<ConstraintColorState>& stretch_color_states() const;

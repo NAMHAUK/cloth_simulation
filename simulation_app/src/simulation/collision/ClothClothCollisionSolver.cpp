@@ -67,7 +67,7 @@ void ClothClothCollisionSolver::initialize(const std::filesystem::path& shader_d
 
     {
         apply_program_ = load_compute_program(collision_dir / "apply.comp", gl);
-        
+
         cloth_vertex_count_loc_ = require_uniform_location(apply_program_, "uVertexCount", gl);
         const GLint max_correction_loc = require_uniform_location(apply_program_, "uMaxCorrectionLength", gl);
         gl.glProgramUniform1f(apply_program_, max_correction_loc, max_correction_length_);
@@ -100,8 +100,7 @@ void ClothClothCollisionSolver::solve(const SceneGpuState& gpu_state,
 
     // accumulate
     const auto& collision_candidates = gpu_state.collision_buffers().cloth_cloth_vertex_face;
-    const std::uint32_t upper_vertex_offset =
-        cloth_state.garment_buffer_states()[GarmentLayer::Upper].vertex_start_index;
+    const auto upper_vertex_offset = cloth_state.garment_states()[GarmentLayer::Upper].vertex_start_index;
 
     gl.glUseProgram(shader.program);
     gl.glProgramUniform1ui(shader.program, shader.max_candidates_loc, collision_candidates.max_pairs);

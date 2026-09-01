@@ -548,7 +548,7 @@ bool ClothGpuState::has_gpu_objects() const
 
 // Accessors
 
-const std::array<GarmentBufferState, 2>& ClothGpuState::garment_buffer_states() const
+const std::array<GarmentBufferState, 2>& ClothGpuState::garment_states() const
 {
     return state_.garments;
 }

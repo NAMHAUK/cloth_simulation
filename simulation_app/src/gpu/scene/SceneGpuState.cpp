@@ -171,7 +171,7 @@ void SceneGpuState::initialize_garment_attachments(const GarmentObject& garment,
 
 void SceneGpuState::build_attachment_targets(GarmentLayer layer, QOpenGLFunctions_4_5_Core& gl)
 {
-    const GarmentBufferState& garment_state = cloth_gpu_state_.garment_buffer_states()[layer];
+    const GarmentBufferState& garment_state = cloth_gpu_state_.garment_states()[layer];
     const std::uint32_t constraint_count = garment_state.attachment_constraint_count;
     if (constraint_count == 0u) {
         return;
