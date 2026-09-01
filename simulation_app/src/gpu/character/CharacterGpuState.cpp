@@ -9,12 +9,6 @@
 #include <glm/vec4.hpp>
 
 namespace {
-constexpr GLuint all_frame_positions_binding = 0;
-constexpr GLuint current_positions_binding = 1;
-constexpr GLuint triangle_position_binding = 0;
-constexpr GLuint triangle_indices_binding = 1;
-constexpr GLuint triangle_positions_binding = 2;
-constexpr GLuint triangle_normals_binding = 3;
 constexpr std::uint32_t position_update_local_size = 128;
 constexpr std::uint32_t triangle_geometry_local_size = 128;
 constexpr std::size_t triangle_vertex_count = 3u;
@@ -177,8 +171,6 @@ void CharacterGpuState::write_current_positions(float frame_alpha, QOpenGLFuncti
     const std::uint32_t next_frame_base = next_frame_index * vertex_count_ * 3u;
 
     gl.glUseProgram(position_program_);
-    gl.glBindBufferBase(GL_SHADER_STORAGE_BUFFER, all_frame_positions_binding, buffers_.all_frame_positions);
-    gl.glBindBufferBase(GL_SHADER_STORAGE_BUFFER, current_positions_binding, buffers_.current_position);
     gl.glProgramUniform1ui(position_program_, position_current_frame_base_location_, current_frame_base);
     gl.glProgramUniform1ui(position_program_, position_next_frame_base_location_, next_frame_base);
     gl.glProgramUniform1f(position_program_, position_frame_alpha_location_, frame_alpha);
@@ -198,10 +190,6 @@ void CharacterGpuState::copy_current_to_previous(QOpenGLFunctions_4_5_Core& gl) 
 void CharacterGpuState::update_triangle_geometry(QOpenGLFunctions_4_5_Core& gl) const
 {
     gl.glUseProgram(triangle_update_program_);
-    gl.glBindBufferBase(GL_SHADER_STORAGE_BUFFER, triangle_position_binding, buffers_.current_position);
-    gl.glBindBufferBase(GL_SHADER_STORAGE_BUFFER, triangle_indices_binding, buffers_.triangle_index);
-    gl.glBindBufferBase(GL_SHADER_STORAGE_BUFFER, triangle_positions_binding, buffers_.triangle_position);
-    gl.glBindBufferBase(GL_SHADER_STORAGE_BUFFER, triangle_normals_binding, buffers_.triangle_normal);
     gl.glProgramUniform1ui(triangle_update_program_, triangle_count_location_, triangle_count_);
 
     gl.glDispatchCompute(compute_group_count(triangle_count_, triangle_geometry_local_size), 1, 1);
@@ -216,71 +204,26 @@ void CharacterGpuState::draw(QOpenGLFunctions_4_5_Core& gl) const
     gl.glDrawElements(GL_TRIANGLES, index_count_, GL_UNSIGNED_INT, nullptr);
 }
 
-void CharacterGpuState::bind_current_positions(GLuint binding_index, QOpenGLFunctions_4_5_Core& gl) const
-{
-    gl.glBindBufferBase(GL_SHADER_STORAGE_BUFFER, binding_index, buffers_.current_position);
-}
-
-void CharacterGpuState::bind_vertex_normals(GLuint binding_index, QOpenGLFunctions_4_5_Core& gl) const
-{
-    gl.glBindBufferBase(GL_SHADER_STORAGE_BUFFER, binding_index, buffers_.vertex_normal);
-}
-
 // Accessors
 
-CharacterMeshTopologyResources CharacterGpuState::mesh_topology_resources() const
+std::uint32_t CharacterGpuState::vertex_count() const
 {
-    CharacterMeshTopologyResources topology;
-    topology.triangle_index_buffer = buffers_.triangle_index;
-    topology.adjacent_triangle_offsets_buffer = buffers_.adjacent_triangle_offsets;
-    topology.adjacent_triangle_indices_buffer = buffers_.adjacent_triangle_indices;
-    topology.bvh_vertex_index_buffer = buffers_.body_vertex_bvh_vertex_index;
-    topology.edge_index_buffer = buffers_.body_edge_index;
-    topology.vertex_count = vertex_count_;
-    topology.triangle_count = triangle_count_;
-    return topology;
+    return vertex_count_;
 }
 
-CharacterVertexBufferView CharacterGpuState::vertex_buffer_view() const
+std::uint32_t CharacterGpuState::triangle_count() const
 {
-    CharacterVertexBufferView view;
-    view.previous_position_buffer = buffers_.previous_position;
-    view.current_position_buffer = buffers_.current_position;
-    view.vertex_normal_buffer = buffers_.vertex_normal;
-    view.vertex_count = vertex_count_;
-    return view;
+    return triangle_count_;
 }
 
-BodyTriangleResources CharacterGpuState::body_triangle_resources() const
+const CharacterBufferSet& CharacterGpuState::buffer_set() const
 {
-    BodyTriangleResources resources;
-    resources.position_buffer = buffers_.triangle_position;
-    resources.normal_buffer = buffers_.triangle_normal;
-    resources.triangle_count = triangle_count_;
-    return resources;
+    return buffers_;
 }
 
-CharacterNormalResources CharacterGpuState::mesh_normal_resources() const
+glm::uvec4 CharacterGpuState::body_arm_triangle_ranges() const
 {
-    CharacterNormalResources resources;
-    resources.triangle_normal_buffer = buffers_.triangle_normal;
-    resources.vertex_normal_buffer = buffers_.vertex_normal;
-    return resources;
-}
-
-BvhBufferView CharacterGpuState::body_triangle_bvh_buffer_view() const
-{
-    return {buffers_.body_triangle_bvh_node, buffers_.body_triangle_bounds, arm_triangle_ranges_};
-}
-
-BvhBufferView CharacterGpuState::body_vertex_bvh_buffer_view() const
-{
-    return {buffers_.body_vertex_bvh_node, buffers_.body_vertex_bounds};
-}
-
-BvhBufferView CharacterGpuState::body_edge_bvh_buffer_view() const
-{
-    return {buffers_.body_edge_bvh_node, buffers_.body_edge_bounds};
+    return arm_triangle_ranges_;
 }
 
 // Release

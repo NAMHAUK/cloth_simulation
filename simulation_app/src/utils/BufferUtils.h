@@ -1,12 +1,11 @@
 #pragma once
 
-#include "gpu/bvh/BvhBufferView.h"
-#include "gpu/character/CharacterGpuDataTypes.h"
-#include "gpu/cloth/ClothGpuDataTypes.h"
-#include "gpu/scene/SimulationGpuView.h"
+#include "asset/AssetDataTypes.h"
+#include "gpu/scene/SimulationBufferBindings.h"
 
 #include <cstddef>
 #include <cstdint>
+#include <vector>
 
 #include <QOpenGLFunctions_4_5_Core>
 
@@ -21,97 +20,15 @@ inline bool is_valid_buffer_access(std::uint32_t start_index, std::uint32_t coun
     return count != 0u && start_index <= total_count && count <= total_count - start_index;
 }
 
-inline bool is_valid_motion_view(const ClothMotionBufferView& motion_view)
+inline bool has_valid_distance_constraints(std::uint32_t constraint_count,
+                                           const std::vector<ConstraintColorState>& color_states)
 {
-    return motion_view.current_position_buffer != 0 &&
-           motion_view.previous_position_buffer != 0 &&
-           motion_view.vertex_count != 0;
+    return constraint_count != 0u && !color_states.empty();
 }
 
-inline bool is_valid_collision_pushout_view(const ClothCollisionPushoutBufferView& collision_pushout_view)
+inline bool has_collision_candidate_capacity(const CollisionCandidateBuffers& buffers)
 {
-    return collision_pushout_view.collision_pushout_buffer != 0 &&
-           collision_pushout_view.cloth_cloth_pushout_buffer != 0 &&
-           collision_pushout_view.vertex_count != 0;
-}
-
-inline bool is_valid_contact_motion_view(const ClothContactMotionBufferView& contact_motion_view)
-{
-    return contact_motion_view.contact_motion_delta_buffer != 0 && contact_motion_view.vertex_count != 0;
-}
-
-inline bool is_valid_character_vertex_buffer_view(const CharacterVertexBufferView& vertex_view)
-{
-    return vertex_view.previous_position_buffer != 0 &&
-           vertex_view.current_position_buffer != 0 &&
-           vertex_view.vertex_normal_buffer != 0 &&
-           vertex_view.vertex_count != 0;
-}
-
-inline bool is_valid_cloth_mesh_topology_resource(const ClothMeshTopologyResources& topology)
-{
-    return topology.triangle_index_buffer != 0 && topology.vertex_count != 0 && topology.triangle_count != 0;
-}
-
-inline bool is_valid_body_triangle_index_view(
-    const ClothBodyTriangleIndexBufferView& body_triangle_index_view)
-{
-    return body_triangle_index_view.body_triangle_index_buffer != 0 &&
-           body_triangle_index_view.vertex_count != 0;
-}
-
-inline bool is_valid_bvh_buffer_view(const BvhBufferView& view)
-{
-    return view.node_buffer != 0 && view.bounds_buffer != 0;
-}
-
-inline bool is_valid_character_mesh_topology_resource(const CharacterMeshTopologyResources& topology)
-{
-    return topology.triangle_index_buffer != 0 &&
-           topology.bvh_vertex_index_buffer != 0 &&
-           topology.edge_index_buffer != 0 &&
-           topology.vertex_count != 0 &&
-           topology.triangle_count != 0;
-}
-
-inline bool is_valid_distance_constraint_view(const DistanceConstraintBufferView& constraint_view)
-{
-    return constraint_view.edge_index_buffer != 0 &&
-           constraint_view.rest_length_buffer != 0 &&
-           constraint_view.constraint_count != 0 &&
-           constraint_view.color_states != nullptr &&
-           !constraint_view.color_states->empty();
-}
-
-inline bool is_valid_body_triangle_resource(const BodyTriangleResources& body_triangles)
-{
-    return body_triangles.position_buffer != 0 &&
-           body_triangles.normal_buffer != 0 &&
-           body_triangles.triangle_count != 0;
-}
-
-inline bool is_valid_collision_candidate_buffer(const CollisionCandidateBuffers& collision_candidate_buffer)
-{
-    return collision_candidate_buffer.candidate_buffer != 0 &&
-           collision_candidate_buffer.count_buffer != 0 &&
-           collision_candidate_buffer.dispatch_size_buffer != 0 &&
-           collision_candidate_buffer.max_pairs != 0;
-}
-
-inline bool is_valid_collision_candidate_buffer_view(const CollisionBuffers& collision_candidate_view)
-{
-    return is_valid_collision_candidate_buffer(collision_candidate_view.cloth_vertex_body_face) &&
-           is_valid_collision_candidate_buffer(collision_candidate_view.cloth_edge_body_edge) &&
-           is_valid_collision_candidate_buffer(collision_candidate_view.cloth_face_body_vertex) &&
-           collision_candidate_view.normal_correction_sum_buffer != 0 &&
-           collision_candidate_view.friction_correction_sum_buffer != 0 &&
-           collision_candidate_view.contact_motion_delta_sum_buffer != 0;
-}
-
-inline bool is_valid_cloth_cloth_candidate_buffer_view(const CollisionBuffers& collision_candidate_view)
-{
-    return is_valid_collision_candidate_buffer(collision_candidate_view.cloth_cloth_vertex_face) &&
-           collision_candidate_view.normal_correction_sum_buffer != 0;
+    return buffers.max_pairs != 0;
 }
 
 inline void clear_collision_candidate_counts(const CollisionCandidateBuffers& buffers,

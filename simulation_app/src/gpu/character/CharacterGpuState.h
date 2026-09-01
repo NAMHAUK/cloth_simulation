@@ -1,13 +1,14 @@
 #pragma once
 
 #include "asset/AssetDataTypes.h"
-#include "gpu/bvh/BvhBufferView.h"
 #include "gpu/character/CharacterGpuDataTypes.h"
 #include "simulation/collision/Bvh.h"
 
 #include <QOpenGLFunctions_4_5_Core>
 #include <cstdint>
 #include <filesystem>
+
+#include <glm/vec4.hpp>
 
 class CharacterGpuState final
 {
@@ -28,16 +29,11 @@ public:
     void update_pose(std::uint32_t frame_index, float frame_alpha, QOpenGLFunctions_4_5_Core& gl);
 
     void draw(QOpenGLFunctions_4_5_Core& gl) const;
-    void bind_current_positions(GLuint binding_index, QOpenGLFunctions_4_5_Core& gl) const;
-    void bind_vertex_normals(GLuint binding_index, QOpenGLFunctions_4_5_Core& gl) const;
 
-    CharacterMeshTopologyResources mesh_topology_resources() const;
-    CharacterVertexBufferView vertex_buffer_view() const;
-    BodyTriangleResources body_triangle_resources() const;
-    CharacterNormalResources mesh_normal_resources() const;
-    BvhBufferView body_triangle_bvh_buffer_view() const;
-    BvhBufferView body_vertex_bvh_buffer_view() const;
-    BvhBufferView body_edge_bvh_buffer_view() const;
+    std::uint32_t vertex_count() const;
+    std::uint32_t triangle_count() const;
+    const CharacterBufferSet& buffer_set() const;
+    glm::uvec4 body_arm_triangle_ranges() const;
 
     void release(QOpenGLFunctions_4_5_Core& gl);
 

@@ -1,6 +1,6 @@
 #include "simulation/collision/GroundCollisionSolver.h"
 
-#include "gpu/scene/SimulationGpuView.h"
+#include "gpu/cloth/ClothGpuState.h"
 #include "simulation/SimulationParams.h"
 #include "utils/BufferUtils.h"
 #include "utils/ShaderUtils.h"
@@ -9,11 +9,6 @@
 #include <stdexcept>
 
 namespace {
-constexpr GLuint current_positions_binding = 0;
-constexpr GLuint previous_positions_binding = 1;
-constexpr GLuint collision_pushouts_binding = 2;
-constexpr GLuint cloth_cloth_pushouts_binding = 3;
-constexpr GLuint contact_motion_deltas_binding = 4;
 constexpr std::uint32_t ground_collision_local_size = 128;
 }
 
@@ -37,52 +32,31 @@ void GroundCollisionSolver::initialize(const std::filesystem::path& shader_dir, 
     dynamic_friction_location_ = require_uniform_location(program_, "uDynamicFriction", gl);
 }
 
-bool GroundCollisionSolver::can_solve(const SimulationGpuView& views) const
+bool GroundCollisionSolver::can_solve(const ClothGpuState& cloth_state) const
 {
     return is_initialized() &&
-           is_valid_motion_view(views.cloth_motion) &&
-           is_valid_collision_pushout_view(views.cloth_collision_pushout) &&
-           is_valid_contact_motion_view(views.cloth_contact_motion) &&
-           views.cloth_motion.vertex_count == views.cloth_collision_pushout.vertex_count &&
-           views.cloth_motion.vertex_count == views.cloth_contact_motion.vertex_count &&
+           cloth_state.element_counts().vertex != 0u &&
            dynamic_friction_ >= 0.0f &&
            static_friction_ >= dynamic_friction_;
 }
 
-void GroundCollisionSolver::solve(const SimulationGpuView& views, QOpenGLFunctions_4_5_Core& gl) const
+void GroundCollisionSolver::solve(const ClothGpuState& cloth_state, QOpenGLFunctions_4_5_Core& gl) const
 {
-    assert(can_solve(views));
+    assert(can_solve(cloth_state));
 
-    const auto& motion_view = views.cloth_motion;
-    const auto& collision_pushout_view = views.cloth_collision_pushout;
-    const auto& contact_motion_view = views.cloth_contact_motion;
+    const std::uint32_t vertex_count = cloth_state.element_counts().vertex;
 
     // shader & GPU 연결
     gl.glUseProgram(program_);
-    gl.glBindBufferBase(GL_SHADER_STORAGE_BUFFER,
-                        current_positions_binding,
-                        motion_view.current_position_buffer);
-    gl.glBindBufferBase(GL_SHADER_STORAGE_BUFFER,
-                        previous_positions_binding,
-                        motion_view.previous_position_buffer);
-    gl.glBindBufferBase(GL_SHADER_STORAGE_BUFFER,
-                        collision_pushouts_binding,
-                        collision_pushout_view.collision_pushout_buffer);
-    gl.glBindBufferBase(GL_SHADER_STORAGE_BUFFER,
-                        cloth_cloth_pushouts_binding,
-                        collision_pushout_view.cloth_cloth_pushout_buffer);
-    gl.glBindBufferBase(GL_SHADER_STORAGE_BUFFER,
-                        contact_motion_deltas_binding,
-                        contact_motion_view.contact_motion_delta_buffer);
 
     // shader에 값 전달
-    gl.glProgramUniform1ui(program_, vertex_count_location_, motion_view.vertex_count);
+    gl.glProgramUniform1ui(program_, vertex_count_location_, vertex_count);
     gl.glProgramUniform1f(program_, floor_height_location_, floor_height_);
     gl.glProgramUniform1f(program_, static_friction_location_, static_friction_);
     gl.glProgramUniform1f(program_, dynamic_friction_location_, dynamic_friction_);
 
     // shader가 바닥과 충돌 처리 (GPU에서 바로 업데이트)
-    gl.glDispatchCompute(compute_group_count(motion_view.vertex_count, ground_collision_local_size), 1, 1);
+    gl.glDispatchCompute(compute_group_count(vertex_count, ground_collision_local_size), 1, 1);
     gl.glMemoryBarrier(GL_SHADER_STORAGE_BARRIER_BIT);
 }
 

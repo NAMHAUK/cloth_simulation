@@ -1,6 +1,6 @@
 #include "simulation/collision/GarmentPrefitSolver.h"
 
-#include "gpu/scene/SimulationGpuView.h"
+#include "gpu/cloth/ClothGpuState.h"
 #include "simulation/SimulationParams.h"
 #include "utils/BufferUtils.h"
 #include "utils/ShaderUtils.h"
@@ -9,10 +9,6 @@
 #include <stdexcept>
 
 namespace {
-constexpr GLuint current_positions_binding = 0;
-constexpr GLuint body_triangle_positions_binding = 2;
-constexpr GLuint body_triangle_normals_binding = 3;
-constexpr GLuint body_triangle_bvh_node_binding = 4;
 constexpr std::uint32_t garment_prefit_local_size = 128;
 }
 
@@ -35,44 +31,26 @@ void GarmentPrefitSolver::initialize(const std::filesystem::path& shader_dir, QO
     pushout_margin_location_ = require_uniform_location(program_, "uPushoutMargin", gl);
 }
 
-bool GarmentPrefitSolver::can_solve(const SimulationGpuView& views, GarmentLayer layer) const
+bool GarmentPrefitSolver::can_solve(const ClothGpuState& cloth_state, GarmentLayer layer) const
 {
-    const GarmentBufferState& garment_state = views.garment_buffer_states[layer];
+    const GarmentBufferState& garment_state = cloth_state.garment_buffer_states()[layer];
     return is_initialized() &&
-           is_valid_motion_view(views.cloth_motion) &&
            is_valid_buffer_access(garment_state.vertex_start_index,
                                   garment_state.vertex_count,
-                                  views.cloth_motion.vertex_count) &&
-           is_valid_body_triangle_resource(views.body_triangles) &&
-           is_valid_bvh_buffer_view(views.body_triangle_bvh) &&
+                                  cloth_state.element_counts().vertex) &&
            search_radius_ > 0.0f &&
            pushout_margin_ > 0.0f;
 }
 
-void GarmentPrefitSolver::solve(const SimulationGpuView& views,
+void GarmentPrefitSolver::solve(const ClothGpuState& cloth_state,
                                 GarmentLayer layer,
                                 QOpenGLFunctions_4_5_Core& gl) const
 {
-    assert(can_solve(views, layer));
+    assert(can_solve(cloth_state, layer));
 
-    const GarmentBufferState& garment_state = views.garment_buffer_states[layer];
-    const auto& motion_view = views.cloth_motion;
-    const auto& body_triangles = views.body_triangles;
-    const auto& body_triangle_bvh = views.body_triangle_bvh;
+    const GarmentBufferState& garment_state = cloth_state.garment_buffer_states()[layer];
 
     gl.glUseProgram(program_);
-    gl.glBindBufferBase(GL_SHADER_STORAGE_BUFFER,
-                        current_positions_binding,
-                        motion_view.current_position_buffer);
-    gl.glBindBufferBase(GL_SHADER_STORAGE_BUFFER,
-                        body_triangle_positions_binding,
-                        body_triangles.position_buffer);
-    gl.glBindBufferBase(GL_SHADER_STORAGE_BUFFER,
-                        body_triangle_normals_binding,
-                        body_triangles.normal_buffer);
-    gl.glBindBufferBase(GL_SHADER_STORAGE_BUFFER,
-                        body_triangle_bvh_node_binding,
-                        body_triangle_bvh.node_buffer);
 
     gl.glProgramUniform1ui(program_, vertex_offset_location_, garment_state.vertex_start_index);
     gl.glProgramUniform1ui(program_, vertex_count_location_, garment_state.vertex_count);

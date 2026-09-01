@@ -25,7 +25,8 @@ add_executable(simulation_app
     src/app/ProjectPaths.h
     src/app/SimulationController.cpp
     src/app/SimulationController.h
-    src/gpu/scene/SimulationGpuView.h
+    src/gpu/scene/SimulationBufferBindings.cpp
+    src/gpu/scene/SimulationBufferBindings.h
     src/simulation/SimulationParams.h
     src/simulation/ClothIntegrator.cpp
     src/simulation/ClothIntegrator.h
@@ -53,7 +54,6 @@ add_executable(simulation_app
     src/gpu/character/CharacterGpuState.cpp
     src/gpu/character/CharacterGpuDataTypes.h
     src/gpu/character/CharacterGpuState.h
-    src/gpu/bvh/BvhBufferView.h
     src/gpu/bvh/BvhBoundsUpdater.cpp
     src/gpu/bvh/BvhBoundsUpdater.h
     src/gpu/cloth/ClothGpuState.cpp
@@ -95,6 +95,7 @@ add_executable(simulation_app
     src/ui/PlacementController.h
     shaders/rendering/viewer.vert
     shaders/rendering/viewer.frag
+    shaders/simulation_buffer_bindings.glsl
     shaders/rendering/background.vert
     shaders/rendering/background.frag
     shaders/mesh/triangle_normal.comp

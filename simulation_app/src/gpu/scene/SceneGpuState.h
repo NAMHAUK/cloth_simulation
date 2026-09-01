@@ -3,7 +3,7 @@
 #include "gpu/bvh/BvhBoundsUpdater.h"
 #include "gpu/character/CharacterGpuState.h"
 #include "gpu/cloth/ClothGpuState.h"
-#include "gpu/scene/SimulationGpuView.h"
+#include "gpu/scene/SimulationBufferBindings.h"
 #include "simulation/SceneState.h"
 
 #include <cstdint>
@@ -34,14 +34,12 @@ public:
     void capture_garment_base_positions(QOpenGLFunctions_4_5_Core& gl);
     void restore_garment_base_positions(QOpenGLFunctions_4_5_Core& gl);
     void clear_garment_base_positions(QOpenGLFunctions_4_5_Core& gl);
-    void update_cloth_bvh_bounds(const SimulationGpuView& views,
-                                 float bounds_margin,
-                                 QOpenGLFunctions_4_5_Core& gl);
+    void update_cloth_bvh_bounds(float bounds_margin, QOpenGLFunctions_4_5_Core& gl);
     void update_cloth_normals(QOpenGLFunctions_4_5_Core& gl);
     bool is_initialized() const;
-    SimulationGpuView simulation_view() const;
     const CharacterGpuState& character_gpu_state() const;
     const ClothGpuState& cloth_gpu_state() const;
+    const CollisionBuffers& collision_buffers() const;
     void release(QOpenGLFunctions_4_5_Core& gl);
     void release_garment_resources(QOpenGLFunctions_4_5_Core& gl);
 
@@ -57,6 +55,7 @@ private:
     void update_character_vertex_normals(QOpenGLFunctions_4_5_Core& gl);
 
     BvhBoundsUpdater bvh_bounds_updater_;
+    SimulationBufferBindings buffer_bindings_;
     CharacterGpuState character_gpu_state_;
     ClothGpuState cloth_gpu_state_;
     CollisionBuffers collision_buffers_;
@@ -65,6 +64,7 @@ private:
     GLuint vertex_normal_program_ = 0;
     GLint triangle_count_location_ = -1;
     GLint vertex_count_location_ = -1;
+    GLint use_character_buffers_location_ = -1;
 
     GLuint attachment_target_program_ = 0;
     GLint attachment_constraint_offset_location_ = -1;

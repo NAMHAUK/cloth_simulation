@@ -486,11 +486,6 @@ void ClothGpuState::clear_base_positions(QOpenGLFunctions_4_5_Core& gl)
 }
 
 // Rendering
-void ClothGpuState::bind_vertex_normals(GLuint binding_index, QOpenGLFunctions_4_5_Core& gl) const
-{
-    gl.glBindBufferBase(GL_SHADER_STORAGE_BUFFER, binding_index, state_.buffers.vertex_normal);
-}
-
 void ClothGpuState::draw_garment(GarmentLayer layer, QOpenGLFunctions_4_5_Core& gl) const
 {
     const GarmentBufferState& garment_state = state_.garments[layer];
@@ -517,6 +512,12 @@ bool ClothGpuState::is_initialized() const
            state_.element_counts.bending_constraint > 0 &&
            !state_.stretch_color_states.empty() &&
            !state_.bending_color_states.empty();
+}
+
+bool ClothGpuState::has_multiple_garments() const
+{
+    return state_.garments[GarmentLayer::Lower].vertex_count != 0u &&
+           state_.garments[GarmentLayer::Upper].vertex_count != 0u;
 }
 
 bool ClothGpuState::has_gpu_objects() const
@@ -550,92 +551,24 @@ const std::array<GarmentBufferState, 2>& ClothGpuState::garment_buffer_states() 
     return state_.garments;
 }
 
-ClothMotionBufferView ClothGpuState::motion_buffer_view() const
+const ClothBufferElementCounts& ClothGpuState::element_counts() const
 {
-    ClothMotionBufferView view;
-    view.current_position_buffer = state_.buffers.current_position;
-    view.previous_position_buffer = state_.buffers.previous_position;
-    view.vertex_count = state_.element_counts.vertex;
-    return view;
+    return state_.element_counts;
 }
 
-ClothCollisionPushoutBufferView ClothGpuState::collision_pushout_buffer_view() const
+const std::vector<ConstraintColorState>& ClothGpuState::stretch_color_states() const
 {
-    ClothCollisionPushoutBufferView view;
-    view.collision_pushout_buffer = state_.buffers.collision_pushout;
-    view.cloth_cloth_pushout_buffer = state_.buffers.cloth_cloth_pushout;
-    view.vertex_count = state_.element_counts.vertex;
-    return view;
+    return state_.stretch_color_states;
 }
 
-ClothContactMotionBufferView ClothGpuState::contact_motion_buffer_view() const
+const std::vector<ConstraintColorState>& ClothGpuState::bending_color_states() const
 {
-    ClothContactMotionBufferView view;
-    view.contact_motion_delta_buffer = state_.buffers.contact_motion_delta;
-    view.vertex_count = state_.element_counts.vertex;
-    return view;
+    return state_.bending_color_states;
 }
 
-ClothBodyTriangleIndexBufferView ClothGpuState::body_triangle_index_buffer_view() const
+const ClothBufferSet& ClothGpuState::buffer_set() const
 {
-    ClothBodyTriangleIndexBufferView view;
-    view.body_triangle_index_buffer = state_.buffers.body_triangle_index;
-    view.vertex_count = state_.element_counts.vertex;
-    return view;
-}
-
-DistanceConstraintBufferView ClothGpuState::stretch_constraint_buffer_view() const
-{
-    DistanceConstraintBufferView view;
-    view.edge_index_buffer = state_.buffers.stretch_edge_index;
-    view.rest_length_buffer = state_.buffers.stretch_rest_length;
-    view.constraint_count = state_.element_counts.stretch_constraint;
-    view.color_states = &state_.stretch_color_states;
-    return view;
-}
-
-DistanceConstraintBufferView ClothGpuState::bending_constraint_buffer_view() const
-{
-    DistanceConstraintBufferView view;
-    view.edge_index_buffer = state_.buffers.bending_edge_index;
-    view.rest_length_buffer = state_.buffers.bending_rest_length;
-    view.constraint_count = state_.element_counts.bending_constraint;
-    view.color_states = &state_.bending_color_states;
-    return view;
-}
-
-AttachmentConstraintBufferView ClothGpuState::attachment_constraint_buffer_view() const
-{
-    AttachmentConstraintBufferView view;
-    view.attachment_index_buffer = state_.buffers.attachment_indices;
-    view.barycentric_offset_buffer = state_.buffers.attachment_barycentric_offset;
-    view.constraint_count = state_.element_counts.attachment_constraint;
-    return view;
-}
-
-ClothMeshTopologyResources ClothGpuState::mesh_topology_resources() const
-{
-    ClothMeshTopologyResources topology;
-    topology.position_buffer = state_.buffers.current_position;
-    topology.triangle_index_buffer = state_.buffers.triangle_vertex_indices;
-    topology.adjacent_triangle_offsets_buffer = state_.buffers.adjacent_triangle_offsets;
-    topology.adjacent_triangle_indices_buffer = state_.buffers.adjacent_triangle_indices;
-    topology.vertex_count = state_.element_counts.vertex;
-    topology.triangle_count = state_.element_counts.triangle;
-    return topology;
-}
-
-ClothNormalResources ClothGpuState::mesh_normal_resources() const
-{
-    ClothNormalResources normals;
-    normals.triangle_normal_buffer = state_.buffers.triangle_normal;
-    normals.vertex_normal_buffer = state_.buffers.vertex_normal;
-    return normals;
-}
-
-BvhBufferView ClothGpuState::cloth_bvh_buffer_view() const
-{
-    return {state_.buffers.bvh_node, state_.buffers.triangle_bounds};
+    return state_.buffers;
 }
 
 // Release

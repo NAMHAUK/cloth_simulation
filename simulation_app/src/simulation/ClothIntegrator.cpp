@@ -1,7 +1,6 @@
 #include "simulation/ClothIntegrator.h"
 
 #include "gpu/cloth/ClothGpuState.h"
-#include "gpu/scene/SimulationGpuView.h"
 #include "simulation/SceneState.h"
 #include "utils/BufferUtils.h"
 #include "utils/ShaderUtils.h"
@@ -12,11 +11,6 @@
 #include <stdexcept>
 
 namespace {
-constexpr GLuint current_positions_binding = 0;
-constexpr GLuint previous_positions_binding = 1;
-constexpr GLuint collision_pushouts_binding = 3;
-constexpr GLuint cloth_cloth_pushouts_binding = 4;
-constexpr GLuint contact_motion_deltas_binding = 5;
 constexpr std::uint32_t integration_local_size = 128;
 
 glm::vec3 clamp_vector_length(const glm::vec3& value, float maximum_length)
@@ -75,27 +69,16 @@ void ClothIntegrator::initialize(const std::filesystem::path& shader_dir,
 }
 
 // 외부 힘 계산 -> 힘에 따른 위치 변화 GPU에서 갱신
-void ClothIntegrator::integrate(const SimulationGpuView& views,
+void ClothIntegrator::integrate(const ClothGpuState& cloth_state,
                                 GarmentLayer layer,
                                 const ReferenceFrameKinematics& reference_frame_kinematics,
                                 QOpenGLFunctions_4_5_Core& gl) const
 {
-    const auto& motion_view = views.cloth_motion;
-    const auto& collision_pushout_view = views.cloth_collision_pushout;
-    const auto& contact_motion_view = views.cloth_contact_motion;
-    const GarmentBufferState& garment_state = views.garment_buffer_states[layer];
+    const GarmentBufferState& garment_state = cloth_state.garment_buffer_states()[layer];
     const bool has_valid_vertices = is_valid_buffer_access(garment_state.vertex_start_index,
                                                            garment_state.vertex_count,
-                                                           motion_view.vertex_count);
-    if (!is_initialized() ||
-        !is_valid_motion_view(motion_view) ||
-        !is_valid_collision_pushout_view(collision_pushout_view) ||
-        !is_valid_contact_motion_view(contact_motion_view) ||
-        motion_view.vertex_count != collision_pushout_view.vertex_count ||
-        motion_view.vertex_count != contact_motion_view.vertex_count ||
-        !has_valid_vertices ||
-        dt_ <= 0.0f ||
-        inverse_dt_ <= 0.0f) {
+                                                           cloth_state.element_counts().vertex);
+    if (!is_initialized() || !has_valid_vertices || dt_ <= 0.0f || inverse_dt_ <= 0.0f) {
         return;
     }
 
@@ -107,21 +90,6 @@ void ClothIntegrator::integrate(const SimulationGpuView& views,
 
     // shader & GPU 연결
     gl.glUseProgram(program_);
-    gl.glBindBufferBase(GL_SHADER_STORAGE_BUFFER,
-                        current_positions_binding,
-                        motion_view.current_position_buffer);
-    gl.glBindBufferBase(GL_SHADER_STORAGE_BUFFER,
-                        previous_positions_binding,
-                        motion_view.previous_position_buffer);
-    gl.glBindBufferBase(GL_SHADER_STORAGE_BUFFER,
-                        collision_pushouts_binding,
-                        collision_pushout_view.collision_pushout_buffer);
-    gl.glBindBufferBase(GL_SHADER_STORAGE_BUFFER,
-                        cloth_cloth_pushouts_binding,
-                        collision_pushout_view.cloth_cloth_pushout_buffer);
-    gl.glBindBufferBase(GL_SHADER_STORAGE_BUFFER,
-                        contact_motion_deltas_binding,
-                        contact_motion_view.contact_motion_delta_buffer);
 
     // shader에 값 전달
     gl.glProgramUniform1ui(program_, vertex_offset_location_, garment_state.vertex_start_index);

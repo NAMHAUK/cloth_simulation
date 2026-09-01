@@ -1,6 +1,6 @@
 #include "simulation/constraints/AttachmentConstraintSolver.h"
 
-#include "gpu/scene/SimulationGpuView.h"
+#include "gpu/cloth/ClothGpuState.h"
 #include "utils/BufferUtils.h"
 #include "utils/ShaderUtils.h"
 
@@ -10,11 +10,6 @@
 #include <stdexcept>
 
 namespace {
-constexpr GLuint current_positions_binding = 0;
-constexpr GLuint attachment_indices_binding = 1;
-constexpr GLuint attachment_barycentric_offsets_binding = 2;
-constexpr GLuint body_triangle_positions_binding = 3;
-constexpr GLuint body_triangle_normals_binding = 4;
 constexpr std::uint32_t attachment_constraint_local_size = 128;
 
 bool has_attachment_constraints(const std::array<GarmentBufferState, 2>& garments)
@@ -24,14 +19,23 @@ bool has_attachment_constraints(const std::array<GarmentBufferState, 2>& garment
     });
 }
 
-bool is_valid_attachment_constraint_view(const AttachmentConstraintBufferView& constraint_view,
-                                         const std::array<GarmentBufferState, 2>& garments)
+bool has_valid_attachment_ranges(const std::array<GarmentBufferState, 2>& garments)
 {
-    return constraint_view.attachment_index_buffer != 0 &&
-           constraint_view.barycentric_offset_buffer != 0 &&
-           constraint_view.constraint_count > 0 &&
-           has_attachment_constraints(garments);
+    std::uint32_t total_constraint_count = 0u;
+    for (const GarmentBufferState& garment_state : garments) {
+        total_constraint_count += garment_state.attachment_constraint_count;
+    }
+
+    return std::all_of(garments.begin(), garments.end(), [total_constraint_count](const auto& garment_state) {
+        return garment_state.active_attachment_constraint_count == 0u ||
+               (garment_state.active_attachment_constraint_count <=
+                    garment_state.attachment_constraint_count &&
+                is_valid_buffer_access(garment_state.attachment_constraint_start_index,
+                                       garment_state.active_attachment_constraint_count,
+                                       total_constraint_count));
+    });
 }
+
 }
 
 AttachmentConstraintSolver::AttachmentConstraintSolver(float stiffness) : stiffness_(stiffness)
@@ -51,45 +55,28 @@ void AttachmentConstraintSolver::initialize(const std::filesystem::path& shader_
     stiffness_location_ = require_uniform_location(program_, "uStiffness", gl);
 }
 
-bool AttachmentConstraintSolver::can_solve(const SimulationGpuView& views) const
+bool AttachmentConstraintSolver::can_solve(const ClothGpuState& cloth_state) const
 {
+    const auto& garment_states = cloth_state.garment_buffer_states();
     return is_initialized() &&
-           is_valid_motion_view(views.cloth_motion) &&
-           is_valid_attachment_constraint_view(views.attachment_constraints, views.garment_buffer_states) &&
-           is_valid_body_triangle_resource(views.body_triangles) &&
+           has_attachment_constraints(garment_states) &&
+           has_valid_attachment_ranges(garment_states) &&
            stiffness_ > 0.0f;
 }
 
-void AttachmentConstraintSolver::solve(const SimulationGpuView& views, QOpenGLFunctions_4_5_Core& gl) const
+void AttachmentConstraintSolver::solve(const ClothGpuState& cloth_state, QOpenGLFunctions_4_5_Core& gl) const
 {
-    const auto& constraint_view = views.attachment_constraints;
-    if (!has_attachment_constraints(views.garment_buffer_states)) {
+    const auto& garment_states = cloth_state.garment_buffer_states();
+    if (!has_attachment_constraints(garment_states)) {
         return;
     }
 
-    assert(can_solve(views));
+    assert(can_solve(cloth_state));
 
-    const auto& motion_view = views.cloth_motion;
-    const auto& body_triangles = views.body_triangles;
     gl.glUseProgram(program_);
-    gl.glBindBufferBase(GL_SHADER_STORAGE_BUFFER,
-                        current_positions_binding,
-                        motion_view.current_position_buffer);
-    gl.glBindBufferBase(GL_SHADER_STORAGE_BUFFER,
-                        attachment_indices_binding,
-                        constraint_view.attachment_index_buffer);
-    gl.glBindBufferBase(GL_SHADER_STORAGE_BUFFER,
-                        attachment_barycentric_offsets_binding,
-                        constraint_view.barycentric_offset_buffer);
-    gl.glBindBufferBase(GL_SHADER_STORAGE_BUFFER,
-                        body_triangle_positions_binding,
-                        body_triangles.position_buffer);
-    gl.glBindBufferBase(GL_SHADER_STORAGE_BUFFER,
-                        body_triangle_normals_binding,
-                        body_triangles.normal_buffer);
     gl.glProgramUniform1f(program_, stiffness_location_, std::clamp(stiffness_, 0.0f, 1.0f));
 
-    for (const GarmentBufferState& garment_state : views.garment_buffer_states) {
+    for (const GarmentBufferState& garment_state : garment_states) {
         if (garment_state.active_attachment_constraint_count == 0) {
             continue;
         }

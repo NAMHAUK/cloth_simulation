@@ -1,11 +1,11 @@
 #pragma once
 
-#include "gpu/scene/SimulationGpuView.h"
-
 #include <cstdint>
 #include <filesystem>
 
 #include <QOpenGLFunctions_4_5_Core>
+
+class SceneGpuState;
 
 class CollisionDetector final
 {
@@ -17,13 +17,21 @@ public:
     bool is_initialized() const;
     void initialize(const std::filesystem::path& shader_dir, QOpenGLFunctions_4_5_Core& gl);
 
-    bool can_detect(const SimulationGpuView& views) const;
-    void detect(const SimulationGpuView& views, QOpenGLFunctions_4_5_Core& gl) const;
-    void detect_prefit(const SimulationGpuView& views, QOpenGLFunctions_4_5_Core& gl) const;
+    bool can_detect(const SceneGpuState& gpu_state) const;
+    void detect(const SceneGpuState& gpu_state, QOpenGLFunctions_4_5_Core& gl) const;
+    void detect_prefit(const SceneGpuState& gpu_state, QOpenGLFunctions_4_5_Core& gl) const;
 
     void release(QOpenGLFunctions_4_5_Core& gl);
 
 private:
+    enum class CandidateKind : std::uint32_t
+    {
+        ClothVertexBodyFace = 0,
+        ClothEdgeBodyEdge = 1,
+        ClothFaceBodyVertex = 2,
+        ClothClothVertexFace = 3,
+    };
+
     struct CandidateDetectionProgram final
     {
         GLuint program = 0;
@@ -34,6 +42,7 @@ private:
     struct DispatchSizeProgram final
     {
         GLuint program = 0;
+        GLint candidate_kind = -1;
         GLint max_candidates = -1;
     };
 
@@ -49,14 +58,15 @@ private:
         GLint max_candidates = -1;
     };
 
-    void detect_cloth_vertex_body_face(const SimulationGpuView& views, QOpenGLFunctions_4_5_Core& gl) const;
-    void detect_cloth_edge_body_edge(const SimulationGpuView& views, QOpenGLFunctions_4_5_Core& gl) const;
-    void detect_cloth_face_body_vertex(const SimulationGpuView& views, QOpenGLFunctions_4_5_Core& gl) const;
-    void detect_cloth_cloth_vertex_face(const SimulationGpuView& views, QOpenGLFunctions_4_5_Core& gl) const;
-    void build_dispatch_size(const CollisionCandidateBuffers& collision_candidates,
+    void detect_cloth_vertex_body_face(const SceneGpuState& gpu_state, QOpenGLFunctions_4_5_Core& gl) const;
+    void detect_cloth_edge_body_edge(const SceneGpuState& gpu_state, QOpenGLFunctions_4_5_Core& gl) const;
+    void detect_cloth_face_body_vertex(const SceneGpuState& gpu_state, QOpenGLFunctions_4_5_Core& gl) const;
+    void detect_cloth_cloth_vertex_face(const SceneGpuState& gpu_state, QOpenGLFunctions_4_5_Core& gl) const;
+    void build_dispatch_size(CandidateKind candidate_kind,
+                             std::uint32_t max_candidates,
                              QOpenGLFunctions_4_5_Core& gl) const;
 
-    bool can_detect_prefit(const SimulationGpuView& views) const;
+    bool can_detect_prefit(const SceneGpuState& gpu_state) const;
 
     CandidateDetectionProgram cloth_vertex_body_face_;
     CandidateDetectionProgram cloth_edge_body_edge_;

@@ -50,8 +50,8 @@ std::optional<std::filesystem::path> parse_shader_include(const std::string& lin
     return std::filesystem::path{line.substr(path_start, path_end - path_start)};
 }
 
-std::string load_shader_source(const std::filesystem::path& shader_path,
-                               std::vector<std::filesystem::path> include_stack)
+std::string load_shader_source_recursive(const std::filesystem::path& shader_path,
+                                         std::vector<std::filesystem::path> include_stack)
 {
     const std::filesystem::path normalized_path = std::filesystem::absolute(shader_path).lexically_normal();
     if (std::find(include_stack.begin(), include_stack.end(), normalized_path) != include_stack.end()) {
@@ -71,7 +71,7 @@ std::string load_shader_source(const std::filesystem::path& shader_path,
     while (std::getline(input, line)) {
         if (const auto include_path = parse_shader_include(line)) {
             const auto include_source =
-                load_shader_source(normalized_path.parent_path() / *include_path, include_stack);
+                load_shader_source_recursive(normalized_path.parent_path() / *include_path, include_stack);
             output << include_source;
             if (include_source.empty() || include_source.back() != '\n') {
                 output << '\n';
@@ -87,9 +87,14 @@ std::string load_shader_source(const std::filesystem::path& shader_path,
 
 }
 
+std::string load_shader_source(const std::filesystem::path& shader_path)
+{
+    return load_shader_source_recursive(shader_path, {});
+}
+
 GLuint load_compute_program(const std::filesystem::path& shader_path, QOpenGLFunctions_4_5_Core& gl)
 {
-    const auto shader_source = load_shader_source(shader_path, {});
+    const auto shader_source = load_shader_source(shader_path);
     const GLuint shader = compile_compute_shader(shader_source.c_str(), shader_path, gl);
     const GLuint program = gl.glCreateProgram();
     gl.glAttachShader(program, shader);

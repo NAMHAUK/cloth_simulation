@@ -1,7 +1,6 @@
 #include "gpu/bvh/BvhBoundsUpdater.h"
 
-#include "gpu/scene/SimulationGpuView.h"
-#include "utils/BufferUtils.h"
+#include "gpu/cloth/ClothGpuState.h"
 #include "utils/ShaderUtils.h"
 
 #include <algorithm>
@@ -12,26 +11,6 @@
 #include <utility>
 
 namespace {
-constexpr GLuint body_triangle_positions_binding = 0;
-constexpr GLuint body_triangle_normals_binding = 1;
-constexpr GLuint body_triangle_indices_binding = 2;
-constexpr GLuint body_current_positions_binding = 3;
-constexpr GLuint body_previous_positions_binding = 4;
-constexpr GLuint body_triangle_bvh_node_binding = 5;
-constexpr GLuint body_triangle_bounds_binding = 6;
-constexpr GLuint body_vertex_indices_binding = 7;
-constexpr GLuint body_vertex_bvh_nodes_binding = 8;
-constexpr GLuint body_vertex_bounds_binding = 9;
-constexpr GLuint body_edge_indices_binding = 10;
-constexpr GLuint body_edge_bvh_nodes_binding = 11;
-constexpr GLuint body_edge_bounds_binding = 12;
-
-constexpr GLuint cloth_current_positions_binding = 0;
-constexpr GLuint cloth_previous_positions_binding = 1;
-constexpr GLuint cloth_triangle_indices_binding = 2;
-constexpr GLuint cloth_bvh_nodes_binding = 3;
-constexpr GLuint cloth_triangle_bounds_binding = 4;
-
 constexpr std::uint32_t bvh_bounds_update_local_size = 128;
 
 std::pair<std::uint32_t, std::uint32_t> valid_or_empty_level(const std::vector<std::uint32_t>& level_offsets,
@@ -85,48 +64,9 @@ void BvhBoundsUpdater::set_body_level_offsets(const std::vector<std::uint32_t>& 
 
 // Bounds update
 
-void BvhBoundsUpdater::update_body_bvh(const SimulationGpuView& views, QOpenGLFunctions_4_5_Core& gl) const
+void BvhBoundsUpdater::update_body_bvh(QOpenGLFunctions_4_5_Core& gl) const
 {
     gl.glUseProgram(body_program_);
-    gl.glBindBufferBase(GL_SHADER_STORAGE_BUFFER,
-                        body_triangle_positions_binding,
-                        views.body_triangles.position_buffer);
-    gl.glBindBufferBase(GL_SHADER_STORAGE_BUFFER,
-                        body_triangle_normals_binding,
-                        views.body_triangles.normal_buffer);
-    gl.glBindBufferBase(GL_SHADER_STORAGE_BUFFER,
-                        body_triangle_indices_binding,
-                        views.body_topology.triangle_index_buffer);
-    gl.glBindBufferBase(GL_SHADER_STORAGE_BUFFER,
-                        body_current_positions_binding,
-                        views.body_vertices.current_position_buffer);
-    gl.glBindBufferBase(GL_SHADER_STORAGE_BUFFER,
-                        body_previous_positions_binding,
-                        views.body_vertices.previous_position_buffer);
-    gl.glBindBufferBase(GL_SHADER_STORAGE_BUFFER,
-                        body_triangle_bvh_node_binding,
-                        views.body_triangle_bvh.node_buffer);
-    gl.glBindBufferBase(GL_SHADER_STORAGE_BUFFER,
-                        body_triangle_bounds_binding,
-                        views.body_triangle_bvh.bounds_buffer);
-    gl.glBindBufferBase(GL_SHADER_STORAGE_BUFFER,
-                        body_vertex_indices_binding,
-                        views.body_topology.bvh_vertex_index_buffer);
-    gl.glBindBufferBase(GL_SHADER_STORAGE_BUFFER,
-                        body_vertex_bvh_nodes_binding,
-                        views.body_vertex_bvh.node_buffer);
-    gl.glBindBufferBase(GL_SHADER_STORAGE_BUFFER,
-                        body_vertex_bounds_binding,
-                        views.body_vertex_bvh.bounds_buffer);
-    gl.glBindBufferBase(GL_SHADER_STORAGE_BUFFER,
-                        body_edge_indices_binding,
-                        views.body_topology.edge_index_buffer);
-    gl.glBindBufferBase(GL_SHADER_STORAGE_BUFFER,
-                        body_edge_bvh_nodes_binding,
-                        views.body_edge_bvh.node_buffer);
-    gl.glBindBufferBase(GL_SHADER_STORAGE_BUFFER,
-                        body_edge_bounds_binding,
-                        views.body_edge_bvh.bounds_buffer);
 
     const std::size_t level_count = std::max({body_triangle_level_offsets_.size(),
                                               body_vertex_level_offsets_.size(),
@@ -161,37 +101,26 @@ void BvhBoundsUpdater::update_body_bvh(const SimulationGpuView& views, QOpenGLFu
     }
 }
 
-void BvhBoundsUpdater::update_cloth_bvh(const SimulationGpuView& views,
+void BvhBoundsUpdater::update_cloth_bvh(const ClothGpuState& cloth_state,
                                         float bounds_margin,
                                         QOpenGLFunctions_4_5_Core& gl) const
 {
-    assert(can_update_cloth(views, bounds_margin));
+    assert(can_update_cloth(cloth_state, bounds_margin));
+
+    const auto& garment_states = cloth_state.garment_buffer_states();
 
     gl.glUseProgram(cloth_program_);
-    gl.glBindBufferBase(GL_SHADER_STORAGE_BUFFER,
-                        cloth_current_positions_binding,
-                        views.cloth_motion.current_position_buffer);
-    gl.glBindBufferBase(GL_SHADER_STORAGE_BUFFER,
-                        cloth_previous_positions_binding,
-                        views.cloth_motion.previous_position_buffer);
-    gl.glBindBufferBase(GL_SHADER_STORAGE_BUFFER,
-                        cloth_triangle_indices_binding,
-                        views.cloth_topology.triangle_index_buffer);
-    gl.glBindBufferBase(GL_SHADER_STORAGE_BUFFER, cloth_bvh_nodes_binding, views.cloth_bvh.node_buffer);
-    gl.glBindBufferBase(GL_SHADER_STORAGE_BUFFER,
-                        cloth_triangle_bounds_binding,
-                        views.cloth_bvh.bounds_buffer);
     gl.glProgramUniform1f(cloth_program_, cloth_bounds_margin_location_, bounds_margin);
 
     std::size_t level_count = 0;
-    for (const GarmentBufferState& garment_state : views.garment_buffer_states) {
+    for (const GarmentBufferState& garment_state : garment_states) {
         if (!garment_state.bvh_level_offsets.empty()) {
             level_count = std::max(level_count, garment_state.bvh_level_offsets.size() - 1u);
         }
     }
 
     for (std::size_t level_index = 0; level_index < level_count; ++level_index) {
-        for (const GarmentBufferState& garment_state : views.garment_buffer_states) {
+        for (const GarmentBufferState& garment_state : garment_states) {
             const auto [first_node_index, node_count] =
                 valid_or_empty_level(garment_state.bvh_level_offsets, level_index);
             if (node_count == 0) {
@@ -209,13 +138,19 @@ void BvhBoundsUpdater::update_cloth_bvh(const SimulationGpuView& views,
 
 // Validation
 
-bool BvhBoundsUpdater::can_update_cloth(const SimulationGpuView& views, float bounds_margin) const
+bool BvhBoundsUpdater::can_update_cloth(const ClothGpuState& cloth_state, float bounds_margin) const
 {
+    const auto& garment_states = cloth_state.garment_buffer_states();
+    const bool has_valid_bvh_levels = std::all_of(garment_states.begin(),
+                                                  garment_states.end(),
+                                                  [](const GarmentBufferState& garment_state) {
+                                                      return garment_state.vertex_count == 0u ||
+                                                             garment_state.bvh_level_offsets.size() >= 2u;
+                                                  });
     return cloth_program_ != 0 &&
-           is_valid_motion_view(views.cloth_motion) &&
-           is_valid_cloth_mesh_topology_resource(views.cloth_topology) &&
-           is_valid_bvh_buffer_view(views.cloth_bvh) &&
-           views.cloth_topology.vertex_count == views.cloth_motion.vertex_count &&
+           cloth_state.element_counts().vertex != 0u &&
+           cloth_state.element_counts().triangle != 0u &&
+           has_valid_bvh_levels &&
            std::isfinite(bounds_margin) &&
            bounds_margin >= 0.0f;
 }

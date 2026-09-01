@@ -1,60 +1,62 @@
 #version 430 core
 
+#include "../../simulation_buffer_bindings.glsl"
+
 layout(local_size_x = 128) in;
 
-layout(std430, binding = 0) readonly buffer ClothCurrentPositions {
+layout(std430, binding = CLOTH_CURRENT_POSITIONS) readonly buffer ClothCurrentPositions {
     vec4 cloth_current_positions[];
 };
 
-layout(std430, binding = 1) readonly buffer ClothPreviousPositions {
+layout(std430, binding = CLOTH_PREVIOUS_POSITIONS) readonly buffer ClothPreviousPositions {
     vec4 cloth_previous_positions[];
 };
 
-layout(std430, binding = 2) readonly buffer ClothTriangleIndices {
+layout(std430, binding = CLOTH_TRIANGLE_VERTEX_INDICES) readonly buffer ClothTriangleIndices {
     uint cloth_triangle_indices[];
 };
 
-layout(std430, binding = 3) readonly buffer BodyPreviousPositions {
+layout(std430, binding = CHARACTER_PREVIOUS_POSITIONS) readonly buffer BodyPreviousPositions {
     vec4 body_previous_positions[];
 };
 
-layout(std430, binding = 4) readonly buffer BodyCurrentPositions {
+layout(std430, binding = CHARACTER_CURRENT_POSITIONS) readonly buffer BodyCurrentPositions {
     vec4 body_current_positions[];
 };
 
-layout(std430, binding = 5) readonly buffer BodyVertexNormals {
+layout(std430, binding = CHARACTER_VERTEX_NORMALS) readonly buffer BodyVertexNormals {
     vec4 body_vertex_normals[];
 };
 
-layout(std430, binding = 6) readonly buffer Candidates {
+layout(std430, binding = CLOTH_FACE_BODY_VERTEX_CANDIDATES) readonly buffer Candidates {
     uvec2 candidates[];
 };
 
-layout(std430, binding = 7) readonly buffer CandidateCount {
+layout(std430, binding = CLOTH_FACE_BODY_VERTEX_CANDIDATE_COUNT) readonly buffer CandidateCount {
     uint candidate_count;
 };
 
-layout(std430, binding = 8) buffer NormalCorrectionSums {
+layout(std430, binding = NORMAL_CORRECTION_SUMS) buffer NormalCorrectionSums {
     ivec4 normal_correction_sums[];
 };
 
-layout(std430, binding = 9) buffer FrictionCorrectionSums {
+layout(std430, binding = FRICTION_CORRECTION_SUMS) buffer FrictionCorrectionSums {
     ivec4 friction_correction_sums[];
 };
 
-layout(std430, binding = 10) readonly buffer CollisionPushouts {
+layout(std430, binding = CLOTH_COLLISION_PUSHOUTS) readonly buffer CollisionPushouts {
     vec4 collision_pushouts[];
 };
 
-layout(std430, binding = 11) readonly buffer ClothClothPushouts {
+layout(std430, binding = CLOTH_CLOTH_PUSHOUTS) readonly buffer ClothClothPushouts {
     vec4 cloth_cloth_pushouts[];
 };
 
-layout(std430, binding = 12) readonly buffer ContactMotionDeltas {
+layout(std430, binding = CLOTH_CONTACT_MOTION_DELTAS) readonly buffer ContactMotionDeltas {
     vec4 contact_motion_deltas[];
 };
 
-layout(std430, binding = 13) buffer ContactMotionDeltaSums {
+layout(std430, binding = CONTACT_MOTION_DELTA_SUMS) buffer ContactMotionDeltaSums {
     ivec4 contact_motion_delta_sums[];
 };
 

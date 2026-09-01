@@ -8,7 +8,7 @@
 #include <QOpenGLFunctions_4_5_Core>
 
 struct ReferenceFrameKinematics;
-struct SimulationGpuView;
+class ClothGpuState;
 
 class ClothIntegrator final
 {
@@ -23,7 +23,7 @@ public:
 
     bool is_initialized() const;
     void initialize(const std::filesystem::path& shader_dir, float dt, QOpenGLFunctions_4_5_Core& gl);
-    void integrate(const SimulationGpuView& views,
+    void integrate(const ClothGpuState& cloth_state,
                    GarmentLayer layer,
                    const ReferenceFrameKinematics& reference_frame_kinematics,
                    QOpenGLFunctions_4_5_Core& gl) const;

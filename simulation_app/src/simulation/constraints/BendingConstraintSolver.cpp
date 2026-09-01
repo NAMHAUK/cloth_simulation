@@ -1,7 +1,6 @@
 #include "simulation/constraints/BendingConstraintSolver.h"
 
 #include "gpu/cloth/ClothGpuState.h"
-#include "gpu/scene/SimulationGpuView.h"
 #include "utils/BufferUtils.h"
 #include "utils/ShaderUtils.h"
 
@@ -11,9 +10,6 @@
 #include <stdexcept>
 
 namespace {
-constexpr GLuint current_positions_binding = 0;
-constexpr GLuint edge_indices_binding = 1;
-constexpr GLuint rest_lengths_binding = 2;
 constexpr std::uint32_t bending_constraint_local_size = 128;
 }
 
@@ -34,30 +30,22 @@ void BendingConstraintSolver::initialize(const std::filesystem::path& shader_dir
     stiffness_location_ = require_uniform_location(program_, "uStiffness", gl);
 }
 
-bool BendingConstraintSolver::can_solve(const SimulationGpuView& views) const
+bool BendingConstraintSolver::can_solve(const ClothGpuState& cloth_state) const
 {
+    const ClothBufferElementCounts& counts = cloth_state.element_counts();
     return is_initialized() &&
-           is_valid_motion_view(views.cloth_motion) &&
-           is_valid_distance_constraint_view(views.bending_constraints) &&
+           has_valid_distance_constraints(counts.bending_constraint, cloth_state.bending_color_states()) &&
            stiffness_ > 0.0f;
 }
 
-void BendingConstraintSolver::solve(const SimulationGpuView& views, QOpenGLFunctions_4_5_Core& gl) const
+void BendingConstraintSolver::solve(const ClothGpuState& cloth_state, QOpenGLFunctions_4_5_Core& gl) const
 {
-    assert(can_solve(views));
-
-    const auto& motion_view = views.cloth_motion;
-    const auto& constraint_view = views.bending_constraints;
+    assert(can_solve(cloth_state));
 
     gl.glUseProgram(program_);
-    gl.glBindBufferBase(GL_SHADER_STORAGE_BUFFER,
-                        current_positions_binding,
-                        motion_view.current_position_buffer);
-    gl.glBindBufferBase(GL_SHADER_STORAGE_BUFFER, edge_indices_binding, constraint_view.edge_index_buffer);
-    gl.glBindBufferBase(GL_SHADER_STORAGE_BUFFER, rest_lengths_binding, constraint_view.rest_length_buffer);
     gl.glProgramUniform1f(program_, stiffness_location_, std::clamp(stiffness_, 0.0f, 1.0f));
 
-    for (const ConstraintColorState& color_state : *constraint_view.color_states) {
+    for (const ConstraintColorState& color_state : cloth_state.bending_color_states()) {
         if (color_state.count == 0) {
             continue;
         }
