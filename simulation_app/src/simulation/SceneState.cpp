@@ -123,9 +123,9 @@ void ReferenceFrameKinematics::update(const glm::vec3& position, const glm::quat
     end_position = position;
     rotation_delta = glm::mat3_cast(glm::normalize(orientation * glm::conjugate(orientation_)));
 
-    start_velocity = velocity_;
-    velocity_ = (end_position - start_position) / dt;
-    acceleration = (velocity_ - start_velocity) / dt;
+    start_linear_velocity = linear_velocity_;
+    linear_velocity_ = (end_position - start_position) / dt;
+    linear_acceleration = (linear_velocity_ - start_linear_velocity) / dt;
 
     start_angular_velocity = angular_velocity_;
     angular_velocity_ = angular_velocity(orientation_, orientation, dt);

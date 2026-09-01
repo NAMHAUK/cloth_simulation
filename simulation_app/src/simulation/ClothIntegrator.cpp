@@ -22,12 +22,12 @@ glm::vec3 clamp_vector_length(const glm::vec3& value, float maximum_length)
 ClothIntegrator::ClothIntegrator(float gravity,
                                  float velocity_damping,
                                  float reference_frame_inertia_scale,
-                                 float reference_frame_max_acceleration,
+                                 float reference_frame_max_linear_acceleration,
                                  float reference_frame_max_angular_acceleration)
     : gravity_(gravity),
       velocity_damping_(velocity_damping),
       reference_frame_inertia_scale_(reference_frame_inertia_scale),
-      reference_frame_max_acceleration_(reference_frame_max_acceleration),
+      reference_frame_max_linear_acceleration_(reference_frame_max_linear_acceleration),
       reference_frame_max_angular_acceleration_(reference_frame_max_angular_acceleration)
 {}
 
@@ -46,8 +46,8 @@ void ClothIntegrator::initialize(const std::filesystem::path& shader_dir,
     frame_start_position_loc_ = require_uniform_location(program_, "uFrameStartPosition", gl);
     frame_end_position_loc_ = require_uniform_location(program_, "uFrameEndPosition", gl);
     frame_rotation_delta_loc_ = require_uniform_location(program_, "uFrameRotationDelta", gl);
-    frame_start_velocity_loc_ = require_uniform_location(program_, "uFrameStartVelocity", gl);
-    frame_acceleration_loc_ = require_uniform_location(program_, "uFrameAcceleration", gl);
+    frame_start_linear_velocity_loc_ = require_uniform_location(program_, "uFrameStartLinearVelocity", gl);
+    frame_linear_acceleration_loc_ = require_uniform_location(program_, "uFrameLinearAcceleration", gl);
     frame_start_angular_velocity_loc_ = require_uniform_location(program_, "uFrameStartAngularVelocity", gl);
     frame_angular_acceleration_loc_ = require_uniform_location(program_, "uFrameAngularAcceleration", gl);
 
@@ -66,15 +66,14 @@ void ClothIntegrator::initialize(const std::filesystem::path& shader_dir,
 
 void ClothIntegrator::integrate(const ClothGpuState& cloth_state,
                                 GarmentLayer layer,
-                                const ReferenceFrameKinematics& reference_frame_kinematics,
+                                const ReferenceFrameKinematics& kinematics,
                                 QOpenGLFunctions_4_5_Core& gl) const
 {
     const GarmentBufferState& garment_state = cloth_state.garment_buffer_states()[layer];
-    const glm::vec3 frame_acceleration =
-        clamp_vector_length(reference_frame_kinematics.acceleration, reference_frame_max_acceleration_);
+    const glm::vec3 frame_linear_acceleration =
+        clamp_vector_length(kinematics.linear_acceleration, reference_frame_max_linear_acceleration_);
     const glm::vec3 frame_angular_acceleration =
-        clamp_vector_length(reference_frame_kinematics.angular_acceleration,
-                            reference_frame_max_angular_acceleration_);
+        clamp_vector_length(kinematics.angular_acceleration, reference_frame_max_angular_acceleration_);
 
     gl.glUseProgram(program_);
 
@@ -82,34 +81,34 @@ void ClothIntegrator::integrate(const ClothGpuState& cloth_state,
     gl.glProgramUniform1ui(program_, vertex_count_loc_, garment_state.vertex_count);
     gl.glProgramUniform3f(program_,
                           frame_start_position_loc_,
-                          reference_frame_kinematics.start_position.x,
-                          reference_frame_kinematics.start_position.y,
-                          reference_frame_kinematics.start_position.z);
+                          kinematics.start_position.x,
+                          kinematics.start_position.y,
+                          kinematics.start_position.z);
     gl.glProgramUniform3f(program_,
                           frame_end_position_loc_,
-                          reference_frame_kinematics.end_position.x,
-                          reference_frame_kinematics.end_position.y,
-                          reference_frame_kinematics.end_position.z);
+                          kinematics.end_position.x,
+                          kinematics.end_position.y,
+                          kinematics.end_position.z);
     gl.glProgramUniformMatrix3fv(program_,
                                  frame_rotation_delta_loc_,
                                  1,
                                  GL_FALSE,
-                                 glm::value_ptr(reference_frame_kinematics.rotation_delta));
+                                 glm::value_ptr(kinematics.rotation_delta));
     gl.glProgramUniform3f(program_,
-                          frame_start_velocity_loc_,
-                          reference_frame_kinematics.start_velocity.x,
-                          reference_frame_kinematics.start_velocity.y,
-                          reference_frame_kinematics.start_velocity.z);
+                          frame_start_linear_velocity_loc_,
+                          kinematics.start_linear_velocity.x,
+                          kinematics.start_linear_velocity.y,
+                          kinematics.start_linear_velocity.z);
     gl.glProgramUniform3f(program_,
-                          frame_acceleration_loc_,
-                          frame_acceleration.x,
-                          frame_acceleration.y,
-                          frame_acceleration.z);
+                          frame_linear_acceleration_loc_,
+                          frame_linear_acceleration.x,
+                          frame_linear_acceleration.y,
+                          frame_linear_acceleration.z);
     gl.glProgramUniform3f(program_,
                           frame_start_angular_velocity_loc_,
-                          reference_frame_kinematics.start_angular_velocity.x,
-                          reference_frame_kinematics.start_angular_velocity.y,
-                          reference_frame_kinematics.start_angular_velocity.z);
+                          kinematics.start_angular_velocity.x,
+                          kinematics.start_angular_velocity.y,
+                          kinematics.start_angular_velocity.z);
     gl.glProgramUniform3f(program_,
                           frame_angular_acceleration_loc_,
                           frame_angular_acceleration.x,
@@ -130,8 +129,8 @@ void ClothIntegrator::release(QOpenGLFunctions_4_5_Core& gl)
     frame_start_position_loc_ = -1;
     frame_end_position_loc_ = -1;
     frame_rotation_delta_loc_ = -1;
-    frame_start_velocity_loc_ = -1;
-    frame_acceleration_loc_ = -1;
+    frame_start_linear_velocity_loc_ = -1;
+    frame_linear_acceleration_loc_ = -1;
     frame_start_angular_velocity_loc_ = -1;
     frame_angular_acceleration_loc_ = -1;
 }

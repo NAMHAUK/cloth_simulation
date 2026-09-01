@@ -13,7 +13,7 @@ SimulationPipeline::SimulationPipeline(SimulationParams params)
       cloth_integrator_(params.integration.gravity,
                         params.integration.velocity_damping,
                         params.integration.reference_frame_inertia_scale,
-                        params.integration.reference_frame_max_acceleration,
+                        params.integration.reference_frame_max_linear_acceleration,
                         params.integration.reference_frame_max_angular_acceleration),
       stretch_constraint_solver_(params.constraints.stretch_stiffness),
       bending_constraint_solver_(params.constraints.bending_stiffness),
