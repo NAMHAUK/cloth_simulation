@@ -19,28 +19,26 @@ public:
     void release(QOpenGLFunctions_4_5_Core& gl);
 
 private:
-    struct AccumulateStage final
+    struct AccumulateProgram final
     {
         GLuint program = 0;
         GLint max_candidates_loc = -1;
     };
 
-    struct ApplyStage final
-    {
-        GLuint program = 0;
-        GLint vertex_count_loc = -1;
-    };
-
     void clear_correction_sums(const SceneGpuState& gpu_state, QOpenGLFunctions_4_5_Core& gl) const;
-    void vf_accumulate(const SceneGpuState& gpu_state, QOpenGLFunctions_4_5_Core& gl) const;
-    void ee_accumulate(const SceneGpuState& gpu_state, QOpenGLFunctions_4_5_Core& gl) const;
-    void bf_accumulate(const SceneGpuState& gpu_state, QOpenGLFunctions_4_5_Core& gl) const;
+    void accumulate_cloth_vertex_body_face(const SceneGpuState& gpu_state,
+                                           QOpenGLFunctions_4_5_Core& gl) const;
+    void accumulate_cloth_edge_body_edge(const SceneGpuState& gpu_state, QOpenGLFunctions_4_5_Core& gl) const;
+    void accumulate_cloth_face_body_vertex(const SceneGpuState& gpu_state,
+                                           QOpenGLFunctions_4_5_Core& gl) const;
     void apply_combined_corrections(const SceneGpuState& gpu_state, QOpenGLFunctions_4_5_Core& gl) const;
 
-    AccumulateStage vf_accumulate_;
-    AccumulateStage ee_accumulate_;
-    AccumulateStage bf_accumulate_;
-    ApplyStage apply_;
+    AccumulateProgram cloth_vertex_body_face_;
+    AccumulateProgram cloth_edge_body_edge_;
+    AccumulateProgram cloth_face_body_vertex_;
+    GLuint apply_program_ = 0;
+    GLint cloth_vertex_count_loc_ = -1;
+
     float collision_thickness_ = 0.0f;
     float max_correction_length_ = 0.0f;
     float static_friction_ = 0.0f;
