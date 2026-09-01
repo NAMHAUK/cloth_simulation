@@ -22,17 +22,13 @@ private:
     struct AccumulateStage final
     {
         GLuint program = 0;
-        GLint max_candidates = -1;
-        GLint thickness = -1;
+        GLint max_candidates_loc = -1;
     };
 
     struct ApplyStage final
     {
         GLuint program = 0;
-        GLint vertex_count = -1;
-        GLint max_correction = -1;
-        GLint static_friction = -1;
-        GLint dynamic_friction = -1;
+        GLint vertex_count_loc = -1;
     };
 
     void clear_correction_sums(const SceneGpuState& gpu_state, QOpenGLFunctions_4_5_Core& gl) const;
