@@ -73,87 +73,6 @@ void assign_bounds(GarmentMesh& garment_mesh, const glm::vec3& min_bounds, const
 {
     garment_mesh.bounds_center = (min_bounds + max_bounds) * 0.5f;
     garment_mesh.bounds_radius = glm::length(max_bounds - min_bounds) * 0.5f;
-}
-
-std::uint32_t find_component_root(std::vector<std::uint32_t>& component_parent, std::uint32_t vertex_index)
-{
-    if (component_parent[vertex_index] != vertex_index) {
-        component_parent[vertex_index] =
-            find_component_root(component_parent, component_parent[vertex_index]);
-    }
-
-    return component_parent[vertex_index];
-}
-
-void validate_garment_obj(const GarmentMesh& garment_mesh, std::uint32_t vertex_count)
-{
-    if (garment_mesh.vertices.size() != vertex_count * position_components) {
-        throw std::runtime_error("Invalid garment OBJ vertex data.");
-    }
-
-    if (garment_mesh.triangle_vertex_indices.size() % 3u != 0u) {
-        throw std::runtime_error("Invalid garment OBJ triangle data.");
-    }
-
-    std::vector<std::uint8_t> used_vertices(vertex_count, 0u);
-    std::vector<std::uint32_t> component_parent(vertex_count, 0u);
-    std::iota(component_parent.begin(), component_parent.end(), 0u);
-
-    for (std::size_t index = 0; index < garment_mesh.triangle_vertex_indices.size(); index += 3u) {
-        const std::uint32_t vertex_a = garment_mesh.triangle_vertex_indices[index];
-        const std::uint32_t vertex_b = garment_mesh.triangle_vertex_indices[index + 1u];
-        const std::uint32_t vertex_c = garment_mesh.triangle_vertex_indices[index + 2u];
-
-        if (vertex_a >= vertex_count || vertex_b >= vertex_count || vertex_c >= vertex_count) {
-            throw std::runtime_error("Garment OBJ contains an out-of-range face index.");
-        }
-
-        if (vertex_a == vertex_b || vertex_b == vertex_c || vertex_c == vertex_a) {
-            throw std::runtime_error("Garment OBJ contains a degenerate triangle.");
-        }
-
-        const glm::vec3 position_a = get_vertex_position(garment_mesh.vertices, vertex_a);
-        const glm::vec3 position_b = get_vertex_position(garment_mesh.vertices, vertex_b);
-        const glm::vec3 position_c = get_vertex_position(garment_mesh.vertices, vertex_c);
-        if (glm::length(glm::cross(position_b - position_a, position_c - position_a)) <= 1.0e-10f) {
-            throw std::runtime_error("Garment OBJ contains a zero-area triangle.");
-        }
-
-        used_vertices[vertex_a] = 1u;
-        used_vertices[vertex_b] = 1u;
-        used_vertices[vertex_c] = 1u;
-
-        const std::uint32_t root_a = find_component_root(component_parent, vertex_a);
-        component_parent[find_component_root(component_parent, vertex_b)] = root_a;
-        component_parent[find_component_root(component_parent, vertex_c)] = root_a;
-    }
-
-    std::uint32_t unused_vertex_count = 0;
-    std::uint32_t component_count = 0;
-    std::vector<std::uint8_t> component_roots(vertex_count, 0u);
-    for (std::uint32_t vertex_index = 0; vertex_index < vertex_count; ++vertex_index) {
-        if (used_vertices[vertex_index] == 0u) {
-            ++unused_vertex_count;
-            continue;
-        }
-
-        const std::uint32_t root = find_component_root(component_parent, vertex_index);
-        if (component_roots[root] != 0u) {
-            continue;
-        }
-        component_roots[root] = 1u;
-        ++component_count;
-    }
-
-    if (unused_vertex_count > 0u) {
-        throw std::runtime_error("Garment OBJ contains unused vertices: " +
-                                 std::to_string(unused_vertex_count));
-    }
-
-    if (component_count != 1u) {
-        throw std::runtime_error("Garment OBJ must be one connected component. component_count=" +
-                                 std::to_string(component_count));
-    }
 
     if (!is_finite_vec3(garment_mesh.bounds_center) ||
         !std::isfinite(garment_mesh.bounds_radius) ||
@@ -162,15 +81,59 @@ void validate_garment_obj(const GarmentMesh& garment_mesh, std::uint32_t vertex_
     }
 }
 
-// parse //
-std::uint32_t parse_face_token(std::string_view token, std::uint32_t vertex_count)
+std::uint32_t find_component_root(std::vector<std::uint32_t>& parents, std::uint32_t vertex_index)
 {
-    const auto vertex_text = token.substr(0, token.find('/'));
-    if (vertex_text.empty()) {
-        throw std::runtime_error("Invalid garment OBJ face. Only triangle faces are supported.");
+    if (parents[vertex_index] != vertex_index) {
+        parents[vertex_index] = find_component_root(parents, parents[vertex_index]);
     }
 
+    return parents[vertex_index];
+}
+
+void validate_garment_topology(const GarmentMesh& garment_mesh)
+{
+    const auto vertex_count = static_cast<std::uint32_t>(garment_mesh.vertices.size() / position_components);
+    std::vector<std::uint32_t> component_parent(vertex_count, 0u);
+    std::iota(component_parent.begin(), component_parent.end(), 0u);
+
+    // check zero-area triangle
+    for (std::size_t index = 0; index < garment_mesh.triangle_vertex_indices.size(); index += 3u) {
+        const std::uint32_t vertex_a = garment_mesh.triangle_vertex_indices[index];
+        const std::uint32_t vertex_b = garment_mesh.triangle_vertex_indices[index + 1u];
+        const std::uint32_t vertex_c = garment_mesh.triangle_vertex_indices[index + 2u];
+
+        const glm::vec3 position_a = get_vertex_position(garment_mesh.vertices, vertex_a);
+        const glm::vec3 position_b = get_vertex_position(garment_mesh.vertices, vertex_b);
+        const glm::vec3 position_c = get_vertex_position(garment_mesh.vertices, vertex_c);
+
+        if (glm::length(glm::cross(position_b - position_a, position_c - position_a)) <= 1.0e-10f) {
+            throw std::runtime_error("Garment OBJ contains a zero-area triangle.");
+        }
+
+        // record triangle root to check one connected component
+        const std::uint32_t root_a = find_component_root(component_parent, vertex_a);
+        component_parent[find_component_root(component_parent, vertex_b)] = root_a;
+        component_parent[find_component_root(component_parent, vertex_c)] = root_a;
+    }
+
+    // check one connected component
+    std::uint32_t component_count = 0;
+    for (std::uint32_t vertex_index = 0; vertex_index < vertex_count; ++vertex_index) {
+        if (component_parent[vertex_index] == vertex_index) {
+            ++component_count;
+        }
+    }
+
+    if (component_count != 1u) {
+        throw std::runtime_error("Garment OBJ must be one connected component.");
+    }
+}
+
+// parse
+std::uint32_t parse_face_token(std::string_view token, std::uint32_t vertex_count)
+{
     std::uint32_t parsed_index = 0;
+    const auto vertex_text = token.substr(0, token.find('/'));
     const char* text_begin = vertex_text.data();
     const char* text_end = text_begin + vertex_text.size();
     const auto [parsed_end, error] = std::from_chars(text_begin, text_end, parsed_index);
@@ -220,11 +183,11 @@ void parse_face_line(std::istringstream& line_stream, GarmentMesh& garment_mesh)
     }
 }
 
-void read_obj_mesh_lines(std::istream& input,
-                         GarmentMesh& garment_mesh,
-                         glm::vec3& min_bounds,
-                         glm::vec3& max_bounds)
+void read_obj_mesh_lines(std::istream& input, GarmentMesh& garment_mesh)
 {
+    glm::vec3 min_bounds{std::numeric_limits<float>::max()};
+    glm::vec3 max_bounds{std::numeric_limits<float>::lowest()};
+
     std::string line;
     while (std::getline(input, line)) {
         std::istringstream line_stream(line);
@@ -241,6 +204,12 @@ void read_obj_mesh_lines(std::istream& input,
             parse_face_line(line_stream, garment_mesh);
         }
     }
+
+    if (garment_mesh.vertices.empty() || garment_mesh.triangle_vertex_indices.empty()) {
+        throw std::runtime_error("Empty garment OBJ mesh.");
+    }
+
+    assign_bounds(garment_mesh, min_bounds, max_bounds);
 }
 
 void build_garment_simulation_data(GarmentMesh& garment_mesh)
@@ -277,35 +246,27 @@ GarmentMesh read_garment_obj(const std::filesystem::path& obj_path, GarmentCateg
         throw std::runtime_error("Failed to open garment OBJ: " + obj_path.string());
     }
 
-    GarmentMesh next_mesh;
-    next_mesh.garment_category = garment_category;
-    glm::vec3 min_bounds{std::numeric_limits<float>::max()};
-    glm::vec3 max_bounds{std::numeric_limits<float>::lowest()};
+    GarmentMesh mesh;
+    mesh.garment_category = garment_category;
+    read_obj_mesh_lines(input, mesh);
 
-    read_obj_mesh_lines(input, next_mesh, min_bounds, max_bounds);
+    validate_garment_topology(mesh);
 
-    if (next_mesh.vertices.empty() || next_mesh.triangle_vertex_indices.empty()) {
-        throw std::runtime_error("Empty garment OBJ mesh.");
-    }
-
-    const auto vertex_count = static_cast<std::uint32_t>(next_mesh.vertices.size() / position_components);
-    assign_bounds(next_mesh, min_bounds, max_bounds);
-    validate_garment_obj(next_mesh, vertex_count);
-
+    const auto vertex_count = static_cast<std::uint32_t>(mesh.vertices.size() / position_components);
     const std::uint32_t flipped_triangle_count =
         orient_triangle_winding_outward(vertex_count,
-                                        next_mesh.vertices,
-                                        next_mesh.bounds_center,
-                                        next_mesh.triangle_vertex_indices);
+                                        mesh.vertices,
+                                        mesh.bounds_center,
+                                        mesh.triangle_vertex_indices);
     if (flipped_triangle_count > 0u) {
         std::cout << "Oriented garment triangle winding: flipped " << flipped_triangle_count
                   << " triangles.\n";
     }
 
-    build_garment_simulation_data(next_mesh);
+    build_garment_simulation_data(mesh);
 
-    print_garment_obj_summary(obj_path, next_mesh);
-    return next_mesh;
+    print_garment_obj_summary(obj_path, mesh);
+    return mesh;
 }
 
 void write_garment_asset(const std::filesystem::path& garment_asset_path, const GarmentMesh& garment_mesh)
