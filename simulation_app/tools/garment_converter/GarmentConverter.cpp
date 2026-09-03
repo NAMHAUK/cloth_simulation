@@ -26,8 +26,6 @@
 #include <glm/geometric.hpp>
 
 namespace {
-constexpr float obj_to_world_scale = 0.001f;
-
 GarmentDistanceConstraints build_distance_constraints(const std::vector<MeshEdge>& edges,
                                                       const std::vector<float>& vertices)
 {
@@ -65,18 +63,6 @@ std::vector<std::uint32_t> build_waistband_attachment_vertex_indices(const Garme
         }
     }
     return attachment_vertex_indices;
-}
-
-void assign_bounds(GarmentMesh& mesh, const glm::vec3& min_bounds, const glm::vec3& max_bounds)
-{
-    mesh.bounds_center = (min_bounds + max_bounds) * 0.5f;
-    mesh.bounds_radius = glm::length(max_bounds - min_bounds) * 0.5f;
-
-    if (!is_finite_vec3(mesh.bounds_center) ||
-        !std::isfinite(mesh.bounds_radius) ||
-        mesh.bounds_radius <= 0.0f) {
-        throw std::runtime_error("Invalid garment OBJ bounds.");
-    }
 }
 
 void validate_garment_topology(const GarmentMesh& mesh)
@@ -125,40 +111,31 @@ std::uint32_t parse_face_token(std::string_view token, std::uint32_t vertex_coun
     return parsed_index - 1u;
 }
 
-void parse_vertex_line(std::istringstream& line_stream,
-                       GarmentMesh& mesh,
-                       glm::vec3& min_bounds,
-                       glm::vec3& max_bounds)
+glm::vec3 parse_vertex_line(std::istringstream& line_stream)
 {
     glm::vec3 vertex{};
     if (!(line_stream >> vertex.x >> vertex.y >> vertex.z)) {
         throw std::runtime_error("Invalid garment OBJ vertex.");
     }
 
+    constexpr float obj_to_world_scale = 0.001f;
     vertex *= obj_to_world_scale;
     if (!is_finite_vec3(vertex)) {
         throw std::runtime_error("Invalid garment OBJ vertex.");
     }
-
-    mesh.vertices.push_back(vertex.x);
-    mesh.vertices.push_back(vertex.y);
-    mesh.vertices.push_back(vertex.z);
-
-    min_bounds = glm::min(min_bounds, vertex);
-    max_bounds = glm::max(max_bounds, vertex);
+    return vertex;
 }
 
 void parse_face_line(std::istringstream& line_stream, GarmentMesh& mesh)
 {
-    const auto vertex_count = static_cast<std::uint32_t>(mesh.vertices.size() / position_components);
-    std::array<std::string, 3> face_tokens;
+    std::array<std::string, 3> tokens;
     std::string extra_token;
-    if (!(line_stream >> face_tokens[0] >> face_tokens[1] >> face_tokens[2]) ||
-        (line_stream >> extra_token)) {
-        throw std::runtime_error("Invalid garment OBJ face. Only triangle faces are supported.");
+    if (!(line_stream >> tokens[0] >> tokens[1] >> tokens[2]) || (line_stream >> extra_token)) {
+        throw std::runtime_error("Garment OBJ faces must contain exactly three vertices.");
     }
 
-    for (const std::string& face_token : face_tokens) {
+    const auto vertex_count = static_cast<std::uint32_t>(mesh.vertices.size() / position_components);
+    for (const std::string& face_token : tokens) {
         mesh.triangle_vertex_indices.push_back(parse_face_token(face_token, vertex_count));
     }
 }
@@ -172,24 +149,29 @@ void read_obj_mesh_lines(std::istream& input, GarmentMesh& mesh)
     while (std::getline(input, line)) {
         std::istringstream line_stream(line);
         std::string tag;
-        line_stream >> tag;
-
-        if (tag.empty() || tag[0] == '#') {
+        if (!(line_stream >> tag) || tag.front() == '#') {
             continue;
         }
 
         if (tag == "v") {
-            parse_vertex_line(line_stream, mesh, min_bounds, max_bounds);
+            const glm::vec3 vertex = parse_vertex_line(line_stream);
+            mesh.vertices.insert(mesh.vertices.end(), {vertex.x, vertex.y, vertex.z});
+            min_bounds = glm::min(min_bounds, vertex);
+            max_bounds = glm::max(max_bounds, vertex);
         } else if (tag == "f") {
             parse_face_line(line_stream, mesh);
         }
     }
 
-    if (mesh.vertices.empty() || mesh.triangle_vertex_indices.empty()) {
-        throw std::runtime_error("Empty garment OBJ mesh.");
-    }
+    mesh.bounds_center = (min_bounds + max_bounds) * 0.5f;
+    mesh.bounds_radius = glm::length(max_bounds - min_bounds) * 0.5f;
 
-    assign_bounds(mesh, min_bounds, max_bounds);
+    if (mesh.vertices.empty() ||
+        mesh.triangle_vertex_indices.empty() ||
+        !std::isfinite(mesh.bounds_radius) ||
+        mesh.bounds_radius <= 0.0f) {
+        throw std::runtime_error("Invalid garment OBJ.");
+    }
 }
 
 void build_garment_constraints(GarmentMesh& mesh)
