@@ -27,7 +27,6 @@
 
 namespace {
 constexpr float obj_to_world_scale = 0.001f;
-constexpr float waistband_attachment_band_height = 0.03f;
 
 GarmentDistanceConstraints build_distance_constraints(const std::vector<MeshEdge>& edges,
                                                       const std::vector<float>& vertices)
@@ -48,20 +47,24 @@ GarmentDistanceConstraints build_distance_constraints(const std::vector<MeshEdge
 
 std::vector<std::uint32_t> build_waistband_attachment_vertex_indices(const GarmentMesh& mesh)
 {
+    // Waistband attachment: top 3cm of the mesh
     const auto vertex_count = static_cast<std::uint32_t>(mesh.vertices.size() / position_components);
+
     float max_y = std::numeric_limits<float>::lowest();
     for (std::uint32_t vertex_index = 0; vertex_index < vertex_count; ++vertex_index) {
         max_y = std::max(max_y, get_vertex_position(mesh.vertices, vertex_index).y);
     }
 
+    constexpr float waistband_attachment_band_height = 0.03f;
     const float attachment_min_y = max_y - waistband_attachment_band_height;
-    std::vector<std::uint32_t> attachment_vertices;
+
+    std::vector<std::uint32_t> attachment_vertex_indices;
     for (std::uint32_t vertex_index = 0; vertex_index < vertex_count; ++vertex_index) {
         if (get_vertex_position(mesh.vertices, vertex_index).y >= attachment_min_y) {
-            attachment_vertices.push_back(vertex_index);
+            attachment_vertex_indices.push_back(vertex_index);
         }
     }
-    return attachment_vertices;
+    return attachment_vertex_indices;
 }
 
 void assign_bounds(GarmentMesh& mesh, const glm::vec3& min_bounds, const glm::vec3& max_bounds)
@@ -189,7 +192,7 @@ void read_obj_mesh_lines(std::istream& input, GarmentMesh& mesh)
     assign_bounds(mesh, min_bounds, max_bounds);
 }
 
-void build_garment_simulation_data(GarmentMesh& mesh)
+void build_garment_constraints(GarmentMesh& mesh)
 {
     const auto triangle_edges = build_unique_triangle_edges(mesh.triangle_vertex_indices);
     mesh.stretch_constraints = build_distance_constraints(triangle_edges, mesh.vertices);
@@ -226,7 +229,7 @@ GarmentMesh read_garment_obj(const std::filesystem::path& obj_path, GarmentCateg
     read_obj_mesh_lines(input, mesh);
     validate_garment_topology(mesh);
     orient_triangles_outward(mesh.vertices, mesh.bounds_center, mesh.triangle_vertex_indices);
-    build_garment_simulation_data(mesh);
+    build_garment_constraints(mesh);
 
     print_garment_obj_summary(obj_path, mesh);
     return mesh;
