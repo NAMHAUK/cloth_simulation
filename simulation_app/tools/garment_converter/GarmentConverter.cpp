@@ -14,7 +14,6 @@
 #include <fstream>
 #include <iostream>
 #include <limits>
-#include <numeric>
 #include <sstream>
 #include <stdexcept>
 #include <string>
@@ -81,20 +80,10 @@ void assign_bounds(GarmentMesh& garment_mesh, const glm::vec3& min_bounds, const
     }
 }
 
-std::uint32_t find_component_root(std::vector<std::uint32_t>& parents, std::uint32_t vertex_index)
-{
-    if (parents[vertex_index] != vertex_index) {
-        parents[vertex_index] = find_component_root(parents, parents[vertex_index]);
-    }
-
-    return parents[vertex_index];
-}
-
 void validate_garment_topology(const GarmentMesh& garment_mesh)
 {
     const auto vertex_count = static_cast<std::uint32_t>(garment_mesh.vertices.size() / position_components);
-    std::vector<std::uint32_t> component_parent(vertex_count, 0u);
-    std::iota(component_parent.begin(), component_parent.end(), 0u);
+    std::vector<std::uint8_t> used_vertices(vertex_count, 0u);
 
     // check zero-area triangle
     for (std::size_t index = 0; index < garment_mesh.triangle_vertex_indices.size(); index += 3u) {
@@ -110,22 +99,14 @@ void validate_garment_topology(const GarmentMesh& garment_mesh)
             throw std::runtime_error("Garment OBJ contains a zero-area triangle.");
         }
 
-        // record triangle root to check one connected component
-        const std::uint32_t root_a = find_component_root(component_parent, vertex_a);
-        component_parent[find_component_root(component_parent, vertex_b)] = root_a;
-        component_parent[find_component_root(component_parent, vertex_c)] = root_a;
+        used_vertices[vertex_a] = 1u;
+        used_vertices[vertex_b] = 1u;
+        used_vertices[vertex_c] = 1u;
     }
 
-    // check one connected component
-    std::uint32_t component_count = 0;
-    for (std::uint32_t vertex_index = 0; vertex_index < vertex_count; ++vertex_index) {
-        if (component_parent[vertex_index] == vertex_index) {
-            ++component_count;
-        }
-    }
-
-    if (component_count != 1u) {
-        throw std::runtime_error("Garment OBJ must be one connected component.");
+    // check unused vertex
+    if (std::find(used_vertices.begin(), used_vertices.end(), 0u) != used_vertices.end()) {
+        throw std::runtime_error("Garment OBJ contains an unused vertex.");
     }
 }
 
@@ -250,7 +231,7 @@ GarmentMesh read_garment_obj(const std::filesystem::path& obj_path, GarmentCateg
     mesh.garment_category = garment_category;
     read_obj_mesh_lines(input, mesh);
     validate_garment_topology(mesh);
-    orient_triangle_winding_outward(mesh.vertices, mesh.bounds_center, mesh.triangle_vertex_indices);
+    orient_triangles_outward(mesh.vertices, mesh.bounds_center, mesh.triangle_vertex_indices);
     build_garment_simulation_data(mesh);
 
     print_garment_obj_summary(obj_path, mesh);

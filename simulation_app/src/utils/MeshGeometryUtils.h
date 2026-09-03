@@ -21,8 +21,8 @@ std::vector<MeshEdge> build_unique_triangle_edges(std::uint32_t vertex_count,
 std::vector<MeshEdge> build_unique_bending_edges(std::uint32_t vertex_count,
                                                  const std::vector<std::uint32_t>& triangle_indices);
 
-void orient_triangle_winding_outward(const std::vector<float>& vertices,
-                                     const glm::vec3& reference_point,
-                                     std::vector<std::uint32_t>& triangle_indices);
+void orient_triangles_outward(const std::vector<float>& vertices,
+                              const glm::vec3& bounds_center,
+                              std::vector<std::uint32_t>& triangle_indices);
 
 ColorizedMeshEdges colorize_mesh_edges(std::uint32_t vertex_count, const std::vector<MeshEdge>& edges);

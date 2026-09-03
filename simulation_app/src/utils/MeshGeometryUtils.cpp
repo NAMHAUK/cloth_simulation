@@ -2,7 +2,9 @@
 
 #include <algorithm>
 #include <cstddef>
-#include <iostream>
+#include <map>
+#include <optional>
+#include <queue>
 #include <stdexcept>
 #include <utility>
 
@@ -10,7 +12,6 @@
 #include <glm/vec3.hpp>
 
 namespace {
-// stretch constraint //
 MeshEdge make_edge(std::uint32_t vertex_a, std::uint32_t vertex_b)
 {
     if (vertex_a < vertex_b) {
@@ -19,7 +20,6 @@ MeshEdge make_edge(std::uint32_t vertex_a, std::uint32_t vertex_b)
     return {vertex_b, vertex_a};
 }
 
-// bending constraint //
 struct MeshEdgeGroup final
 {
     std::vector<MeshEdge> edges;
@@ -30,19 +30,6 @@ struct EdgeOppositeVertex final
 {
     MeshEdge edge;
     std::uint32_t edge_opposite_vertex = 0;
-};
-
-struct TriangleEdge final
-{
-    MeshEdge edge;
-    std::uint32_t triangle_index = 0;
-    bool follows_edge_order = false;
-};
-
-struct TriangleWindingNeighbor final
-{
-    std::uint32_t triangle_index = 0;
-    bool flip = false;
 };
 
 bool can_add_edge(const MeshEdgeGroup& group, const MeshEdge& edge)
@@ -69,15 +56,45 @@ void add_edge_opposite_vertex(std::vector<EdgeOppositeVertex>& edge_opposite_ver
     edge_opposite_vertices.push_back({make_edge(vertex_a, vertex_b), edge_opposite_vertex});
 }
 
-void add_triangle_edge(std::vector<TriangleEdge>& triangle_edges,
+struct TriangleEdge final
+{
+    std::uint32_t triangle_index = 0;
+    std::uint32_t start_vertex_index = 0;
+    bool has_neighbor = false;
+};
+
+struct TriangleNeighbor final
+{
+    std::uint32_t triangle_index = 0;
+    bool has_winding_conflict = false;
+};
+
+bool determine_neighbor_flip(bool current_needs_flip, bool has_winding_conflict)
+{
+    return has_winding_conflict ? !current_needs_flip : current_needs_flip;
+}
+
+void add_triangle_edge(std::map<MeshEdge, TriangleEdge>& triangle_edge_map,
+                       std::vector<std::vector<TriangleNeighbor>>& triangle_neighbors,
                        std::uint32_t triangle_index,
                        std::uint32_t vertex_a,
                        std::uint32_t vertex_b)
 {
-    const MeshEdge edge = vertex_a < vertex_b ? MeshEdge{vertex_a, vertex_b} : MeshEdge{vertex_b, vertex_a};
-    triangle_edges.push_back({edge, triangle_index, vertex_a < vertex_b});
-}
+    const MeshEdge edge = make_edge(vertex_a, vertex_b);
+    const bool is_first_check_edge = triangle_edge_map.count(edge) == 0u;
+    TriangleEdge& triangle_edge = triangle_edge_map[edge];
 
+    if (is_first_check_edge) {
+        triangle_edge = {triangle_index, vertex_a};
+    } else if (!triangle_edge.has_neighbor) {
+        const bool has_winding_conflict = vertex_a == triangle_edge.start_vertex_index;
+        triangle_neighbors[triangle_index].push_back({triangle_edge.triangle_index, has_winding_conflict});
+        triangle_neighbors[triangle_edge.triangle_index].push_back({triangle_index, has_winding_conflict});
+        triangle_edge.has_neighbor = true;
+    } else {
+        throw std::runtime_error("Garment edge is shared by more than two triangles.");
+    }
+}
 }
 
 glm::vec3 get_vertex_position(const std::vector<float>& vertices, std::uint32_t vertex_index)
@@ -236,117 +253,78 @@ std::vector<MeshEdge> build_unique_bending_edges(std::uint32_t vertex_count,
 
 // garment converter utils
 
-void orient_triangle_winding_outward(const std::vector<float>& vertices,
-                                     const glm::vec3& reference_point,
-                                     std::vector<std::uint32_t>& triangle_indices)
+void orient_triangles_outward(const std::vector<float>& vertices,
+                              const glm::vec3& bounds_center,
+                              std::vector<std::uint32_t>& triangle_indices)
 {
     const auto triangle_count = static_cast<std::uint32_t>(triangle_indices.size() / 3u);
-    std::vector<TriangleEdge> triangle_edges;
-    triangle_edges.reserve(triangle_indices.size());
+
+    // Build triangle edge map and neighbors
+    std::map<MeshEdge, TriangleEdge> triangle_edge_map;
+    std::vector<std::vector<TriangleNeighbor>> triangle_neighbors(triangle_count);
     for (std::uint32_t triangle_index = 0u; triangle_index < triangle_count; ++triangle_index) {
-        const std::size_t index_base = static_cast<std::size_t>(triangle_index) * 3u;
-        const std::uint32_t vertex_a = triangle_indices[index_base];
-        const std::uint32_t vertex_b = triangle_indices[index_base + 1u];
-        const std::uint32_t vertex_c = triangle_indices[index_base + 2u];
+        const std::uint32_t vertex_a = triangle_indices[triangle_index * 3u];
+        const std::uint32_t vertex_b = triangle_indices[triangle_index * 3u + 1u];
+        const std::uint32_t vertex_c = triangle_indices[triangle_index * 3u + 2u];
 
-        add_triangle_edge(triangle_edges, triangle_index, vertex_a, vertex_b);
-        add_triangle_edge(triangle_edges, triangle_index, vertex_b, vertex_c);
-        add_triangle_edge(triangle_edges, triangle_index, vertex_c, vertex_a);
+        add_triangle_edge(triangle_edge_map, triangle_neighbors, triangle_index, vertex_a, vertex_b);
+        add_triangle_edge(triangle_edge_map, triangle_neighbors, triangle_index, vertex_b, vertex_c);
+        add_triangle_edge(triangle_edge_map, triangle_neighbors, triangle_index, vertex_c, vertex_a);
     }
 
-    std::sort(triangle_edges.begin(),
-              triangle_edges.end(),
-              [](const TriangleEdge& lhs, const TriangleEdge& rhs) {
-                  if (lhs.edge == rhs.edge) {
-                      return lhs.triangle_index < rhs.triangle_index;
-                  }
-                  return lhs.edge < rhs.edge;
-              });
+    // Align triangle directions
+    std::vector<std::optional<bool>> flip_decisions(triangle_count);
+    std::queue<std::uint32_t> triangle_queue;
+    flip_decisions[0] = false;
+    triangle_queue.push(0u);
 
-    std::vector<std::vector<TriangleWindingNeighbor>> triangle_winding_neighbors(triangle_count);
-    for (std::size_t group_begin = 0u; group_begin < triangle_edges.size();) {
-        std::size_t group_end = group_begin + 1u;
-        while (group_end < triangle_edges.size() &&
-               triangle_edges[group_begin].edge == triangle_edges[group_end].edge) {
-            ++group_end;
+    while (!triangle_queue.empty()) {
+        const std::uint32_t triangle_index = triangle_queue.front();
+        triangle_queue.pop();
+
+        for (const TriangleNeighbor& neighbor : triangle_neighbors[triangle_index]) {
+            const bool neighbor_needs_flip = determine_neighbor_flip(flip_decisions[triangle_index].value(),
+                                                                     neighbor.has_winding_conflict);
+            
+            if (!flip_decisions[neighbor.triangle_index].has_value()) {
+                flip_decisions[neighbor.triangle_index] = neighbor_needs_flip;
+                triangle_queue.push(neighbor.triangle_index);
+            } else if (flip_decisions[neighbor.triangle_index].value() != neighbor_needs_flip) {
+                throw std::runtime_error("Conflicting triangle flip decisions.");
+            }
         }
-
-        const std::size_t triangle_edge_count = group_end - group_begin;
-        if (triangle_edge_count == 2u) {
-            const TriangleEdge& edge_a = triangle_edges[group_begin];
-            const TriangleEdge& edge_b = triangle_edges[group_begin + 1u];
-            const bool flip = edge_a.follows_edge_order == edge_b.follows_edge_order;
-            triangle_winding_neighbors[edge_a.triangle_index].push_back({edge_b.triangle_index, flip});
-            triangle_winding_neighbors[edge_b.triangle_index].push_back({edge_a.triangle_index, flip});
-        }
-
-        group_begin = group_end;
     }
 
-    std::vector<std::int8_t> should_flip(triangle_count, -1);
-    std::vector<std::uint32_t> stack;
-    std::vector<std::uint32_t> component_triangles;
-    for (std::uint32_t root_triangle = 0u; root_triangle < triangle_count; ++root_triangle) {
-        if (should_flip[root_triangle] >= 0) {
+    if (std::find(flip_decisions.begin(), flip_decisions.end(), std::nullopt) != flip_decisions.end()) {
+        throw std::runtime_error("Garment triangles must form one edge-connected component.");
+    }
+
+    // Orient outward
+    double orientation_score = 0.0;
+    for (std::uint32_t triangle_index = 0u; triangle_index < triangle_count; ++triangle_index) {
+        const glm::vec3 position_a = get_vertex_position(vertices, triangle_indices[triangle_index * 3u]);
+        const glm::vec3 position_b = get_vertex_position(vertices, triangle_indices[triangle_index * 3u + 1u]);
+        const glm::vec3 position_c = get_vertex_position(vertices, triangle_indices[triangle_index * 3u + 2u]);
+        const glm::vec3 area_normal = glm::cross(position_b - position_a, position_c - position_a);
+        const glm::vec3 centroid = (position_a + position_b + position_c) / 3.0f;
+        
+        const double triangle_score = static_cast<double>(glm::dot(area_normal, centroid - bounds_center));
+        orientation_score += flip_decisions[triangle_index].value() ? -triangle_score : triangle_score;
+    }
+
+    if (orientation_score < 0.0) {
+        for (std::uint32_t triangle_index = 0u; triangle_index < triangle_count; ++triangle_index) {
+            flip_decisions[triangle_index] = !flip_decisions[triangle_index].value();
+        }
+    }
+
+    // Flip triangles
+    for (std::uint32_t triangle_index = 0u; triangle_index < triangle_count; ++triangle_index) {
+        if (!flip_decisions[triangle_index].value()) {
             continue;
         }
 
-        should_flip[root_triangle] = 0;
-        stack.push_back(root_triangle);
-        component_triangles.clear();
-        while (!stack.empty()) {
-            const std::uint32_t triangle_index = stack.back();
-            stack.pop_back();
-            component_triangles.push_back(triangle_index);
-
-            for (const TriangleWindingNeighbor& neighbor : triangle_winding_neighbors[triangle_index]) {
-                const std::int8_t required_flip =
-                    static_cast<std::int8_t>(should_flip[triangle_index] ^ (neighbor.flip ? 1 : 0));
-                if (should_flip[neighbor.triangle_index] < 0) {
-                    should_flip[neighbor.triangle_index] = required_flip;
-                    stack.push_back(neighbor.triangle_index);
-                } else if (should_flip[neighbor.triangle_index] != required_flip) {
-                    throw std::runtime_error("Cannot orient triangle winding consistently.");
-                }
-            }
-        }
-
-        double orientation_score = 0.0;
-        for (std::uint32_t triangle_index : component_triangles) {
-            const std::size_t index_base = static_cast<std::size_t>(triangle_index) * 3u;
-            const glm::vec3 position_a = get_vertex_position(vertices, triangle_indices[index_base]);
-            glm::vec3 position_b = get_vertex_position(vertices, triangle_indices[index_base + 1u]);
-            glm::vec3 position_c = get_vertex_position(vertices, triangle_indices[index_base + 2u]);
-            if (should_flip[triangle_index] != 0) {
-                std::swap(position_b, position_c);
-            }
-
-            const glm::vec3 area_normal = glm::cross(position_b - position_a, position_c - position_a);
-            const glm::vec3 centroid = (position_a + position_b + position_c) / 3.0f;
-            orientation_score += static_cast<double>(glm::dot(area_normal, centroid - reference_point));
-        }
-
-        if (orientation_score < 0.0) {
-            for (std::uint32_t triangle_index : component_triangles) {
-                should_flip[triangle_index] ^= 1;
-            }
-        }
-    }
-
-    std::uint32_t flipped_triangle_count = 0u;
-    for (std::uint32_t triangle_index = 0u; triangle_index < triangle_count; ++triangle_index) {
-        if (should_flip[triangle_index] == 0) {
-            continue;
-        }
-
-        const std::size_t index_base = static_cast<std::size_t>(triangle_index) * 3u;
-        std::swap(triangle_indices[index_base + 1u], triangle_indices[index_base + 2u]);
-        ++flipped_triangle_count;
-    }
-
-    if (flipped_triangle_count > 0u) {
-        std::cout << "Oriented garment triangle winding: flipped " << flipped_triangle_count
-                  << " triangles.\n";
+        std::swap(triangle_indices[triangle_index * 3u + 1u], triangle_indices[triangle_index * 3u + 2u]);
     }
 }
 
