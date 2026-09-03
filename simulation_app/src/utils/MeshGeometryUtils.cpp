@@ -1,17 +1,19 @@
 #include "utils/MeshGeometryUtils.h"
 
 #include <algorithm>
+#include <bitset>
 #include <cstddef>
 #include <map>
 #include <optional>
 #include <queue>
 #include <stdexcept>
-#include <utility>
 
 #include <glm/geometric.hpp>
 #include <glm/vec3.hpp>
 
 namespace {
+constexpr std::size_t max_color_count = 64u;
+
 MeshEdge make_edge(std::uint32_t vertex_a, std::uint32_t vertex_b)
 {
     if (vertex_a < vertex_b) {
@@ -20,28 +22,28 @@ MeshEdge make_edge(std::uint32_t vertex_a, std::uint32_t vertex_b)
     return {vertex_b, vertex_a};
 }
 
-struct MeshEdgeGroup final
-{
-    std::vector<MeshEdge> edges;
-    std::vector<std::uint8_t> used_vertices;
-};
-
 struct EdgeOppositeVertex final
 {
     MeshEdge edge;
     std::uint32_t edge_opposite_vertex = 0;
 };
 
-bool can_add_edge(const MeshEdgeGroup& group, const MeshEdge& edge)
+std::size_t assign_edge_color(std::vector<std::bitset<max_color_count>>& assigned_colors,
+                              const MeshEdge& edge)
 {
-    return group.used_vertices[edge.vertex_a] == 0u && group.used_vertices[edge.vertex_b] == 0u;
-}
+    const auto unavailable_colors = assigned_colors[edge.vertex_a] | assigned_colors[edge.vertex_b];
 
-void add_edge(MeshEdgeGroup& group, const MeshEdge& edge)
-{
-    group.edges.push_back(edge);
-    group.used_vertices[edge.vertex_a] = 1u;
-    group.used_vertices[edge.vertex_b] = 1u;
+    for (std::size_t color_index = 0; color_index < max_color_count; ++color_index) {
+        if (unavailable_colors.test(color_index)) {
+            continue;
+        }
+
+        assigned_colors[edge.vertex_a].set(color_index);
+        assigned_colors[edge.vertex_b].set(color_index);
+        return color_index;
+    }
+
+    throw std::runtime_error("Garment requires more than 64 constraint colors.");
 }
 
 void add_edge_opposite_vertex(std::vector<EdgeOppositeVertex>& edge_opposite_vertices,
@@ -330,48 +332,26 @@ void orient_triangles_outward(const std::vector<float>& vertices,
 
 ColorizedMeshEdges colorize_mesh_edges(std::uint32_t vertex_count, const std::vector<MeshEdge>& edges)
 {
-    std::vector<MeshEdgeGroup> edge_groups;
+    std::vector<std::vector<MeshEdge>> edge_groups;
+    std::vector<std::bitset<max_color_count>> assigned_colors(vertex_count);
 
     for (const MeshEdge& edge : edges) {
-        if (edge.vertex_a >= vertex_count || edge.vertex_b >= vertex_count) {
-            return {};
+        const std::size_t color_index = assign_edge_color(assigned_colors, edge);
+        if (color_index == edge_groups.size()) {
+            edge_groups.emplace_back();
         }
-
-        bool inserted = false;
-        for (MeshEdgeGroup& edge_group : edge_groups) {
-            if (!can_add_edge(edge_group, edge)) {
-                continue;
-            }
-
-            add_edge(edge_group, edge);
-            inserted = true;
-            break;
-        }
-
-        if (!inserted) {
-            MeshEdgeGroup edge_group;
-            edge_group.used_vertices.resize(vertex_count, 0u);
-            add_edge(edge_group, edge);
-            edge_groups.push_back(std::move(edge_group));
-        }
+        edge_groups[color_index].push_back(edge);
     }
 
     ColorizedMeshEdges colorized_edges;
     colorized_edges.edges.reserve(edges.size());
     colorized_edges.color_states.reserve(edge_groups.size());
-    for (const MeshEdgeGroup& edge_group : edge_groups) {
-        if (edge_group.edges.empty()) {
-            continue;
-        }
 
-        ConstraintColorState color_state;
-        color_state.start_index = static_cast<std::uint32_t>(colorized_edges.edges.size());
-        color_state.count = static_cast<std::uint32_t>(edge_group.edges.size());
-        colorized_edges.color_states.push_back(color_state);
+    for (const std::vector<MeshEdge>& edge_group : edge_groups) {
+        colorized_edges.color_states.push_back({static_cast<std::uint32_t>(colorized_edges.edges.size()),
+                                                static_cast<std::uint32_t>(edge_group.size())});
 
-        colorized_edges.edges.insert(colorized_edges.edges.end(),
-                                     edge_group.edges.begin(),
-                                     edge_group.edges.end());
+        colorized_edges.edges.insert(colorized_edges.edges.end(), edge_group.begin(), edge_group.end());
     }
 
     return colorized_edges;
