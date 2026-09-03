@@ -7,6 +7,7 @@
 #include <optional>
 #include <queue>
 #include <stdexcept>
+#include <utility>
 
 #include <glm/geometric.hpp>
 #include <glm/vec3.hpp>
@@ -21,12 +22,6 @@ MeshEdge make_edge(std::uint32_t vertex_a, std::uint32_t vertex_b)
     }
     return {vertex_b, vertex_a};
 }
-
-struct EdgeOppositeVertex final
-{
-    MeshEdge edge;
-    std::uint32_t edge_opposite_vertex = 0;
-};
 
 std::size_t assign_edge_color(std::vector<std::bitset<max_color_count>>& assigned_colors,
                               const MeshEdge& edge)
@@ -44,18 +39,6 @@ std::size_t assign_edge_color(std::vector<std::bitset<max_color_count>>& assigne
     }
 
     throw std::runtime_error("Garment requires more than 64 constraint colors.");
-}
-
-void add_edge_opposite_vertex(std::vector<EdgeOppositeVertex>& edge_opposite_vertices,
-                              std::uint32_t vertex_a,
-                              std::uint32_t vertex_b,
-                              std::uint32_t edge_opposite_vertex)
-{
-    if (vertex_a == vertex_b) {
-        return;
-    }
-
-    edge_opposite_vertices.push_back({make_edge(vertex_a, vertex_b), edge_opposite_vertex});
 }
 
 struct TriangleEdge final
@@ -165,33 +148,18 @@ std::vector<float> compute_mesh_edge_lengths(const std::vector<MeshEdge>& edges,
     return lengths;
 }
 
-std::vector<MeshEdge> build_unique_triangle_edges(std::uint32_t vertex_count,
-                                                  const std::vector<std::uint32_t>& triangle_indices)
+std::vector<MeshEdge> build_unique_triangle_edges(const std::vector<std::uint32_t>& triangle_indices)
 {
     std::vector<MeshEdge> edges;
-    if (vertex_count == 0 || triangle_indices.empty() || triangle_indices.size() % 3u != 0u) {
-        return edges;
-    }
-
     edges.reserve(triangle_indices.size());
     for (std::size_t index = 0; index < triangle_indices.size(); index += 3u) {
         const std::uint32_t vertex_a = triangle_indices[index];
         const std::uint32_t vertex_b = triangle_indices[index + 1u];
         const std::uint32_t vertex_c = triangle_indices[index + 2u];
 
-        if (vertex_a >= vertex_count || vertex_b >= vertex_count || vertex_c >= vertex_count) {
-            return {};
-        }
-
-        if (vertex_a != vertex_b) {
-            edges.push_back(make_edge(vertex_a, vertex_b));
-        }
-        if (vertex_b != vertex_c) {
-            edges.push_back(make_edge(vertex_b, vertex_c));
-        }
-        if (vertex_c != vertex_a) {
-            edges.push_back(make_edge(vertex_c, vertex_a));
-        }
+        edges.push_back(make_edge(vertex_a, vertex_b));
+        edges.push_back(make_edge(vertex_b, vertex_c));
+        edges.push_back(make_edge(vertex_c, vertex_a));
     }
 
     std::sort(edges.begin(), edges.end());
@@ -199,57 +167,35 @@ std::vector<MeshEdge> build_unique_triangle_edges(std::uint32_t vertex_count,
     return edges;
 }
 
-std::vector<MeshEdge> build_unique_bending_edges(std::uint32_t vertex_count,
-                                                 const std::vector<std::uint32_t>& triangle_indices)
+std::vector<MeshEdge> build_unique_bending_edges(const std::vector<std::uint32_t>& triangle_indices)
 {
-    std::vector<EdgeOppositeVertex> edge_opposite_vertices;
-    if (vertex_count == 0 || triangle_indices.empty() || triangle_indices.size() % 3u != 0u) {
-        return {};
-    }
-
+    std::vector<std::pair<MeshEdge, std::uint32_t>> edge_opposite_vertices;
     edge_opposite_vertices.reserve(triangle_indices.size());
     for (std::size_t index = 0; index < triangle_indices.size(); index += 3u) {
         const std::uint32_t vertex_a = triangle_indices[index];
         const std::uint32_t vertex_b = triangle_indices[index + 1u];
         const std::uint32_t vertex_c = triangle_indices[index + 2u];
 
-        if (vertex_a >= vertex_count || vertex_b >= vertex_count || vertex_c >= vertex_count) {
-            return {};
-        }
-
-        add_edge_opposite_vertex(edge_opposite_vertices, vertex_a, vertex_b, vertex_c);
-        add_edge_opposite_vertex(edge_opposite_vertices, vertex_b, vertex_c, vertex_a);
-        add_edge_opposite_vertex(edge_opposite_vertices, vertex_c, vertex_a, vertex_b);
+        edge_opposite_vertices.push_back({make_edge(vertex_a, vertex_b), vertex_c});
+        edge_opposite_vertices.push_back({make_edge(vertex_b, vertex_c), vertex_a});
+        edge_opposite_vertices.push_back({make_edge(vertex_c, vertex_a), vertex_b});
     }
 
-    std::sort(
-        edge_opposite_vertices.begin(),
-        edge_opposite_vertices.end(),
-        [](const EdgeOppositeVertex& lhs, const EdgeOppositeVertex& rhs) { return lhs.edge < rhs.edge; });
+    std::sort(edge_opposite_vertices.begin(), edge_opposite_vertices.end());
 
     std::vector<MeshEdge> bending_edges;
-    for (std::size_t group_begin = 0; group_begin < edge_opposite_vertices.size();) {
-        std::size_t group_end = group_begin + 1u;
-        while (group_end < edge_opposite_vertices.size() &&
-               edge_opposite_vertices[group_begin].edge == edge_opposite_vertices[group_end].edge) {
-            ++group_end;
+    for (std::size_t index = 1u; index < edge_opposite_vertices.size(); ++index) {
+        const auto& [edge_a, opposite_vertex_a] = edge_opposite_vertices[index - 1u];
+        const auto& [edge_b, opposite_vertex_b] = edge_opposite_vertices[index];
+        
+        if (edge_a == edge_b && opposite_vertex_a != opposite_vertex_b) {
+            bending_edges.push_back(make_edge(opposite_vertex_a, opposite_vertex_b));
         }
-
-        if (group_end - group_begin == 2u) {
-            const std::uint32_t edge_opposite_vertex_a =
-                edge_opposite_vertices[group_begin].edge_opposite_vertex;
-            const std::uint32_t edge_opposite_vertex_b =
-                edge_opposite_vertices[group_begin + 1u].edge_opposite_vertex;
-            if (edge_opposite_vertex_a != edge_opposite_vertex_b) {
-                bending_edges.push_back(make_edge(edge_opposite_vertex_a, edge_opposite_vertex_b));
-            }
-        }
-
-        group_begin = group_end;
     }
 
     std::sort(bending_edges.begin(), bending_edges.end());
     bending_edges.erase(std::unique(bending_edges.begin(), bending_edges.end()), bending_edges.end());
+    
     return bending_edges;
 }
 

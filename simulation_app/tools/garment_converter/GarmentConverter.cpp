@@ -29,25 +29,21 @@ namespace {
 constexpr float obj_to_world_scale = 0.001f;
 constexpr float waistband_attachment_band_height = 0.03f;
 
-using MeshEdgeBuilder = std::vector<MeshEdge> (*)(std::uint32_t, const std::vector<std::uint32_t>&);
-
-GarmentDistanceConstraints build_distance_constraints(const std::vector<std::uint32_t>& triangle_indices,
-                                                      const std::vector<float>& vertices,
-                                                      MeshEdgeBuilder build_edges)
+GarmentDistanceConstraints build_distance_constraints(const std::vector<MeshEdge>& edges,
+                                                      const std::vector<float>& vertices)
 {
     const auto vertex_count = static_cast<std::uint32_t>(vertices.size() / position_components);
-    const std::vector<MeshEdge> edges = build_edges(vertex_count, triangle_indices);
     ColorizedMeshEdges colorized_edges = colorize_mesh_edges(vertex_count, edges);
 
-    GarmentDistanceConstraints distance_constraints;
-    distance_constraints.colorized_edges = std::move(colorized_edges.edges);
-    distance_constraints.color_states = std::move(colorized_edges.color_states);
-    distance_constraints.rest_lengths =
-        compute_mesh_edge_lengths(distance_constraints.colorized_edges, vertices);
-    if (!distance_constraints.is_valid()) {
+    GarmentDistanceConstraints constraints;
+    constraints.colorized_edges = std::move(colorized_edges.edges);
+    constraints.color_states = std::move(colorized_edges.color_states);
+    constraints.rest_lengths = compute_mesh_edge_lengths(constraints.colorized_edges, vertices);
+
+    if (!constraints.is_valid()) {
         throw std::runtime_error("Invalid garment distance constraints.");
     }
-    return distance_constraints;
+    return constraints;
 }
 
 std::vector<std::uint32_t> build_waistband_attachment_vertex_indices(const GarmentMesh& mesh)
@@ -195,11 +191,11 @@ void read_obj_mesh_lines(std::istream& input, GarmentMesh& mesh)
 
 void build_garment_simulation_data(GarmentMesh& mesh)
 {
-    mesh.stretch_constraints =
-        build_distance_constraints(mesh.triangle_vertex_indices, mesh.vertices, build_unique_triangle_edges);
+    const auto triangle_edges = build_unique_triangle_edges(mesh.triangle_vertex_indices);
+    mesh.stretch_constraints = build_distance_constraints(triangle_edges, mesh.vertices);
 
-    mesh.bending_constraints =
-        build_distance_constraints(mesh.triangle_vertex_indices, mesh.vertices, build_unique_bending_edges);
+    const auto bending_edges = build_unique_bending_edges(mesh.triangle_vertex_indices);
+    mesh.bending_constraints = build_distance_constraints(bending_edges, mesh.vertices);
 
     if (mesh.garment_category == GarmentCategory::Bottom) {
         mesh.attachment_vertex_indices = build_waistband_attachment_vertex_indices(mesh);
