@@ -1,6 +1,6 @@
 #include "gpu/cloth/ClothGpuState.h"
 
-#include "asset/MeshGeometryUtils.h"
+#include "utils/MeshGeometryUtils.h"
 #include "simulation/SceneState.h"
 #include "simulation/collision/Bvh.h"
 #include "utils/BufferUtils.h"

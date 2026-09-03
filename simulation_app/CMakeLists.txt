@@ -49,8 +49,8 @@ add_executable(simulation_app
     src/simulation/collision/ClothClothCollisionSolver.h
     src/simulation/collision/GarmentPrefitSolver.cpp
     src/simulation/collision/GarmentPrefitSolver.h
-    src/asset/MeshGeometryUtils.cpp
-    src/asset/MeshGeometryUtils.h
+    src/utils/MeshGeometryUtils.cpp
+    src/utils/MeshGeometryUtils.h
     src/gpu/character/CharacterGpuState.cpp
     src/gpu/character/CharacterGpuDataTypes.h
     src/gpu/character/CharacterGpuState.h
@@ -163,8 +163,8 @@ add_executable(garment_converter
     src/asset/AssetDataTypes.h
     src/asset/AssetIO.cpp
     src/asset/AssetIO.h
-    src/asset/MeshGeometryUtils.cpp
-    src/asset/MeshGeometryUtils.h
+    src/utils/MeshGeometryUtils.cpp
+    src/utils/MeshGeometryUtils.h
 )
 
 target_include_directories(simulation_app PRIVATE

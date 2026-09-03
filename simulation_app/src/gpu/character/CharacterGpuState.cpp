@@ -1,6 +1,6 @@
 #include "gpu/character/CharacterGpuState.h"
 
-#include "asset/MeshGeometryUtils.h"
+#include "utils/MeshGeometryUtils.h"
 #include "utils/BufferUtils.h"
 #include "utils/ShaderUtils.h"
 #include <cstddef>

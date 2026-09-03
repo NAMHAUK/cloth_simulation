@@ -1,7 +1,7 @@
 #include "GarmentConverter.h"
 
 #include "asset/AssetIO.h"
-#include "asset/MeshGeometryUtils.h"
+#include "utils/MeshGeometryUtils.h"
 #include "utils/NumericUtils.h"
 
 #include <algorithm>
@@ -249,20 +249,8 @@ GarmentMesh read_garment_obj(const std::filesystem::path& obj_path, GarmentCateg
     GarmentMesh mesh;
     mesh.garment_category = garment_category;
     read_obj_mesh_lines(input, mesh);
-
     validate_garment_topology(mesh);
-
-    const auto vertex_count = static_cast<std::uint32_t>(mesh.vertices.size() / position_components);
-    const std::uint32_t flipped_triangle_count =
-        orient_triangle_winding_outward(vertex_count,
-                                        mesh.vertices,
-                                        mesh.bounds_center,
-                                        mesh.triangle_vertex_indices);
-    if (flipped_triangle_count > 0u) {
-        std::cout << "Oriented garment triangle winding: flipped " << flipped_triangle_count
-                  << " triangles.\n";
-    }
-
+    orient_triangle_winding_outward(mesh.vertices, mesh.bounds_center, mesh.triangle_vertex_indices);
     build_garment_simulation_data(mesh);
 
     print_garment_obj_summary(obj_path, mesh);
