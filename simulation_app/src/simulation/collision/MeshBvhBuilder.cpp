@@ -1,6 +1,6 @@
 #include "simulation/collision/MeshBvhBuilder.h"
 
-#include "asset/MeshGeometryUtils.h"
+#include "utils/MeshGeometryUtils.h"
 
 #include <algorithm>
 #include <array>
