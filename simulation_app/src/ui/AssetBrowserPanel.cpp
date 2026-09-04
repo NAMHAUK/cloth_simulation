@@ -1,7 +1,6 @@
 #include "ui/AssetBrowserPanel.h"
 
 #include "asset/AssetConverter.h"
-#include "asset/AssetConverterCommands.h"
 #include "asset/AssetIO.h"
 #include "asset/AssetLoader.h"
 #include "utils/QtUtils.h"
@@ -491,13 +490,11 @@ void AssetBrowserPanel::request_garment_conversion()
         return;
     }
 
-    const ConverterCommand command = converter_commands::make_garment_command(project_paths_,
-                                                                              garment_obj_path,
-                                                                              garment_asset_path,
-                                                                              *garment_category);
-
     import_button_->setEnabled(false);
-    garment_converter_->start_conversion(command);
+    garment_converter_->start_garment_conversion(project_paths_,
+                                                 garment_obj_path,
+                                                 garment_asset_path,
+                                                 *garment_category);
 }
 
 void AssetBrowserPanel::request_motion_conversion(const std::filesystem::path& source_path)
@@ -508,16 +505,13 @@ void AssetBrowserPanel::request_motion_conversion(const std::filesystem::path& s
 
     const auto motion_asset_path =
         project_paths_.motion_asset_dir / (source_path.stem().string() + ".motion");
-    const ConverterCommand command =
-        converter_commands::make_motion_command(project_paths_, source_path, motion_asset_path);
-
     converting_motion_asset_path_ = motion_asset_path;
     if (state_ == State::Subjects || state_ == State::Motions) {
         const int scroll_value = table_widget_->verticalScrollBar()->value();
         rebuild_list();
         table_widget_->verticalScrollBar()->setValue(scroll_value);
     }
-    motion_converter_->start_conversion(command);
+    motion_converter_->start_motion_conversion(project_paths_, source_path, motion_asset_path);
 }
 
 void AssetBrowserPanel::finish_motion_conversion()
