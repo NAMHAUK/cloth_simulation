@@ -4,26 +4,9 @@
 #include <filesystem>
 #include <iostream>
 #include <optional>
-#include <string>
 #include <string_view>
 
 namespace {
-void print_usage()
-{
-    std::cerr << "Usage: garment_converter --input <source.obj> --output <asset.garment> "
-                 "--garment-category top|bottom|full-body\n";
-}
-
-std::optional<std::filesystem::path> find_argument_path(int argc, char** argv, std::string_view name)
-{
-    for (int index = 1; index + 1 < argc; ++index) {
-        if (std::string_view(argv[index]) == name) {
-            return std::filesystem::path(argv[index + 1]);
-        }
-    }
-    return std::nullopt;
-}
-
 std::optional<std::string_view> find_argument_value(int argc, char** argv, std::string_view name)
 {
     for (int index = 1; index + 1 < argc; ++index) {
@@ -36,8 +19,7 @@ std::optional<std::string_view> find_argument_value(int argc, char** argv, std::
 
 std::optional<GarmentCategory> parse_garment_category(int argc, char** argv)
 {
-    const std::optional<std::string_view> garment_category =
-        find_argument_value(argc, argv, "--garment-category");
+    const auto garment_category = find_argument_value(argc, argv, "--garment-category");
     if (!garment_category) {
         return std::nullopt;
     }
@@ -53,39 +35,23 @@ std::optional<GarmentCategory> parse_garment_category(int argc, char** argv)
 
     return std::nullopt;
 }
-
-bool has_help_argument(int argc, char** argv)
-{
-    for (int index = 1; index < argc; ++index) {
-        const std::string_view argument = argv[index];
-        if (argument == "--help" || argument == "-h") {
-            return true;
-        }
-    }
-    return false;
-}
 }
 
 int main(int argc, char** argv)
 {
     try {
-        if (has_help_argument(argc, argv)) {
-            print_usage();
-            return 0;
-        }
+        const std::filesystem::path input_path(find_argument_value(argc, argv, "--input").value_or(""));
+        const std::filesystem::path output_path(find_argument_value(argc, argv, "--output").value_or(""));
+        const auto garment_category = parse_garment_category(argc, argv);
 
-        const std::optional<std::filesystem::path> input_path = find_argument_path(argc, argv, "--input");
-        const std::optional<std::filesystem::path> output_path = find_argument_path(argc, argv, "--output");
-        const std::optional<GarmentCategory> garment_category = parse_garment_category(argc, argv);
-        if (!input_path || !output_path || !garment_category) {
-            print_usage();
+        if (input_path.empty() || output_path.empty() || !garment_category) {
+            std::cerr << "Garment conversion failed: missing or invalid arguments.\n";
             return 1;
         }
 
-        const GarmentMesh garment_mesh = read_garment_obj(*input_path, *garment_category);
-        write_garment_asset(*output_path, garment_mesh);
+        const GarmentMesh garment_mesh = read_garment_obj(input_path, *garment_category);
+        write_garment_asset(output_path, garment_mesh);
 
-        std::cout << "Garment conversion succeeded.\n";
         return 0;
     } catch (const std::exception& error) {
         std::cerr << "Garment conversion failed: " << error.what() << '\n';
