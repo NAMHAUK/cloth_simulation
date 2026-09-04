@@ -307,15 +307,15 @@ void AssetBrowserPanel::setup_asset_loader()
 
 void AssetBrowserPanel::setup_asset_converters()
 {
-    motion_converter_ = new AssetConverter(this);
-    garment_converter_ = new AssetConverter(this);
+    motion_converter_ = new AssetConverter(project_paths_, this);
+    garment_converter_ = new AssetConverter(project_paths_, this);
 
     connect(motion_converter_, &AssetConverter::conversion_succeeded, this, [this]() {
         converted_motion_paths_.insert(make_motion_id(converting_motion_asset_path_),
                                        to_q_string(converting_motion_asset_path_));
         finish_motion_conversion();
     });
-    connect(motion_converter_, &AssetConverter::conversion_failed, this, [this](const std::string&) {
+    connect(motion_converter_, &AssetConverter::conversion_failed, this, [this]() {
         finish_motion_conversion();
         QMessageBox::warning(this, "Conversion Failed", "Failed to convert AMASS motion.");
     });
@@ -324,7 +324,7 @@ void AssetBrowserPanel::setup_asset_converters()
         import_button_->setEnabled(true);
         refresh_garment_list();
     });
-    connect(garment_converter_, &AssetConverter::conversion_failed, this, [this](const std::string&) {
+    connect(garment_converter_, &AssetConverter::conversion_failed, this, [this]() {
         import_button_->setEnabled(true);
         QMessageBox::warning(this, "Conversion Failed", "Failed to convert garment OBJ.");
     });
@@ -491,10 +491,7 @@ void AssetBrowserPanel::request_garment_conversion()
     }
 
     import_button_->setEnabled(false);
-    garment_converter_->start_garment_conversion(project_paths_,
-                                                 garment_obj_path,
-                                                 garment_asset_path,
-                                                 *garment_category);
+    garment_converter_->start_garment_conversion(garment_obj_path, garment_asset_path, *garment_category);
 }
 
 void AssetBrowserPanel::request_motion_conversion(const std::filesystem::path& source_path)
@@ -511,7 +508,7 @@ void AssetBrowserPanel::request_motion_conversion(const std::filesystem::path& s
         rebuild_list();
         table_widget_->verticalScrollBar()->setValue(scroll_value);
     }
-    motion_converter_->start_motion_conversion(project_paths_, source_path, motion_asset_path);
+    motion_converter_->start_motion_conversion(source_path, motion_asset_path);
 }
 
 void AssetBrowserPanel::finish_motion_conversion()
