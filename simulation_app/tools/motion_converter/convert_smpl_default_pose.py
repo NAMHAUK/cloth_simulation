@@ -12,11 +12,10 @@ from motion_converter_common import (
     SHOULDER_AXIS_TO_OFFSET,
     make_default_pose,
     set_smpl_compatibility,
-    write_default_motion_labels,
+    write_triangle_part_labels,
     write_motion_header,
 )
 
-IS_DEFAULT_MOTION_ASSET = True
 EPSILON = 1.0e-8
 LOW_CONFIDENCE_THRESHOLD = 0.60
 
@@ -67,7 +66,7 @@ def make_triangle_part_labels(faces, lbs_weights):
         vertex_part_weights[:, part_label] = vertex_joint_weights[:, joint_indices].sum(axis=1)
     triangle_part_weights = vertex_part_weights[faces].sum(axis=1)
     triangle_part_labels = np.argmax(triangle_part_weights, axis=1).astype(np.uint8)
-    confidence = triangle_part_weights.max(axis=1) / np.maximum(triangle_part_weights.sum(axis=1),EPSILON,)
+    confidence = triangle_part_weights.max(axis=1) / np.maximum(triangle_part_weights.sum(axis=1), EPSILON)
     low_confidence_count = int(np.count_nonzero(confidence < LOW_CONFIDENCE_THRESHOLD))
     return triangle_part_labels, low_confidence_count
 
@@ -100,7 +99,7 @@ def write_default_pose_motion(output_path,
             torso_position.tofile(out_file)
             orientation.tofile(out_file)
             vertices.tofile(out_file)
-            write_default_motion_labels(out_file, faces, triangle_part_labels, IS_DEFAULT_MOTION_ASSET)
+            write_triangle_part_labels(out_file, faces, triangle_part_labels)
 
         temp_output_path.replace(output_path)
     except Exception:
@@ -117,6 +116,8 @@ def main():
     parser.add_argument("--fps", default=30.0, type=float)
     parser.add_argument("--ground-clearance", default=0.0, type=float)
     args = parser.parse_args()
+    if not np.isfinite((args.arm_angle_deg, args.fps, args.ground_clearance)).all():
+        parser.error("--arm-angle-deg, --fps, and --ground-clearance must be finite")
 
     set_smpl_compatibility()
 

@@ -41,9 +41,7 @@ def write_motion_header(out_file, fps, faces, frame_count, vertex_count):
     indices.tofile(out_file)
 
 
-def write_default_motion_labels(out_file, faces, triangle_part_labels, is_default_motion_asset):
-    if not is_default_motion_asset:
-        return
+def write_triangle_part_labels(out_file, faces, triangle_part_labels):
     if triangle_part_labels is None:
         raise ValueError("Default motion asset requires triangle part labels")
 
