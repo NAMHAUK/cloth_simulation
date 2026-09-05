@@ -1,4 +1,5 @@
 import argparse
+from enum import IntEnum
 from pathlib import Path
 
 import numpy as np
@@ -18,16 +19,29 @@ from motion_converter_common import (
 IS_DEFAULT_MOTION_ASSET = True
 EPSILON = 1.0e-8
 LOW_CONFIDENCE_THRESHOLD = 0.60
-PART_GROUPS = (
-    ("torso", (0, 3, 6, 9, 12, 13, 14)),
-    ("head", (15,)),
-    ("left_arm", (16, 18)),
-    ("right_arm", (17, 19)),
-    ("left_leg", (1, 4, 7, 10)),
-    ("right_leg", (2, 5, 8, 11)),
-    ("left_hand", (20, 22)),
-    ("right_hand", (21, 23)),
-)
+
+
+class BodyPartLabel(IntEnum):
+    TORSO = 0
+    HEAD = 1
+    LEFT_ARM = 2
+    RIGHT_ARM = 3
+    LEFT_LEG = 4
+    RIGHT_LEG = 5
+    LEFT_HAND = 6
+    RIGHT_HAND = 7
+
+
+JOINT_INDICES_BY_PART = {
+    BodyPartLabel.TORSO: (0, 3, 6, 9, 12, 13, 14),
+    BodyPartLabel.HEAD: (15,),
+    BodyPartLabel.LEFT_ARM: (16, 18),
+    BodyPartLabel.RIGHT_ARM: (17, 19),
+    BodyPartLabel.LEFT_LEG: (1, 4, 7, 10),
+    BodyPartLabel.RIGHT_LEG: (2, 5, 8, 11),
+    BodyPartLabel.LEFT_HAND: (20, 22),
+    BodyPartLabel.RIGHT_HAND: (21, 23),
+}
 TORSO_JOINT_INDEX = 9
 IDENTITY_QUATERNION_XYZW = np.array([0.0, 0.0, 0.0, 1.0], dtype=np.float32)
 
@@ -48,7 +62,9 @@ def make_triangle_part_labels(faces, lbs_weights):
     if vertex_joint_weights.ndim != 2 or vertex_joint_weights.shape[1] < 24:
         raise ValueError(f"Expected LBS weights shaped as [vertices, >=24], got {vertex_joint_weights.shape}")
 
-    vertex_part_weights = np.stack([vertex_joint_weights[:, joint_indices].sum(axis=1) for _, joint_indices in PART_GROUPS], axis=1,)
+    vertex_part_weights = np.zeros((vertex_joint_weights.shape[0], len(BodyPartLabel)), dtype=np.float32)
+    for part_label, joint_indices in JOINT_INDICES_BY_PART.items():
+        vertex_part_weights[:, part_label] = vertex_joint_weights[:, joint_indices].sum(axis=1)
     triangle_part_weights = vertex_part_weights[faces].sum(axis=1)
     triangle_part_labels = np.argmax(triangle_part_weights, axis=1).astype(np.uint8)
     confidence = triangle_part_weights.max(axis=1) / np.maximum(triangle_part_weights.sum(axis=1),EPSILON,)
