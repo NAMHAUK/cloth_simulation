@@ -145,9 +145,6 @@ GarmentDistanceConstraints build_distance_constraints(const std::vector<MeshEdge
     constraints.color_states = std::move(colorized_edges.color_states);
     constraints.rest_lengths = compute_mesh_edge_lengths(constraints.colorized_edges, vertices);
 
-    if (!constraints.is_valid()) {
-        throw std::runtime_error("Invalid garment distance constraints.");
-    }
     return constraints;
 }
 

@@ -99,13 +99,6 @@ struct GarmentDistanceConstraints final
     std::vector<MeshEdge> colorized_edges;
     std::vector<ConstraintColorState> color_states;
     std::vector<float> rest_lengths;
-
-    bool is_valid() const
-    {
-        return !colorized_edges.empty() &&
-               !color_states.empty() &&
-               colorized_edges.size() == rest_lengths.size();
-    }
 };
 
 enum class GarmentCategory : std::uint32_t

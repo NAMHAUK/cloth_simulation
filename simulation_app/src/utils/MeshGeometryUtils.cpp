@@ -278,6 +278,10 @@ void orient_triangles_outward(const std::vector<float>& vertices,
 
 ColorizedMeshEdges colorize_mesh_edges(std::uint32_t vertex_count, const std::vector<MeshEdge>& edges)
 {
+    if (edges.empty()) {
+        throw std::runtime_error("Cannot color an empty edge set.");
+    }
+
     std::vector<std::vector<MeshEdge>> edge_groups;
     std::vector<std::bitset<max_color_count>> assigned_colors(vertex_count);
 
