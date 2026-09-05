@@ -198,7 +198,9 @@ void print_garment_obj_summary(const std::filesystem::path& obj_path, const Garm
 }
 }
 
-GarmentMesh read_garment_obj(const std::filesystem::path& obj_path, GarmentCategory garment_category)
+void convert_garment(const std::filesystem::path& obj_path,
+                     const std::filesystem::path& garment_asset_path,
+                     GarmentCategory garment_category)
 {
     std::ifstream input(obj_path);
     if (!input) {
@@ -213,11 +215,6 @@ GarmentMesh read_garment_obj(const std::filesystem::path& obj_path, GarmentCateg
     build_garment_constraints(mesh);
 
     print_garment_obj_summary(obj_path, mesh);
-    return mesh;
-}
-
-void write_garment_asset(const std::filesystem::path& garment_asset_path, const GarmentMesh& mesh)
-{
-    asset_io::write_garment_asset(garment_asset_path, mesh);
+    asset_io::write_garment_mesh(garment_asset_path, mesh);
     std::cout << "Wrote garment asset: " << garment_asset_path << '\n';
 }

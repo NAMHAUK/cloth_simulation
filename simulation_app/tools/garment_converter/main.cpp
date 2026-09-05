@@ -49,8 +49,7 @@ int main(int argc, char** argv)
             return 1;
         }
 
-        const GarmentMesh garment_mesh = read_garment_obj(input_path, *garment_category);
-        write_garment_asset(output_path, garment_mesh);
+        convert_garment(input_path, output_path, *garment_category);
 
         return 0;
     } catch (const std::exception& error) {

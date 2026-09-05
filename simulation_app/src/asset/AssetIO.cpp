@@ -96,16 +96,19 @@ bool is_valid_distance_constraints(const GarmentDistanceConstraints& constraints
            is_finite_values(constraints.rest_lengths);
 }
 
-bool is_valid_garment_mesh(const GarmentMesh& garment_mesh)
+void validate_garment_mesh(const GarmentMesh& garment_mesh)
 {
     const bool has_valid_garment_category = garment_mesh.garment_category == GarmentCategory::Top ||
                                             garment_mesh.garment_category == GarmentCategory::Bottom ||
                                             garment_mesh.garment_category == GarmentCategory::FullBody;
-    if (!has_valid_garment_category ||
-        garment_mesh.vertices.empty() ||
+    if (!has_valid_garment_category) {
+        throw std::runtime_error("Invalid garment category");
+    }
+
+    if (garment_mesh.vertices.empty() ||
         garment_mesh.vertices.size() % position_components != 0u ||
         !is_finite_values(garment_mesh.vertices)) {
-        return false;
+        throw std::runtime_error("Invalid garment vertices");
     }
 
     const auto vertex_count = static_cast<std::uint32_t>(garment_mesh.vertices.size() / position_components);
@@ -114,19 +117,23 @@ bool is_valid_garment_mesh(const GarmentMesh& garment_mesh)
         garment_mesh.triangle_vertex_indices.size() % 3u != 0u ||
         !is_valid_vertex_indices(garment_mesh.triangle_vertex_indices, vertex_count) ||
         !has_distinct_triangle_vertices(garment_mesh.triangle_vertex_indices)) {
-        return false;
+        throw std::runtime_error("Invalid garment triangles");
     }
 
     if (!is_valid_distance_constraints(garment_mesh.stretch_constraints, vertex_count) ||
-        !is_valid_distance_constraints(garment_mesh.bending_constraints, vertex_count) ||
-        !is_valid_vertex_indices(garment_mesh.attachment_vertex_indices, vertex_count)) {
-        return false;
+        !is_valid_distance_constraints(garment_mesh.bending_constraints, vertex_count)) {
+        throw std::runtime_error("Invalid garment constraints");
     }
 
-    return is_finite_vec3(garment_mesh.bounds_center) &&
-           std::isfinite(garment_mesh.bounds_radius) &&
-           garment_mesh.bounds_radius > 0.0f &&
-           is_finite_vec3(garment_mesh.color);
+    if (!is_valid_vertex_indices(garment_mesh.attachment_vertex_indices, vertex_count)) {
+        throw std::runtime_error("Invalid garment attachment vertices");
+    }
+
+    if (!is_finite_vec3(garment_mesh.bounds_center) ||
+        !std::isfinite(garment_mesh.bounds_radius) ||
+        garment_mesh.bounds_radius <= 0.0f) {
+        throw std::runtime_error("Invalid garment bounds");
+    }
 }
 
 // read
@@ -367,9 +374,7 @@ GarmentMesh read_garment_mesh(const std::filesystem::path& garment_asset_path)
     GarmentAssetCounts counts;
     read_garment_asset_header(input, counts, garment_mesh);
     read_garment_asset_data(input, counts, garment_mesh);
-    if (!is_valid_garment_mesh(garment_mesh)) {
-        throw std::runtime_error("Invalid garment asset payload");
-    }
+    validate_garment_mesh(garment_mesh);
 
     std::cout << "Loaded garment asset: " << garment_asset_path << '\n';
     std::cout << "  vertices=" << garment_mesh.vertices.size() / position_components
@@ -383,12 +388,8 @@ GarmentMesh read_garment_mesh(const std::filesystem::path& garment_asset_path)
     return garment_mesh;
 }
 
-void write_garment_asset(const std::filesystem::path& garment_asset_path, const GarmentMesh& garment_mesh)
+void write_garment_mesh(const std::filesystem::path& garment_asset_path, const GarmentMesh& garment_mesh)
 {
-    if (!is_valid_garment_mesh(garment_mesh)) {
-        throw std::runtime_error("Cannot write invalid garment asset mesh.");
-    }
-
     const auto parent_path = garment_asset_path.parent_path();
     if (!parent_path.empty()) {
         std::filesystem::create_directories(parent_path);

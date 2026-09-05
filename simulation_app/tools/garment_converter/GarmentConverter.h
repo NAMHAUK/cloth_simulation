@@ -4,5 +4,6 @@
 
 #include <filesystem>
 
-GarmentMesh read_garment_obj(const std::filesystem::path& obj_path, GarmentCategory garment_category);
-void write_garment_asset(const std::filesystem::path& garment_asset_path, const GarmentMesh& mesh);
+void convert_garment(const std::filesystem::path& obj_path,
+                     const std::filesystem::path& garment_asset_path,
+                     GarmentCategory garment_category);
