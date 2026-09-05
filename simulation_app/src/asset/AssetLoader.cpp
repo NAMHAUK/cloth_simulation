@@ -2,6 +2,7 @@
 
 #include "asset/AssetIO.h"
 
+#include <exception>
 #include <iostream>
 #include <utility>
 
@@ -33,7 +34,13 @@ void AssetLoader::load_motion(std::filesystem::path motion_asset_path)
         QtConcurrent::run([motion_asset_path = std::move(motion_asset_path)]() mutable {
             MotionLoadResult result;
             result.source_path = std::move(motion_asset_path);
-            result.is_loaded = asset_io::read_character_motion(result.source_path, result.motion);
+            try {
+                result.motion = asset_io::read_character_motion(result.source_path);
+                result.is_loaded = true;
+            } catch (const std::exception& error) {
+                std::cerr << "Failed to load motion asset: " << result.source_path << '\n';
+                std::cerr << "  " << error.what() << '\n';
+            }
             return result;
         }));
 }

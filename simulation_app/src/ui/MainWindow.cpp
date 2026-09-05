@@ -1,16 +1,13 @@
 #include "ui/MainWindow.h"
 
 #include "app/SimulationController.h"
-#include "asset/AssetIO.h"
 #include "ui/AssetBrowserPanel.h"
 #include "ui/PlacementController.h"
 #include "ui/Viewport.h"
 #include "utils/QtUtils.h"
 
-#include <cstdint>
 #include <memory>
 #include <utility>
-#include <vector>
 
 #include <QMessageBox>
 #include <QWidget>
@@ -100,16 +97,7 @@ void MainWindow::setup_placement_controller()
 
 void MainWindow::initialize_scene(QOpenGLFunctions_4_5_Core& gl)
 {
-    CharacterMotion character_motion;
-    std::vector<std::uint8_t> triangle_part_labels;
-    asset_io::read_default_character(project_paths_.default_character_path,
-                                     character_motion,
-                                     triangle_part_labels);
-
-    simulation_controller_->initialize(project_paths_.shader_dir,
-                                       std::move(character_motion),
-                                       triangle_part_labels,
-                                       gl);
+    simulation_controller_->initialize(project_paths_.shader_dir, project_paths_.default_character_path, gl);
 }
 
 void MainWindow::setup_viewport_render_callbacks()

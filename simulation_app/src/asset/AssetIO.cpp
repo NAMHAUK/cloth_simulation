@@ -109,9 +109,7 @@ void read_motion_asset_header(std::ifstream& input,
     }
 }
 
-void read_motion_asset_file_sizes(const std::filesystem::path& motion_asset_path,
-                                  const CharacterMotion& character_motion,
-                                  bool is_default)
+std::uintmax_t motion_asset_base_file_size(const CharacterMotion& character_motion)
 {
     const std::size_t reference_position_count = character_motion.frame_count * position_components;
     const std::size_t orientation_count = character_motion.frame_count * quaternion_components;
@@ -119,21 +117,23 @@ void read_motion_asset_file_sizes(const std::filesystem::path& motion_asset_path
     const std::uintmax_t triangle_vertex_index_count =
         static_cast<std::uintmax_t>(character_motion.triangle_count) * 3u;
 
-    const std::uintmax_t base_file_size =
-        sizeof(float) +
-        sizeof(std::uint32_t) * 3u +
-        triangle_vertex_index_count * sizeof(std::uint32_t) +
-        static_cast<std::uintmax_t>(reference_position_count) * sizeof(float) * 2u +
-        static_cast<std::uintmax_t>(orientation_count) * sizeof(float) * 2u +
-        static_cast<std::uintmax_t>(vertex_position_count) * sizeof(float);
+    return sizeof(float) +
+           sizeof(std::uint32_t) * 3u +
+           triangle_vertex_index_count * sizeof(std::uint32_t) +
+           static_cast<std::uintmax_t>(reference_position_count) * sizeof(float) * 2u +
+           static_cast<std::uintmax_t>(orientation_count) * sizeof(float) * 2u +
+           static_cast<std::uintmax_t>(vertex_position_count) * sizeof(float);
+}
 
-    std::uintmax_t expected_file_size = base_file_size;
-    if (is_default) {
-        expected_file_size += sizeof(std::uint32_t);
-        expected_file_size += static_cast<std::uintmax_t>(character_motion.triangle_count);
-    }
-
-    if (std::filesystem::file_size(motion_asset_path) != expected_file_size) {
+void validate_motion_asset_file_size(const std::filesystem::path& motion_asset_path,
+                                     const CharacterMotion& character_motion)
+{
+    const std::uintmax_t base_file_size = motion_asset_base_file_size(character_motion);
+    const auto label_payload_size = sizeof(std::uint32_t) + character_motion.triangle_count;
+    const auto labeled_file_size = base_file_size + label_payload_size;
+    const std::uintmax_t file_size = std::filesystem::file_size(motion_asset_path);
+    
+    if (file_size != base_file_size && file_size != labeled_file_size) {
         throw std::runtime_error("Invalid motion asset size: " + motion_asset_path.string());
     }
 }
@@ -161,42 +161,6 @@ void read_motion_asset_data(const std::filesystem::path& motion_asset_path,
         !is_finite_values(character_motion.torso_orientations) ||
         !is_finite_values(character_motion.vertices)) {
         throw std::runtime_error("Motion asset contains non-finite values: " + motion_asset_path.string());
-    }
-}
-
-void read_motion_asset_labels(const std::filesystem::path& motion_asset_path,
-                              const CharacterMotion& character_motion,
-                              std::ifstream& input,
-                              std::vector<std::uint8_t>& triangle_part_labels)
-{
-    triangle_part_labels.clear();
-
-    const std::uint32_t triangle_count = character_motion.triangle_count;
-    std::uint32_t triangle_label_count = 0;
-
-    read_binary_value(input, triangle_label_count);
-    if (triangle_label_count != triangle_count) {
-        throw std::runtime_error("Invalid default motion asset triangle part labels: " +
-                                 motion_asset_path.string());
-    }
-    read_binary_values(input, triangle_part_labels, triangle_label_count);
-
-    const bool has_invalid_label =
-        std::any_of(triangle_part_labels.begin(), triangle_part_labels.end(), [](std::uint8_t label) {
-            return label >= body_part_label_count;
-        });
-    if (has_invalid_label) {
-        throw std::runtime_error("Default motion asset contains invalid triangle part labels: " +
-                                 motion_asset_path.string());
-    }
-
-    const bool has_collision_triangle =
-        std::any_of(triangle_part_labels.begin(), triangle_part_labels.end(), [](std::uint8_t label) {
-            return !is_hand_body_part_label(label);
-        });
-    if (!has_collision_triangle) {
-        throw std::runtime_error("Default motion asset contains no collision triangles: " +
-                                 motion_asset_path.string());
     }
 }
 
@@ -338,60 +302,65 @@ bool is_valid_garment_mesh(const GarmentMesh& garment_mesh)
            garment_mesh.bounds_radius > 0.0f &&
            is_finite_vec3(garment_mesh.color);
 }
+
+CharacterMotion read_motion_asset(const std::filesystem::path& motion_asset_path, std::ifstream& input)
+{
+    CharacterMotion character_motion;
+    read_motion_asset_header(input, motion_asset_path, character_motion);
+    validate_motion_asset_file_size(motion_asset_path, character_motion);
+    read_motion_asset_data(motion_asset_path, character_motion, input);
+    if (!is_valid_vertex_indices(character_motion.triangle_vertex_indices, character_motion.vertex_count) ||
+        !has_distinct_triangle_vertices(character_motion.triangle_vertex_indices)) {
+        throw std::runtime_error("Motion asset contains invalid triangle indices: " +
+                                 motion_asset_path.string());
+    }
+
+    std::cout << "Loaded motion asset: " << motion_asset_path << '\n';
+    std::cout << "  fps=" << character_motion.fps << " frames=" << character_motion.frame_count
+              << " vertices=" << character_motion.vertex_count
+              << " triangles=" << character_motion.triangle_count << '\n';
+    return character_motion;
+}
 }
 
 namespace asset_io {
-bool read_character_motion(const std::filesystem::path& motion_asset_path, CharacterMotion& character_motion)
-{
-    try {
-        std::ifstream input;
-        input.exceptions(std::ios::failbit | std::ios::badbit);
-        input.open(motion_asset_path, std::ios::binary);
-
-        read_motion_asset_header(input, motion_asset_path, character_motion);
-        read_motion_asset_file_sizes(motion_asset_path, character_motion, false);
-        read_motion_asset_data(motion_asset_path, character_motion, input);
-        if (!is_valid_vertex_indices(character_motion.triangle_vertex_indices,
-                                     character_motion.vertex_count) ||
-            !has_distinct_triangle_vertices(character_motion.triangle_vertex_indices)) {
-            throw std::runtime_error("Motion asset contains invalid triangle indices.");
-        }
-
-        std::cout << "Loaded motion asset: " << motion_asset_path << '\n';
-        std::cout << "  fps=" << character_motion.fps << " frames=" << character_motion.frame_count
-                  << " vertices=" << character_motion.vertex_count
-                  << " triangles=" << character_motion.triangle_count << '\n';
-        return true;
-    } catch (const std::exception& error) {
-        std::cerr << "Failed to load motion asset: " << motion_asset_path << '\n';
-        std::cerr << "  " << error.what() << '\n';
-        return false;
-    }
-}
-
-void read_default_character(const std::filesystem::path& motion_asset_path,
-                            CharacterMotion& character_motion,
-                            std::vector<std::uint8_t>& triangle_part_labels)
+CharacterMotion read_character_motion(const std::filesystem::path& motion_asset_path)
 {
     std::ifstream input;
     input.exceptions(std::ios::failbit | std::ios::badbit);
     input.open(motion_asset_path, std::ios::binary);
 
-    read_motion_asset_header(input, motion_asset_path, character_motion);
-    read_motion_asset_file_sizes(motion_asset_path, character_motion, true);
-    read_motion_asset_data(motion_asset_path, character_motion, input);
-    if (!is_valid_vertex_indices(character_motion.triangle_vertex_indices, character_motion.vertex_count) ||
-        !has_distinct_triangle_vertices(character_motion.triangle_vertex_indices)) {
-        throw std::runtime_error("Default motion asset contains invalid triangle indices: " +
-                                 motion_asset_path.string());
-    }
-    read_motion_asset_labels(motion_asset_path, character_motion, input, triangle_part_labels);
+    return read_motion_asset(motion_asset_path, input);
+}
 
-    std::cout << "Loaded default motion asset: " << motion_asset_path << '\n';
-    std::cout << "  fps=" << character_motion.fps << " frames=" << character_motion.frame_count
-              << " vertices=" << character_motion.vertex_count
-              << " triangles=" << character_motion.triangle_count
-              << " triangle_part_labels=" << triangle_part_labels.size() << '\n';
+CharacterMotion read_default_character(const std::filesystem::path& motion_asset_path,
+                                       std::vector<std::uint8_t>& triangle_part_labels)
+{
+    std::ifstream input;
+    input.exceptions(std::ios::failbit | std::ios::badbit);
+    input.open(motion_asset_path, std::ios::binary);
+
+    CharacterMotion character_motion = read_motion_asset(motion_asset_path, input);
+    if (character_motion.frame_count != 1u) {
+        throw std::runtime_error("Default character asset must contain one frame");
+    }
+
+    // read per triangle part labels
+    std::uint32_t labeled_triangle_count = 0;
+    read_binary_value(input, labeled_triangle_count);
+    read_binary_values(input, triangle_part_labels, character_motion.triangle_count);
+
+    if (labeled_triangle_count != character_motion.triangle_count ||
+        std::any_of(triangle_part_labels.begin(),
+                    triangle_part_labels.end(),
+                    [](std::uint8_t label) { return label >= body_part_label_count; }) ||
+        std::none_of(triangle_part_labels.begin(), triangle_part_labels.end(), [](std::uint8_t label) {
+            return !is_hand_body_part_label(label);
+        })) {
+        throw std::runtime_error("Invalid default character triangle part labels");
+    }
+
+    return character_motion;
 }
 
 GarmentMesh read_garment_mesh(const std::filesystem::path& garment_asset_path)
