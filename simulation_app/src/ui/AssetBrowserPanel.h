@@ -7,6 +7,7 @@
 #include <functional>
 #include <vector>
 
+#include <QFuture>
 #include <QHash>
 #include <QJsonObject>
 #include <QString>
@@ -19,7 +20,6 @@ class QTableWidget;
 class QVBoxLayout;
 class QWidget;
 class AssetConverter;
-class AssetLoader;
 
 class AssetBrowserPanel final : public QWidget
 {
@@ -31,7 +31,6 @@ public:
         std::function<void(const std::filesystem::path& asset_path, GarmentMesh mesh)>;
 
     explicit AssetBrowserPanel(const ProjectPaths& project_paths, QWidget* parent = nullptr);
-    ~AssetBrowserPanel() override;
 
     void set_motion_selection_enabled(bool enabled);
     void set_garment_selection_enabled(bool enabled);
@@ -62,7 +61,6 @@ private:
 
     void setup_asset_buttons(QVBoxLayout& root_layout);
     void setup_list_panel(QVBoxLayout& root_layout);
-    void setup_asset_loader();
     void setup_asset_converters();
     void load_motion_paths();
 
@@ -88,7 +86,6 @@ private:
     void rebuild_garment_list();
 
     ProjectPaths project_paths_;
-    AssetLoader* asset_loader_ = nullptr;
     AssetConverter* motion_converter_ = nullptr;
     AssetConverter* garment_converter_ = nullptr;
     QPushButton* motion_button_ = nullptr;
@@ -106,6 +103,7 @@ private:
     QHash<QString, QString> converted_motion_paths_;
     QJsonObject motion_descriptions_;
     QJsonObject subject_descriptions_;
+    QFuture<void> motion_load_;
     MotionLoadedCallback motion_loaded_callback_;
     GarmentLoadedCallback garment_loaded_callback_;
 };

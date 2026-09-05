@@ -2,7 +2,6 @@
 
 #include "asset/AssetConverter.h"
 #include "asset/AssetIO.h"
-#include "asset/AssetLoader.h"
 #include "utils/QtUtils.h"
 
 #include <algorithm>
@@ -35,6 +34,7 @@
 #include <QTableWidget>
 #include <QTimer>
 #include <QVBoxLayout>
+#include <QtConcurrent/QtConcurrentRun>
 
 #include <iostream>
 #include <utility>
@@ -186,17 +186,10 @@ AssetBrowserPanel::AssetBrowserPanel(const ProjectPaths& project_paths, QWidget*
 
     setup_asset_buttons(*root_layout);
     setup_list_panel(*root_layout);
-    setup_asset_loader();
     setup_asset_converters();
 
     load_motion_paths();
     refresh_garment_list();
-}
-
-AssetBrowserPanel::~AssetBrowserPanel()
-{
-    asset_loader_->set_motion_loaded_callback({});
-    asset_loader_->set_motion_load_failed_callback({});
 }
 
 // Initialization
@@ -288,21 +281,6 @@ void AssetBrowserPanel::setup_list_panel(QVBoxLayout& root_layout)
     connect(close_button, &QPushButton::clicked, this, [this]() { set_state(State::Closed); });
     connect(table_widget_, &QTableWidget::cellClicked, this, &AssetBrowserPanel::handle_table_row_click);
     connect(import_button_, &QPushButton::clicked, this, &AssetBrowserPanel::request_garment_conversion);
-}
-
-void AssetBrowserPanel::setup_asset_loader()
-{
-    asset_loader_ = new AssetLoader(this);
-
-    asset_loader_->set_motion_loaded_callback([this](CharacterMotion motion) {
-        motion_loaded_callback_(std::move(motion));
-        Q_EMIT motion_loading_changed(false);
-    });
-
-    asset_loader_->set_motion_load_failed_callback([this](const std::filesystem::path& asset_path) {
-        Q_EMIT motion_loading_changed(false);
-        QMessageBox::warning(this, "Load Failed", "Failed to load motion:\n" + to_q_string(asset_path));
-    });
 }
 
 void AssetBrowserPanel::setup_asset_converters()
@@ -455,8 +433,23 @@ void AssetBrowserPanel::refresh_garment_list()
 
 void AssetBrowserPanel::load_motion(const std::filesystem::path& asset_path)
 {
+    if (motion_load_.isRunning()) {
+        return;
+    }
+
     Q_EMIT motion_loading_changed(true);
-    asset_loader_->load_motion(asset_path);
+    motion_load_ = QtConcurrent::run(asset_io::read_character_motion, asset_path)
+                       .then(this,
+                             [this](CharacterMotion motion) {
+                                 motion_loaded_callback_(std::move(motion));
+                                 Q_EMIT motion_loading_changed(false);
+                             })
+                       .onFailed(this, [this, asset_path] {
+                           Q_EMIT motion_loading_changed(false);
+                           QMessageBox::warning(this,
+                                                "Load Failed",
+                                                "Failed to load motion:\n" + to_q_string(asset_path));
+                       });
 }
 
 void AssetBrowserPanel::load_garment(const std::filesystem::path& asset_path)

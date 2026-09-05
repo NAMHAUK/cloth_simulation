@@ -18,8 +18,6 @@ add_executable(simulation_app
     src/asset/AssetDataTypes.h
     src/asset/AssetIO.cpp
     src/asset/AssetIO.h
-    src/asset/AssetLoader.cpp
-    src/asset/AssetLoader.h
     src/app/ProjectPaths.h
     src/app/SimulationController.cpp
     src/app/SimulationController.h
