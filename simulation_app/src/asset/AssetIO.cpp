@@ -421,13 +421,6 @@ void write_garment_mesh(const std::filesystem::path& garment_asset_path, const G
     output.close();
 }
 
-std::filesystem::path make_garment_asset_path(const ProjectPaths& project_paths,
-                                              const std::filesystem::path& garment_obj_path)
-{
-    return project_paths.garment_asset_dir / (garment_obj_path.stem().string() + ".garment");
-}
-
-// asset directory 아래 지정한 확장자의 asset file 경로를 정렬해 반환
 std::vector<std::filesystem::path> scan_asset_paths(const std::filesystem::path& asset_dir,
                                                     const std::filesystem::path& asset_extension)
 {
@@ -436,11 +429,10 @@ std::vector<std::filesystem::path> scan_asset_paths(const std::filesystem::path&
     }
 
     std::vector<std::filesystem::path> asset_paths;
-    for (const auto& file : std::filesystem::recursive_directory_iterator(asset_dir)) {
-        if (!file.is_regular_file() || file.path().extension() != asset_extension) {
-            continue;
+    for (const auto& entry : std::filesystem::recursive_directory_iterator(asset_dir)) {
+        if (entry.is_regular_file() && entry.path().extension() == asset_extension) {
+            asset_paths.push_back(entry.path());
         }
-        asset_paths.push_back(file.path());
     }
 
     std::sort(asset_paths.begin(), asset_paths.end(), [](const auto& lhs, const auto& rhs) {

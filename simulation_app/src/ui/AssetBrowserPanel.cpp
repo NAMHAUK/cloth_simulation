@@ -473,7 +473,7 @@ void AssetBrowserPanel::request_garment_conversion()
     }
 
     const auto garment_obj_path = std::filesystem::path{selected_file.toStdWString()};
-    const auto garment_asset_path = asset_io::make_garment_asset_path(project_paths_, garment_obj_path);
+    const auto garment_asset_path = make_garment_asset_path(project_paths_, garment_obj_path);
     if (std::filesystem::exists(garment_asset_path)) {
         return;
     }

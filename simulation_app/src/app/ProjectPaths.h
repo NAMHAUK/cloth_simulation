@@ -35,3 +35,11 @@ inline ProjectPaths make_project_paths(const std::filesystem::path& project_root
         project_root / "data" / "runtime_assets" / "garments",
     };
 }
+
+inline std::filesystem::path make_garment_asset_path(const ProjectPaths& project_paths,
+                                                     const std::filesystem::path& garment_obj_path)
+{
+    std::filesystem::path garment_asset_filename = garment_obj_path.filename();
+    garment_asset_filename.replace_extension(".garment");
+    return project_paths.garment_asset_dir / garment_asset_filename;
+}

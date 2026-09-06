@@ -1,6 +1,5 @@
 #pragma once
 
-#include "app/ProjectPaths.h"
 #include "asset/AssetDataTypes.h"
 
 #include <cstdint>
@@ -16,8 +15,6 @@ CharacterMotion read_default_character(const std::filesystem::path& motion_asset
 // Garment //
 GarmentMesh read_garment_mesh(const std::filesystem::path& garment_asset_path);
 void write_garment_mesh(const std::filesystem::path& garment_asset_path, const GarmentMesh& garment_mesh);
-std::filesystem::path make_garment_asset_path(const ProjectPaths& project_paths,
-                                              const std::filesystem::path& garment_obj_path);
 
 // Common //
 std::vector<std::filesystem::path> scan_asset_paths(const std::filesystem::path& asset_dir,
