@@ -15,8 +15,6 @@ add_executable(simulation_app
     src/app/main.cpp
     src/asset/AssetConverter.cpp
     src/asset/AssetConverter.h
-    src/asset/AssetConverterCommands.cpp
-    src/asset/AssetConverterCommands.h
     src/asset/AssetDataTypes.h
     src/asset/AssetIO.cpp
     src/asset/AssetIO.h
