@@ -17,9 +17,6 @@ public:
     explicit AssetConverter(const ProjectPaths& project_paths, QObject* parent = nullptr);
     ~AssetConverter() override;
 
-    AssetConverter(const AssetConverter&) = delete;
-    AssetConverter& operator=(const AssetConverter&) = delete;
-
     void start_motion_conversion(const std::filesystem::path& amass_motion_path,
                                  const std::filesystem::path& motion_asset_path);
     void start_garment_conversion(const std::filesystem::path& garment_obj_path,

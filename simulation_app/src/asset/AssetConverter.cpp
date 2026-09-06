@@ -5,8 +5,6 @@
 
 #include <filesystem>
 #include <iostream>
-#include <string>
-#include <utility>
 
 #include <QCoreApplication>
 #include <QtLogging>
@@ -53,10 +51,6 @@ AssetConverter::~AssetConverter()
 void AssetConverter::start_motion_conversion(const std::filesystem::path& amass_motion_path,
                                              const std::filesystem::path& motion_asset_path)
 {
-    if (process_) {
-        return;
-    }
-
     start_conversion(make_motion_command(amass_motion_path, motion_asset_path));
 }
 
@@ -64,15 +58,15 @@ void AssetConverter::start_garment_conversion(const std::filesystem::path& garme
                                               const std::filesystem::path& garment_asset_path,
                                               const QString& garment_category)
 {
-    if (process_) {
-        return;
-    }
-
     start_conversion(make_garment_command(garment_obj_path, garment_asset_path, garment_category));
 }
 
 void AssetConverter::start_conversion(const ConverterCommand& command)
 {
+    if (process_) {
+        return;
+    }
+
     process_ = new QProcess(this);
     process_->setProgram(command.program);
     process_->setArguments(command.arguments);
@@ -85,15 +79,13 @@ void AssetConverter::start_conversion(const ConverterCommand& command)
 
 void AssetConverter::connect_process()
 {
-    QProcess* process = process_;
-
     connect(
-        process,
+        process_,
         qOverload<int, QProcess::ExitStatus>(&QProcess::finished),
         this,
         [this](int exit_code, QProcess::ExitStatus exit_status) { finish_process(exit_code, exit_status); });
 
-    connect(process, &QProcess::errorOccurred, this, [this](QProcess::ProcessError error) {
+    connect(process_, &QProcess::errorOccurred, this, [this](QProcess::ProcessError error) {
         if (error == QProcess::FailedToStart) {
             finish_process(-1, QProcess::CrashExit);
         }
@@ -103,7 +95,6 @@ void AssetConverter::connect_process()
 void AssetConverter::finish_process(int exit_code, QProcess::ExitStatus exit_status)
 {
     const bool succeeded = exit_status == QProcess::NormalExit && exit_code == 0;
-    const std::string error_message = process_->errorString().toStdString();
 
     process_->deleteLater();
     process_ = nullptr;
@@ -111,7 +102,6 @@ void AssetConverter::finish_process(int exit_code, QProcess::ExitStatus exit_sta
     if (succeeded) {
         Q_EMIT conversion_succeeded();
     } else {
-        std::cerr << error_message << '\n';
         Q_EMIT conversion_failed();
     }
 }
