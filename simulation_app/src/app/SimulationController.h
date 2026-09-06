@@ -37,8 +37,7 @@ public:
 
     void set_run_with_gl_context(std::function<void(GlContextTask)> run_with_gl_context);
     void initialize(const std::filesystem::path& shader_dir,
-                    CharacterMotion character_motion,
-                    const std::vector<std::uint8_t>& triangle_part_labels,
+                    const std::filesystem::path& default_character_path,
                     QOpenGLFunctions_4_5_Core& gl);
 
     void start_simulation();
@@ -68,8 +67,7 @@ Q_SIGNALS:
 
 private:
     void initialize_gpu(const std::filesystem::path& shader_dir, QOpenGLFunctions_4_5_Core& gl);
-    void load_default_character(CharacterMotion motion,
-                                const std::vector<std::uint8_t>& triangle_part_labels);
+    void load_default_character(const std::filesystem::path& default_character_path);
 
     void tick_frame();
     void update_frame_timer();

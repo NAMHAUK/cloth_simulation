@@ -1,7 +1,8 @@
 #include "app/SimulationController.h"
 
-#include "simulation/collision/MeshBvhBuilder.h"
+#include "asset/AssetIO.h"
 #include "simulation/SimulationParams.h"
+#include "simulation/collision/MeshBvhBuilder.h"
 
 #include <algorithm>
 #include <cassert>
@@ -47,11 +48,10 @@ SimulationController::~SimulationController()
 
 // Initialization
 void SimulationController::initialize(const std::filesystem::path& shader_dir,
-                                      CharacterMotion character_motion,
-                                      const std::vector<std::uint8_t>& triangle_part_labels,
+                                      const std::filesystem::path& default_character_path,
                                       QOpenGLFunctions_4_5_Core& gl)
 {
-    load_default_character(std::move(character_motion), triangle_part_labels);
+    load_default_character(default_character_path);
     initialize_gpu(shader_dir, gl);
     Q_EMIT camera_reset_requested(scene_.character_root_position(0));
     frame_timer_.setSingleShot(true);
@@ -75,9 +75,11 @@ void SimulationController::initialize_gpu(const std::filesystem::path& shader_di
     render_pipeline_.initialize(shader_dir, gl);
 }
 
-void SimulationController::load_default_character(CharacterMotion motion,
-                                                  const std::vector<std::uint8_t>& triangle_part_labels)
+void SimulationController::load_default_character(const std::filesystem::path& default_character_path)
 {
+    std::vector<std::uint8_t> triangle_part_labels;
+    CharacterMotion motion = asset_io::read_default_character(default_character_path, triangle_part_labels);
+
     MeshBvhBuilder body_bvh_builder(motion, triangle_part_labels);
     scene_.set_body_bvhs(body_bvh_builder.build_triangle_bvh(),
                          body_bvh_builder.build_vertex_bvh(),

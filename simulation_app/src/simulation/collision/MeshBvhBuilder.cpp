@@ -20,17 +20,14 @@ constexpr std::size_t triangle_vertex_count = 3u;
 constexpr std::size_t leaf_size = 3u;
 constexpr std::size_t shader_max_bvh_stack_depth = 32u;
 
-constexpr std::uint8_t left_arm_part_label = 2u;
-constexpr std::uint8_t right_arm_part_label = 3u;
-constexpr std::uint8_t left_hand_part_label = 6u;
-constexpr std::uint8_t right_hand_part_label = 7u;
+constexpr std::uint8_t left_arm_part_label = body_part_label_value(BodyPartLabel::LeftArm);
+constexpr std::uint8_t right_arm_part_label = body_part_label_value(BodyPartLabel::RightArm);
 constexpr std::uint8_t invalid_part_label = 0xFFu;
-constexpr std::size_t body_part_label_count = 8u;
 using LabelCounts = std::array<std::uint32_t, body_part_label_count>;
 
 bool is_excluded_part(std::uint8_t part_label)
 {
-    return part_label == left_hand_part_label || part_label == right_hand_part_label;
+    return is_hand_body_part_label(part_label);
 }
 
 void count_edge_label(std::map<MeshEdge, LabelCounts>& edge_part_label_counts,

@@ -10,6 +10,32 @@
 
 inline constexpr std::size_t position_components = 3u;
 
+enum class BodyPartLabel : std::uint8_t
+{
+    Torso = 0u,
+    Head = 1u,
+    LeftArm = 2u,
+    RightArm = 3u,
+    LeftLeg = 4u,
+    RightLeg = 5u,
+    LeftHand = 6u,
+    RightHand = 7u,
+    Count,
+};
+
+constexpr std::uint8_t body_part_label_value(BodyPartLabel label)
+{
+    return static_cast<std::uint8_t>(label);
+}
+
+inline constexpr std::size_t body_part_label_count = body_part_label_value(BodyPartLabel::Count);
+
+constexpr bool is_hand_body_part_label(std::uint8_t label)
+{
+    return label == body_part_label_value(BodyPartLabel::LeftHand) ||
+           label == body_part_label_value(BodyPartLabel::RightHand);
+}
+
 struct VertexTriangleAdjacency final
 {
     std::vector<std::uint32_t> offsets;
@@ -73,13 +99,6 @@ struct GarmentDistanceConstraints final
     std::vector<MeshEdge> colorized_edges;
     std::vector<ConstraintColorState> color_states;
     std::vector<float> rest_lengths;
-
-    bool is_valid() const
-    {
-        return !colorized_edges.empty() &&
-               !color_states.empty() &&
-               colorized_edges.size() == rest_lengths.size();
-    }
 };
 
 enum class GarmentCategory : std::uint32_t

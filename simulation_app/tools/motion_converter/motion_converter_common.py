@@ -3,7 +3,6 @@ import struct
 
 import numpy as np
 
-MOTION_SIGNATURE = b"SMPLMOT2"
 MOTION_HEADER_FORMAT = "<fIII"
 SMPL_POSE_COMPONENT_COUNT = 72
 SMPL_BODY_POSE_OFFSET = 3
@@ -38,14 +37,11 @@ def make_default_pose(arm_angle_deg=DEFAULT_A_POSE_ARM_ANGLE_DEG, shoulder_axis=
 def write_motion_header(out_file, fps, faces, frame_count, vertex_count):
     indices = np.asarray(faces, dtype=np.uint32).reshape(-1)
     triangle_count = indices.size // 3
-    out_file.write(MOTION_SIGNATURE)
     out_file.write(struct.pack(MOTION_HEADER_FORMAT, float(fps), frame_count, vertex_count, triangle_count))
     indices.tofile(out_file)
 
 
-def write_default_motion_labels(out_file, faces, triangle_part_labels, is_default_motion_asset):
-    if not is_default_motion_asset:
-        return
+def write_triangle_part_labels(out_file, faces, triangle_part_labels):
     if triangle_part_labels is None:
         raise ValueError("Default motion asset requires triangle part labels")
 
