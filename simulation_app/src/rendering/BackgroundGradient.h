@@ -28,7 +28,4 @@ private:
     glm::vec3 bottom_color_{0.94f, 0.95f, 0.97f};
     GLuint program_ = 0;
     GLuint vao_ = 0;
-    GLuint vertex_buffer_ = 0;
-    GLint top_color_loc_ = -1;
-    GLint bottom_color_loc_ = -1;
 };
