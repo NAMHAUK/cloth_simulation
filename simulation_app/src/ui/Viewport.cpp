@@ -8,9 +8,7 @@
 
 #include <algorithm>
 #include <cmath>
-#include <exception>
 #include <iostream>
-#include <utility>
 
 #include <QEvent>
 #include <QIcon>
@@ -27,7 +25,6 @@
 #include <QTimer>
 #include <QVBoxLayout>
 #include <QWheelEvent>
-#include <QtLogging>
 
 #include <glm/ext/matrix_clip_space.hpp>
 #include <glm/ext/matrix_transform.hpp>
@@ -239,15 +236,7 @@ void Viewport::initializeGL()
     std::cout << "OpenGL version: " << glGetString(GL_VERSION) << '\n';
     std::cout << "Renderer: " << glGetString(GL_RENDERER) << '\n';
 
-    if (!initialize_callback_) {
-        qFatal("Scene initialize callback is not set before OpenGL initialization.");
-    }
-
-    try {
-        initialize_callback_(gl_functions());
-    } catch (const std::exception& error) {
-        qFatal("Application initialization failed: %s", error.what());
-    }
+    Q_EMIT scene_initialization_requested(gl_functions());
 
     glEnable(GL_DEPTH_TEST);
 }
@@ -358,7 +347,7 @@ void Viewport::paintGL()
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
     const glm::mat4 mvp = make_mvp();
-    scene_render_callback_(mvp, gl_functions());
+    Q_EMIT scene_render_requested(mvp, gl_functions());
 
     update_frame_stats();
     draw_frame_stats();
@@ -500,15 +489,4 @@ GarmentCardsPanel& Viewport::garment_cards_panel()
 QOpenGLFunctions_4_5_Core& Viewport::gl_functions()
 {
     return *this;
-}
-
-// Callback Registration
-void Viewport::set_initialize_callback(InitializeCallback callback)
-{
-    initialize_callback_ = std::move(callback);
-}
-
-void Viewport::set_scene_render_callback(SceneRenderCallback callback)
-{
-    scene_render_callback_ = std::move(callback);
 }
