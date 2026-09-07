@@ -17,7 +17,6 @@ constexpr int initial_window_width = 1440;
 constexpr int initial_window_height = 900;
 constexpr int minimum_window_width = 1000;
 constexpr int minimum_window_height = 700;
-constexpr float placement_character_opacity = 0.3f;
 }
 
 MainWindow::MainWindow(const std::filesystem::path& project_root, QWidget* parent)
@@ -111,9 +110,7 @@ void MainWindow::setup_viewport_render_callbacks()
             return;
         }
 
-        const float character_opacity =
-            placement_controller_->is_active() ? placement_character_opacity : 1.0f;
-        simulation_controller_->draw(mvp, character_opacity, gl);
+        simulation_controller_->draw(mvp, placement_controller_->is_active(), gl);
     });
 }
 

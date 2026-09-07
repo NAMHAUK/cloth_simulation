@@ -15,6 +15,7 @@ const glm::vec3 fill_light_direction_world = glm::normalize(glm::vec3{0.3f, 0.6f
 constexpr float ambient_strength = 0.35f;
 constexpr float diffuse_strength = 0.65f;
 constexpr float fill_diffuse_strength = 0.35f;
+constexpr float placement_character_opacity = 0.3f;
 }
 
 bool SceneRenderer::is_initialized() const
@@ -63,7 +64,7 @@ void SceneRenderer::draw(const SceneState& scene,
                          const SceneGpuState& gpu_state,
                          const std::array<glm::mat4, 2>& placement_matrices,
                          const glm::mat4& mvp,
-                         float character_opacity,
+                         bool is_placement_active,
                          QOpenGLFunctions_4_5_Core& gl)
 {
     assert(is_initialized() && gpu_state.is_initialized());
@@ -101,22 +102,18 @@ void SceneRenderer::draw(const SceneState& scene,
 
     // character
     gl.glProgramUniformMatrix4fv(program_, mvp_loc_, 1, GL_FALSE, glm::value_ptr(mvp));
-    const bool character_transparent = character_opacity < 1.0f;
-    if (character_transparent) {
-        gl.glEnable(GL_BLEND);
-        gl.glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-        gl.glDepthMask(GL_FALSE);
-    }
+    const float character_opacity = is_placement_active ? placement_character_opacity : 1.0f;
+    gl.glEnable(GL_BLEND);
+    gl.glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+    gl.glDepthMask(!is_placement_active);
 
     gl.glProgramUniform1i(program_, position_buffer_mode_loc_, 1);
     gl.glProgramUniform1i(program_, solid_mode_loc_, 0);
     gl.glProgramUniform1f(program_, opacity_loc_, character_opacity);
     gpu_state.character_gpu_state().draw(gl);
 
-    if (character_transparent) {
-        gl.glDepthMask(GL_TRUE);
-        gl.glDisable(GL_BLEND);
-    }
+    gl.glDepthMask(GL_TRUE);
+    gl.glDisable(GL_BLEND);
 }
 
 void SceneRenderer::release(QOpenGLFunctions_4_5_Core& gl)
