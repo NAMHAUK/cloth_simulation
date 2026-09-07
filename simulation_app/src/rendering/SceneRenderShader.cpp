@@ -2,9 +2,6 @@
 
 #include "utils/ShaderUtils.h"
 
-#include <iostream>
-#include <stdexcept>
-
 #include <glm/gtc/type_ptr.hpp>
 
 bool SceneRenderShader::is_initialized() const
@@ -14,42 +11,9 @@ bool SceneRenderShader::is_initialized() const
 
 void SceneRenderShader::load(const std::filesystem::path& shader_dir, QOpenGLFunctions_4_5_Core& gl)
 {
-    const std::filesystem::path rendering_shader_dir = shader_dir / "rendering";
-    const std::filesystem::path vertex_shader_path = rendering_shader_dir / "viewer.vert";
-    const std::filesystem::path fragment_shader_path = rendering_shader_dir / "viewer.frag";
-    const std::string vertex_shader_source = load_shader_source(vertex_shader_path);
-    const std::string fragment_shader_source = load_shader_source(fragment_shader_path);
-
-    const GLuint vertex_shader = compile_shader(GL_VERTEX_SHADER, vertex_shader_source.c_str(), gl);
-    if (vertex_shader == 0) {
-        throw std::runtime_error("Failed to compile scene rendering vertex shader.");
-    }
-
-    const GLuint fragment_shader = compile_shader(GL_FRAGMENT_SHADER, fragment_shader_source.c_str(), gl);
-    if (fragment_shader == 0) {
-        gl.glDeleteShader(vertex_shader);
-        throw std::runtime_error("Failed to compile scene rendering fragment shader.");
-    }
-
-    program_ = gl.glCreateProgram();
-    gl.glAttachShader(program_, vertex_shader);
-    gl.glAttachShader(program_, fragment_shader);
-    gl.glLinkProgram(program_);
-
-    GLint success = 0;
-    gl.glGetProgramiv(program_, GL_LINK_STATUS, &success);
-    if (!success) {
-        char log[1024] = {};
-        gl.glGetProgramInfoLog(program_, sizeof(log), nullptr, log);
-        gl.glDeleteShader(vertex_shader);
-        gl.glDeleteShader(fragment_shader);
-        gl.glDeleteProgram(program_);
-        program_ = 0;
-        throw std::runtime_error(std::string("Scene rendering program link failed: ") + log);
-    }
-
-    gl.glDeleteShader(vertex_shader);
-    gl.glDeleteShader(fragment_shader);
+    const std::filesystem::path vertex_shader_path = shader_dir / "rendering" / "viewer.vert";
+    const std::filesystem::path fragment_shader_path = shader_dir / "rendering" / "viewer.frag";
+    program_ = load_render_program(vertex_shader_path, fragment_shader_path, gl);
 
     mvp_loc_ = gl.glGetUniformLocation(program_, "uMVP");
     solid_mode_loc_ = gl.glGetUniformLocation(program_, "uUseSolidColor");
@@ -187,23 +151,4 @@ void SceneRenderShader::release(QOpenGLFunctions_4_5_Core& gl)
     ambient_strength_loc_ = -1;
     diffuse_strength_loc_ = -1;
     fill_diffuse_strength_loc_ = -1;
-}
-
-GLuint SceneRenderShader::compile_shader(GLenum type, const char* source, QOpenGLFunctions_4_5_Core& gl)
-{
-    const GLuint shader = gl.glCreateShader(type);
-    gl.glShaderSource(shader, 1, &source, nullptr);
-    gl.glCompileShader(shader);
-
-    GLint success = 0;
-    gl.glGetShaderiv(shader, GL_COMPILE_STATUS, &success);
-    if (!success) {
-        char log[1024] = {};
-        gl.glGetShaderInfoLog(shader, sizeof(log), nullptr, log);
-        std::cerr << "Shader compile failed: " << log << '\n';
-        gl.glDeleteShader(shader);
-        return 0;
-    }
-
-    return shader;
 }

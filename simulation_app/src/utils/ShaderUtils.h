@@ -9,6 +9,9 @@
 std::string load_shader_source(const std::filesystem::path& shader_path);
 
 GLuint load_compute_program(const std::filesystem::path& shader_path, QOpenGLFunctions_4_5_Core& gl);
+GLuint load_render_program(const std::filesystem::path& vertex_shader_path,
+                           const std::filesystem::path& fragment_shader_path,
+                           QOpenGLFunctions_4_5_Core& gl);
 
 GLint require_uniform_location(GLuint program, const char* name, QOpenGLFunctions_4_5_Core& gl);
 

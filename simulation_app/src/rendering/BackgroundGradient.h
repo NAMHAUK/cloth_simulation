@@ -19,11 +19,6 @@ public:
     void release(QOpenGLFunctions_4_5_Core& gl);
 
 private:
-    GLuint load_program(const std::filesystem::path& vertex_shader_path,
-                        const std::filesystem::path& fragment_shader_path,
-                        QOpenGLFunctions_4_5_Core& gl) const;
-    GLuint compile_shader(GLenum type, const char* source, QOpenGLFunctions_4_5_Core& gl) const;
-
     glm::vec3 top_color_{0.58f, 0.59f, 0.62f};
     glm::vec3 bottom_color_{0.94f, 0.95f, 0.97f};
     GLuint program_ = 0;

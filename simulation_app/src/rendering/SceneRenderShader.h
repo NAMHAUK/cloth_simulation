@@ -35,8 +35,6 @@ public:
     void release(QOpenGLFunctions_4_5_Core& gl);
 
 private:
-    GLuint compile_shader(GLenum type, const char* source, QOpenGLFunctions_4_5_Core& gl);
-
     GLuint program_ = 0;
     GLint mvp_loc_ = -1;
     GLint solid_mode_loc_ = -1;
