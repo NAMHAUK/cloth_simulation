@@ -56,7 +56,7 @@ void SceneRenderer::initialize(const std::filesystem::path& shader_dir, QOpenGLF
 
     background_gradient_.initialize(shader_dir, gl);
 
-    ground_grid_.upload(gl);
+    ground_grid_.initialize(gl);
 }
 
 void SceneRenderer::draw(const SceneState& scene,
