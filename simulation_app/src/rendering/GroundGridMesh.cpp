@@ -1,12 +1,8 @@
 #include "rendering/GroundGridMesh.h"
 
+#include <cassert>
 #include <cstddef>
 #include <vector>
-
-bool GroundGridMesh::is_initialized() const
-{
-    return vao_ != 0 && vertex_buffer_ != 0 && vertex_count_ > 0;
-}
 
 const glm::vec3& GroundGridMesh::color() const
 {
@@ -69,9 +65,7 @@ void GroundGridMesh::upload(QOpenGLFunctions_4_5_Core& gl)
 
 void GroundGridMesh::draw(QOpenGLFunctions_4_5_Core& gl) const
 {
-    if (!is_initialized()) {
-        return;
-    }
+    assert(vao_ != 0 && vertex_buffer_ != 0 && vertex_count_ > 0);
 
     gl.glBindVertexArray(vao_);
     gl.glDrawArrays(GL_LINES, 0, vertex_count_);

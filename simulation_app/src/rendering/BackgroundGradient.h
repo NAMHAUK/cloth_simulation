@@ -13,7 +13,6 @@ public:
     BackgroundGradient(const BackgroundGradient&) = delete;
     BackgroundGradient& operator=(const BackgroundGradient&) = delete;
 
-    bool is_initialized() const;
     void initialize(const std::filesystem::path& shader_dir, QOpenGLFunctions_4_5_Core& gl);
     void draw(QOpenGLFunctions_4_5_Core& gl) const;
     void release(QOpenGLFunctions_4_5_Core& gl);

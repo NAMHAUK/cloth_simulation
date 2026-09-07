@@ -2,10 +2,7 @@
 
 #include "utils/ShaderUtils.h"
 
-bool BackgroundGradient::is_initialized() const
-{
-    return program_ != 0 && vao_ != 0;
-}
+#include <cassert>
 
 void BackgroundGradient::initialize(const std::filesystem::path& shader_dir, QOpenGLFunctions_4_5_Core& gl)
 {
@@ -23,9 +20,7 @@ void BackgroundGradient::initialize(const std::filesystem::path& shader_dir, QOp
 
 void BackgroundGradient::draw(QOpenGLFunctions_4_5_Core& gl) const
 {
-    if (!is_initialized()) {
-        return;
-    }
+    assert(program_ != 0 && vao_ != 0);
 
     gl.glUseProgram(program_);
     gl.glBindVertexArray(vao_);

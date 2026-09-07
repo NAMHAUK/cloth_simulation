@@ -3,6 +3,8 @@
 #include "gpu/scene/SceneGpuState.h"
 #include "simulation/SceneState.h"
 
+#include <cassert>
+
 #include <glm/geometric.hpp>
 
 namespace {
@@ -33,18 +35,14 @@ void RenderPipeline::draw(const SceneState& scene,
                           float character_opacity,
                           QOpenGLFunctions_4_5_Core& gl)
 {
-    if (!is_initialized() || !gpu_state.is_initialized()) {
-        return;
-    }
+    assert(is_initialized() && gpu_state.is_initialized());
 
-    if (background_gradient_.is_initialized()) {
-        gl.glDepthMask(GL_FALSE);
-        gl.glDisable(GL_DEPTH_TEST);
-        background_gradient_.draw(gl);
+    gl.glDepthMask(GL_FALSE);
+    gl.glDisable(GL_DEPTH_TEST);
+    background_gradient_.draw(gl);
 
-        gl.glEnable(GL_DEPTH_TEST);
-        gl.glDepthMask(GL_TRUE);
-    }
+    gl.glEnable(GL_DEPTH_TEST);
+    gl.glDepthMask(GL_TRUE);
 
     // shader setting
     viewer_shader_.bind(gl);
@@ -59,13 +57,11 @@ void RenderPipeline::draw(const SceneState& scene,
     viewer_shader_.set_opacity(1.0f, gl);
 
     // ground grid
-    if (ground_grid_.is_initialized()) {
-        viewer_shader_.set_normal_lighting_enabled(false, gl);
-        viewer_shader_.set_solid_color(ground_grid_.color(), gl);
-        gl.glDepthMask(GL_FALSE);
-        ground_grid_.draw(gl);
-        gl.glDepthMask(GL_TRUE);
-    }
+    viewer_shader_.set_normal_lighting_enabled(false, gl);
+    viewer_shader_.set_solid_color(ground_grid_.color(), gl);
+    gl.glDepthMask(GL_FALSE);
+    ground_grid_.draw(gl);
+    gl.glDepthMask(GL_TRUE);
 
     // garments
     viewer_shader_.set_attribute_position_mode(gl);
