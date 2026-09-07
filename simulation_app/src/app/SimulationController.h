@@ -2,7 +2,7 @@
 
 #include "asset/AssetDataTypes.h"
 #include "gpu/scene/SceneGpuState.h"
-#include "rendering/RenderPipeline.h"
+#include "rendering/SceneRenderer.h"
 #include "simulation/SceneState.h"
 #include "simulation/SimulationPipeline.h"
 
@@ -89,7 +89,7 @@ private:
     CharacterMotion default_character_motion_;
     SceneGpuState gpu_state_;
     SimulationPipeline simulation_pipeline_;
-    RenderPipeline render_pipeline_;
+    SceneRenderer scene_renderer_;
 
     std::uint32_t motion_step_index_ = 0;
     std::array<std::optional<GarmentPlacementState>, 2> garment_placement_states_{};
