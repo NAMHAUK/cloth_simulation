@@ -10,7 +10,7 @@
 #include <glm/gtc/type_ptr.hpp>
 
 namespace {
-const glm::vec3 light_direction_world = glm::normalize(glm::vec3{-0.4f, 0.8f, 0.3f});
+const glm::vec3 light_direction_world = glm::normalize(glm::vec3{-0.2f, 0.6f, 0.6f});
 const glm::vec3 fill_light_direction_world = glm::normalize(glm::vec3{0.3f, 0.6f, -0.8f});
 constexpr float ambient_strength = 0.35f;
 constexpr float diffuse_strength = 0.65f;
