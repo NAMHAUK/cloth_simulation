@@ -80,8 +80,7 @@ void BvhBoundsUpdater::update_body_bvh(QOpenGLFunctions_4_5_Core& gl) const
         const auto vertex_level = level_range(body_vertex_level_offsets_, level_index);
         const auto edge_level = level_range(body_edge_level_offsets_, level_index);
 
-        const std::uint32_t dispatch_node_count =
-            std::max({triangle_level.node_count, vertex_level.node_count, edge_level.node_count});
+        const std::uint32_t dispatch_node_count = triangle_level.node_count + vertex_level.node_count + edge_level.node_count;
 
         gl.glProgramUniform1ui(body_program_,
                                body_triangle_first_node_index_loc_,
