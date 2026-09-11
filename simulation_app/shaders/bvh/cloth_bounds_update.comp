@@ -28,8 +28,8 @@ layout(std430, binding = CLOTH_TRIANGLE_BOUNDS) buffer ClothTriangleBounds {
     Aabb triangle_bounds[];
 };
 
-uniform uint uLevelFirstNodeIndex;
-uniform uint uLevelNodeCount;
+uniform uvec2 uLevelFirstNodeIndex;
+uniform uvec2 uLevelNodeCount;
 uniform float uBoundsMargin;
 
 #define POSITION_IO_CLOTH_CURRENT
@@ -83,11 +83,14 @@ void update_internal_bounds(uint node_index, BvhNode node)
 void main()
 {
     uint level_node_offset = gl_GlobalInvocationID.x;
-    if (level_node_offset >= uLevelNodeCount) {
+    if (level_node_offset >= uLevelNodeCount.x + uLevelNodeCount.y) {
         return;
     }
 
-    uint node_index = uLevelFirstNodeIndex + level_node_offset;
+    uint node_index = uLevelFirstNodeIndex.x + level_node_offset;
+    if (level_node_offset >= uLevelNodeCount.x) {
+        node_index = uLevelFirstNodeIndex.y + (level_node_offset - uLevelNodeCount.x);
+    }
     BvhNode node = bvh_nodes[node_index];
 
     if (is_leaf_node(node)) {
