@@ -2,7 +2,7 @@
 
 #include "asset/AssetDataTypes.h"
 #include "gpu/scene/SceneGpuState.h"
-#include "rendering/RenderPipeline.h"
+#include "rendering/SceneRenderer.h"
 #include "simulation/SceneState.h"
 #include "simulation/SimulationPipeline.h"
 
@@ -42,7 +42,7 @@ public:
 
     void start_simulation();
     void stop_simulation();
-    void draw(const glm::mat4& mvp, float character_opacity, QOpenGLFunctions_4_5_Core& gl);
+    void draw(const glm::mat4& mvp, bool is_placement_active, QOpenGLFunctions_4_5_Core& gl);
 
     bool set_character_motion(CharacterMotion motion);
     void reset_scene();
@@ -89,7 +89,7 @@ private:
     CharacterMotion default_character_motion_;
     SceneGpuState gpu_state_;
     SimulationPipeline simulation_pipeline_;
-    RenderPipeline render_pipeline_;
+    SceneRenderer scene_renderer_;
 
     std::uint32_t motion_step_index_ = 0;
     std::array<std::optional<GarmentPlacementState>, 2> garment_placement_states_{};

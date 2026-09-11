@@ -6,18 +6,19 @@
 #include "ui/Viewport.h"
 #include "utils/QtUtils.h"
 
+#include <exception>
 #include <memory>
 #include <utility>
 
 #include <QMessageBox>
 #include <QWidget>
+#include <QtLogging>
 
 namespace {
 constexpr int initial_window_width = 1440;
 constexpr int initial_window_height = 900;
 constexpr int minimum_window_width = 1000;
 constexpr int minimum_window_height = 700;
-constexpr float placement_character_opacity = 0.3f;
 }
 
 MainWindow::MainWindow(const std::filesystem::path& project_root, QWidget* parent)
@@ -32,10 +33,10 @@ MainWindow::MainWindow(const std::filesystem::path& project_root, QWidget* paren
 
     setup_simulation_controller();
     setup_placement_controller();
+    connect_viewport_rendering();
 
     setCentralWidget(viewport_);
 
-    setup_viewport_render_callbacks();
     setup_asset_browser_callbacks();
     connect_simulation_controls();
 
@@ -49,8 +50,6 @@ MainWindow::~MainWindow()
     asset_browser_panel.set_motion_loaded_callback({});
     asset_browser_panel.set_garment_loaded_callback({});
     placement_controller_.reset();
-    viewport_->set_initialize_callback({});
-    viewport_->set_scene_render_callback({});
 }
 
 // Initialization
@@ -97,24 +96,31 @@ void MainWindow::setup_placement_controller()
 
 void MainWindow::initialize_scene(QOpenGLFunctions_4_5_Core& gl)
 {
-    simulation_controller_->initialize(project_paths_.shader_dir, project_paths_.default_character_path, gl);
+    try {
+        simulation_controller_->initialize(project_paths_.shader_dir,
+                                           project_paths_.default_character_path,
+                                           gl);
+    } catch (const std::exception& error) {
+        qFatal("Application initialization failed: %s", error.what());
+    }
 }
 
-void MainWindow::setup_viewport_render_callbacks()
+void MainWindow::connect_viewport_rendering()
 {
-    // Scene initialization
-    viewport_->set_initialize_callback([this](QOpenGLFunctions_4_5_Core& gl) { initialize_scene(gl); });
+    connect(viewport_,
+            &Viewport::scene_initialization_requested,
+            this,
+            &MainWindow::initialize_scene,
+            Qt::DirectConnection);
 
-    // Scene rendering
-    viewport_->set_scene_render_callback([this](const glm::mat4& mvp, QOpenGLFunctions_4_5_Core& gl) {
-        if (!simulation_controller_->is_gpu_initialized()) {
-            return;
-        }
-
-        const float character_opacity =
-            placement_controller_->is_active() ? placement_character_opacity : 1.0f;
-        simulation_controller_->draw(mvp, character_opacity, gl);
-    });
+    connect(
+        viewport_,
+        &Viewport::scene_render_requested,
+        this,
+        [this](const glm::mat4& mvp, QOpenGLFunctions_4_5_Core& gl) {
+            simulation_controller_->draw(mvp, placement_controller_->is_active(), gl);
+        },
+        Qt::DirectConnection);
 }
 
 void MainWindow::setup_asset_browser_callbacks()

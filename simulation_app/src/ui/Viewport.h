@@ -1,8 +1,6 @@
 #pragma once
 
 #include <cstdint>
-#include <functional>
-
 #include <glm/mat4x4.hpp>
 #include <glm/vec3.hpp>
 
@@ -41,9 +39,6 @@ class Viewport final : public QOpenGLWidget, protected QOpenGLFunctions_4_5_Core
     Q_OBJECT
 
 public:
-    using InitializeCallback = std::function<void(QOpenGLFunctions_4_5_Core&)>;
-    using SceneRenderCallback = std::function<void(const glm::mat4&, QOpenGLFunctions_4_5_Core&)>;
-
     explicit Viewport(const ProjectPaths& project_paths, QWidget* parent = nullptr);
     ~Viewport() override;
 
@@ -60,10 +55,9 @@ public:
     GarmentCardsPanel& garment_cards_panel();
     QOpenGLFunctions_4_5_Core& gl_functions();
 
-    void set_initialize_callback(InitializeCallback callback);
-    void set_scene_render_callback(SceneRenderCallback callback);
-
 Q_SIGNALS:
+    void scene_initialization_requested(QOpenGLFunctions_4_5_Core& gl);
+    void scene_render_requested(const glm::mat4& mvp, QOpenGLFunctions_4_5_Core& gl);
     void play_pause_requested();
     void default_pose_requested();
     void reset_requested();
@@ -106,8 +100,6 @@ private:
     QPushButton* reset_button_ = nullptr;
     QIcon play_icon_{QStringLiteral(":/icons/play.svg")};
     QIcon pause_icon_{QStringLiteral(":/icons/pause.svg")};
-    InitializeCallback initialize_callback_;
-    SceneRenderCallback scene_render_callback_;
     OrbitCamera camera_;
     QElapsedTimer render_fps_timer_;
 

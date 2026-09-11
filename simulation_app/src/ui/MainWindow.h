@@ -24,7 +24,7 @@ private:
     void setup_simulation_controller();
     void setup_placement_controller();
     void initialize_scene(QOpenGLFunctions_4_5_Core& gl);
-    void setup_viewport_render_callbacks();
+    void connect_viewport_rendering();
     void setup_asset_browser_callbacks();
     void connect_simulation_controls();
 

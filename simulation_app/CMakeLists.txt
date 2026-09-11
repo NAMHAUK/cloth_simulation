@@ -61,12 +61,10 @@ add_executable(simulation_app
     src/rendering/GroundGridMesh.h
     src/gpu/scene/SceneGpuState.cpp
     src/gpu/scene/SceneGpuState.h
-    src/rendering/RenderPipeline.cpp
-    src/rendering/RenderPipeline.h
+    src/rendering/SceneRenderer.cpp
+    src/rendering/SceneRenderer.h
     src/ui/Viewport.cpp
     src/ui/Viewport.h
-    src/rendering/SceneRenderShader.cpp
-    src/rendering/SceneRenderShader.h
     src/simulation/SimulationPipeline.cpp
     src/simulation/SimulationPipeline.h
     src/simulation/SceneState.cpp

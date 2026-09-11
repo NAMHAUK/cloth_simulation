@@ -1,50 +1,42 @@
 #include "rendering/GroundGridMesh.h"
 
+#include <cassert>
 #include <cstddef>
 #include <vector>
 
-bool GroundGridMesh::is_initialized() const
+namespace {
+constexpr float grid_size = 40.0f;
+constexpr float half_size = grid_size * 0.5f;
+constexpr float spacing = 0.5f;
+constexpr int line_count_per_axis = static_cast<int>(grid_size / spacing) + 1;
+constexpr GLsizei grid_vertex_count = line_count_per_axis * 4;
+
+std::vector<glm::vec3> build_ground_grid_vertices()
 {
-    return vao_ != 0 && vertex_buffer_ != 0 && vertex_count_ > 0;
-}
-
-const glm::vec3& GroundGridMesh::color() const
-{
-    return color_;
-}
-
-void GroundGridMesh::upload(QOpenGLFunctions_4_5_Core& gl)
-{
-    constexpr int half_line_count = 40;
-    constexpr float spacing = 0.5f;
-    constexpr float half_size = static_cast<float>(half_line_count) * spacing;
-
-    std::vector<float> vertices;
-    vertices.reserve(static_cast<std::size_t>((half_line_count * 2 + 1) * 4 * 3));
-    for (int line = -half_line_count; line <= half_line_count; ++line) {
-        const float offset = static_cast<float>(line) * spacing;
-
-        vertices.push_back(offset);
-        vertices.push_back(0.0f);
-        vertices.push_back(-half_size);
-        vertices.push_back(offset);
-        vertices.push_back(0.0f);
-        vertices.push_back(half_size);
-
-        vertices.push_back(-half_size);
-        vertices.push_back(0.0f);
-        vertices.push_back(offset);
-        vertices.push_back(half_size);
-        vertices.push_back(0.0f);
-        vertices.push_back(offset);
+    std::vector<glm::vec3> vertices;
+    vertices.reserve(static_cast<std::size_t>(grid_vertex_count));
+    for (int line_index = 0; line_index < line_count_per_axis; ++line_index) {
+        const float offset = -half_size + static_cast<float>(line_index) * spacing;
+        vertices.insert(vertices.end(),
+                        {{offset, 0.0f, -half_size},
+                         {offset, 0.0f, half_size},
+                         {-half_size, 0.0f, offset},
+                         {half_size, 0.0f, offset}});
     }
+
+    return vertices;
+}
+}
+
+void GroundGridMesh::initialize(QOpenGLFunctions_4_5_Core& gl)
+{
+    const std::vector<glm::vec3> vertices = build_ground_grid_vertices();
 
     gl.glCreateVertexArrays(1, &vao_);
     gl.glCreateBuffers(1, &vertex_buffer_);
-    vertex_count_ = static_cast<GLsizei>(vertices.size() / 3);
 
     gl.glNamedBufferData(vertex_buffer_,
-                         static_cast<GLsizeiptr>(vertices.size() * sizeof(float)),
+                         static_cast<GLsizeiptr>(vertices.size() * sizeof(glm::vec3)),
                          vertices.data(),
                          GL_STATIC_DRAW);
 
@@ -56,7 +48,7 @@ void GroundGridMesh::upload(QOpenGLFunctions_4_5_Core& gl)
                                  position_binding_index,
                                  vertex_buffer_,
                                  0,
-                                 3 * static_cast<GLsizei>(sizeof(float)));
+                                 static_cast<GLsizei>(sizeof(glm::vec3)));
     gl.glEnableVertexArrayAttrib(vao_, position_attribute_loc);
     gl.glVertexArrayAttribFormat(vao_,
                                  position_attribute_loc,
@@ -69,12 +61,15 @@ void GroundGridMesh::upload(QOpenGLFunctions_4_5_Core& gl)
 
 void GroundGridMesh::draw(QOpenGLFunctions_4_5_Core& gl) const
 {
-    if (!is_initialized()) {
-        return;
-    }
+    assert(vao_ != 0 && vertex_buffer_ != 0);
 
     gl.glBindVertexArray(vao_);
-    gl.glDrawArrays(GL_LINES, 0, vertex_count_);
+    gl.glDrawArrays(GL_LINES, 0, grid_vertex_count);
+}
+
+const glm::vec3& GroundGridMesh::color() const
+{
+    return color_;
 }
 
 void GroundGridMesh::release(QOpenGLFunctions_4_5_Core& gl)
@@ -84,5 +79,4 @@ void GroundGridMesh::release(QOpenGLFunctions_4_5_Core& gl)
 
     vao_ = 0;
     vertex_buffer_ = 0;
-    vertex_count_ = 0;
 }

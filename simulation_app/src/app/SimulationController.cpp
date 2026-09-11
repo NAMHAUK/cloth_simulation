@@ -72,7 +72,7 @@ void SimulationController::initialize_gpu(const std::filesystem::path& shader_di
                           scene_,
                           gl);
     simulation_pipeline_.initialize(shader_dir, gl);
-    render_pipeline_.initialize(shader_dir, gl);
+    scene_renderer_.initialize(shader_dir, gl);
 }
 
 void SimulationController::load_default_character(const std::filesystem::path& default_character_path)
@@ -106,9 +106,9 @@ void SimulationController::stop_simulation()
     simulation_running_ = false;
 }
 
-void SimulationController::draw(const glm::mat4& mvp, float character_opacity, QOpenGLFunctions_4_5_Core& gl)
+void SimulationController::draw(const glm::mat4& mvp, bool is_placement_active, QOpenGLFunctions_4_5_Core& gl)
 {
-    render_pipeline_.draw(scene_, gpu_state_, make_placement_matrices(), mvp, character_opacity, gl);
+    scene_renderer_.draw(scene_, gpu_state_, make_placement_matrices(), mvp, is_placement_active, gl);
 }
 
 void SimulationController::tick_frame()
@@ -331,7 +331,7 @@ bool SimulationController::is_gpu_initialized() const
 {
     return gpu_state_.is_initialized() &&
            simulation_pipeline_.is_initialized() &&
-           render_pipeline_.is_initialized();
+           scene_renderer_.is_initialized();
 }
 
 bool SimulationController::can_start_garment_placement() const
@@ -366,7 +366,7 @@ void SimulationController::release_gpu()
 
 void SimulationController::release_gpu(QOpenGLFunctions_4_5_Core& gl)
 {
-    render_pipeline_.release(gl);
+    scene_renderer_.release(gl);
     simulation_pipeline_.release(gl);
     gpu_state_.release(gl);
 }

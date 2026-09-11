@@ -12,21 +12,23 @@
 
 namespace {
 
-GLuint compile_compute_shader(const char* source,
-                              const std::filesystem::path& shader_path,
-                              QOpenGLFunctions_4_5_Core& gl)
+GLuint compile_shader_file(GLenum type,
+                           const std::filesystem::path& shader_path,
+                           QOpenGLFunctions_4_5_Core& gl)
 {
-    const GLuint shader = gl.glCreateShader(GL_COMPUTE_SHADER);
-    gl.glShaderSource(shader, 1, &source, nullptr);
+    const std::string source = load_shader_source(shader_path);
+    const char* source_data = source.c_str();
+    const GLuint shader = gl.glCreateShader(type);
+    gl.glShaderSource(shader, 1, &source_data, nullptr);
     gl.glCompileShader(shader);
 
-    GLint success = 0;
-    gl.glGetShaderiv(shader, GL_COMPILE_STATUS, &success);
-    if (!success) {
+    GLint compiled = 0;
+    gl.glGetShaderiv(shader, GL_COMPILE_STATUS, &compiled);
+    if (!compiled) {
         char log[1024] = {};
         gl.glGetShaderInfoLog(shader, sizeof(log), nullptr, log);
         gl.glDeleteShader(shader);
-        throw std::runtime_error("Failed to compile compute shader: " + shader_path.string() + "\n" + log);
+        throw std::runtime_error("Failed to compile shader: " + shader_path.string() + "\n" + log);
     }
 
     return shader;
@@ -94,8 +96,7 @@ std::string load_shader_source(const std::filesystem::path& shader_path)
 
 GLuint load_compute_program(const std::filesystem::path& shader_path, QOpenGLFunctions_4_5_Core& gl)
 {
-    const auto shader_source = load_shader_source(shader_path);
-    const GLuint shader = compile_compute_shader(shader_source.c_str(), shader_path, gl);
+    const GLuint shader = compile_shader_file(GL_COMPUTE_SHADER, shader_path, gl);
     const GLuint program = gl.glCreateProgram();
     gl.glAttachShader(program, shader);
     gl.glLinkProgram(program);
@@ -108,6 +109,35 @@ GLuint load_compute_program(const std::filesystem::path& shader_path, QOpenGLFun
         gl.glGetProgramInfoLog(program, sizeof(log), nullptr, log);
         gl.glDeleteProgram(program);
         throw std::runtime_error("Failed to link compute program: " + shader_path.string() + "\n" + log);
+    }
+
+    return program;
+}
+
+GLuint load_render_program(const std::filesystem::path& vertex_shader_path,
+                           const std::filesystem::path& fragment_shader_path,
+                           QOpenGLFunctions_4_5_Core& gl)
+{
+    const GLuint vertex_shader = compile_shader_file(GL_VERTEX_SHADER, vertex_shader_path, gl);
+    const GLuint fragment_shader = compile_shader_file(GL_FRAGMENT_SHADER, fragment_shader_path, gl);
+    const GLuint program = gl.glCreateProgram();
+    gl.glAttachShader(program, vertex_shader);
+    gl.glAttachShader(program, fragment_shader);
+    gl.glLinkProgram(program);
+
+    GLint linked = 0;
+    gl.glGetProgramiv(program, GL_LINK_STATUS, &linked);
+    gl.glDeleteShader(vertex_shader);
+    gl.glDeleteShader(fragment_shader);
+    if (!linked) {
+        char log[1024] = {};
+        gl.glGetProgramInfoLog(program, sizeof(log), nullptr, log);
+        gl.glDeleteProgram(program);
+        std::string error_message = "Failed to link render program:\n";
+        error_message += vertex_shader_path.string() + '\n';
+        error_message += fragment_shader_path.string() + '\n';
+        error_message += log;
+        throw std::runtime_error(error_message);
     }
 
     return program;
