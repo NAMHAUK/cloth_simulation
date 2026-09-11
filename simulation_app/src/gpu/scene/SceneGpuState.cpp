@@ -115,10 +115,17 @@ void SceneGpuState::set_character_motion(const SceneState& scene, QOpenGLFunctio
 
 void SceneGpuState::update_character_pose(const SceneState& scene,
                                           float frame_alpha,
-                                          QOpenGLFunctions_4_5_Core& gl)
+                                          QOpenGLFunctions_4_5_Core& gl,
+                                          const GLuint* body_bounds_queries)
 {
     character_gpu_state_.update_pose(scene.motion_frame_index(), frame_alpha, gl);
+    if (body_bounds_queries) {
+        gl.glQueryCounter(body_bounds_queries[0], GL_TIMESTAMP);
+    }
     bvh_bounds_updater_.update_body_bvh(gl);
+    if (body_bounds_queries) {
+        gl.glQueryCounter(body_bounds_queries[1], GL_TIMESTAMP);
+    }
     update_character_vertex_normals(gl);
 }
 

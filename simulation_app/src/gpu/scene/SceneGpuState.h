@@ -24,7 +24,10 @@ public:
                     const SceneState& scene,
                     QOpenGLFunctions_4_5_Core& gl);
     void set_character_motion(const SceneState& scene, QOpenGLFunctions_4_5_Core& gl);
-    void update_character_pose(const SceneState& scene, float frame_alpha, QOpenGLFunctions_4_5_Core& gl);
+    void update_character_pose(const SceneState& scene,
+                               float frame_alpha,
+                               QOpenGLFunctions_4_5_Core& gl,
+                               const GLuint* body_bounds_queries = nullptr);
     void rebuild_garment_resources(const SceneState& scene,
                                    QOpenGLFunctions_4_5_Core& gl,
                                    GarmentLayer changed_layer);

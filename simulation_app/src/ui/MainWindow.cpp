@@ -135,13 +135,14 @@ void MainWindow::setup_asset_browser_callbacks()
             update_simulation_button_state();
         }
     });
-    asset_browser_panel.set_motion_loaded_callback([this](CharacterMotion motion) {
-        if (!simulation_controller_->set_character_motion(std::move(motion))) {
-            QMessageBox::warning(this, "Load Failed", "Motion topology does not match the character.");
-            return;
-        }
-        simulation_controller_->start_simulation();
-    });
+    asset_browser_panel.set_motion_loaded_callback(
+        [this](const std::filesystem::path& asset_path, CharacterMotion motion) {
+            if (!simulation_controller_->set_character_motion(std::move(motion), asset_path)) {
+                QMessageBox::warning(this, "Load Failed", "Motion topology does not match the character.");
+                return;
+            }
+            simulation_controller_->start_simulation();
+        });
     asset_browser_panel.set_garment_loaded_callback(
         [this](const std::filesystem::path& asset_path, GarmentMesh mesh) {
             simulation_controller_->return_to_default_pose();

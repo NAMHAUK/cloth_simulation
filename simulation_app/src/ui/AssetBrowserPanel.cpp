@@ -440,8 +440,8 @@ void AssetBrowserPanel::load_motion(const std::filesystem::path& asset_path)
     Q_EMIT motion_loading_changed(true);
     motion_load_ = QtConcurrent::run(asset_io::read_character_motion, asset_path)
                        .then(this,
-                             [this](CharacterMotion motion) {
-                                 motion_loaded_callback_(std::move(motion));
+                             [this, asset_path](CharacterMotion motion) {
+                                 motion_loaded_callback_(asset_path, std::move(motion));
                                  Q_EMIT motion_loading_changed(false);
                              })
                        .onFailed(this, [this, asset_path] {
