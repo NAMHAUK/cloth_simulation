@@ -2,6 +2,7 @@
 
 #include "asset/AssetDataTypes.h"
 
+#include <cstdint>
 #include <filesystem>
 
 #include <QOpenGLFunctions_4_5_Core>
@@ -26,4 +27,5 @@ private:
     GLint vertex_count_loc_ = -1;
     float search_radius_ = 0.0f;
     float pushout_margin_ = 0.0f;
+    std::uint32_t iteration_count_ = 0;
 };

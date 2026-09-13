@@ -28,6 +28,7 @@ uniform float uSearchRadiusSquared;
 
 uniform uint uVertexOffset;
 uniform uint uVertexCount;
+uniform uint uIterationCount;
 uniform float uPushoutMargin;
 
 #define POSITION_IO_CLOTH_CURRENT
@@ -49,13 +50,17 @@ void main()
 
     vec3 cloth_position = read_cloth_current_position(cloth_vertex_index);
 
-    NearestBodySurface nearest_surface;
-    if (!find_nearest_body_surface(cloth_position, uSearchRadiusSquared, nearest_surface)) {
-        return;
+    for (uint iteration = 0u; iteration < uIterationCount; ++iteration) {
+        NearestBodySurface nearest_surface;
+        if (!find_nearest_body_surface(cloth_position, uSearchRadiusSquared, nearest_surface)) {
+            continue;
+        }
+
+        float signed_distance = dot(cloth_position - nearest_surface.point, nearest_surface.normal);
+        if (signed_distance < uPushoutMargin) {
+            cloth_position = nearest_surface.point + nearest_surface.normal * uPushoutMargin;
+        }
     }
 
-    float signed_distance = dot(cloth_position - nearest_surface.point, nearest_surface.normal);
-    if (signed_distance < uPushoutMargin) {
-        store_cloth_position(cloth_vertex_index, nearest_surface.point + nearest_surface.normal * uPushoutMargin);
-    }
+    store_cloth_position(cloth_vertex_index, cloth_position);
 }

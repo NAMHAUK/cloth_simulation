@@ -76,9 +76,7 @@ void SimulationPipeline::prefit_garments(SceneGpuState& gpu_state,
 
     // Garment pre-fit
     for (const GarmentObject* garment : garments) {
-        for (std::uint32_t iteration = 0; iteration < params_.prefit.iteration_count; ++iteration) {
-            garment_prefit_solver_.solve(cloth_state, garment->layer, gl);
-        }
+        garment_prefit_solver_.solve(cloth_state, garment->layer, gl);
     }
     gl.glQueryCounter(queries[1], GL_TIMESTAMP);
     gpu_state.cloth_gpu_state().copy_current_positions_to_previous(gl);

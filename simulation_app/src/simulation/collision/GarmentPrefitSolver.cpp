@@ -12,7 +12,8 @@ constexpr std::uint32_t local_size = 128;
 
 GarmentPrefitSolver::GarmentPrefitSolver(const PrefitParams& params)
     : search_radius_(params.surface_search_radius),
-      pushout_margin_(params.pushout_margin)
+      pushout_margin_(params.pushout_margin),
+      iteration_count_(params.iteration_count)
 {}
 
 void GarmentPrefitSolver::initialize(const std::filesystem::path& shader_dir, QOpenGLFunctions_4_5_Core& gl)
@@ -23,9 +24,11 @@ void GarmentPrefitSolver::initialize(const std::filesystem::path& shader_dir, QO
 
     const GLint search_radius_squared_loc = require_uniform_location(program_, "uSearchRadiusSquared", gl);
     const GLint pushout_margin_loc = require_uniform_location(program_, "uPushoutMargin", gl);
+    const GLint iteration_count_loc = require_uniform_location(program_, "uIterationCount", gl);
 
     gl.glProgramUniform1f(program_, search_radius_squared_loc, search_radius_ * search_radius_);
     gl.glProgramUniform1f(program_, pushout_margin_loc, pushout_margin_);
+    gl.glProgramUniform1ui(program_, iteration_count_loc, iteration_count_);
 }
 
 void GarmentPrefitSolver::solve(const ClothGpuState& cloth_state,
