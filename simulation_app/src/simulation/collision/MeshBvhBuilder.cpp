@@ -17,7 +17,7 @@ namespace {
 constexpr std::size_t edge_vertex_count = 2u;
 constexpr std::size_t triangle_vertex_count = 3u;
 
-constexpr std::size_t leaf_size = 3u;
+constexpr std::size_t leaf_size = 4u;
 constexpr std::size_t shader_max_bvh_stack_depth = 32u;
 
 constexpr std::uint8_t left_arm_part_label = body_part_label_value(BodyPartLabel::LeftArm);
