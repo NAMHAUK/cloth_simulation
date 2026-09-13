@@ -76,16 +76,17 @@ void ClothBodyCollisionSolver::solve(const SceneGpuState& gpu_state, QOpenGLFunc
     clear_correction_sums(gpu_state, gl);
     accumulate_cloth_face_body_vertex(gpu_state, gl);
     apply_combined_corrections(gpu_state, gl);
+    gl.glMemoryBarrier(GL_SHADER_STORAGE_BARRIER_BIT | GL_BUFFER_UPDATE_BARRIER_BIT);
 }
 
 void ClothBodyCollisionSolver::clear_correction_sums(const SceneGpuState& gpu_state,
                                                      QOpenGLFunctions_4_5_Core& gl) const
 {
     const CollisionBuffers& collision = gpu_state.collision_buffers();
+    gl.glMemoryBarrier(GL_SHADER_STORAGE_BARRIER_BIT | GL_BUFFER_UPDATE_BARRIER_BIT);
     clear_collision_correction_sum(collision.normal_correction_sum_buffer, gl);
     clear_collision_correction_sum(collision.friction_correction_sum_buffer, gl);
     clear_collision_correction_sum(collision.contact_motion_delta_sum_buffer, gl);
-    gl.glMemoryBarrier(GL_SHADER_STORAGE_BARRIER_BIT | GL_BUFFER_UPDATE_BARRIER_BIT);
 }
 
 void ClothBodyCollisionSolver::accumulate_cloth_vertex_body_face(const SceneGpuState& gpu_state,
@@ -138,7 +139,6 @@ void ClothBodyCollisionSolver::apply_combined_corrections(const SceneGpuState& g
     gl.glUseProgram(apply_program_);
     gl.glProgramUniform1ui(apply_program_, cloth_vertex_count_loc_, vertex_count);
     gl.glDispatchCompute(compute_group_count(vertex_count, local_size), 1, 1);
-    gl.glMemoryBarrier(GL_SHADER_STORAGE_BARRIER_BIT);
 }
 
 void ClothBodyCollisionSolver::release(QOpenGLFunctions_4_5_Core& gl)

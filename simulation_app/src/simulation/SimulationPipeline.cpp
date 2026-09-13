@@ -181,6 +181,7 @@ void SimulationPipeline::integrate_cloth(const SceneState& scene,
         const auto& kinematics = scene.reference_frame_kinematics(garment.mesh.garment_category);
         cloth_integrator_.integrate(cloth_state, garment.layer, kinematics, gl);
     }
+    gl.glMemoryBarrier(GL_SHADER_STORAGE_BARRIER_BIT);
 }
 
 // Motion timing

@@ -191,6 +191,7 @@ void ClothGpuState::create_dynamic_buffers(const std::vector<GarmentObject>& gar
         if (changed_layer == layer) {
             upload_vertex_positions(rebuild_state.buffers, garment.mesh.vertices, garment_state, gl);
         } else {
+            gl.glMemoryBarrier(GL_BUFFER_UPDATE_BARRIER_BIT);
             copy_dynamic_state_buffers(layer, rebuild_state, gl);
             copy_attachment_target_state(layer, rebuild_state, gl);
         }
@@ -236,7 +237,6 @@ void ClothGpuState::copy_attachment_target_state(GarmentLayer layer,
         return;
     }
 
-    gl.glMemoryBarrier(GL_BUFFER_UPDATE_BARRIER_BIT);
     gl.glCopyNamedBufferSubData(state_.buffers.attachment_indices,
                                 rebuild_state.buffers.attachment_indices,
                                 byte_size<glm::uvec2>(source_state.attachment_constraint_start_index),
@@ -445,7 +445,6 @@ void ClothGpuState::copy_current_positions_to_previous(QOpenGLFunctions_4_5_Core
                                 0,
                                 position_bytes);
     clear_dynamic_state(state_.buffers, 0, state_.element_counts.vertex, gl);
-    gl.glMemoryBarrier(GL_SHADER_STORAGE_BARRIER_BIT);
 }
 
 // Base Position Buffers
@@ -459,7 +458,6 @@ void ClothGpuState::capture_base_positions(QOpenGLFunctions_4_5_Core& gl)
 
     gl.glMemoryBarrier(GL_SHADER_STORAGE_BARRIER_BIT | GL_BUFFER_UPDATE_BARRIER_BIT);
     gl.glCopyNamedBufferSubData(state_.buffers.current_position, base_positions_, 0, 0, position_bytes);
-    gl.glMemoryBarrier(GL_SHADER_STORAGE_BARRIER_BIT | GL_BUFFER_UPDATE_BARRIER_BIT);
 
     base_position_vertex_count_ = state_.element_counts.vertex;
 }
@@ -476,7 +474,6 @@ void ClothGpuState::restore_base_positions(QOpenGLFunctions_4_5_Core& gl) const
     gl.glCopyNamedBufferSubData(base_positions_, state_.buffers.current_position, 0, 0, position_bytes);
     gl.glCopyNamedBufferSubData(base_positions_, state_.buffers.previous_position, 0, 0, position_bytes);
     clear_dynamic_state(state_.buffers, 0, state_.element_counts.vertex, gl);
-    gl.glMemoryBarrier(GL_SHADER_STORAGE_BARRIER_BIT | GL_BUFFER_UPDATE_BARRIER_BIT);
 }
 
 void ClothGpuState::clear_base_positions(QOpenGLFunctions_4_5_Core& gl)

@@ -116,7 +116,6 @@ void ClothIntegrator::integrate(const ClothGpuState& cloth_state,
                           frame_angular_acceleration.z);
 
     gl.glDispatchCompute(compute_group_count(garment_state.vertex_count, local_size), 1, 1);
-    gl.glMemoryBarrier(GL_SHADER_STORAGE_BARRIER_BIT);
 }
 
 void ClothIntegrator::release(QOpenGLFunctions_4_5_Core& gl)

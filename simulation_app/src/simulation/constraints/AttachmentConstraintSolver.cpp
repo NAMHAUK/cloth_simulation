@@ -39,7 +39,6 @@ void AttachmentConstraintSolver::solve(const ClothGpuState& cloth_state, QOpenGL
                                garment_state.attachment_constraint_start_index);
         gl.glProgramUniform1ui(program_, constraint_count_loc_, attachment_count);
         gl.glDispatchCompute(compute_group_count(attachment_count, local_size), 1, 1);
-        gl.glMemoryBarrier(GL_SHADER_STORAGE_BARRIER_BIT);
     }
 }
 

@@ -251,7 +251,7 @@ void SceneGpuState::update_character_vertex_normals(QOpenGLFunctions_4_5_Core& g
     gl.glProgramUniform1ui(vertex_normal_program_, vertex_count_loc_, vertex_count);
     gl.glProgramUniform1i(vertex_normal_program_, use_character_buffers_loc_, GL_TRUE);
     gl.glDispatchCompute(compute_group_count(vertex_count, normal_update_local_size), 1, 1);
-    gl.glMemoryBarrier(GL_SHADER_STORAGE_BARRIER_BIT | GL_VERTEX_ATTRIB_ARRAY_BARRIER_BIT);
+    gl.glMemoryBarrier(GL_SHADER_STORAGE_BARRIER_BIT);
 }
 
 // Accessors

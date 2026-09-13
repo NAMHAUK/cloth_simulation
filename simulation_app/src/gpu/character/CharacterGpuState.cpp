@@ -173,14 +173,14 @@ void CharacterGpuState::write_current_positions(float frame_alpha, QOpenGLFuncti
     gl.glProgramUniform1ui(position_program_, position_vertex_count_loc_, vertex_count_);
 
     gl.glDispatchCompute(compute_group_count(vertex_count_, position_update_local_size), 1, 1);
-    gl.glMemoryBarrier(GL_SHADER_STORAGE_BARRIER_BIT);
+    gl.glMemoryBarrier(GL_SHADER_STORAGE_BARRIER_BIT | GL_BUFFER_UPDATE_BARRIER_BIT);
 }
 
 void CharacterGpuState::copy_current_to_previous(QOpenGLFunctions_4_5_Core& gl) const
 {
     const auto position_bytes = byte_size<glm::vec4>(vertex_count_);
     gl.glCopyNamedBufferSubData(buffers_.current_position, buffers_.previous_position, 0, 0, position_bytes);
-    gl.glMemoryBarrier(GL_SHADER_STORAGE_BARRIER_BIT | GL_BUFFER_UPDATE_BARRIER_BIT);
+    gl.glMemoryBarrier(GL_SHADER_STORAGE_BARRIER_BIT);
 }
 
 void CharacterGpuState::update_triangle_geometry(QOpenGLFunctions_4_5_Core& gl) const
