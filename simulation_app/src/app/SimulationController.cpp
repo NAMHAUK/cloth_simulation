@@ -116,9 +116,8 @@ void SimulationController::tick_frame()
     assert(is_gpu_initialized());
     update_frame_timer();
 
-    run_with_gl_context_([this](QOpenGLFunctions_4_5_Core& gl) {
-        simulation_pipeline_.collect_motion_timing(gl);
-        if (simulation_running_) {
+    if (simulation_running_) {
+        run_with_gl_context_([this](QOpenGLFunctions_4_5_Core& gl) {
             if (scene_.garments().empty()) {
                 const float frame_position = params_.step.motion_frame_position(motion_step_index_ + 1u, 0);
                 const float frame_alpha = scene_.motion_frame_alpha(frame_position);
@@ -128,13 +127,8 @@ void SimulationController::tick_frame()
             }
             ++motion_step_index_;
             scene_.set_motion_frame_index(motion_step_index_ / params_.step.motion_stride());
-            if (scene_.motion_frame_index() + 1u >= scene_.character_motion().frame_count) {
-                simulation_pipeline_.finish_motion_timing();
-            }
-        }
-    });
+        });
 
-    if (simulation_running_) {
         Q_EMIT camera_target_changed(scene_.character_root_position(scene_.motion_frame_index()));
     }
 
@@ -153,8 +147,7 @@ void SimulationController::update_frame_timer()
 }
 
 // Character
-bool SimulationController::set_character_motion(CharacterMotion motion,
-                                                const std::filesystem::path& motion_path)
+bool SimulationController::set_character_motion(CharacterMotion motion)
 {
     assert(is_gpu_initialized());
 
@@ -172,8 +165,6 @@ bool SimulationController::set_character_motion(CharacterMotion motion,
         set_character_motion_state(std::move(motion), gl);
         is_default_pose_ = false;
     });
-
-    simulation_pipeline_.start_motion_timing(motion_path);
 
     return true;
 }
@@ -214,7 +205,6 @@ void SimulationController::return_to_default_pose()
 
 void SimulationController::set_character_motion_state(CharacterMotion motion, QOpenGLFunctions_4_5_Core& gl)
 {
-    simulation_pipeline_.finish_motion_timing();
     scene_.set_character_motion(std::move(motion));
     gpu_state_.set_character_motion(scene_, gl);
     motion_step_index_ = 0;

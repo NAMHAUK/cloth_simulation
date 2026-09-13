@@ -44,7 +44,7 @@ public:
     void stop_simulation();
     void draw(const glm::mat4& mvp, bool is_placement_active, QOpenGLFunctions_4_5_Core& gl);
 
-    bool set_character_motion(CharacterMotion motion, const std::filesystem::path& motion_path);
+    bool set_character_motion(CharacterMotion motion);
     void reset_scene();
     void return_to_default_pose();
 

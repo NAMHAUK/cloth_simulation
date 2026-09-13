@@ -26,7 +26,7 @@ class AssetBrowserPanel final : public QWidget
     Q_OBJECT
 
 public:
-    using MotionLoadedCallback = std::function<void(const std::filesystem::path& asset_path, CharacterMotion)>;
+    using MotionLoadedCallback = std::function<void(CharacterMotion)>;
     using GarmentLoadedCallback =
         std::function<void(const std::filesystem::path& asset_path, GarmentMesh mesh)>;
 
