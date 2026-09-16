@@ -39,16 +39,6 @@ uniform vec3 uFrameStartAngularVelocity;
 uniform vec3 uFrameAngularAcceleration;
 uniform float uFrameInertiaScale;
 
-const float pushout_normal_epsilon = 1.0e-20;
-
-void remove_inward_collision_velocity(inout vec3 velocity, vec3 unit_normal)
-{
-    float normal_velocity = dot(velocity, unit_normal);
-    if (normal_velocity < 0.0) {
-        velocity -= unit_normal * normal_velocity;
-    }
-}
-
 void main()
 {
     uint garment_vertex_index = gl_GlobalInvocationID.x;
@@ -64,13 +54,6 @@ void main()
     vec3 collision_pushout = collision_pushouts[vertex_index].xyz;
     vec3 cloth_cloth_pushout = cloth_cloth_pushouts[vertex_index].xyz;
     vec3 solved_velocity = (current - previous - collision_pushout - cloth_cloth_pushout) * uInverseDeltaTime;
-
-    float cloth_cloth_pushout_length_sq = dot(cloth_cloth_pushout, cloth_cloth_pushout);
-    if (cloth_cloth_pushout_length_sq > pushout_normal_epsilon) {
-        remove_inward_collision_velocity(
-            solved_velocity,
-            cloth_cloth_pushout * inversesqrt(cloth_cloth_pushout_length_sq));
-    }
 
     solved_velocity += contact_motion_deltas[vertex_index].xyz * uInverseDeltaTime;
 

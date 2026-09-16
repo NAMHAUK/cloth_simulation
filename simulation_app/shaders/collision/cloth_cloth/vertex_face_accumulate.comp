@@ -31,6 +31,22 @@ layout(std430, binding = NORMAL_CORRECTION_SUMS) buffer NormalCorrectionSums {
     ivec4 normal_correction_sums[];
 };
 
+layout(std430, binding = CLOTH_COLLISION_PUSHOUTS) readonly buffer CollisionPushouts {
+    vec4 collision_pushouts[];
+};
+
+layout(std430, binding = CLOTH_CLOTH_PUSHOUTS) readonly buffer ClothClothPushouts {
+    vec4 cloth_cloth_pushouts[];
+};
+
+layout(std430, binding = CLOTH_CONTACT_MOTION_DELTAS) readonly buffer ContactMotionDeltas {
+    vec4 contact_motion_deltas[];
+};
+
+layout(std430, binding = CONTACT_MOTION_DELTA_SUMS) buffer ContactMotionDeltaSums {
+    ivec4 contact_motion_delta_sums[];
+};
+
 // Uniforms
 uniform uint uMaxCandidateCount;
 uniform uint uUpperVertexOffset;
@@ -45,6 +61,7 @@ uniform float uCollisionStiffness;
 #include "../contact_geometry.glsl"
 
 #define COLLISION_CORRECTION_ACCUMULATE
+#define COLLISION_CONTACT_MOTION_ACCUMULATE
 #include "../correction.glsl"
 
 // Shader constants
@@ -139,7 +156,17 @@ bool compute_candidate_contact(uint vertex_index,
     return true;
 }
 
-void accumulate_contact_correction(uint vertex_index, float vertex_weight, vec3 correction)
+vec3 compute_vertex_motion_delta(uint vertex_index)
+{
+    vec3 position_delta = read_cloth_current_position(vertex_index) - read_cloth_previous_position(vertex_index);
+    vec3 collision_delta = collision_pushouts[vertex_index].xyz + cloth_cloth_pushouts[vertex_index].xyz;
+    return position_delta - collision_delta + contact_motion_deltas[vertex_index].xyz;
+}
+
+void accumulate_contact_correction(uint vertex_index,
+                                   float vertex_weight,
+                                   vec3 correction,
+                                   vec3 contact_motion_delta)
 {
     if (vertex_weight == 0.0) {
         return;
@@ -147,6 +174,7 @@ void accumulate_contact_correction(uint vertex_index, float vertex_weight, vec3 
 
     accumulate_vertex_normal_correction(vertex_index, vertex_weight * correction);
     atomicAdd(normal_correction_sums[vertex_index].w, 1);
+    accumulate_vertex_contact_motion_delta(vertex_index, vertex_weight * contact_motion_delta);
 }
 
 void accumulate_candidate_correction(uint vertex_index, uint triangle_index)
@@ -159,10 +187,17 @@ void accumulate_candidate_correction(uint vertex_index, uint triangle_index)
 
     float inverse_denominator = 1.0 / (1.0 + dot(contact.barycentric, contact.barycentric));
     vec3 correction = contact.correction_normal * contact.depth * uCollisionStiffness * inverse_denominator;
-    accumulate_contact_correction(vertex_index, 1.0, correction);
-    accumulate_contact_correction(face_vertices.x, -contact.barycentric.x, correction);
-    accumulate_contact_correction(face_vertices.y, -contact.barycentric.y, correction);
-    accumulate_contact_correction(face_vertices.z, -contact.barycentric.z, correction);
+    vec3 face_delta = compute_vertex_motion_delta(face_vertices.x) * contact.barycentric.x
+                    + compute_vertex_motion_delta(face_vertices.y) * contact.barycentric.y
+                    + compute_vertex_motion_delta(face_vertices.z) * contact.barycentric.z;
+    vec3 relative_delta = compute_vertex_motion_delta(vertex_index) - face_delta;
+    float inward_delta = dot(relative_delta, contact.correction_normal);
+    vec3 contact_motion_delta = contact.correction_normal * max(-inward_delta, 0.0) * inverse_denominator;
+
+    accumulate_contact_correction(vertex_index, 1.0, correction, contact_motion_delta);
+    accumulate_contact_correction(face_vertices.x, -contact.barycentric.x, correction, contact_motion_delta);
+    accumulate_contact_correction(face_vertices.y, -contact.barycentric.y, correction, contact_motion_delta);
+    accumulate_contact_correction(face_vertices.z, -contact.barycentric.z, correction, contact_motion_delta);
 }
 
 void main()
