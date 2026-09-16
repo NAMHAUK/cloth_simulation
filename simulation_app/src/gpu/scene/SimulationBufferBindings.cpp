@@ -19,7 +19,6 @@ constexpr GLuint previous_positions = 1;
 constexpr GLuint collision_pushouts = 2;
 constexpr GLuint cloth_pushouts = 3;
 constexpr GLuint contact_motion_deltas = 4;
-constexpr GLuint body_triangle_indices = 5;
 constexpr GLuint triangle_vertex_indices = 6;
 constexpr GLuint adjacent_triangle_offsets = 7;
 constexpr GLuint adjacent_triangle_indices = 8;
@@ -166,7 +165,7 @@ void SimulationBufferBindings::bind_cloth(const ClothBufferSet& buffers, QOpenGL
         buffers.collision_pushout,
         buffers.cloth_cloth_pushout,
         buffers.contact_motion_delta,
-        buffers.body_triangle_index,
+        dummy_buffer_, // Reserved binding 5.
         buffers.triangle_vertex_indices,
         buffers.adjacent_triangle_offsets,
         buffers.adjacent_triangle_indices,

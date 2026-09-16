@@ -71,7 +71,6 @@ void SimulationPipeline::prefit_garments(SceneGpuState& gpu_state,
             cloth_cloth_collision_solver_.solve_initial(gpu_state, gl);
             gpu_state.cloth_gpu_state().copy_current_positions_to_previous(gl);
         }
-        cloth_cloth_collision_solver_.update_body_surface_mapping(gpu_state, gl);
     }
 
     gpu_state.update_cloth_normals(gl);
@@ -85,7 +84,6 @@ void SimulationPipeline::step(SceneState& scene,
     assert(is_initialized());
 
     const ClothGpuState& cloth_state = gpu_state.cloth_gpu_state();
-    cloth_cloth_collision_solver_.update_body_surface_mapping(gpu_state, gl);
 
     for (std::uint32_t substep = 0; substep < params_.step.substep_count; ++substep) {
         update_character_motion(scene, gpu_state, motion_step_index, substep + 1u, gl);
@@ -98,8 +96,8 @@ void SimulationPipeline::step(SceneState& scene,
             stretch_constraint_solver_.solve(cloth_state, gl);
             bending_constraint_solver_.solve(cloth_state, gl);
             attachment_constraint_solver_.solve(cloth_state, gl);
-            cloth_body_collision_solver_.solve(gpu_state, gl);
             cloth_cloth_collision_solver_.solve(gpu_state, gl);
+            cloth_body_collision_solver_.solve(gpu_state, gl);
             ground_collision_solver_.solve(cloth_state, gl);
         }
     }

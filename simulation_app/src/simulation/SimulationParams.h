@@ -7,7 +7,7 @@ struct SimulationStepParams final
     std::uint32_t motion_fps = 60;
     std::uint32_t fps = 60;
     std::uint32_t substep_count = 8;
-    std::uint32_t iteration_count = 4;
+    std::uint32_t iteration_count = 8;
 
     constexpr std::uint32_t motion_stride() const { return fps / motion_fps; }
 

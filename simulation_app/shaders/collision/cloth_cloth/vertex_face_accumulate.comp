@@ -31,20 +31,11 @@ layout(std430, binding = NORMAL_CORRECTION_SUMS) buffer NormalCorrectionSums {
     ivec4 normal_correction_sums[];
 };
 
-layout(std430, binding = BODY_TRIANGLE_NORMALS) readonly buffer BodyTriangleNormals {
-    vec4 body_triangle_normals[];
-};
-
-layout(std430, binding = CLOTH_BODY_TRIANGLE_INDICES) readonly buffer ClothBodyTriangleIndices {
-    uint cloth_body_triangle_indices[];
-};
-
 // Uniforms
 uniform uint uMaxCandidateCount;
+uniform uint uUpperVertexOffset;
 uniform float uCollisionThickness;
 uniform float uCollisionStiffness;
-uniform uint uBodyTriangleCount;
-uniform uint uUpperVertexOffset;
 
 // Shared dependencies
 #define POSITION_IO_CLOTH_CURRENT
@@ -58,8 +49,6 @@ uniform uint uUpperVertexOffset;
 
 // Shader constants
 const float distance_delta_epsilon = 1.0e-8;
-const float normal_length_epsilon = 1.0e-12;
-const float layer_projection_epsilon = 1.0e-6;
 
 struct VertexFaceContact {
     vec3 correction_normal;
@@ -75,71 +64,7 @@ uvec3 load_face_vertices(uint triangle_index)
                  cloth_triangle_indices[triangle_base + 2u]);
 }
 
-bool read_body_normal(uint cloth_vertex_index, out vec3 body_normal)
-{
-    uint body_triangle_index = cloth_body_triangle_indices[cloth_vertex_index];
-    if (body_triangle_index >= uBodyTriangleCount) {
-        return false;
-    }
-
-    vec4 stored_normal = body_triangle_normals[body_triangle_index];
-    if (stored_normal.w == 0.0) {
-        return false;
-    }
-
-    body_normal = stored_normal.xyz;
-    return true;
-}
-
-bool read_lower_body_normal(uint vertex_index,
-                            bool is_upper_vertex,
-                            uvec3 face_vertices,
-                            out vec3 body_normal)
-{
-    if (!is_upper_vertex) {
-        return read_body_normal(vertex_index, body_normal);
-    }
-
-    vec3 blended_normal = vec3(0.0);
-    vec3 vertex_normal;
-    if (read_body_normal(face_vertices.x, vertex_normal)) {
-        blended_normal += vertex_normal;
-    }
-    if (read_body_normal(face_vertices.y, vertex_normal)) {
-        blended_normal += vertex_normal;
-    }
-    if (read_body_normal(face_vertices.z, vertex_normal)) {
-        blended_normal += vertex_normal;
-    }
-
-    float normal_length_sq = dot(blended_normal, blended_normal);
-    if (normal_length_sq <= normal_length_epsilon) {
-        return false;
-    }
-
-    body_normal = blended_normal * inversesqrt(normal_length_sq);
-    return true;
-}
-
-bool project_point_to_face(vec3 point,
-                           TrianglePositions face,
-                           vec3 face_normal,
-                           vec3 direction,
-                           out vec3 surface_point,
-                           out float distance)
-{
-    float direction_dot_normal = dot(direction, face_normal);
-    if (abs(direction_dot_normal) <= layer_projection_epsilon) {
-        return false;
-    }
-
-    distance = dot(face.a - point, face_normal) / direction_dot_normal;
-    surface_point = point + direction * distance;
-    return true;
-}
-
 bool compute_candidate_contact(uint vertex_index,
-                               bool is_upper_vertex,
                                uvec3 face_vertex_indices,
                                out VertexFaceContact contact)
 {
@@ -155,36 +80,13 @@ bool compute_candidate_contact(uint vertex_index,
         return false;
     }
 
-    current_normal = align_normal(current_normal, previous_normal);
-
-    vec3 layer_normal;
-    if (!read_lower_body_normal(vertex_index,
-                                is_upper_vertex,
-                                face_vertex_indices,
-                                layer_normal)) {
-        return false;
-    }
-
-    vec3 projection_direction = is_upper_vertex ? -layer_normal : layer_normal;
-
-    vec3 previous_surface_point;
-    vec3 projected_surface_point;
-    float previous_distance;
-    float current_distance;
-    if (!project_point_to_face(previous_vertex_position,
-                               previous_face,
-                               previous_normal,
-                               projection_direction,
-                               previous_surface_point,
-                               previous_distance) ||
-        !project_point_to_face(current_vertex_position,
-                               current_face,
-                               current_normal,
-                               projection_direction,
-                               projected_surface_point,
-                               current_distance)) {
-        return false;
-    }
+    bool is_upper_vertex = vertex_index >= uUpperVertexOffset;
+    float normal_sign = is_upper_vertex ? 1.0 : -1.0;
+    previous_normal *= normal_sign;
+    current_normal *= normal_sign;
+    float previous_distance = dot(previous_vertex_position - previous_face.a, previous_normal);
+    float current_distance = dot(current_vertex_position - current_face.a, current_normal);
+    vec3 projected_surface_point = current_vertex_position - current_normal * current_distance;
 
     bool has_swept_contact = false;
     float distance_delta = previous_distance - current_distance;
@@ -194,17 +96,10 @@ bool compute_candidate_contact(uint vertex_index,
         TrianglePositions hit_face = interpolate_triangle_positions(previous_face, current_face, hit_time);
         vec3 hit_normal;
         if (compute_triangle_normal(hit_face, hit_normal)) {
-            hit_normal = align_normal(hit_normal, previous_normal);
-            vec3 hit_surface_point;
-            float hit_distance;
-            bool has_layer_projection = project_point_to_face(hit_vertex_position,
-                                                              hit_face,
-                                                              hit_normal,
-                                                              projection_direction,
-                                                              hit_surface_point,
-                                                              hit_distance);
-            has_swept_contact = has_layer_projection &&
-                                compute_barycentric_if_inside(hit_surface_point, hit_face, contact.barycentric);
+            hit_normal *= normal_sign;
+            float hit_distance = dot(hit_vertex_position - hit_face.a, hit_normal);
+            vec3 hit_surface_point = hit_vertex_position - hit_normal * hit_distance;
+            has_swept_contact = compute_barycentric_if_inside(hit_surface_point, hit_face, contact.barycentric);
         }
     }
 
@@ -215,72 +110,39 @@ bool compute_candidate_contact(uint vertex_index,
     }
 
     vec3 current_surface_point = interpolate_triangle_position(current_face, contact.barycentric);
-    vec3 lower_reference_point = is_upper_vertex
-        ? current_surface_point
-        : current_vertex_position;
-    vec3 upper_surface_point = is_upper_vertex
-        ? current_vertex_position
-        : current_surface_point;
-
-    float layer_distance = dot(upper_surface_point - lower_reference_point, layer_normal);
-    contact.depth = uCollisionThickness - layer_distance;
+    contact.depth = uCollisionThickness - dot(current_vertex_position - current_surface_point, current_normal);
     if (contact.depth <= 0.0) {
         return false;
     }
 
-    contact.correction_normal = layer_normal;
+    contact.correction_normal = current_normal;
     return true;
 }
 
-void accumulate_upper_vertex(uint vertex_index, VertexFaceContact contact)
+void accumulate_contact_correction(uint vertex_index, float vertex_weight, vec3 correction)
 {
-    vec3 correction = contact.correction_normal * contact.depth * uCollisionStiffness;
-    accumulate_vertex_normal_correction(vertex_index, correction);
-    atomicAdd(normal_correction_sums[vertex_index].w, 1);
-}
-
-void accumulate_upper_face_vertex(uint vertex_index,
-                                   float vertex_weight,
-                                   float inverse_denominator,
-                                   VertexFaceContact contact)
-{
-    if (vertex_weight <= 0.0) {
+    if (vertex_weight == 0.0) {
         return;
     }
 
-    float weight_scale = vertex_weight * inverse_denominator;
-    vec3 correction = contact.correction_normal * contact.depth * uCollisionStiffness * weight_scale;
-    accumulate_vertex_normal_correction(vertex_index, correction);
+    accumulate_vertex_normal_correction(vertex_index, vertex_weight * correction);
     atomicAdd(normal_correction_sums[vertex_index].w, 1);
 }
 
 void accumulate_candidate_correction(uint vertex_index, uint triangle_index)
 {
-    bool is_upper_vertex = vertex_index >= uUpperVertexOffset;
     uvec3 face_vertices = load_face_vertices(triangle_index);
     VertexFaceContact contact;
-    if (!compute_candidate_contact(vertex_index, is_upper_vertex, face_vertices, contact)) {
+    if (!compute_candidate_contact(vertex_index, face_vertices, contact)) {
         return;
     }
 
-    if (is_upper_vertex) {
-        accumulate_upper_vertex(vertex_index, contact);
-        return;
-    }
-
-    float inverse_denominator = 1.0 / dot(contact.barycentric, contact.barycentric);
-    accumulate_upper_face_vertex(face_vertices.x,
-                                  contact.barycentric.x,
-                                  inverse_denominator,
-                                  contact);
-    accumulate_upper_face_vertex(face_vertices.y,
-                                  contact.barycentric.y,
-                                  inverse_denominator,
-                                  contact);
-    accumulate_upper_face_vertex(face_vertices.z,
-                                  contact.barycentric.z,
-                                  inverse_denominator,
-                                  contact);
+    float inverse_denominator = 1.0 / (1.0 + dot(contact.barycentric, contact.barycentric));
+    vec3 correction = contact.correction_normal * contact.depth * uCollisionStiffness * inverse_denominator;
+    accumulate_contact_correction(vertex_index, 1.0, correction);
+    accumulate_contact_correction(face_vertices.x, -contact.barycentric.x, correction);
+    accumulate_contact_correction(face_vertices.y, -contact.barycentric.y, correction);
+    accumulate_contact_correction(face_vertices.z, -contact.barycentric.z, correction);
 }
 
 void main()
