@@ -63,15 +63,11 @@ void detect_vertex_face_candidates(uint cloth_vertex_index, uint target_bvh_root
 
     uint node_index_stack[max_bvh_stack_depth];
     uint stack_count = 0u;
-    node_index_stack[stack_count++] = target_bvh_root;
+    uint node_index = target_bvh_root;
+    bool has_next_node = overlaps_aabb(vertex_bounds, bvh_nodes[node_index].bounds);
 
-    while (stack_count > 0u) {
-        uint node_index = node_index_stack[--stack_count];
+    while (has_next_node) {
         BvhNode node = bvh_nodes[node_index];
-        if (!overlaps_aabb(vertex_bounds, node.bounds)) {
-            continue;
-        }
-
         if (is_leaf_node(node)) {
             for (uint triangle_offset = 0u; triangle_offset < node.element_count; ++triangle_offset) {
                 uint triangle_index = node.first_element_index + triangle_offset;
@@ -81,8 +77,22 @@ void detect_vertex_face_candidates(uint cloth_vertex_index, uint target_bvh_root
                 }
             }
         } else {
-            node_index_stack[stack_count++] = node.left_child_index;
-            node_index_stack[stack_count++] = node.right_child_index;
+            bool left_overlap = overlaps_aabb(vertex_bounds,
+                                              bvh_nodes[node.left_child_index].bounds);
+            bool right_overlap = overlaps_aabb(vertex_bounds,
+                                               bvh_nodes[node.right_child_index].bounds);
+            if (left_overlap && right_overlap) {
+                node_index_stack[stack_count++] = node.left_child_index;
+            }
+            if (left_overlap || right_overlap) {
+                node_index = right_overlap ? node.right_child_index : node.left_child_index;
+                continue;
+            }
+        }
+
+        has_next_node = stack_count > 0u;
+        if (has_next_node) {
+            node_index = node_index_stack[--stack_count];
         }
     }
 }

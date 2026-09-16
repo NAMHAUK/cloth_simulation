@@ -37,9 +37,9 @@ struct GarmentBufferState final
     std::uint32_t vertex_count = 0;
     std::uint32_t triangle_start_index = 0;
     std::uint32_t triangle_count = 0;
-    std::uint32_t stretch_constraint_start_index = 0;
+    std::vector<std::uint32_t> stretch_color_offsets;
     std::uint32_t stretch_constraint_count = 0;
-    std::uint32_t bending_constraint_start_index = 0;
+    std::vector<std::uint32_t> bending_color_offsets;
     std::uint32_t bending_constraint_count = 0;
     std::uint32_t attachment_constraint_start_index = 0;
     std::uint32_t attachment_constraint_count = 0;

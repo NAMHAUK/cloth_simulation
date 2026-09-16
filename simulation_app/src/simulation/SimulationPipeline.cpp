@@ -57,9 +57,7 @@ void SimulationPipeline::prefit_garments(SceneGpuState& gpu_state,
 
     // Garment pre-fit
     for (const GarmentObject* garment : garments) {
-        for (std::uint32_t iteration = 0; iteration < params_.prefit.iteration_count; ++iteration) {
-            garment_prefit_solver_.solve(cloth_state, garment->layer, gl);
-        }
+        garment_prefit_solver_.solve(cloth_state, garment->layer, gl);
     }
     gpu_state.cloth_gpu_state().copy_current_positions_to_previous(gl);
 
@@ -130,6 +128,7 @@ void SimulationPipeline::integrate_cloth(const SceneState& scene,
         const auto& kinematics = scene.reference_frame_kinematics(garment.mesh.garment_category);
         cloth_integrator_.integrate(cloth_state, garment.layer, kinematics, gl);
     }
+    gl.glMemoryBarrier(GL_SHADER_STORAGE_BARRIER_BIT);
 }
 
 // Accessors

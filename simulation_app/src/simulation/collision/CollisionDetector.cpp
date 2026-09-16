@@ -75,32 +75,35 @@ void CollisionDetector::detect(const SceneGpuState& gpu_state, QOpenGLFunctions_
         clear_collision_candidate_counts(collision.cloth_cloth_vertex_face, gl);
     }
 
-    gl.glMemoryBarrier(GL_SHADER_STORAGE_BARRIER_BIT | GL_BUFFER_UPDATE_BARRIER_BIT);
     detect_cloth_vertex_body_face(gpu_state, gl);
-    build_dispatch_size(CandidateKind::ClothVertexBodyFace, collision.cloth_vertex_body_face.max_pairs, gl);
-
     detect_cloth_edge_body_edge(gpu_state, gl);
-    build_dispatch_size(CandidateKind::ClothEdgeBodyEdge, collision.cloth_edge_body_edge.max_pairs, gl);
-
     detect_cloth_face_body_vertex(gpu_state, gl);
-    build_dispatch_size(CandidateKind::ClothFaceBodyVertex, collision.cloth_face_body_vertex.max_pairs, gl);
-
     if (cloth_state.has_multiple_garments()) {
         detect_cloth_cloth_vertex_face(gpu_state, gl);
+    }
+    gl.glMemoryBarrier(GL_SHADER_STORAGE_BARRIER_BIT);
+
+    build_dispatch_size(CandidateKind::ClothVertexBodyFace, collision.cloth_vertex_body_face.max_pairs, gl);
+    build_dispatch_size(CandidateKind::ClothEdgeBodyEdge, collision.cloth_edge_body_edge.max_pairs, gl);
+    build_dispatch_size(CandidateKind::ClothFaceBodyVertex, collision.cloth_face_body_vertex.max_pairs, gl);
+    if (cloth_state.has_multiple_garments()) {
         build_dispatch_size(CandidateKind::ClothClothVertexFace,
                             collision.cloth_cloth_vertex_face.max_pairs,
                             gl);
     }
+    gl.glMemoryBarrier(GL_COMMAND_BARRIER_BIT);
 }
 
 void CollisionDetector::detect_prefit(const SceneGpuState& gpu_state, QOpenGLFunctions_4_5_Core& gl) const
 {
     const CollisionCandidateBuffers& candidates = gpu_state.collision_buffers().cloth_cloth_vertex_face;
 
-    clear_collision_candidate_counts(candidates, gl);
     gl.glMemoryBarrier(GL_SHADER_STORAGE_BARRIER_BIT | GL_BUFFER_UPDATE_BARRIER_BIT);
+    clear_collision_candidate_counts(candidates, gl);
     detect_cloth_cloth_vertex_face(gpu_state, gl);
+    gl.glMemoryBarrier(GL_SHADER_STORAGE_BARRIER_BIT);
     build_dispatch_size(CandidateKind::ClothClothVertexFace, candidates.max_pairs, gl);
+    gl.glMemoryBarrier(GL_SHADER_STORAGE_BARRIER_BIT | GL_COMMAND_BARRIER_BIT);
 }
 
 // Detection
@@ -115,7 +118,6 @@ void CollisionDetector::detect_cloth_vertex_body_face(const SceneGpuState& gpu_s
     gl.glProgramUniform1ui(shader.program, shader.item_count, vertex_count);
     gl.glProgramUniform1ui(shader.program, shader.max_candidates, candidates.max_pairs);
     gl.glDispatchCompute(compute_group_count(vertex_count, candidate_detect_local_size), 1, 1);
-    gl.glMemoryBarrier(GL_SHADER_STORAGE_BARRIER_BIT);
 }
 
 void CollisionDetector::detect_cloth_edge_body_edge(const SceneGpuState& gpu_state,
@@ -128,7 +130,6 @@ void CollisionDetector::detect_cloth_edge_body_edge(const SceneGpuState& gpu_sta
     gl.glProgramUniform1ui(shader.program, shader.item_count, constraint_count);
     gl.glProgramUniform1ui(shader.program, shader.max_candidates, candidates.max_pairs);
     gl.glDispatchCompute(compute_group_count(constraint_count, candidate_detect_local_size), 1, 1);
-    gl.glMemoryBarrier(GL_SHADER_STORAGE_BARRIER_BIT);
 }
 
 void CollisionDetector::detect_cloth_face_body_vertex(const SceneGpuState& gpu_state,
@@ -141,7 +142,6 @@ void CollisionDetector::detect_cloth_face_body_vertex(const SceneGpuState& gpu_s
     gl.glProgramUniform1ui(shader.program, shader.item_count, triangle_count);
     gl.glProgramUniform1ui(shader.program, shader.max_candidates, candidates.max_pairs);
     gl.glDispatchCompute(compute_group_count(triangle_count, candidate_detect_local_size), 1, 1);
-    gl.glMemoryBarrier(GL_SHADER_STORAGE_BARRIER_BIT);
 }
 
 void CollisionDetector::detect_cloth_cloth_vertex_face(const SceneGpuState& gpu_state,
@@ -163,7 +163,6 @@ void CollisionDetector::detect_cloth_cloth_vertex_face(const SceneGpuState& gpu_
 
     const std::uint32_t query_vertex_count = upper.vertex_count + lower.vertex_count;
     gl.glDispatchCompute(compute_group_count(query_vertex_count, candidate_detect_local_size), 1, 1);
-    gl.glMemoryBarrier(GL_SHADER_STORAGE_BARRIER_BIT);
 }
 
 void CollisionDetector::build_dispatch_size(CandidateKind candidate_kind,
@@ -176,7 +175,6 @@ void CollisionDetector::build_dispatch_size(CandidateKind candidate_kind,
     gl.glProgramUniform1ui(shader.program, shader.candidate_kind, static_cast<GLuint>(candidate_kind));
     gl.glProgramUniform1ui(shader.program, shader.max_candidates, max_candidates);
     gl.glDispatchCompute(1, 1, 1);
-    gl.glMemoryBarrier(GL_SHADER_STORAGE_BARRIER_BIT | GL_COMMAND_BARRIER_BIT);
 }
 
 // Release

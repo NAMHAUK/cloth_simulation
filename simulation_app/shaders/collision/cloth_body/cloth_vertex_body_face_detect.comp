@@ -67,15 +67,11 @@ void main()
 
         uint node_index_stack[max_bvh_stack_depth];
         uint stack_count = 0u;
-        node_index_stack[stack_count++] = bvh_root_node;
+        uint current_node_index = bvh_root_node;
+        bool has_next_node = overlaps_aabb(query_bounds, bvh_nodes[current_node_index].bounds);
 
-        while (stack_count > 0u) {
-            --stack_count;
-            BvhNode current_node = bvh_nodes[node_index_stack[stack_count]];
-            if (!overlaps_aabb(query_bounds, current_node.bounds)) {
-                continue;
-            }
-
+        while (has_next_node) {
+            BvhNode current_node = bvh_nodes[current_node_index];
             if (is_leaf_node(current_node)) {
                 for (uint triangle_offset = 0u; triangle_offset < current_node.element_count; ++triangle_offset) {
                     uint triangle_index = current_node.first_element_index + triangle_offset;
@@ -85,8 +81,22 @@ void main()
                     }
                 }
             } else {
-                node_index_stack[stack_count++] = current_node.left_child_index;
-                node_index_stack[stack_count++] = current_node.right_child_index;
+                bool left_overlap = overlaps_aabb(query_bounds,
+                                                  bvh_nodes[current_node.left_child_index].bounds);
+                bool right_overlap = overlaps_aabb(query_bounds,
+                                                   bvh_nodes[current_node.right_child_index].bounds);
+                if (left_overlap && right_overlap) {
+                    node_index_stack[stack_count++] = current_node.left_child_index;
+                }
+                if (left_overlap || right_overlap) {
+                    current_node_index = right_overlap ? current_node.right_child_index : current_node.left_child_index;
+                    continue;
+                }
+            }
+
+            has_next_node = stack_count > 0u;
+            if (has_next_node) {
+                current_node_index = node_index_stack[--stack_count];
             }
         }
     }

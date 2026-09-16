@@ -96,7 +96,6 @@ void ClothClothCollisionSolver::solve(const SceneGpuState& gpu_state,
 
     // clear
     clear_collision_correction_sum(gpu_state.collision_buffers().normal_correction_sum_buffer, gl);
-    gl.glMemoryBarrier(GL_SHADER_STORAGE_BARRIER_BIT | GL_BUFFER_UPDATE_BARRIER_BIT);
 
     // accumulate
     const auto& collision_candidates = gpu_state.collision_buffers().cloth_cloth_vertex_face;
@@ -142,7 +141,6 @@ void ClothClothCollisionSolver::update_body_surface_mapping(const SceneGpuState&
                            arm_ranges.z,
                            arm_ranges.w);
     gl.glDispatchCompute(compute_group_count(vertex_count, body_triangle_index_build_local_size), 1, 1);
-    gl.glMemoryBarrier(GL_SHADER_STORAGE_BARRIER_BIT);
 }
 
 void ClothClothCollisionSolver::release(QOpenGLFunctions_4_5_Core& gl)

@@ -224,11 +224,9 @@ void main()
     uint local_node_index = gl_GlobalInvocationID.x;
     if (local_node_index < uTriangleNodeCount) {
         update_triangle_bounds(local_node_index);
-    }
-    if (local_node_index < uVertexNodeCount) {
-        update_vertex_bounds(local_node_index);
-    }
-    if (local_node_index < uEdgeNodeCount) {
-        update_edge_bounds(local_node_index);
+    } else if (local_node_index < uTriangleNodeCount + uVertexNodeCount) {
+        update_vertex_bounds(local_node_index - uTriangleNodeCount);
+    } else if (local_node_index < uTriangleNodeCount + uVertexNodeCount + uEdgeNodeCount) {
+        update_edge_bounds(local_node_index - uTriangleNodeCount - uVertexNodeCount);
     }
 }
