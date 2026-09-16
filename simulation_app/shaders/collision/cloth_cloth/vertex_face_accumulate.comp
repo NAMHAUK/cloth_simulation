@@ -64,6 +64,26 @@ uvec3 load_face_vertices(uint triangle_index)
                  cloth_triangle_indices[triangle_base + 2u]);
 }
 
+bool compute_boundary_contact(vec3 point,
+                              TrianglePositions face,
+                              vec3 face_normal,
+                              out VertexFaceContact contact)
+{
+    vec3 closest_point = closest_point_on_triangle(point, face.a, face.b, face.c);
+    vec3 separation = point - closest_point;
+    float distance = length(separation);
+    if (distance >= uCollisionThickness ||
+        !compute_barycentric_if_inside(closest_point, face, contact.barycentric)) {
+        return false;
+    }
+
+    contact.barycentric = max(contact.barycentric, vec3(0.0));
+    contact.barycentric /= dot(contact.barycentric, vec3(1.0));
+    contact.correction_normal = distance > 0.0 ? separation / distance : face_normal;
+    contact.depth = uCollisionThickness - distance;
+    return true;
+}
+
 bool compute_candidate_contact(uint vertex_index,
                                uvec3 face_vertex_indices,
                                out VertexFaceContact contact)
@@ -105,7 +125,7 @@ bool compute_candidate_contact(uint vertex_index,
 
     if (!has_swept_contact) {
         if (!compute_barycentric_if_inside(projected_surface_point, current_face, contact.barycentric)) {
-            return false;
+            return compute_boundary_contact(current_vertex_position, current_face, current_normal, contact);
         }
     }
 
