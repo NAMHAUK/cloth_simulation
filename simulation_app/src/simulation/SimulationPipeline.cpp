@@ -49,10 +49,12 @@ void SimulationPipeline::initialize(const std::filesystem::path& shader_dir, QOp
 // Simulation
 void SimulationPipeline::prefit_garments(SceneGpuState& gpu_state,
                                          const std::vector<const GarmentObject*>& garments,
+                                         std::uint32_t iteration_count,
                                          QOpenGLFunctions_4_5_Core& gl)
 {
     assert(is_initialized());
 
+    params_.step.iteration_count = iteration_count;
     const ClothGpuState& cloth_state = gpu_state.cloth_gpu_state();
 
     // Garment pre-fit
