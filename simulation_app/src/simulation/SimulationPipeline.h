@@ -32,11 +32,13 @@ public:
     void release(QOpenGLFunctions_4_5_Core& gl);
     void prefit_garments(SceneGpuState& gpu_state,
                          const std::vector<const GarmentObject*>& garments,
+                         std::uint32_t iteration_count,
                          QOpenGLFunctions_4_5_Core& gl);
     void step(SceneState& scene,
               SceneGpuState& gpu_state,
               std::uint32_t motion_step_index,
               QOpenGLFunctions_4_5_Core& gl);
+    bool is_initialized() const;
 
 private:
     void update_character_motion(SceneState& scene,
@@ -48,10 +50,6 @@ private:
                          const ClothGpuState& cloth_state,
                          QOpenGLFunctions_4_5_Core& gl) const;
 
-public:
-    bool is_initialized() const;
-
-private:
     SimulationParams params_;
     ClothIntegrator cloth_integrator_;
     StretchConstraintSolver stretch_constraint_solver_;

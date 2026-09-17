@@ -7,6 +7,7 @@
 #include <algorithm>
 #include <cassert>
 #include <chrono>
+#include <numeric>
 #include <stdexcept>
 #include <utility>
 
@@ -258,7 +259,7 @@ void SimulationController::confirm_garment_placement()
         }
 
         gpu_state_.rebuild_collision_buffers(gl);
-        simulation_pipeline_.prefit_garments(gpu_state_, placement_garments, gl);
+        simulation_pipeline_.prefit_garments(gpu_state_, placement_garments, calculate_iteration_count(), gl);
 
         for (const GarmentObject* garment : placement_garments) {
             gpu_state_.initialize_garment_attachments(*garment, gl);
@@ -296,6 +297,28 @@ void SimulationController::cancel_placement_session()
             gpu_state_.rebuild_garment_resources(scene_, gl, GarmentLayer::Upper);
         }
     });
+}
+
+std::uint32_t SimulationController::calculate_iteration_count() const
+{
+    std::uint32_t iteration_count = 4u;
+    for (const GarmentObject& garment : scene_.garments()) {
+        const auto& rest_lengths = garment.mesh.stretch_constraints.rest_lengths;
+        const double total_rest_length = std::accumulate(rest_lengths.begin(), rest_lengths.end(), 0.0);
+        const double average_rest_length = total_rest_length / rest_lengths.size();
+
+        // ponytail: Empirical spacing bands in meters; retune against observed garment stretch.
+        std::uint32_t garment_iteration_count = 4u;
+        if (average_rest_length <= 0.005f) {
+            garment_iteration_count = 16u;
+        } else if (average_rest_length < 0.009f) {
+            garment_iteration_count = 12u;
+        } else if (average_rest_length < 0.013f) {
+            garment_iteration_count = 8u;
+        }
+        iteration_count = std::max(iteration_count, garment_iteration_count);
+    }
+    return iteration_count;
 }
 
 std::array<glm::mat4, 2> SimulationController::make_placement_matrices() const

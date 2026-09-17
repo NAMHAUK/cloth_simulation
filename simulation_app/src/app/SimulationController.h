@@ -79,6 +79,7 @@ private:
         float scale = 1.0f;
     };
 
+    std::uint32_t calculate_iteration_count() const;
     std::array<glm::mat4, 2> make_placement_matrices() const;
     void reset_garment_placements();
     void release_gpu();
