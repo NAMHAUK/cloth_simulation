@@ -284,6 +284,38 @@ void ClothGpuState::create_topology_buffers(const std::vector<GarmentObject>& ga
                          byte_size<std::uint32_t>(adjacency.triangle_indices.size()),
                          adjacency.triangle_indices.data(),
                          GL_STATIC_DRAW);
+    create_vertex_face_exclusion_buffer(garments, rebuild_state, gl);
+}
+
+void ClothGpuState::create_vertex_face_exclusion_buffer(const std::vector<GarmentObject>& garments,
+                                                        BufferState& rebuild_state,
+                                                        QOpenGLFunctions_4_5_Core& gl)
+{
+    GLint max_block_size = 0;
+    gl.glGetIntegerv(GL_MAX_SHADER_STORAGE_BLOCK_SIZE, &max_block_size);
+    std::vector<std::uint32_t> exclusions;
+    for (const GarmentObject& garment : garments) {
+        auto& state = rebuild_state.garments[garment.layer];
+        state.vertex_face_exclusion_offset = static_cast<std::uint32_t>(exclusions.size());
+        const std::size_t masks_per_vertex = (static_cast<std::size_t>(state.triangle_count) + 31u) / 32u;
+        const std::size_t mask_count = exclusions.size() + state.vertex_count * masks_per_vertex;
+        if (byte_size<std::uint32_t>(mask_count) > max_block_size) {
+            throw std::runtime_error("Cloth vertex-face exclusion bitset exceeds the GPU SSBO size limit.");
+        }
+        const auto garment_exclusions = build_vertex_neighborhood_masks(state.vertex_count,
+                                                                        garment.triangle_bvh.indices);
+        exclusions.insert(exclusions.end(), garment_exclusions.begin(), garment_exclusions.end());
+    }
+
+    const GLsizeiptr buffer_size = byte_size<std::uint32_t>(exclusions.size());
+    GLuint& buffer = rebuild_state.buffers.vertex_face_exclusions;
+    gl.glCreateBuffers(1, &buffer);
+    gl.glNamedBufferData(buffer, buffer_size, exclusions.data(), GL_STATIC_DRAW);
+    GLint64 allocated_size = 0;
+    gl.glGetNamedBufferParameteri64v(buffer, GL_BUFFER_SIZE, &allocated_size);
+    if (allocated_size != buffer_size) {
+        throw std::runtime_error("Failed to allocate cloth vertex-face exclusion bitset.");
+    }
 }
 
 void ClothGpuState::create_bvh_buffers(const std::vector<GarmentObject>& garments,
@@ -551,7 +583,8 @@ bool ClothGpuState::has_gpu_objects() const
            state_.buffers.triangle_normal != 0 &&
            state_.buffers.vertex_normal != 0 &&
            state_.buffers.bvh_node != 0 &&
-           state_.buffers.triangle_bounds != 0;
+           state_.buffers.triangle_bounds != 0 &&
+           state_.buffers.vertex_face_exclusions != 0;
 }
 
 // Accessors
@@ -615,6 +648,7 @@ void ClothGpuState::delete_buffer_set(ClothBufferSet& buffers, QOpenGLFunctions_
         buffers.vertex_normal,
         buffers.bvh_node,
         buffers.triangle_bounds,
+        buffers.vertex_face_exclusions,
     };
     gl.glDeleteBuffers(static_cast<GLsizei>(std::size(buffer_ids)), buffer_ids);
     gl.glDeleteVertexArrays(1, &buffers.vao);

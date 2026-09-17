@@ -14,23 +14,13 @@
 namespace {
 constexpr std::uint32_t attachment_target_local_size = 128;
 constexpr std::uint32_t normal_update_local_size = 128;
-constexpr std::uint32_t dispatch_component_count = 3;
+constexpr GLsizeiptr dispatch_size_bytes = byte_size<std::uint32_t>(3u);
 constexpr std::uint32_t candidate_capacity_multiplier = 8;
 
 void create_buffer(GLuint& buffer, GLsizeiptr size, QOpenGLFunctions_4_5_Core& gl)
 {
     gl.glCreateBuffers(1, &buffer);
     gl.glNamedBufferData(buffer, size, nullptr, GL_DYNAMIC_DRAW);
-}
-
-void create_collision_candidate_buffer(CollisionCandidateBuffers& buffers,
-                                       std::uint32_t element_count,
-                                       QOpenGLFunctions_4_5_Core& gl)
-{
-    buffers.max_pairs = element_count * candidate_capacity_multiplier;
-    create_buffer(buffers.candidate_buffer, byte_size<glm::uvec2>(buffers.max_pairs), gl);
-    create_buffer(buffers.count_buffer, byte_size<std::uint32_t>(1u), gl);
-    create_buffer(buffers.dispatch_size_buffer, byte_size<std::uint32_t>(dispatch_component_count), gl);
 }
 
 void delete_collision_candidate_buffer(CollisionCandidateBuffers& buffers, QOpenGLFunctions_4_5_Core& gl)
@@ -141,19 +131,54 @@ void SceneGpuState::rebuild_collision_buffers(QOpenGLFunctions_4_5_Core& gl)
 
     const ClothBufferElementCounts& counts = cloth_gpu_state_.element_counts();
 
-    create_collision_candidate_buffer(collision_buffers_.cloth_vertex_body_face, counts.vertex, gl);
-    create_collision_candidate_buffer(collision_buffers_.cloth_edge_body_edge, counts.stretch_constraint, gl);
-    create_collision_candidate_buffer(collision_buffers_.cloth_face_body_vertex, counts.triangle, gl);
-    const bool cloth_cloth_active = cloth_gpu_state_.has_multiple_garments();
-    if (cloth_cloth_active) {
-        create_collision_candidate_buffer(collision_buffers_.cloth_cloth_vertex_face, counts.vertex, gl);
-    }
+    create_collision_candidate_buffers(gl);
 
     const GLsizeiptr correction_bytes = byte_size<glm::ivec4>(counts.vertex);
     create_buffer(collision_buffers_.normal_correction_sum_buffer, correction_bytes, gl);
     create_buffer(collision_buffers_.friction_correction_sum_buffer, correction_bytes, gl);
     create_buffer(collision_buffers_.contact_motion_delta_sum_buffer, correction_bytes, gl);
-    buffer_bindings_.bind_collision(collision_buffers_, cloth_cloth_active, gl);
+    buffer_bindings_.bind_collision(collision_buffers_, gl);
+}
+
+void SceneGpuState::create_collision_candidate_buffers(QOpenGLFunctions_4_5_Core& gl)
+{
+    const ClothBufferElementCounts& counts = cloth_gpu_state_.element_counts();
+
+    // Cloth vertex / body face
+    {
+        auto& buffers = collision_buffers_.cloth_vertex_body_face;
+        buffers.max_pairs = counts.vertex * candidate_capacity_multiplier;
+        create_buffer(buffers.candidate_buffer, byte_size<glm::uvec2>(buffers.max_pairs), gl);
+        create_buffer(buffers.count_buffer, byte_size<std::uint32_t>(1u), gl);
+        create_buffer(buffers.dispatch_size_buffer, dispatch_size_bytes, gl);
+    }
+
+    // Cloth edge / body edge
+    {
+        auto& buffers = collision_buffers_.cloth_edge_body_edge;
+        buffers.max_pairs = counts.stretch_constraint * candidate_capacity_multiplier;
+        create_buffer(buffers.candidate_buffer, byte_size<glm::uvec2>(buffers.max_pairs), gl);
+        create_buffer(buffers.count_buffer, byte_size<std::uint32_t>(1u), gl);
+        create_buffer(buffers.dispatch_size_buffer, dispatch_size_bytes, gl);
+    }
+
+    // Cloth face / body vertex
+    {
+        auto& buffers = collision_buffers_.cloth_face_body_vertex;
+        buffers.max_pairs = counts.triangle * candidate_capacity_multiplier;
+        create_buffer(buffers.candidate_buffer, byte_size<glm::uvec2>(buffers.max_pairs), gl);
+        create_buffer(buffers.count_buffer, byte_size<std::uint32_t>(1u), gl);
+        create_buffer(buffers.dispatch_size_buffer, dispatch_size_bytes, gl);
+    }
+
+    // Cloth vertex / cloth face
+    {
+        auto& buffers = collision_buffers_.cloth_cloth_vertex_face;
+        buffers.max_pairs = counts.vertex * candidate_capacity_multiplier * 4;
+        create_buffer(buffers.candidate_buffer, byte_size<glm::uvec2>(buffers.max_pairs), gl);
+        create_buffer(buffers.count_buffer, byte_size<std::uint32_t>(1u), gl);
+        create_buffer(buffers.dispatch_size_buffer, dispatch_size_bytes, gl);
+    }
 }
 
 void SceneGpuState::upload_garment_placement(const GarmentObject& garment, QOpenGLFunctions_4_5_Core& gl)
@@ -211,9 +236,7 @@ void SceneGpuState::clear_garment_base_positions(QOpenGLFunctions_4_5_Core& gl)
 
 void SceneGpuState::update_cloth_bvh_bounds(float bounds_margin, QOpenGLFunctions_4_5_Core& gl)
 {
-    if (cloth_gpu_state_.has_multiple_garments()) {
-        bvh_bounds_updater_.update_cloth_bvh(cloth_gpu_state_, bounds_margin, gl);
-    }
+    bvh_bounds_updater_.update_cloth_bvh(cloth_gpu_state_, bounds_margin, gl);
 }
 
 // Normals

@@ -49,6 +49,10 @@ private:
                                               float surface_offset,
                                               QOpenGLFunctions_4_5_Core& gl);
     void initialize_character_resources(const SceneState& scene, QOpenGLFunctions_4_5_Core& gl);
+
+    // Collision candidate buffers
+    void create_collision_candidate_buffers(QOpenGLFunctions_4_5_Core& gl);
+
     void build_attachment_targets(GarmentLayer layer, QOpenGLFunctions_4_5_Core& gl);
     void release_collision_buffers(QOpenGLFunctions_4_5_Core& gl);
 

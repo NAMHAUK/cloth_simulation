@@ -83,7 +83,8 @@ constexpr GLuint end = contact_motion_delta_sums + 1;
 constexpr std::size_t count = end - start;
 }
 
-constexpr std::size_t count = collision::end;
+constexpr GLuint vertex_face_exclusions = 57;
+constexpr std::size_t count = vertex_face_exclusions + 1;
 
 static_assert(cloth::end == character::start);
 static_assert(character::end == collision::start);
@@ -181,10 +182,10 @@ void SimulationBufferBindings::bind_cloth(const ClothBufferSet& buffers, QOpenGL
         buffers.triangle_bounds,
     };
     bind_buffers(binding::cloth::start, binding_buffers, "cloth", gl);
+    bind_buffers(binding::vertex_face_exclusions, std::array{buffers.vertex_face_exclusions}, "cloth", gl);
 }
 
 void SimulationBufferBindings::bind_collision(const CollisionBuffers& buffers,
-                                              bool cloth_cloth_active,
                                               QOpenGLFunctions_4_5_Core& gl) const
 {
     const std::array<GLuint, binding::collision::count> binding_buffers{
@@ -197,9 +198,9 @@ void SimulationBufferBindings::bind_collision(const CollisionBuffers& buffers,
         buffers.cloth_face_body_vertex.candidate_buffer,
         buffers.cloth_face_body_vertex.count_buffer,
         buffers.cloth_face_body_vertex.dispatch_size_buffer,
-        cloth_cloth_active ? buffers.cloth_cloth_vertex_face.candidate_buffer : dummy_buffer_,
-        cloth_cloth_active ? buffers.cloth_cloth_vertex_face.count_buffer : dummy_buffer_,
-        cloth_cloth_active ? buffers.cloth_cloth_vertex_face.dispatch_size_buffer : dummy_buffer_,
+        buffers.cloth_cloth_vertex_face.candidate_buffer,
+        buffers.cloth_cloth_vertex_face.count_buffer,
+        buffers.cloth_cloth_vertex_face.dispatch_size_buffer,
         buffers.normal_correction_sum_buffer,
         buffers.friction_correction_sum_buffer,
         buffers.contact_motion_delta_sum_buffer,
@@ -217,6 +218,7 @@ void SimulationBufferBindings::reset_character_bindings(QOpenGLFunctions_4_5_Cor
 void SimulationBufferBindings::reset_cloth_bindings(QOpenGLFunctions_4_5_Core& gl) const
 {
     bind_dummy_buffers(binding::cloth::start, binding::cloth::count, dummy_buffer_, gl);
+    bind_dummy_buffers(binding::vertex_face_exclusions, 1, dummy_buffer_, gl);
 }
 
 void SimulationBufferBindings::reset_collision_bindings(QOpenGLFunctions_4_5_Core& gl) const

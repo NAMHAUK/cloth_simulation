@@ -28,6 +28,7 @@ struct ClothBufferSet final
     GLuint vertex_normal = 0;
     GLuint bvh_node = 0;
     GLuint triangle_bounds = 0;
+    GLuint vertex_face_exclusions = 0;
 };
 
 struct GarmentBufferState final
@@ -36,6 +37,7 @@ struct GarmentBufferState final
     std::uint32_t vertex_count = 0;
     std::uint32_t triangle_start_index = 0;
     std::uint32_t triangle_count = 0;
+    std::uint32_t vertex_face_exclusion_offset = 0;
     std::vector<std::uint32_t> stretch_color_offsets;
     std::uint32_t stretch_constraint_count = 0;
     std::vector<std::uint32_t> bending_color_offsets;

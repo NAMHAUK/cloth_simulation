@@ -135,6 +135,29 @@ VertexTriangleAdjacency build_vertex_triangle_adjacency(std::uint32_t vertex_cou
     return adjacency;
 }
 
+std::vector<std::uint32_t> build_vertex_neighborhood_masks(std::uint32_t vertex_count,
+                                                           const std::vector<std::uint32_t>& triangle_indices)
+{
+    const auto adjacency = build_vertex_triangle_adjacency(vertex_count, triangle_indices);
+    const std::size_t masks_per_vertex = (static_cast<std::size_t>(adjacency.triangle_count) + 31u) / 32u;
+    std::vector<std::uint32_t> exclusions(vertex_count * masks_per_vertex, 0u);
+
+    for (std::uint32_t vertex = 0; vertex < vertex_count; ++vertex) {
+        const std::size_t row_offset = vertex * masks_per_vertex;
+        for (std::uint32_t entry = adjacency.offsets[vertex]; entry < adjacency.offsets[vertex + 1u]; ++entry) {
+            const std::size_t triangle_base = static_cast<std::size_t>(adjacency.triangle_indices[entry]) * 3u;
+            for (std::uint32_t corner = 0; corner < 3u; ++corner) {
+                const std::uint32_t neighbor = triangle_indices[triangle_base + corner];
+                for (std::uint32_t neighbor_entry = adjacency.offsets[neighbor]; neighbor_entry < adjacency.offsets[neighbor + 1u]; ++neighbor_entry) {
+                    const std::uint32_t triangle = adjacency.triangle_indices[neighbor_entry];
+                    exclusions[row_offset + triangle / 32u] |= 1u << (triangle % 32u);
+                }
+            }
+        }
+    }
+    return exclusions;
+}
+
 std::vector<float> compute_mesh_edge_lengths(const std::vector<MeshEdge>& edges,
                                              const std::vector<float>& vertices)
 {

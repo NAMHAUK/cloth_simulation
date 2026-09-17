@@ -64,7 +64,7 @@ void SimulationPipeline::prefit_garments(SceneGpuState& gpu_state,
     gpu_state.cloth_gpu_state().copy_current_positions_to_previous(gl);
 
     // Initial cloth-cloth collision
-    if (cloth_state.has_multiple_garments()) {
+    if (cloth_state.element_counts().vertex > 0u) {
         for (std::uint32_t iteration = 0; iteration < params_.step.iteration_count; ++iteration) {
             gpu_state.update_cloth_bvh_bounds(params_.collisions.cloth.initial_detection_distance, gl);
             collision_detector_.detect_prefit(gpu_state, gl);

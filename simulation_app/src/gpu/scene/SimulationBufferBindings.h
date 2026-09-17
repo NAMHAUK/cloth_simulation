@@ -38,9 +38,7 @@ public:
 
     void bind_character(const CharacterBufferSet& buffers, QOpenGLFunctions_4_5_Core& gl) const;
     void bind_cloth(const ClothBufferSet& buffers, QOpenGLFunctions_4_5_Core& gl) const;
-    void bind_collision(const CollisionBuffers& buffers,
-                        bool cloth_cloth_active,
-                        QOpenGLFunctions_4_5_Core& gl) const;
+    void bind_collision(const CollisionBuffers& buffers, QOpenGLFunctions_4_5_Core& gl) const;
 
     void reset_character_bindings(QOpenGLFunctions_4_5_Core& gl) const;
     void reset_cloth_bindings(QOpenGLFunctions_4_5_Core& gl) const;

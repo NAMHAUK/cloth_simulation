@@ -10,6 +10,10 @@
 VertexTriangleAdjacency build_vertex_triangle_adjacency(std::uint32_t vertex_count,
                                                         const std::vector<std::uint32_t>& triangle_indices);
 
+std::vector<std::uint32_t> build_vertex_neighborhood_masks(
+    std::uint32_t vertex_count,
+    const std::vector<std::uint32_t>& triangle_indices);
+
 glm::vec3 get_vertex_position(const std::vector<float>& vertices, std::uint32_t vertex_index);
 
 std::vector<float> compute_mesh_edge_lengths(const std::vector<MeshEdge>& edges,

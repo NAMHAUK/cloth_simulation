@@ -47,12 +47,12 @@ private:
     struct ClothClothDetectionProgram final
     {
         GLuint program = 0;
-        GLint upper_vertex_offset = -1;
-        GLint upper_vertex_count = -1;
-        GLint upper_bvh_root = -1;
-        GLint lower_vertex_offset = -1;
-        GLint lower_vertex_count = -1;
-        GLint lower_bvh_root = -1;
+        GLint vertex_offsets = -1;
+        GLint vertex_counts = -1;
+        GLint bvh_roots = -1;
+        GLint triangle_offsets = -1;
+        GLint masks_per_vertex = -1;
+        GLint exclusion_offsets = -1;
         GLint max_candidates = -1;
     };
 
