@@ -63,7 +63,7 @@ struct ClothCollisionParams final
     float thickness = 0.007f;
     float detection_distance = 0.009f;
     float stiffness = 1.0f;
-    float max_correction_length = 0.003f;
+    float max_correction_length = 0.005f;
     float body_search_radius = 0.15f;
 };
 
