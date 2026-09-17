@@ -28,8 +28,20 @@ layout(std430, binding = CLOTH_TRIANGLE_BOUNDS) buffer ClothTriangleBounds {
     Aabb triangle_bounds[];
 };
 
-uniform uvec2 uLevelFirstNodeIndex;
-uniform uvec2 uLevelNodeCount;
+layout(std430, binding = CLOTH_EDGE_INDICES) readonly buffer ClothEdgeIndices {
+    uint cloth_edge_indices[];
+};
+
+layout(std430, binding = CLOTH_EDGE_BVH_NODES) buffer ClothEdgeBvhNodes {
+    BvhNode edge_bvh_nodes[];
+};
+
+layout(std430, binding = CLOTH_EDGE_BOUNDS) buffer ClothEdgeBounds {
+    Aabb edge_bounds[];
+};
+
+uniform uvec4 uLevelFirstNodeIndex;
+uniform uvec4 uLevelNodeCount;
 uniform float uBoundsMargin;
 
 #define POSITION_IO_CLOTH_CURRENT
@@ -80,10 +92,46 @@ void update_internal_bounds(uint node_index, BvhNode node)
     bvh_nodes[node_index].bounds = Aabb(min_bounds, max_bounds);
 }
 
+void update_edge_bounds(uint node_index)
+{
+    BvhNode node = edge_bvh_nodes[node_index];
+    vec3 min_bounds = vec3(max_float);
+    vec3 max_bounds = vec3(-max_float);
+    if (is_leaf_node(node)) {
+        for (uint offset = 0u; offset < node.element_count; ++offset) {
+            uint edge_index = node.first_element_index + offset;
+            uvec2 vertices = uvec2(cloth_edge_indices[edge_index * 2u], cloth_edge_indices[edge_index * 2u + 1u]);
+            vec3 previous_a = read_cloth_previous_position(vertices.x);
+            vec3 previous_b = read_cloth_previous_position(vertices.y);
+            vec3 current_a = read_cloth_current_position(vertices.x);
+            vec3 current_b = read_cloth_current_position(vertices.y);
+            vec3 edge_min = min(min(previous_a, previous_b), min(current_a, current_b));
+            vec3 edge_max = max(max(previous_a, previous_b), max(current_a, current_b));
+            // Store unexpanded bounds so queries can expand only the target by the margin.
+            edge_bounds[edge_index] = Aabb(vec4(edge_min, 0.0), vec4(edge_max, 0.0));
+            min_bounds = min(min_bounds, edge_min - uBoundsMargin);
+            max_bounds = max(max_bounds, edge_max + uBoundsMargin);
+        }
+    } else {
+        min_bounds = min(edge_bvh_nodes[node.left_child_index].bounds.min_bounds.xyz,
+                         edge_bvh_nodes[node.right_child_index].bounds.min_bounds.xyz);
+        max_bounds = max(edge_bvh_nodes[node.left_child_index].bounds.max_bounds.xyz,
+                         edge_bvh_nodes[node.right_child_index].bounds.max_bounds.xyz);
+    }
+    edge_bvh_nodes[node_index].bounds = Aabb(vec4(min_bounds, 0.0), vec4(max_bounds, 0.0));
+}
+
 void main()
 {
     uint level_node_offset = gl_GlobalInvocationID.x;
-    if (level_node_offset >= uLevelNodeCount.x + uLevelNodeCount.y) {
+    uint triangle_node_count = uLevelNodeCount.x + uLevelNodeCount.y;
+    if (level_node_offset >= triangle_node_count) {
+        uint edge_offset = level_node_offset - triangle_node_count;
+        if (edge_offset < uLevelNodeCount.z) {
+            update_edge_bounds(uLevelFirstNodeIndex.z + edge_offset);
+        } else if (edge_offset < uLevelNodeCount.z + uLevelNodeCount.w) {
+            update_edge_bounds(uLevelFirstNodeIndex.w + edge_offset - uLevelNodeCount.z);
+        }
         return;
     }
 

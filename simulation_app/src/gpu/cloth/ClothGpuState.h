@@ -15,6 +15,7 @@ struct ClothBufferElementCounts final
 {
     std::uint32_t vertex = 0;
     std::uint32_t triangle = 0;
+    std::uint32_t edge = 0;
     std::uint32_t stretch_constraint = 0;
     std::uint32_t bending_constraint = 0;
     std::uint32_t attachment_constraint = 0;

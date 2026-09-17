@@ -46,6 +46,15 @@ layout(std430, binding = CLOTH_CLOTH_VERTEX_FACE_DISPATCH_SIZE) buffer ClothClot
     uint cloth_cloth_vertex_face_dispatch_size_z;
 };
 
+layout(std430, binding = CLOTH_CLOTH_EDGE_EDGE_CANDIDATE_COUNT) readonly buffer ClothClothEdgeEdgeCandidateCount {
+    uint cloth_cloth_edge_edge_candidate_count;
+};
+
+layout(std430, binding = CLOTH_CLOTH_EDGE_EDGE_DISPATCH_SIZE) buffer ClothClothEdgeEdgeDispatchSize {
+    uint cloth_cloth_edge_edge_dispatch_size_x;
+    uint cloth_cloth_edge_edge_dispatch_size_y;
+    uint cloth_cloth_edge_edge_dispatch_size_z;
+};
 uniform uint uMaxCandidateCount;
 uniform uint uCandidateKind;
 
@@ -62,6 +71,8 @@ void main()
         candidate_count = cloth_face_body_vertex_candidate_count;
     } else if (uCandidateKind == 3u) {
         candidate_count = cloth_cloth_vertex_face_candidate_count;
+    } else if (uCandidateKind == 4u) {
+        candidate_count = cloth_cloth_edge_edge_candidate_count;
     } else {
         return;
     }
@@ -81,9 +92,13 @@ void main()
         cloth_face_body_vertex_dispatch_size_x = dispatch_size_x;
         cloth_face_body_vertex_dispatch_size_y = 1u;
         cloth_face_body_vertex_dispatch_size_z = 1u;
-    } else {
+    } else if (uCandidateKind == 3u) {
         cloth_cloth_vertex_face_dispatch_size_x = dispatch_size_x;
         cloth_cloth_vertex_face_dispatch_size_y = 1u;
         cloth_cloth_vertex_face_dispatch_size_z = 1u;
+    } else {
+        cloth_cloth_edge_edge_dispatch_size_x = dispatch_size_x;
+        cloth_cloth_edge_edge_dispatch_size_y = 1u;
+        cloth_cloth_edge_edge_dispatch_size_z = 1u;
     }
 }

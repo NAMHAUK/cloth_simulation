@@ -58,21 +58,32 @@ void ClothClothCollisionSolver::initialize(const std::filesystem::path& shader_d
         const GLint max_correction_loc = require_uniform_location(apply_program_, "uMaxCorrectionLength", gl);
         gl.glProgramUniform1f(apply_program_, max_correction_loc, max_correction_length_);
     }
+
+    {
+        auto& shader = edge_accumulate_;
+        shader.program = load_compute_program(collision_dir / "edge_edge_accumulate.comp", gl);
+        shader.max_candidates_loc = require_uniform_location(shader.program, "uMaxCandidateCount", gl);
+        const GLint thickness_loc = require_uniform_location(shader.program, "uCollisionThickness", gl);
+        const GLint stiffness_loc = require_uniform_location(shader.program, "uCollisionStiffness", gl);
+        gl.glProgramUniform1f(shader.program, thickness_loc, collision_thickness_);
+        gl.glProgramUniform1f(shader.program, stiffness_loc, collision_stiffness_);
+    }
 }
 
 void ClothClothCollisionSolver::solve(const SceneGpuState& gpu_state, QOpenGLFunctions_4_5_Core& gl) const
 {
-    solve(gpu_state, accumulate_, gl);
+    solve(gpu_state, accumulate_, true, gl);
 }
 
 void ClothClothCollisionSolver::solve_initial(const SceneGpuState& gpu_state,
                                               QOpenGLFunctions_4_5_Core& gl) const
 {
-    solve(gpu_state, initial_accumulate_, gl);
+    solve(gpu_state, initial_accumulate_, false, gl);
 }
 
 void ClothClothCollisionSolver::solve(const SceneGpuState& gpu_state,
                                       const AccumulateProgram& shader,
+                                      bool solve_edges,
                                       QOpenGLFunctions_4_5_Core& gl) const
 {
     const ClothGpuState& cloth_state = gpu_state.cloth_gpu_state();
@@ -97,6 +108,15 @@ void ClothClothCollisionSolver::solve(const SceneGpuState& gpu_state,
                            cloth_state.garment_states()[GarmentLayer::Upper].vertex_count);
     gl.glBindBuffer(GL_DISPATCH_INDIRECT_BUFFER, collision_candidates.dispatch_size_buffer);
     gl.glDispatchComputeIndirect(0);
+    if (solve_edges) {
+        const auto& edge_candidates = gpu_state.collision_buffers().cloth_cloth_edge_edge;
+        gl.glUseProgram(edge_accumulate_.program);
+        gl.glProgramUniform1ui(edge_accumulate_.program,
+                               edge_accumulate_.max_candidates_loc,
+                               edge_candidates.max_pairs);
+        gl.glBindBuffer(GL_DISPATCH_INDIRECT_BUFFER, edge_candidates.dispatch_size_buffer);
+        gl.glDispatchComputeIndirect(0);
+    }
     gl.glBindBuffer(GL_DISPATCH_INDIRECT_BUFFER, 0);
     gl.glMemoryBarrier(GL_SHADER_STORAGE_BARRIER_BIT);
 
@@ -113,8 +133,10 @@ void ClothClothCollisionSolver::release(QOpenGLFunctions_4_5_Core& gl)
     gl.glDeleteProgram(apply_program_);
     gl.glDeleteProgram(initial_accumulate_.program);
     gl.glDeleteProgram(accumulate_.program);
+    gl.glDeleteProgram(edge_accumulate_.program);
     accumulate_ = {};
     initial_accumulate_ = {};
+    edge_accumulate_ = {};
     apply_program_ = 0;
     cloth_vertex_count_loc_ = -1;
 }

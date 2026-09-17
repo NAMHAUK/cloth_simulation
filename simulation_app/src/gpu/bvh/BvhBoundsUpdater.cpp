@@ -107,18 +107,24 @@ void BvhBoundsUpdater::update_cloth_bvh(const ClothGpuState& cloth_state,
     gl.glProgramUniform1f(cloth_program_, cloth_bounds_margin_loc_, bounds_margin);
 
     for (std::size_t level = 0; level < cloth_state.max_bvh_level_count(); ++level) {
-        const auto lower_garment_level = level_range(states[GarmentLayer::Lower].bvh_level_offsets, level);
-        const auto upper_garment_level = level_range(states[GarmentLayer::Upper].bvh_level_offsets, level);
-        const auto level_node_count = lower_garment_level.node_count + upper_garment_level.node_count;
-        
-        gl.glProgramUniform2ui(cloth_program_,
+        const auto lower_garment_level = level_range(states[GarmentLayer::Lower].triangle_bvh_level_offsets, level);
+        const auto upper_garment_level = level_range(states[GarmentLayer::Upper].triangle_bvh_level_offsets, level);
+        const auto lower_edge_level = level_range(states[GarmentLayer::Lower].edge_bvh_level_offsets, level);
+        const auto upper_edge_level = level_range(states[GarmentLayer::Upper].edge_bvh_level_offsets, level);
+        const auto level_node_count = lower_garment_level.node_count + upper_garment_level.node_count + lower_edge_level.node_count + upper_edge_level.node_count;
+
+        gl.glProgramUniform4ui(cloth_program_,
                                cloth_level_first_node_index_loc_,
                                lower_garment_level.first_node_index,
-                               upper_garment_level.first_node_index);
-        gl.glProgramUniform2ui(cloth_program_,
+                               upper_garment_level.first_node_index,
+                               lower_edge_level.first_node_index,
+                               upper_edge_level.first_node_index);
+        gl.glProgramUniform4ui(cloth_program_,
                                cloth_level_node_count_loc_,
                                lower_garment_level.node_count,
-                               upper_garment_level.node_count);
+                               upper_garment_level.node_count,
+                               lower_edge_level.node_count,
+                               upper_edge_level.node_count);
         gl.glDispatchCompute(compute_group_count(level_node_count, local_size), 1, 1);
         gl.glMemoryBarrier(GL_SHADER_STORAGE_BARRIER_BIT);
     }

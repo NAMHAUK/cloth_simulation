@@ -30,6 +30,7 @@ private:
 
     AccumulateProgram accumulate_;
     AccumulateProgram initial_accumulate_;
+    AccumulateProgram edge_accumulate_;
     GLuint apply_program_ = 0;
     GLint cloth_vertex_count_loc_ = -1;
 
@@ -40,5 +41,6 @@ private:
 
     void solve(const SceneGpuState& gpu_state,
                const AccumulateProgram& shader,
+               bool should_solve_edges,
                QOpenGLFunctions_4_5_Core& gl) const;
 };

@@ -36,6 +36,7 @@ struct GarmentObject
     GarmentLayer layer = GarmentLayer::Lower;
     GarmentMesh mesh;
     Bvh triangle_bvh;
+    Bvh edge_bvh;
 };
 
 class SceneState final
