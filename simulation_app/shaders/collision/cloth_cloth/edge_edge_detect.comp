@@ -87,7 +87,8 @@ void detect_edge_candidates(uint edge_index)
                 }
             }
         } else {
-            bool left_overlap = overlaps_aabb(query_bounds, bvh_nodes[node.left_child_index].bounds);
+            bool left_overlap = (!uIsSelfCollision || edge_index < bvh_nodes[node.right_child_index].first_element_index) &&
+                                overlaps_aabb(query_bounds, bvh_nodes[node.left_child_index].bounds);
             bool right_overlap = overlaps_aabb(query_bounds, bvh_nodes[node.right_child_index].bounds);
             if (left_overlap && right_overlap) {
                 stack[stack_count++] = node.left_child_index;

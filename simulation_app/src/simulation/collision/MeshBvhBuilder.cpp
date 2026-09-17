@@ -244,7 +244,6 @@ void MeshBvhBuilder::build_node(std::uint32_t node_index)
 
     node.left_child_index = static_cast<std::uint32_t>(bvh_.nodes.size());
     node.right_child_index = node.left_child_index + 1u;
-    node.first_element_index = 0u;
     node.element_count = 0u;
     bvh_.nodes.push_back(left_child);
     bvh_.nodes.push_back(right_child);

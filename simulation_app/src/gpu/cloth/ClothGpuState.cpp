@@ -119,6 +119,7 @@ void append_bvh_nodes(const Bvh& bvh,
         if (node.is_leaf()) {
             node.first_element_index += element_start_index;
         } else {
+            node.first_element_index += element_start_index;
             node.left_child_index += root_node_index;
             node.right_child_index += root_node_index;
         }
