@@ -5,23 +5,14 @@
 
 layout(local_size_x = 128) in;
 
-layout(std430, binding = CLOTH_EDGE_INDICES) readonly buffer ClothEdgeIndices {
-    uint cloth_edge_indices[];
+layout(std430, binding = CLOTH_EDGE_EXCLUSIONS) readonly buffer ClothEdgeExclusions {
+    uint edge_exclusions[];
 };
 layout(std430, binding = CLOTH_EDGE_BOUNDS) readonly buffer ClothEdgeBounds {
     Aabb edge_bounds[];
 };
 layout(std430, binding = CLOTH_EDGE_BVH_NODES) readonly buffer ClothEdgeBvhNodes {
     BvhNode bvh_nodes[];
-};
-layout(std430, binding = CLOTH_TRIANGLE_VERTEX_INDICES) readonly buffer ClothTriangleIndices {
-    uint cloth_triangle_indices[];
-};
-layout(std430, binding = CLOTH_ADJACENT_TRIANGLE_OFFSETS) readonly buffer ClothAdjacentTriangleOffsets {
-    uint cloth_adjacent_triangle_offsets[];
-};
-layout(std430, binding = CLOTH_ADJACENT_TRIANGLE_INDICES) readonly buffer ClothAdjacentTriangleIndices {
-    uint cloth_adjacent_triangle_indices[];
 };
 layout(std430, binding = CLOTH_CLOTH_EDGE_EDGE_CANDIDATES) buffer Candidates {
     uvec2 candidates[];
@@ -32,6 +23,7 @@ layout(std430, binding = CLOTH_CLOTH_EDGE_EDGE_CANDIDATE_COUNT) buffer Candidate
 
 uniform uint uEdgeOffset;
 uniform uint uEdgeCount;
+uniform uint uEdgeExclusionOffset;
 uniform uint uTargetBvhRoot;
 uniform bool uIsSelfCollision;
 uniform uint uMaxCandidateCount;
@@ -42,27 +34,13 @@ const uint group_candidate_capacity = 512u;
 
 #include "../candidate_output.glsl"
 
-bool are_local_edges(uint first_edge, uint second_edge)
+bool is_excluded_edge_pair(uint first_edge, uint second_edge)
 {
-    uvec2 first = uvec2(cloth_edge_indices[first_edge * 2u], cloth_edge_indices[first_edge * 2u + 1u]);
-    uvec2 second = uvec2(cloth_edge_indices[second_edge * 2u], cloth_edge_indices[second_edge * 2u + 1u]);
-    if (any(equal(first, uvec2(second.x))) || any(equal(first, uvec2(second.y)))) {
-        return true;
-    }
-    // Match the VF one-ring exclusion using the existing rest-topology adjacency.
-    for (uint endpoint = 0u; endpoint < 2u; ++endpoint) {
-        uint vertex = first[endpoint];
-        for (uint entry = cloth_adjacent_triangle_offsets[vertex];
-             entry < cloth_adjacent_triangle_offsets[vertex + 1u]; ++entry) {
-            uint base = cloth_adjacent_triangle_indices[entry] * 3u;
-            for (uint corner = 0u; corner < 3u; ++corner) {
-                if (any(equal(second, uvec2(cloth_triangle_indices[base + corner])))) {
-                    return true;
-                }
-            }
-        }
-    }
-    return false;
+    uint local_first_edge = first_edge - uEdgeOffset;
+    uint local_second_edge = second_edge - uEdgeOffset;
+    uint words_per_edge = (uEdgeCount + 31u) / 32u;
+    uint word_index = uEdgeExclusionOffset + local_first_edge * words_per_edge + local_second_edge / 32u;
+    return (edge_exclusions[word_index] & (1u << (local_second_edge % 32u))) != 0u;
 }
 
 void detect_edge_candidates(uint edge_index)
@@ -82,7 +60,7 @@ void detect_edge_candidates(uint edge_index)
                 }
                 Aabb target_bounds = expand_aabb(edge_bounds[target_edge], vec3(uDetectionDistance));
                 if (overlaps_aabb(query_bounds, target_bounds) &&
-                    (!uIsSelfCollision || !are_local_edges(edge_index, target_edge))) {
+                    (!uIsSelfCollision || !is_excluded_edge_pair(edge_index, target_edge))) {
                     append_candidate(uvec2(edge_index, target_edge));
                 }
             }

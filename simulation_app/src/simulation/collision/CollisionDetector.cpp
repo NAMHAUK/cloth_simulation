@@ -71,6 +71,7 @@ void CollisionDetector::initialize(const std::filesystem::path& shader_dir, QOpe
         shader.program = load_compute_program(collision_shader_dir / "cloth_cloth" / "edge_edge_detect.comp", gl);
         shader.edge_offset = require_uniform_location(shader.program, "uEdgeOffset", gl);
         shader.edge_count = require_uniform_location(shader.program, "uEdgeCount", gl);
+        shader.edge_exclusion_offset_loc = require_uniform_location(shader.program, "uEdgeExclusionOffset", gl);
         shader.target_bvh_root = require_uniform_location(shader.program, "uTargetBvhRoot", gl);
         shader.is_self_collision = require_uniform_location(shader.program, "uIsSelfCollision", gl);
         shader.max_candidates = require_uniform_location(shader.program, "uMaxCandidateCount", gl);
@@ -230,6 +231,7 @@ void CollisionDetector::detect_edges(const GarmentBufferState& source,
     const auto& shader = cloth_cloth_edge_edge_;
     gl.glProgramUniform1ui(shader.program, shader.edge_offset, source.edge_start_index);
     gl.glProgramUniform1ui(shader.program, shader.edge_count, source.edge_count);
+    gl.glProgramUniform1ui(shader.program, shader.edge_exclusion_offset_loc, source.edge_exclusion_offset);
     gl.glProgramUniform1ui(shader.program, shader.target_bvh_root, target.edge_bvh_level_offsets.front());
     gl.glProgramUniform1i(shader.program, shader.is_self_collision, is_self_collision);
     gl.glDispatchCompute(compute_group_count(source.edge_count, candidate_detect_local_size), 1, 1);

@@ -8,6 +8,7 @@
 #include <cstddef>
 #include <cstdint>
 #include <iterator>
+#include <limits>
 #include <stdexcept>
 #include <utility>
 
@@ -301,6 +302,7 @@ void ClothGpuState::create_topology_buffers(const std::vector<GarmentObject>& ga
                          adjacency.triangle_indices.data(),
                          GL_STATIC_DRAW);
     create_vertex_face_exclusion_buffer(garments, rebuild_state, gl);
+    create_edge_exclusion_buffer(garments, rebuild_state, gl);
 }
 
 void ClothGpuState::create_vertex_face_exclusion_buffer(const std::vector<GarmentObject>& garments,
@@ -331,6 +333,44 @@ void ClothGpuState::create_vertex_face_exclusion_buffer(const std::vector<Garmen
     gl.glGetNamedBufferParameteri64v(buffer, GL_BUFFER_SIZE, &allocated_size);
     if (allocated_size != buffer_size) {
         throw std::runtime_error("Failed to allocate cloth vertex-face exclusion bitset.");
+    }
+}
+
+void ClothGpuState::create_edge_exclusion_buffer(const std::vector<GarmentObject>& garments,
+                                                 BufferState& rebuild_state,
+                                                 QOpenGLFunctions_4_5_Core& gl)
+{
+    GLint64 max_block_size = 0;
+    gl.glGetInteger64v(GL_MAX_SHADER_STORAGE_BLOCK_SIZE, &max_block_size);
+    std::size_t word_count = 0;
+    for (const GarmentObject& garment : garments) {
+        auto& state = rebuild_state.garments[garment.layer];
+        state.edge_exclusion_offset = static_cast<std::uint32_t>(word_count);
+        const std::size_t words_per_edge = (static_cast<std::size_t>(state.edge_count) + 31u) / 32u;
+        word_count += state.edge_count * words_per_edge;
+        if (word_count > std::numeric_limits<std::uint32_t>::max() ||
+            byte_size<std::uint32_t>(word_count) > max_block_size) {
+            throw std::runtime_error("Cloth edge exclusion bitset exceeds the GPU SSBO size limit.");
+        }
+    }
+
+    const GLsizeiptr buffer_size = byte_size<std::uint32_t>(word_count);
+    GLuint& buffer = rebuild_state.buffers.edge_exclusions;
+    gl.glCreateBuffers(1, &buffer);
+    gl.glNamedBufferData(buffer, buffer_size, nullptr, GL_STATIC_DRAW);
+    GLint64 allocated_size = 0;
+    gl.glGetNamedBufferParameteri64v(buffer, GL_BUFFER_SIZE, &allocated_size);
+    if (allocated_size != buffer_size) {
+        throw std::runtime_error("Failed to allocate cloth edge exclusion bitset.");
+    }
+
+    for (const GarmentObject& garment : garments) {
+        const auto& state = rebuild_state.garments[garment.layer];
+        const auto exclusions = build_edge_exclusions(state.vertex_count, garment.edge_bvh.indices);
+        gl.glNamedBufferSubData(buffer,
+                                byte_size<std::uint32_t>(state.edge_exclusion_offset),
+                                byte_size<std::uint32_t>(exclusions.size()),
+                                exclusions.data());
     }
 }
 
@@ -622,7 +662,8 @@ bool ClothGpuState::has_gpu_objects() const
            state_.buffers.edge_index != 0 &&
            state_.buffers.edge_bounds != 0 &&
            state_.buffers.edge_bvh_node != 0 &&
-           state_.buffers.vertex_face_exclusions != 0;
+           state_.buffers.vertex_face_exclusions != 0 &&
+           state_.buffers.edge_exclusions != 0;
 }
 
 // Accessors
@@ -690,6 +731,7 @@ void ClothGpuState::delete_buffer_set(ClothBufferSet& buffers, QOpenGLFunctions_
         buffers.edge_index,
         buffers.edge_bounds,
         buffers.edge_bvh_node,
+        buffers.edge_exclusions,
     };
     gl.glDeleteBuffers(static_cast<GLsizei>(std::size(buffer_ids)), buffer_ids);
     gl.glDeleteVertexArrays(1, &buffers.vao);

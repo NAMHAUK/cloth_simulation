@@ -190,6 +190,39 @@ std::vector<MeshEdge> build_unique_triangle_edges(const std::vector<std::uint32_
     return edges;
 }
 
+std::vector<std::uint32_t> build_edge_exclusions(std::uint32_t vertex_count,
+                                                 const std::vector<std::uint32_t>& edge_indices)
+{
+    if (edge_indices.size() % 2u != 0u) {
+        throw std::invalid_argument("Cannot build edge exclusions from invalid topology.");
+    }
+    const auto edge_count = static_cast<std::uint32_t>(edge_indices.size() / 2u);
+    std::vector<std::vector<std::uint32_t>> vertex_edges(vertex_count);
+    for (std::size_t index = 0; index < edge_indices.size(); ++index) {
+        const std::uint32_t vertex = edge_indices[index];
+        if (vertex >= vertex_count) {
+            throw std::invalid_argument("Cannot build edge exclusions from invalid topology.");
+        }
+        vertex_edges[vertex].push_back(static_cast<std::uint32_t>(index / 2u));
+    }
+
+    const std::size_t words_per_edge = (static_cast<std::size_t>(edge_count) + 31u) / 32u;
+    std::vector<std::uint32_t> exclusions(edge_count * words_per_edge, 0u);
+
+    for (std::uint32_t edge = 0; edge < edge_count; ++edge) {
+        const std::uint32_t vertex_a = edge_indices[edge * 2u];
+        const std::uint32_t vertex_b = edge_indices[edge * 2u + 1u];
+        for (std::uint32_t first_edge : vertex_edges[vertex_a]) {
+            const std::size_t row_offset = first_edge * words_per_edge;
+            for (std::uint32_t second_edge : vertex_edges[vertex_b]) {
+                exclusions[row_offset + second_edge / 32u] |= 1u << (second_edge % 32u);
+                exclusions[second_edge * words_per_edge + first_edge / 32u] |= 1u << (first_edge % 32u);
+            }
+        }
+    }
+    return exclusions;
+}
+
 std::vector<MeshEdge> build_unique_bending_edges(const std::vector<std::uint32_t>& triangle_indices)
 {
     std::vector<std::pair<MeshEdge, std::uint32_t>> edge_opposite_vertices;

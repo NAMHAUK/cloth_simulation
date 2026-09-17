@@ -32,6 +32,7 @@ struct ClothBufferSet final
     GLuint edge_index = 0;
     GLuint edge_bounds = 0;
     GLuint edge_bvh_node = 0;
+    GLuint edge_exclusions = 0;
 };
 
 struct GarmentBufferState final
@@ -43,6 +44,7 @@ struct GarmentBufferState final
     std::uint32_t vertex_face_exclusion_offset = 0;
     std::uint32_t edge_start_index = 0;
     std::uint32_t edge_count = 0;
+    std::uint32_t edge_exclusion_offset = 0; // uint32_t index in the shared exclusion buffer.
     std::vector<std::uint32_t> stretch_color_offsets;
     std::uint32_t stretch_constraint_count = 0;
     std::vector<std::uint32_t> bending_color_offsets;

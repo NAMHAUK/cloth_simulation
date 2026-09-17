@@ -66,6 +66,7 @@ private:
         GLuint program = 0;
         GLint edge_offset = -1;
         GLint edge_count = -1;
+        GLint edge_exclusion_offset_loc = -1;
         GLint target_bvh_root = -1;
         GLint is_self_collision = -1;
         GLint max_candidates = -1;
