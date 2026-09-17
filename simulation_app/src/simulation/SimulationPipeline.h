@@ -13,14 +13,12 @@
 
 #include <cstdint>
 #include <filesystem>
-#include <vector>
 
 #include <QOpenGLFunctions_4_5_Core>
 
 class SceneGpuState;
 class SceneState;
 class ClothGpuState;
-struct GarmentObject;
 class SimulationPipeline final
 {
 public:
@@ -31,7 +29,6 @@ public:
     void initialize(const std::filesystem::path& shader_dir, QOpenGLFunctions_4_5_Core& gl);
     void release(QOpenGLFunctions_4_5_Core& gl);
     void prefit_garments(SceneGpuState& gpu_state,
-                         const std::vector<const GarmentObject*>& garments,
                          std::uint32_t iteration_count,
                          QOpenGLFunctions_4_5_Core& gl);
     void step(SceneState& scene,

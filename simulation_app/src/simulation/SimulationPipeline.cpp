@@ -48,7 +48,6 @@ void SimulationPipeline::initialize(const std::filesystem::path& shader_dir, QOp
 
 // Simulation
 void SimulationPipeline::prefit_garments(SceneGpuState& gpu_state,
-                                         const std::vector<const GarmentObject*>& garments,
                                          std::uint32_t iteration_count,
                                          QOpenGLFunctions_4_5_Core& gl)
 {
@@ -58,21 +57,25 @@ void SimulationPipeline::prefit_garments(SceneGpuState& gpu_state,
     const ClothGpuState& cloth_state = gpu_state.cloth_gpu_state();
 
     // Garment pre-fit
-    for (const GarmentObject* garment : garments) {
-        garment_prefit_solver_.solve(cloth_state, garment->layer, gl);
-    }
-    gpu_state.cloth_gpu_state().copy_current_positions_to_previous(gl);
+    for (std::uint32_t iteration = 0; iteration < params_.prefit.iteration_count; ++iteration) {
+        gpu_state.cloth_gpu_state().copy_current_positions_to_previous(gl);
+        for (GarmentLayer layer : {GarmentLayer::Lower, GarmentLayer::Upper}) {
+            if (cloth_state.garment_states()[layer].vertex_count > 0u) {
+                garment_prefit_solver_.solve(cloth_state, layer, gl);
+            }
+        }
+        stretch_constraint_solver_.solve(cloth_state, gl);
+        bending_constraint_solver_.solve(cloth_state, gl);
 
-    // Initial cloth-cloth collision
-    if (cloth_state.element_counts().vertex > 0u) {
-        for (std::uint32_t iteration = 0; iteration < params_.step.iteration_count; ++iteration) {
+        for (std::uint32_t collision_iteration = 0; collision_iteration < params_.step.iteration_count;
+             ++collision_iteration) {
             gpu_state.update_cloth_bvh_bounds(params_.collisions.cloth.initial_detection_distance, gl);
             collision_detector_.detect_prefit(gpu_state, gl);
             cloth_cloth_collision_solver_.solve_initial(gpu_state, gl);
-            gpu_state.cloth_gpu_state().copy_current_positions_to_previous(gl);
         }
     }
 
+    gpu_state.cloth_gpu_state().copy_current_positions_to_previous(gl);
     gpu_state.update_cloth_normals(gl);
 }
 

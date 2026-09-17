@@ -101,10 +101,9 @@ bool compute_candidate_contact(uint vertex_index,
     }
 
     vec3 body_outward_normal;
-    if (!find_body_outward_normal(surface_point, body_outward_normal)) {
-        return false;
-    }
-    if (dot(face_normal, body_outward_normal) < 0.0) {
+    // Without a nearby body surface, the garment winding must face outward.
+    if (find_body_outward_normal(surface_point, body_outward_normal) &&
+        dot(face_normal, body_outward_normal) < 0.0) {
         face_normal = -face_normal;
     }
 
@@ -117,7 +116,7 @@ bool compute_candidate_contact(uint vertex_index,
         return false;
     }
 
-    contact.correction_normal = body_outward_normal;
+    contact.correction_normal = face_normal;
     return true;
 }
 

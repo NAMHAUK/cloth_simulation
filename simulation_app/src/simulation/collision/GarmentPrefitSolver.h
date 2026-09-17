@@ -27,5 +27,5 @@ private:
     GLint vertex_count_loc_ = -1;
     float search_radius_ = 0.0f;
     float pushout_margin_ = 0.0f;
-    std::uint32_t iteration_count_ = 0;
+    float max_correction_length_ = 0.0f;
 };

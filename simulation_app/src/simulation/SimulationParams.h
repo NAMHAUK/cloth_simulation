@@ -78,6 +78,7 @@ struct PrefitParams final
 {
     float surface_search_radius = 0.15f;
     float pushout_margin = 0.01f;
+    float max_correction_length = 0.003f;
     std::uint32_t iteration_count = 32;
 };
 
@@ -138,6 +139,7 @@ constexpr bool is_valid_simulation_params(const SimulationParams& params)
            cloth.body_search_radius > 0.0f &&
            prefit.pushout_margin > 0.0f &&
            prefit.surface_search_radius >= prefit.pushout_margin &&
+           prefit.max_correction_length > 0.0f &&
            prefit.iteration_count > 0;
 }
 
