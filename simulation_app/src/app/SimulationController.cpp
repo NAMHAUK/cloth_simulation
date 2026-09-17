@@ -301,20 +301,22 @@ void SimulationController::cancel_placement_session()
 
 std::uint32_t SimulationController::calculate_iteration_count() const
 {
-    std::uint32_t iteration_count = 4u;
+    std::uint32_t iteration_count = 8u;
     for (const GarmentObject& garment : scene_.garments()) {
         const auto& rest_lengths = garment.mesh.stretch_constraints.rest_lengths;
         const double total_rest_length = std::accumulate(rest_lengths.begin(), rest_lengths.end(), 0.0);
         const double average_rest_length = total_rest_length / rest_lengths.size();
 
         // ponytail: Empirical spacing bands in meters; retune against observed garment stretch.
-        std::uint32_t garment_iteration_count = 4u;
+        std::uint32_t garment_iteration_count = 8u;
         if (average_rest_length <= 0.005f) {
             garment_iteration_count = 16u;
+        } else if (average_rest_length < 0.007f) {
+            garment_iteration_count = 14u;
         } else if (average_rest_length < 0.009f) {
             garment_iteration_count = 12u;
         } else if (average_rest_length < 0.013f) {
-            garment_iteration_count = 8u;
+            garment_iteration_count = 10u;
         }
         iteration_count = std::max(iteration_count, garment_iteration_count);
     }

@@ -9,7 +9,6 @@
 
 namespace {
 constexpr std::uint32_t apply_local_size = 128u;
-constexpr std::uint32_t body_triangle_index_build_local_size = 128u;
 }
 
 ClothClothCollisionSolver::ClothClothCollisionSolver(const ClothCollisionParams& params)
@@ -29,8 +28,6 @@ void ClothClothCollisionSolver::initialize(const std::filesystem::path& shader_d
         shader.program = load_compute_program(collision_dir / "vertex_face_accumulate.comp", gl);
 
         shader.max_candidates_loc = require_uniform_location(shader.program, "uMaxCandidateCount", gl);
-        body_triangle_count_loc_ = require_uniform_location(shader.program, "uBodyTriangleCount", gl);
-        shader.upper_vertex_offset_loc = require_uniform_location(shader.program, "uUpperVertexOffset", gl);
         const GLint thickness_loc = require_uniform_location(shader.program, "uCollisionThickness", gl);
         const GLint stiffness_loc = require_uniform_location(shader.program, "uCollisionStiffness", gl);
         gl.glProgramUniform1f(shader.program, thickness_loc, collision_thickness_);
@@ -48,18 +45,6 @@ void ClothClothCollisionSolver::initialize(const std::filesystem::path& shader_d
         const GLint search_radius_loc = require_uniform_location(shader.program, "uSearchRadiusSquared", gl);
         gl.glProgramUniform1f(shader.program, thickness_loc, collision_thickness_);
         gl.glProgramUniform1f(shader.program, stiffness_loc, collision_stiffness_);
-        gl.glProgramUniform1f(shader.program,
-                              search_radius_loc,
-                              surface_search_radius_ * surface_search_radius_);
-    }
-
-    {
-        auto& shader = body_triangle_index_build_;
-        shader.program = load_compute_program(collision_dir / "body_triangle_index_build.comp", gl);
-
-        shader.vertex_count_loc = require_uniform_location(shader.program, "uVertexCount", gl);
-        shader.arm_triangle_ranges_loc = require_uniform_location(shader.program, "uArmTriangleRanges", gl);
-        const GLint search_radius_loc = require_uniform_location(shader.program, "uSearchRadiusSquared", gl);
         gl.glProgramUniform1f(shader.program,
                               search_radius_loc,
                               surface_search_radius_ * surface_search_radius_);
@@ -95,7 +80,9 @@ void ClothClothCollisionSolver::solve(const SceneGpuState& gpu_state,
     }
 
     // clear
+    gl.glMemoryBarrier(GL_SHADER_STORAGE_BARRIER_BIT | GL_BUFFER_UPDATE_BARRIER_BIT);
     clear_collision_correction_sum(gpu_state.collision_buffers().normal_correction_sum_buffer, gl);
+    clear_collision_correction_sum(gpu_state.collision_buffers().contact_motion_delta_sum_buffer, gl);
 
     // accumulate
     const auto& collision_candidates = gpu_state.collision_buffers().cloth_cloth_vertex_face;
@@ -117,42 +104,13 @@ void ClothClothCollisionSolver::solve(const SceneGpuState& gpu_state,
     gl.glMemoryBarrier(GL_SHADER_STORAGE_BARRIER_BIT);
 }
 
-void ClothClothCollisionSolver::update_body_surface_mapping(const SceneGpuState& gpu_state,
-                                                            QOpenGLFunctions_4_5_Core& gl) const
-{
-    if (!gpu_state.cloth_gpu_state().has_multiple_garments()) {
-        return;
-    }
-
-    const std::uint32_t vertex_count = gpu_state.cloth_gpu_state().element_counts().vertex;
-    const glm::uvec4 arm_ranges = gpu_state.character_gpu_state().body_arm_triangle_ranges();
-    const auto& shader = body_triangle_index_build_;
-
-    gl.glProgramUniform1ui(accumulate_.program,
-                           body_triangle_count_loc_,
-                           gpu_state.character_gpu_state().triangle_count());
-
-    gl.glUseProgram(shader.program);
-    gl.glProgramUniform1ui(shader.program, shader.vertex_count_loc, vertex_count);
-    gl.glProgramUniform4ui(shader.program,
-                           shader.arm_triangle_ranges_loc,
-                           arm_ranges.x,
-                           arm_ranges.y,
-                           arm_ranges.z,
-                           arm_ranges.w);
-    gl.glDispatchCompute(compute_group_count(vertex_count, body_triangle_index_build_local_size), 1, 1);
-}
-
 void ClothClothCollisionSolver::release(QOpenGLFunctions_4_5_Core& gl)
 {
     gl.glDeleteProgram(apply_program_);
-    gl.glDeleteProgram(body_triangle_index_build_.program);
     gl.glDeleteProgram(initial_accumulate_.program);
     gl.glDeleteProgram(accumulate_.program);
     accumulate_ = {};
     initial_accumulate_ = {};
-    body_triangle_index_build_ = {};
     apply_program_ = 0;
-    body_triangle_count_loc_ = -1;
     cloth_vertex_count_loc_ = -1;
 }
