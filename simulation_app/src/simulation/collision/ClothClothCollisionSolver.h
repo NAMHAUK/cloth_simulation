@@ -25,6 +25,7 @@ private:
         GLuint program = 0;
         GLint max_candidates_loc = -1;
         GLint upper_vertex_offset_loc = -1;
+        GLint upper_vertex_count_loc = -1;
     };
 
     AccumulateProgram accumulate_;

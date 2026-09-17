@@ -10,6 +10,10 @@ layout(std430, binding = CLOTH_CURRENT_POSITIONS) readonly buffer ClothCurrentPo
     vec4 cloth_current_positions[];
 };
 
+layout(std430, binding = CLOTH_PREVIOUS_POSITIONS) readonly buffer ClothPreviousPositions {
+    vec4 cloth_previous_positions[];
+};
+
 layout(std430, binding = CLOTH_TRIANGLE_VERTEX_INDICES) readonly buffer ClothTriangleIndices {
     uint cloth_triangle_indices[];
 };
@@ -45,20 +49,16 @@ uniform float uCollisionThickness;
 uniform float uCollisionStiffness;
 uniform float uSearchRadiusSquared;
 uniform uint uUpperVertexOffset;
+uniform uint uUpperVertexCount;
 
 #define POSITION_IO_CLOTH_CURRENT
+#define POSITION_IO_CLOTH_PREVIOUS
 #include "../../mesh/position_io.glsl"
 #include "../../bvh/body_surface_search.glsl"
 #include "../contact_geometry.glsl"
 
 #define COLLISION_CORRECTION_ACCUMULATE
 #include "../correction.glsl"
-
-struct VertexFaceContact {
-    vec3 correction_normal;
-    vec3 barycentric;
-    float depth;
-};
 
 uvec3 load_face_vertices(uint triangle_index)
 {
@@ -84,7 +84,7 @@ bool find_body_outward_normal(vec3 surface_point, out vec3 outward_normal)
 bool compute_candidate_contact(uint vertex_index,
                                bool is_upper_vertex,
                                uvec3 target_vertices,
-                               out VertexFaceContact contact)
+                               out ClothVertexFaceContact contact)
 {
     vec3 query = read_cloth_current_position(vertex_index);
     TrianglePositions target = read_cloth_current_triangle(target_vertices);
@@ -121,7 +121,7 @@ bool compute_candidate_contact(uint vertex_index,
     return true;
 }
 
-void accumulate_upper_vertex(uint vertex_index, VertexFaceContact contact)
+void accumulate_upper_vertex(uint vertex_index, ClothVertexFaceContact contact)
 {
     vec3 correction = contact.correction_normal * contact.depth * uCollisionStiffness;
     accumulate_vertex_normal_correction(vertex_index, correction);
@@ -131,7 +131,7 @@ void accumulate_upper_vertex(uint vertex_index, VertexFaceContact contact)
 void accumulate_upper_face_vertex(uint vertex_index,
                                    float vertex_weight,
                                    float inverse_denominator,
-                                   VertexFaceContact contact)
+                                   ClothVertexFaceContact contact)
 {
     if (vertex_weight <= 0.0) {
         return;
@@ -141,6 +141,28 @@ void accumulate_upper_face_vertex(uint vertex_index,
     vec3 correction = contact.correction_normal * contact.depth * uCollisionStiffness * weight_scale;
     accumulate_vertex_normal_correction(vertex_index, correction);
     atomicAdd(normal_correction_sums[vertex_index].w, 1);
+}
+
+void accumulate_self_contact(uint vertex_index, uvec3 face_vertices)
+{
+    ClothVertexFaceContact contact;
+    if (!compute_cloth_vertex_face_contact(vertex_index,
+                                           face_vertices,
+                                           uCollisionThickness,
+                                           contact)) {
+        return;
+    }
+
+    float inverse_denominator = 1.0 / (1.0 + dot(contact.barycentric, contact.barycentric));
+    vec3 correction = contact.correction_normal * contact.depth * uCollisionStiffness * inverse_denominator;
+    uvec4 vertices = uvec4(vertex_index, face_vertices);
+    vec4 weights = vec4(1.0, -contact.barycentric);
+    for (uint corner = 0u; corner < 4u; ++corner) {
+        if (weights[corner] != 0.0) {
+            accumulate_vertex_normal_correction(vertices[corner], weights[corner] * correction);
+            atomicAdd(normal_correction_sums[vertices[corner]].w, 1);
+        }
+    }
 }
 
 void main()
@@ -154,9 +176,16 @@ void main()
     uvec2 candidate_indices = candidates[candidate_index];
     uint vertex_index = candidate_indices.x;
     uint triangle_index = candidate_indices.y;
-    bool is_upper_vertex = vertex_index >= uUpperVertexOffset;
+    bool is_upper_vertex = vertex_index >= uUpperVertexOffset &&
+                           vertex_index < uUpperVertexOffset + uUpperVertexCount;
     uvec3 target_vertices = load_face_vertices(triangle_index);
-    VertexFaceContact contact;
+    bool is_upper_face = target_vertices.x >= uUpperVertexOffset &&
+                         target_vertices.x < uUpperVertexOffset + uUpperVertexCount;
+    if (is_upper_vertex == is_upper_face) {
+        accumulate_self_contact(vertex_index, target_vertices);
+        return;
+    }
+    ClothVertexFaceContact contact;
     if (!compute_candidate_contact(vertex_index, is_upper_vertex, target_vertices, contact)) {
         return;
     }

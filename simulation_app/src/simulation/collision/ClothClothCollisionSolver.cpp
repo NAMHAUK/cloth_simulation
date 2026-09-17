@@ -40,6 +40,7 @@ void ClothClothCollisionSolver::initialize(const std::filesystem::path& shader_d
 
         shader.max_candidates_loc = require_uniform_location(shader.program, "uMaxCandidateCount", gl);
         shader.upper_vertex_offset_loc = require_uniform_location(shader.program, "uUpperVertexOffset", gl);
+        shader.upper_vertex_count_loc = require_uniform_location(shader.program, "uUpperVertexCount", gl);
         const GLint thickness_loc = require_uniform_location(shader.program, "uCollisionThickness", gl);
         const GLint stiffness_loc = require_uniform_location(shader.program, "uCollisionStiffness", gl);
         const GLint search_radius_loc = require_uniform_location(shader.program, "uSearchRadiusSquared", gl);
@@ -75,7 +76,7 @@ void ClothClothCollisionSolver::solve(const SceneGpuState& gpu_state,
                                       QOpenGLFunctions_4_5_Core& gl) const
 {
     const ClothGpuState& cloth_state = gpu_state.cloth_gpu_state();
-    if (!cloth_state.has_multiple_garments()) {
+    if (cloth_state.element_counts().vertex == 0u) {
         return;
     }
 
@@ -91,6 +92,9 @@ void ClothClothCollisionSolver::solve(const SceneGpuState& gpu_state,
     gl.glUseProgram(shader.program);
     gl.glProgramUniform1ui(shader.program, shader.max_candidates_loc, collision_candidates.max_pairs);
     gl.glProgramUniform1ui(shader.program, shader.upper_vertex_offset_loc, upper_vertex_offset);
+    gl.glProgramUniform1ui(shader.program,
+                           shader.upper_vertex_count_loc,
+                           cloth_state.garment_states()[GarmentLayer::Upper].vertex_count);
     gl.glBindBuffer(GL_DISPATCH_INDIRECT_BUFFER, collision_candidates.dispatch_size_buffer);
     gl.glDispatchComputeIndirect(0);
     gl.glBindBuffer(GL_DISPATCH_INDIRECT_BUFFER, 0);

@@ -62,6 +62,100 @@ bool compute_barycentric_if_inside(vec3 point, TrianglePositions triangle, out v
     return compute_barycentric_if_inside(point, triangle.a, triangle.b, triangle.c, barycentric);
 }
 
+struct ClothVertexFaceContact {
+    vec3 correction_normal;
+    vec3 barycentric;
+    float depth;
+};
+
+bool compute_cloth_boundary_contact(vec3 point,
+                                     TrianglePositions face,
+                                     vec3 face_normal,
+                                     float collision_thickness,
+                                     out ClothVertexFaceContact contact)
+{
+    vec3 closest_point = closest_point_on_triangle(point, face.a, face.b, face.c);
+    vec3 separation = point - closest_point;
+    float distance = length(separation);
+    if (distance >= collision_thickness ||
+        !compute_barycentric_if_inside(closest_point, face, contact.barycentric)) {
+        return false;
+    }
+
+    contact.barycentric = max(contact.barycentric, vec3(0.0));
+    contact.barycentric /= dot(contact.barycentric, vec3(1.0));
+    contact.correction_normal = distance > 0.0 ? separation / distance : face_normal;
+    contact.depth = collision_thickness - distance;
+    return true;
+}
+
+bool compute_cloth_vertex_face_contact(uint vertex_index,
+                                      uvec3 face_vertices,
+                                      float collision_thickness,
+                                      out ClothVertexFaceContact contact)
+{
+    vec3 previous_vertex_position = read_cloth_previous_position(vertex_index);
+    vec3 current_vertex_position = read_cloth_current_position(vertex_index);
+    TrianglePositions previous_face = read_cloth_previous_triangle(face_vertices);
+    TrianglePositions current_face = read_cloth_current_triangle(face_vertices);
+
+    const float distance_delta_epsilon = 1.0e-8;
+
+    vec3 previous_normal;
+    vec3 current_normal;
+    if (!compute_triangle_normal(previous_face, previous_normal) ||
+        !compute_triangle_normal(current_face, current_normal)) {
+        return false;
+    }
+
+    // Use the starting side only for this sweep and the zero-distance fallback.
+    float signed_distance = dot(previous_vertex_position - previous_face.a, previous_normal);
+    if (abs(signed_distance) <= distance_delta_epsilon) {
+        signed_distance = dot(current_vertex_position - current_face.a, current_normal);
+    }
+    float normal_sign = signed_distance < 0.0 ? -1.0 : 1.0;
+    previous_normal *= normal_sign;
+    current_normal *= normal_sign;
+    float previous_distance = dot(previous_vertex_position - previous_face.a, previous_normal);
+    float current_distance = dot(current_vertex_position - current_face.a, current_normal);
+
+    bool has_swept_contact = false;
+    float distance_delta = previous_distance - current_distance;
+    // Inside the thickness shell, sweep against the face itself.
+    float contact_distance = previous_distance > collision_thickness ? collision_thickness : 0.0;
+    if (previous_distance >= contact_distance &&
+        current_distance <= contact_distance &&
+        distance_delta > distance_delta_epsilon) {
+        float hit_time = clamp((previous_distance - contact_distance) / distance_delta, 0.0, 1.0);
+        vec3 hit_vertex_position = mix(previous_vertex_position, current_vertex_position, hit_time);
+        TrianglePositions hit_face = interpolate_triangle_positions(previous_face, current_face, hit_time);
+        vec3 hit_normal;
+        if (compute_triangle_normal(hit_face, hit_normal)) {
+            hit_normal *= normal_sign;
+            float hit_distance = dot(hit_vertex_position - hit_face.a, hit_normal);
+            vec3 hit_surface_point = hit_vertex_position - hit_normal * hit_distance;
+            has_swept_contact = compute_barycentric_if_inside(hit_surface_point, hit_face, contact.barycentric);
+        }
+    }
+
+    if (!has_swept_contact) {
+        return compute_cloth_boundary_contact(current_vertex_position,
+                                               current_face,
+                                               current_normal,
+                                               collision_thickness,
+                                               contact);
+    }
+
+    vec3 current_surface_point = interpolate_triangle_position(current_face, contact.barycentric);
+    contact.depth = collision_thickness - dot(current_vertex_position - current_surface_point, current_normal);
+    if (contact.depth <= 0.0) {
+        return false;
+    }
+
+    contact.correction_normal = current_normal;
+    return true;
+}
+
 void update_closest_segments(float first_t,
                              float second_t,
                              inout SegmentState first,

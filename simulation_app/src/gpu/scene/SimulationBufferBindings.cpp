@@ -184,7 +184,6 @@ void SimulationBufferBindings::bind_cloth(const ClothBufferSet& buffers, QOpenGL
 }
 
 void SimulationBufferBindings::bind_collision(const CollisionBuffers& buffers,
-                                              bool cloth_cloth_active,
                                               QOpenGLFunctions_4_5_Core& gl) const
 {
     const std::array<GLuint, binding::collision::count> binding_buffers{
@@ -197,9 +196,9 @@ void SimulationBufferBindings::bind_collision(const CollisionBuffers& buffers,
         buffers.cloth_face_body_vertex.candidate_buffer,
         buffers.cloth_face_body_vertex.count_buffer,
         buffers.cloth_face_body_vertex.dispatch_size_buffer,
-        cloth_cloth_active ? buffers.cloth_cloth_vertex_face.candidate_buffer : dummy_buffer_,
-        cloth_cloth_active ? buffers.cloth_cloth_vertex_face.count_buffer : dummy_buffer_,
-        cloth_cloth_active ? buffers.cloth_cloth_vertex_face.dispatch_size_buffer : dummy_buffer_,
+        buffers.cloth_cloth_vertex_face.candidate_buffer,
+        buffers.cloth_cloth_vertex_face.count_buffer,
+        buffers.cloth_cloth_vertex_face.dispatch_size_buffer,
         buffers.normal_correction_sum_buffer,
         buffers.friction_correction_sum_buffer,
         buffers.contact_motion_delta_sum_buffer,
