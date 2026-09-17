@@ -82,9 +82,7 @@ void CollisionDetector::initialize(const std::filesystem::path& shader_dir, QOpe
 
 // Detection
 
-void CollisionDetector::detect(const SceneGpuState& gpu_state,
-                               QOpenGLFunctions_4_5_Core& gl,
-                               const GLuint* edge_timestamps) const
+void CollisionDetector::detect(const SceneGpuState& gpu_state, QOpenGLFunctions_4_5_Core& gl) const
 {
     const CollisionBuffers& collision = gpu_state.collision_buffers();
 
@@ -99,13 +97,7 @@ void CollisionDetector::detect(const SceneGpuState& gpu_state,
     detect_cloth_edge_body_edge(gpu_state, gl);
     detect_cloth_face_body_vertex(gpu_state, gl);
     detect_cloth_cloth_vertex_face(gpu_state, gl);
-    if (edge_timestamps) {
-        gl.glQueryCounter(edge_timestamps[0], GL_TIMESTAMP);
-    }
     detect_cloth_cloth_edge_edge(gpu_state, gl);
-    if (edge_timestamps) {
-        gl.glQueryCounter(edge_timestamps[1], GL_TIMESTAMP);
-    }
     gl.glMemoryBarrier(GL_SHADER_STORAGE_BARRIER_BIT);
 
     build_dispatch_size(CandidateKind::ClothVertexBodyFace, collision.cloth_vertex_body_face.max_pairs, gl);

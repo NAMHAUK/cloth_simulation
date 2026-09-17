@@ -15,9 +15,7 @@ public:
     ClothClothCollisionSolver& operator=(const ClothClothCollisionSolver&) = delete;
 
     void initialize(const std::filesystem::path& shader_dir, QOpenGLFunctions_4_5_Core& gl);
-    void solve(const SceneGpuState& gpu_state,
-               QOpenGLFunctions_4_5_Core& gl,
-               const GLuint* edge_timestamps = nullptr) const;
+    void solve(const SceneGpuState& gpu_state, QOpenGLFunctions_4_5_Core& gl) const;
     void solve_initial(const SceneGpuState& gpu_state, QOpenGLFunctions_4_5_Core& gl) const;
     void release(QOpenGLFunctions_4_5_Core& gl);
 
@@ -44,6 +42,5 @@ private:
     void solve(const SceneGpuState& gpu_state,
                const AccumulateProgram& shader,
                bool should_solve_edges,
-               QOpenGLFunctions_4_5_Core& gl,
-               const GLuint* edge_timestamps) const;
+               QOpenGLFunctions_4_5_Core& gl) const;
 };

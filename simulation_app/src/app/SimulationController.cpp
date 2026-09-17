@@ -110,7 +110,6 @@ void SimulationController::stop_simulation()
 
 void SimulationController::draw(const glm::mat4& mvp, bool is_placement_active, QOpenGLFunctions_4_5_Core& gl)
 {
-    simulation_pipeline_.collect_timings(gl);
     scene_renderer_.draw(scene_, gpu_state_, make_placement_matrices(), mvp, is_placement_active, gl);
 }
 
@@ -208,7 +207,6 @@ void SimulationController::return_to_default_pose()
 
 void SimulationController::set_character_motion_state(CharacterMotion motion, QOpenGLFunctions_4_5_Core& gl)
 {
-    simulation_pipeline_.reset_timings();
     scene_.set_character_motion(std::move(motion));
     gpu_state_.set_character_motion(scene_, gl);
     motion_step_index_ = 0;
