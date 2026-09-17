@@ -28,7 +28,6 @@ void ClothClothCollisionSolver::initialize(const std::filesystem::path& shader_d
         shader.program = load_compute_program(collision_dir / "vertex_face_accumulate.comp", gl);
 
         shader.max_candidates_loc = require_uniform_location(shader.program, "uMaxCandidateCount", gl);
-        shader.upper_vertex_offset_loc = require_uniform_location(shader.program, "uUpperVertexOffset", gl);
         const GLint thickness_loc = require_uniform_location(shader.program, "uCollisionThickness", gl);
         const GLint stiffness_loc = require_uniform_location(shader.program, "uCollisionStiffness", gl);
         gl.glProgramUniform1f(shader.program, thickness_loc, collision_thickness_);
