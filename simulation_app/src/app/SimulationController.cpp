@@ -243,6 +243,7 @@ void SimulationController::set_garment_color(GarmentLayer layer, const glm::vec3
 void SimulationController::confirm_garment_placement()
 {
     assert(is_gpu_initialized());
+    assert(!scene_.garments().empty());
 
     run_with_gl_context_([this](QOpenGLFunctions_4_5_Core& gl) {
         std::vector<const GarmentObject*> placement_garments;
@@ -259,7 +260,7 @@ void SimulationController::confirm_garment_placement()
         }
 
         gpu_state_.rebuild_collision_buffers(gl);
-        simulation_pipeline_.prefit_garments(gpu_state_, placement_garments, calculate_iteration_count(), gl);
+        simulation_pipeline_.prefit_garments(gpu_state_, calculate_iteration_count(), gl);
 
         for (const GarmentObject* garment : placement_garments) {
             gpu_state_.initialize_garment_attachments(*garment, gl);
