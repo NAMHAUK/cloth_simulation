@@ -4,6 +4,7 @@
 #include "utils/BufferUtils.h"
 #include "utils/ShaderUtils.h"
 
+#include <array>
 #include <stdexcept>
 
 namespace {
@@ -44,12 +45,12 @@ void CollisionDetector::initialize(const std::filesystem::path& shader_dir, QOpe
         const auto shader_path = collision_shader_dir / "cloth_cloth" / "vertex_face_detect.comp";
         auto& shader = cloth_cloth_vertex_face_;
         shader.program = load_compute_program(shader_path, gl);
-        shader.upper_vertex_offset = require_uniform_location(shader.program, "uUpperVertexOffset", gl);
-        shader.upper_vertex_count = require_uniform_location(shader.program, "uUpperVertexCount", gl);
-        shader.upper_bvh_root = require_uniform_location(shader.program, "uUpperBvhRoot", gl);
-        shader.lower_vertex_offset = require_uniform_location(shader.program, "uLowerVertexOffset", gl);
-        shader.lower_vertex_count = require_uniform_location(shader.program, "uLowerVertexCount", gl);
-        shader.lower_bvh_root = require_uniform_location(shader.program, "uLowerBvhRoot", gl);
+        shader.vertex_offsets = require_uniform_location(shader.program, "uVertexOffsets[0]", gl);
+        shader.vertex_counts = require_uniform_location(shader.program, "uVertexCounts[0]", gl);
+        shader.bvh_roots = require_uniform_location(shader.program, "uBvhRoots[0]", gl);
+        shader.triangle_offsets = require_uniform_location(shader.program, "uTriangleOffsets[0]", gl);
+        shader.masks_per_vertex = require_uniform_location(shader.program, "uMasksPerVertex[0]", gl);
+        shader.exclusion_offsets = require_uniform_location(shader.program, "uExclusionOffsets[0]", gl);
         shader.max_candidates = require_uniform_location(shader.program, "uMaxCandidateCount", gl);
     }
 
@@ -150,19 +151,25 @@ void CollisionDetector::detect_cloth_cloth_vertex_face(const SceneGpuState& gpu_
     const GarmentBufferState& lower = garment_states[GarmentLayer::Lower];
     const std::uint32_t vertex_count = upper.vertex_count + lower.vertex_count;
 
-    const std::uint32_t upper_bvh_root = upper.vertex_count > 0u ? upper.bvh_level_offsets.front() : 0u;
-    const std::uint32_t lower_bvh_root = lower.vertex_count > 0u ? lower.bvh_level_offsets.front() : 0u;
+    const std::array<GLuint, 2> vertex_offsets{lower.vertex_start_index, upper.vertex_start_index};
+    const std::array<GLuint, 2> vertex_counts{lower.vertex_count, upper.vertex_count};
+    const std::array<GLuint, 2> bvh_roots{
+        lower.vertex_count > 0u ? lower.bvh_level_offsets.front() : 0u,
+        upper.vertex_count > 0u ? upper.bvh_level_offsets.front() : 0u,
+    };
+    const std::array<GLuint, 2> triangle_offsets{lower.triangle_start_index, upper.triangle_start_index};
+    const std::array<GLuint, 2> masks_per_vertex{(lower.triangle_count + 31u) / 32u, (upper.triangle_count + 31u) / 32u};
+    const std::array<GLuint, 2> exclusion_offsets{lower.vertex_face_exclusion_offset, upper.vertex_face_exclusion_offset};
 
     gl.glUseProgram(shader.program);
     gl.glProgramUniform1ui(shader.program, shader.max_candidates, candidates.max_pairs);
 
-    gl.glProgramUniform1ui(shader.program, shader.upper_vertex_offset, upper.vertex_start_index);
-    gl.glProgramUniform1ui(shader.program, shader.upper_vertex_count, upper.vertex_count);
-    gl.glProgramUniform1ui(shader.program, shader.upper_bvh_root, upper_bvh_root);
-
-    gl.glProgramUniform1ui(shader.program, shader.lower_vertex_offset, lower.vertex_start_index);
-    gl.glProgramUniform1ui(shader.program, shader.lower_vertex_count, lower.vertex_count);
-    gl.glProgramUniform1ui(shader.program, shader.lower_bvh_root, lower_bvh_root);
+    gl.glProgramUniform1uiv(shader.program, shader.vertex_offsets, 2, vertex_offsets.data());
+    gl.glProgramUniform1uiv(shader.program, shader.vertex_counts, 2, vertex_counts.data());
+    gl.glProgramUniform1uiv(shader.program, shader.bvh_roots, 2, bvh_roots.data());
+    gl.glProgramUniform1uiv(shader.program, shader.triangle_offsets, 2, triangle_offsets.data());
+    gl.glProgramUniform1uiv(shader.program, shader.masks_per_vertex, 2, masks_per_vertex.data());
+    gl.glProgramUniform1uiv(shader.program, shader.exclusion_offsets, 2, exclusion_offsets.data());
 
     gl.glDispatchCompute(compute_group_count(vertex_count, candidate_detect_local_size), 1, 1);
 }

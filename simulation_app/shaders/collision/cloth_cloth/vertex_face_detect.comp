@@ -14,16 +14,8 @@ layout(std430, binding = CLOTH_PREVIOUS_POSITIONS) readonly buffer ClothPrevious
     vec4 cloth_previous_positions[];
 };
 
-layout(std430, binding = CLOTH_TRIANGLE_VERTEX_INDICES) readonly buffer ClothTriangleIndices {
-    uint cloth_triangle_indices[];
-};
-
-layout(std430, binding = CLOTH_ADJACENT_TRIANGLE_OFFSETS) readonly buffer ClothAdjacentTriangleOffsets {
-    uint cloth_adjacent_triangle_offsets[];
-};
-
-layout(std430, binding = CLOTH_ADJACENT_TRIANGLE_INDICES) readonly buffer ClothAdjacentTriangleIndices {
-    uint cloth_adjacent_triangle_indices[];
+layout(std430, binding = CLOTH_VERTEX_FACE_EXCLUSIONS) readonly buffer ClothVertexFaceExclusions {
+    uint vertex_face_exclusions[];
 };
 
 layout(std430, binding = CLOTH_TRIANGLE_BOUNDS) readonly buffer ClothTriangleBounds {
@@ -42,14 +34,16 @@ layout(std430, binding = CLOTH_CLOTH_VERTEX_FACE_CANDIDATE_COUNT) buffer Candida
     uint candidate_count;
 };
 
-uniform uint uUpperVertexOffset;
-uniform uint uUpperVertexCount;
-uniform uint uUpperBvhRoot;
-uniform uint uLowerVertexOffset;
-uniform uint uLowerVertexCount;
-uniform uint uLowerBvhRoot;
+uniform uint uVertexOffsets[2];
+uniform uint uVertexCounts[2];
+uniform uint uBvhRoots[2];
+uniform uint uTriangleOffsets[2];
+uniform uint uMasksPerVertex[2];
+uniform uint uExclusionOffsets[2];
 uniform uint uMaxCandidateCount;
 
+const uint lower_layer = 0u;
+const uint upper_layer = 1u;
 const uint max_bvh_stack_depth = 32u;
 const uint group_candidate_capacity = 512u;
 
@@ -62,40 +56,26 @@ shared uint garment_roots_overlap;
 
 bool roots_overlap()
 {
-    if (uUpperVertexCount == 0u || uLowerVertexCount == 0u) {
+    if (uVertexCounts[lower_layer] == 0u || uVertexCounts[upper_layer] == 0u) {
         return false;
     }
 
-    BvhNode upper_root = bvh_nodes[uUpperBvhRoot];
-    BvhNode lower_root = bvh_nodes[uLowerBvhRoot];
+    BvhNode upper_root = bvh_nodes[uBvhRoots[upper_layer]];
+    BvhNode lower_root = bvh_nodes[uBvhRoots[lower_layer]];
     return overlaps_aabb(upper_root.bounds, lower_root.bounds);
 }
 
-bool is_local_triangle(uint vertex_index, uint triangle_index)
+bool is_local_triangle(uint local_triangle, uint exclusion_row_offset)
 {
-    uint triangle_base = triangle_index * 3u;
-    uvec3 face_vertices = uvec3(cloth_triangle_indices[triangle_base],
-                                cloth_triangle_indices[triangle_base + 1u],
-                                cloth_triangle_indices[triangle_base + 2u]);
-    if (any(equal(face_vertices, uvec3(vertex_index)))) {
-        return true;
-    }
-
-    // ponytail: One-ring exclusion; wider rest-topology filtering is needed when thickness exceeds mesh spacing.
-    uint begin = cloth_adjacent_triangle_offsets[vertex_index];
-    uint end = cloth_adjacent_triangle_offsets[vertex_index + 1u];
-    for (uint entry_index = begin; entry_index < end; ++entry_index) {
-        uint adjacent_base = cloth_adjacent_triangle_indices[entry_index] * 3u;
-        for (uint corner = 0u; corner < 3u; ++corner) {
-            if (any(equal(face_vertices, uvec3(cloth_triangle_indices[adjacent_base + corner])))) {
-                return true;
-            }
-        }
-    }
-    return false;
+    uint mask_index = exclusion_row_offset + local_triangle / 32u;
+    return (vertex_face_exclusions[mask_index] & (1u << (local_triangle % 32u))) != 0u;
 }
 
-void detect_vertex_face_candidates(uint cloth_vertex_index, uint target_bvh_root, bool is_self_contact)
+void detect_vertex_face_candidates(uint cloth_vertex_index,
+                                   uint target_bvh_root,
+                                   bool is_self_contact,
+                                   uint exclusion_row_offset,
+                                   uint garment_triangle_offset)
 {
     vec3 previous_position = read_cloth_previous_position(cloth_vertex_index);
     vec3 current_position = read_cloth_current_position(cloth_vertex_index);
@@ -113,7 +93,7 @@ void detect_vertex_face_candidates(uint cloth_vertex_index, uint target_bvh_root
                 uint triangle_index = node.first_element_index + triangle_offset;
                 Aabb bounds = triangle_bounds[triangle_index];
                 if (overlaps_aabb(vertex_bounds, bounds) &&
-                    (!is_self_contact || !is_local_triangle(cloth_vertex_index, triangle_index))) {
+                    (!is_self_contact || !is_local_triangle(triangle_index - garment_triangle_offset, exclusion_row_offset))) {
                     append_candidate(uvec2(cloth_vertex_index, triangle_index));
                 }
             }
@@ -147,17 +127,28 @@ void main()
     barrier();
 
     uint dispatch_vertex_index = gl_GlobalInvocationID.x;
-    uint garment_pair_vertex_count = uUpperVertexCount + uLowerVertexCount;
+    uint garment_pair_vertex_count = uVertexCounts[lower_layer] + uVertexCounts[upper_layer];
     
     if (dispatch_vertex_index < garment_pair_vertex_count) {
-        bool is_upper_vertex = dispatch_vertex_index < uUpperVertexCount;
-        uint vertex_index = is_upper_vertex ? uUpperVertexOffset + dispatch_vertex_index : uLowerVertexOffset + dispatch_vertex_index - uUpperVertexCount;
+        uint garment_index = dispatch_vertex_index < uVertexCounts[upper_layer] ? upper_layer : lower_layer;
+        uint local_vertex = dispatch_vertex_index - (garment_index == upper_layer ? 0u : uVertexCounts[upper_layer]);
+        uint vertex_index = uVertexOffsets[garment_index] + local_vertex;
+        uint triangle_offset = uTriangleOffsets[garment_index];
+        uint exclusion_row_offset = uExclusionOffsets[garment_index] + local_vertex * uMasksPerVertex[garment_index];
+        
         if (garment_roots_overlap != 0u) {
-            uint target_bvh_root = is_upper_vertex ? uLowerBvhRoot : uUpperBvhRoot;
-            detect_vertex_face_candidates(vertex_index, target_bvh_root, false);
+            uint target_garment_index = garment_index == upper_layer ? lower_layer : upper_layer;
+            detect_vertex_face_candidates(vertex_index,
+                                          uBvhRoots[target_garment_index],
+                                          false,
+                                          exclusion_row_offset,
+                                          triangle_offset);
         }
-        uint self_bvh_root = is_upper_vertex ? uUpperBvhRoot : uLowerBvhRoot;
-        detect_vertex_face_candidates(vertex_index, self_bvh_root, true);
+        detect_vertex_face_candidates(vertex_index,
+                                      uBvhRoots[garment_index],
+                                      true,
+                                      exclusion_row_offset,
+                                      triangle_offset);
     }
 
     flush_group_candidates();

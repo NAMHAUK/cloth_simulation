@@ -79,6 +79,9 @@ private:
     static void create_topology_buffers(const std::vector<GarmentObject>& garments,
                                         BufferState& rebuild_state,
                                         QOpenGLFunctions_4_5_Core& gl);
+    static void create_vertex_face_exclusion_buffer(const std::vector<GarmentObject>& garments,
+                                                    BufferState& rebuild_state,
+                                                    QOpenGLFunctions_4_5_Core& gl);
     static void create_bvh_buffers(const std::vector<GarmentObject>& garments,
                                    BufferState& rebuild_state,
                                    QOpenGLFunctions_4_5_Core& gl);

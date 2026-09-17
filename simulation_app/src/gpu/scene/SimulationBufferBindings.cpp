@@ -83,7 +83,8 @@ constexpr GLuint end = contact_motion_delta_sums + 1;
 constexpr std::size_t count = end - start;
 }
 
-constexpr std::size_t count = collision::end;
+constexpr GLuint vertex_face_exclusions = 57;
+constexpr std::size_t count = vertex_face_exclusions + 1;
 
 static_assert(cloth::end == character::start);
 static_assert(character::end == collision::start);
@@ -181,6 +182,7 @@ void SimulationBufferBindings::bind_cloth(const ClothBufferSet& buffers, QOpenGL
         buffers.triangle_bounds,
     };
     bind_buffers(binding::cloth::start, binding_buffers, "cloth", gl);
+    bind_buffers(binding::vertex_face_exclusions, std::array{buffers.vertex_face_exclusions}, "cloth", gl);
 }
 
 void SimulationBufferBindings::bind_collision(const CollisionBuffers& buffers,
@@ -216,6 +218,7 @@ void SimulationBufferBindings::reset_character_bindings(QOpenGLFunctions_4_5_Cor
 void SimulationBufferBindings::reset_cloth_bindings(QOpenGLFunctions_4_5_Core& gl) const
 {
     bind_dummy_buffers(binding::cloth::start, binding::cloth::count, dummy_buffer_, gl);
+    bind_dummy_buffers(binding::vertex_face_exclusions, 1, dummy_buffer_, gl);
 }
 
 void SimulationBufferBindings::reset_collision_bindings(QOpenGLFunctions_4_5_Core& gl) const
