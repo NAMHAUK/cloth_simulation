@@ -78,7 +78,7 @@ void main()
                           cloth_edge_indices[edges.y * 2u],
                           cloth_edge_indices[edges.y * 2u + 1u]);
     ClothEdgeEdgeContact contact;
-    if (!compute_cloth_edge_edge_contact(vertices, uCollisionThickness, contact)) {
+    if (!compute_cloth_edge_edge_contact(vertices.xy, vertices.zw, uCollisionThickness, contact)) {
         return;
     }
 

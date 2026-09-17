@@ -7,104 +7,58 @@ struct ClothEdgeEdgeContact {
     float depth;
 };
 
-bool closest_edges_at_time(EdgePositions previous_first,
-                            EdgePositions previous_second,
-                            EdgePositions current_first,
-                            EdgePositions current_second,
-                            float time,
-                            out SegmentState first,
-                            out SegmentState second)
-{
-    first.positions = EdgePositions(mix(previous_first.a, current_first.a, time),
-                                   mix(previous_first.b, current_first.b, time));
-    second.positions = EdgePositions(mix(previous_second.a, current_second.a, time),
-                                    mix(previous_second.b, current_second.b, time));
-    return closest_segment_points(first, second);
-}
-
-bool compute_cloth_edge_edge_contact(uvec4 vertices,
+bool compute_cloth_edge_edge_contact(uvec2 first_edge,
+                                      uvec2 second_edge,
                                       float thickness,
                                       out ClothEdgeEdgeContact contact)
 {
-    EdgePositions previous_first = read_cloth_previous_edge(vertices.xy);
-    EdgePositions previous_second = read_cloth_previous_edge(vertices.zw);
-    EdgePositions current_first = read_cloth_current_edge(vertices.xy);
-    EdgePositions current_second = read_cloth_current_edge(vertices.zw);
-    SegmentState first;
-    SegmentState second;
-    if (!closest_edges_at_time(previous_first, previous_second, current_first, current_second, 0.0, first, second)) {
+    EdgePositions current_first = read_cloth_current_edge(first_edge);
+    EdgePositions current_second = read_cloth_current_edge(second_edge);
+    SegmentState first = SegmentState(current_first, 0.0, current_first.a);
+    SegmentState second = SegmentState(current_second, 0.0, current_second.a);
+    if (!closest_segment_points(first, second)) {
         return false;
     }
 
-    vec3 previous_delta = first.point - second.point;
-    float previous_distance = length(previous_delta);
-    vec3 motion_a = current_first.a - previous_first.a;
-    vec3 motion_b = current_first.b - previous_first.b;
-    vec3 motion_c = current_second.a - previous_second.a;
-    vec3 motion_d = current_second.b - previous_second.b;
-    vec3 average_motion = (motion_a + motion_b + motion_c + motion_d) * 0.25;
-    float speed_bound = max(length(motion_a - average_motion), length(motion_b - average_motion))
-                      + max(length(motion_c - average_motion), length(motion_d - average_motion));
-    float tolerance = max(thickness * 1.0e-4, 1.0e-7);
-    // Inside the thickness shell, preserve the starting side by approaching a smaller gap.
-    float target_distance = previous_distance > thickness ? thickness : previous_distance * 0.1;
-    float time = 0.0;
-    float distance = previous_distance;
-    bool has_swept_contact = false;
-    if (previous_distance > tolerance && speed_bound > tolerance) {
-        for (uint iteration = 0u; iteration < 64u; ++iteration) {
-            float gap = distance - target_distance;
-            if (gap <= tolerance) {
-                has_swept_contact = true;
-                break;
-            }
-            float time_step = 0.9 * gap / speed_bound;
-            if (time_step > 1.0 - time) {
-                break;
-            }
-            float next_time = time + time_step;
-            if (next_time == time || iteration == 63u) {
-                has_swept_contact = true;
-                break;
-            }
-            time = next_time;
-            if (!closest_edges_at_time(previous_first, previous_second, current_first, current_second, time, first, second)) {
-                return false;
-            }
-            distance = length(first.point - second.point);
-        }
+    vec3 current_delta = first.point - second.point;
+    float contact_distance = thickness - penetration_tolerance;
+    float current_distance_sq = dot(current_delta, current_delta);
+    if (contact_distance <= 0.0 ||
+        current_distance_sq >= contact_distance * contact_distance) {
+        return false;
+    }
+    
+    if (first.t <= 0.0 || first.t >= 1.0 || second.t <= 0.0 || second.t >= 1.0) {
+        return false;
     }
 
-    if (!has_swept_contact) {
-        if (!closest_edges_at_time(previous_first, previous_second, current_first, current_second, 1.0, first, second)) {
-            return false;
-        }
-        distance = length(first.point - second.point);
-        if (distance >= thickness) {
-            return false;
-        }
-        // VF already handles discrete vertex-edge and vertex-vertex proximity.
-        if (first.t <= 0.0 || first.t >= 1.0 || second.t <= 0.0 || second.t >= 1.0) {
-            return false;
-        }
+    EdgePositions previous_first = read_cloth_previous_edge(first_edge);
+    EdgePositions previous_second = read_cloth_previous_edge(second_edge);
+    SegmentState previous_first_segment = SegmentState(previous_first, 0.0, previous_first.a);
+    SegmentState previous_second_segment = SegmentState(previous_second, 0.0, previous_second.a);
+    if (!closest_segment_points(previous_first_segment, previous_second_segment)) {
+        return false;
     }
 
-    vec3 separation = first.point - second.point;
-    if (distance > tolerance) {
-        contact.normal = separation / distance;
-    } else if (previous_distance > tolerance) {
-        contact.normal = previous_delta / previous_distance;
+    vec3 previous_delta = previous_first_segment.point - previous_second_segment.point;
+    float previous_distance_sq = dot(previous_delta, previous_delta);
+    const float normal_distance_sq_epsilon = 1.0e-8;
+    if (current_distance_sq <= normal_distance_sq_epsilon) {
+        if (previous_distance_sq <= normal_distance_sq_epsilon) {
+            return false;
+        }
+        contact.normal = previous_delta * inversesqrt(previous_distance_sq);
     } else {
-        vec3 normal = cross(first.positions.b - first.positions.a, second.positions.b - second.positions.a);
-        float normal_length = length(normal);
-        if (normal_length <= 0.0) {
-            return false;
-        }
-        contact.normal = normal / normal_length;
+        contact.normal = current_delta * inversesqrt(current_distance_sq);
     }
+
+    if (previous_distance_sq > thickness * thickness &&
+        dot(previous_delta, contact.normal) <= thickness) {
+        return false;
+    }
+
     contact.weights = vec4(1.0 - first.t, first.t, second.t - 1.0, -second.t);
-    vec3 current_delta = interpolate_edge_position(current_first, first.t) - interpolate_edge_position(current_second, second.t);
-    contact.depth = thickness - dot(current_delta, contact.normal);
+    contact.depth = thickness - dot(current_delta, contact.normal) - penetration_tolerance;
     return contact.depth > 0.0;
 }
 
