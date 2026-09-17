@@ -28,9 +28,8 @@ private:
     {
         ClothVertexBodyFace = 0,
         ClothEdgeBodyEdge = 1,
-        ClothFaceBodyVertex = 2,
-        ClothClothVertexFace = 3,
-        ClothClothEdgeEdge = 4,
+        ClothClothVertexFace = 2,
+        ClothClothEdgeEdge = 3,
     };
 
     struct CandidateDetectionProgram final
@@ -72,7 +71,6 @@ private:
 
     void detect_cloth_vertex_body_face(const SceneGpuState& gpu_state, QOpenGLFunctions_4_5_Core& gl) const;
     void detect_cloth_edge_body_edge(const SceneGpuState& gpu_state, QOpenGLFunctions_4_5_Core& gl) const;
-    void detect_cloth_face_body_vertex(const SceneGpuState& gpu_state, QOpenGLFunctions_4_5_Core& gl) const;
     void detect_cloth_cloth_vertex_face(const SceneGpuState& gpu_state, QOpenGLFunctions_4_5_Core& gl) const;
     void detect_cloth_cloth_edge_edge(const SceneGpuState& gpu_state, QOpenGLFunctions_4_5_Core& gl) const;
     void detect_edges(const GarmentBufferState& source,
@@ -85,7 +83,6 @@ private:
 
     CandidateDetectionProgram cloth_vertex_body_face_;
     CandidateDetectionProgram cloth_edge_body_edge_;
-    CandidateDetectionProgram cloth_face_body_vertex_;
     ClothClothDetectionProgram cloth_cloth_vertex_face_;
     EdgeDetectionProgram cloth_cloth_edge_edge_;
     DispatchSizeProgram dispatch_size_;

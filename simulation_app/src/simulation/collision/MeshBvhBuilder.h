@@ -15,7 +15,6 @@ public:
     explicit MeshBvhBuilder(const GarmentMesh& mesh);
 
     Bvh build_triangle_bvh();
-    Bvh build_vertex_bvh();
     Bvh build_edge_bvh();
 
 private:
@@ -46,11 +45,9 @@ private:
 
     // Primitive construction
     void make_triangle_primitives();
-    void make_vertex_primitives();
     void make_edge_primitives(const std::vector<LabeledEdge>& edges);
 
     // Part label assignment
-    std::vector<std::uint8_t> make_vertex_part_labels() const;
     std::vector<LabeledEdge> make_labeled_edges() const;
 
     // Index construction
@@ -61,7 +58,6 @@ private:
         const std::vector<LabeledEdge>& edges);
 
     // Source data
-    std::uint32_t vertex_count_ = 0;
     const std::vector<std::uint32_t>& source_triangle_vertex_indices_;
     const std::vector<float>& source_vertex_positions_;
     std::vector<std::uint32_t> collision_triangle_indices_;

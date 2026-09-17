@@ -19,7 +19,6 @@ struct CollisionBuffers final
 {
     CollisionCandidateBuffers cloth_vertex_body_face;
     CollisionCandidateBuffers cloth_edge_body_edge;
-    CollisionCandidateBuffers cloth_face_body_vertex;
     CollisionCandidateBuffers cloth_cloth_vertex_face;
     CollisionCandidateBuffers cloth_cloth_edge_edge;
     GLuint normal_correction_sum_buffer = 0;

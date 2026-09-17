@@ -41,9 +41,6 @@ void CharacterGpuState::initialize_gpu_resources(QOpenGLFunctions_4_5_Core& gl)
     gl.glCreateBuffers(1, &buffers_.triangle_index);
     gl.glCreateBuffers(1, &buffers_.body_triangle_bvh_node);
     gl.glCreateBuffers(1, &buffers_.body_triangle_bounds);
-    gl.glCreateBuffers(1, &buffers_.body_vertex_bvh_node);
-    gl.glCreateBuffers(1, &buffers_.body_vertex_bvh_vertex_index);
-    gl.glCreateBuffers(1, &buffers_.body_vertex_bounds);
     gl.glCreateBuffers(1, &buffers_.body_edge_bvh_node);
     gl.glCreateBuffers(1, &buffers_.body_edge_index);
     gl.glCreateBuffers(1, &buffers_.body_edge_bounds);
@@ -58,7 +55,6 @@ void CharacterGpuState::initialize_gpu_resources(QOpenGLFunctions_4_5_Core& gl)
 
 void CharacterGpuState::initialize_mesh(const CharacterMotion& motion,
                                         const Bvh& body_triangle_bvh,
-                                        const Bvh& body_vertex_bvh,
                                         const Bvh& body_edge_bvh,
                                         QOpenGLFunctions_4_5_Core& gl)
 {
@@ -78,18 +74,6 @@ void CharacterGpuState::initialize_mesh(const CharacterMotion& motion,
                          GL_DYNAMIC_DRAW);
     gl.glNamedBufferData(buffers_.body_triangle_bounds,
                          byte_size<Aabb>(body_triangle_bvh.leaf_element_count()),
-                         nullptr,
-                         GL_DYNAMIC_DRAW);
-    gl.glNamedBufferData(buffers_.body_vertex_bvh_node,
-                         byte_size<BvhNode>(body_vertex_bvh.nodes.size()),
-                         body_vertex_bvh.nodes.data(),
-                         GL_DYNAMIC_DRAW);
-    gl.glNamedBufferData(buffers_.body_vertex_bvh_vertex_index,
-                         byte_size<std::uint32_t>(body_vertex_bvh.indices.size()),
-                         body_vertex_bvh.indices.data(),
-                         GL_STATIC_DRAW);
-    gl.glNamedBufferData(buffers_.body_vertex_bounds,
-                         byte_size<Aabb>(motion.vertex_count),
                          nullptr,
                          GL_DYNAMIC_DRAW);
     gl.glNamedBufferData(buffers_.body_edge_bvh_node,
@@ -251,9 +235,6 @@ void CharacterGpuState::release_mesh_resources(QOpenGLFunctions_4_5_Core& gl)
     gl.glDeleteBuffers(1, &buffers_.body_edge_bounds);
     gl.glDeleteBuffers(1, &buffers_.body_edge_index);
     gl.glDeleteBuffers(1, &buffers_.body_edge_bvh_node);
-    gl.glDeleteBuffers(1, &buffers_.body_vertex_bounds);
-    gl.glDeleteBuffers(1, &buffers_.body_vertex_bvh_vertex_index);
-    gl.glDeleteBuffers(1, &buffers_.body_vertex_bvh_node);
     gl.glDeleteBuffers(1, &buffers_.body_triangle_bounds);
     gl.glDeleteBuffers(1, &buffers_.current_position);
     gl.glDeleteBuffers(1, &buffers_.previous_position);

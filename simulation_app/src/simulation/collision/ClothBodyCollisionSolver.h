@@ -29,13 +29,10 @@ private:
     void accumulate_cloth_vertex_body_face(const SceneGpuState& gpu_state,
                                            QOpenGLFunctions_4_5_Core& gl) const;
     void accumulate_cloth_edge_body_edge(const SceneGpuState& gpu_state, QOpenGLFunctions_4_5_Core& gl) const;
-    void accumulate_cloth_face_body_vertex(const SceneGpuState& gpu_state,
-                                           QOpenGLFunctions_4_5_Core& gl) const;
     void apply_combined_corrections(const SceneGpuState& gpu_state, QOpenGLFunctions_4_5_Core& gl) const;
 
     AccumulateProgram cloth_vertex_body_face_;
     AccumulateProgram cloth_edge_body_edge_;
-    AccumulateProgram cloth_face_body_vertex_;
     GLuint apply_program_ = 0;
     GLint cloth_vertex_count_loc_ = -1;
 

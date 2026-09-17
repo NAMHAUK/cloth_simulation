@@ -26,16 +26,6 @@ layout(std430, binding = CLOTH_EDGE_BODY_EDGE_DISPATCH_SIZE) buffer ClothEdgeBod
     uint cloth_edge_body_edge_dispatch_size_z;
 };
 
-layout(std430, binding = CLOTH_FACE_BODY_VERTEX_CANDIDATE_COUNT) readonly buffer ClothFaceBodyVertexCandidateCount {
-    uint cloth_face_body_vertex_candidate_count;
-};
-
-layout(std430, binding = CLOTH_FACE_BODY_VERTEX_DISPATCH_SIZE) buffer ClothFaceBodyVertexDispatchSize {
-    uint cloth_face_body_vertex_dispatch_size_x;
-    uint cloth_face_body_vertex_dispatch_size_y;
-    uint cloth_face_body_vertex_dispatch_size_z;
-};
-
 layout(std430, binding = CLOTH_CLOTH_VERTEX_FACE_CANDIDATE_COUNT) readonly buffer ClothClothVertexFaceCandidateCount {
     uint cloth_cloth_vertex_face_candidate_count;
 };
@@ -68,10 +58,8 @@ void main()
     } else if (uCandidateKind == 1u) {
         candidate_count = cloth_edge_body_edge_candidate_count;
     } else if (uCandidateKind == 2u) {
-        candidate_count = cloth_face_body_vertex_candidate_count;
-    } else if (uCandidateKind == 3u) {
         candidate_count = cloth_cloth_vertex_face_candidate_count;
-    } else if (uCandidateKind == 4u) {
+    } else if (uCandidateKind == 3u) {
         candidate_count = cloth_cloth_edge_edge_candidate_count;
     } else {
         return;
@@ -89,10 +77,6 @@ void main()
         cloth_edge_body_edge_dispatch_size_y = 1u;
         cloth_edge_body_edge_dispatch_size_z = 1u;
     } else if (uCandidateKind == 2u) {
-        cloth_face_body_vertex_dispatch_size_x = dispatch_size_x;
-        cloth_face_body_vertex_dispatch_size_y = 1u;
-        cloth_face_body_vertex_dispatch_size_z = 1u;
-    } else if (uCandidateKind == 3u) {
         cloth_cloth_vertex_face_dispatch_size_x = dispatch_size_x;
         cloth_cloth_vertex_face_dispatch_size_y = 1u;
         cloth_cloth_vertex_face_dispatch_size_z = 1u;

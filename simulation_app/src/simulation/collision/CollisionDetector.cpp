@@ -39,14 +39,6 @@ void CollisionDetector::initialize(const std::filesystem::path& shader_dir, QOpe
     }
 
     {
-        const auto shader_path = collision_shader_dir / "cloth_body" / "body_vertex_cloth_face_detect.comp";
-        auto& shader = cloth_face_body_vertex_;
-        shader.program = load_compute_program(shader_path, gl);
-        shader.item_count = require_uniform_location(shader.program, "uTriangleCount", gl);
-        shader.max_candidates = require_uniform_location(shader.program, "uMaxCandidateCount", gl);
-    }
-
-    {
         const auto shader_path = collision_shader_dir / "cloth_cloth" / "vertex_face_detect.comp";
         auto& shader = cloth_cloth_vertex_face_;
         shader.program = load_compute_program(shader_path, gl);
@@ -89,20 +81,17 @@ void CollisionDetector::detect(const SceneGpuState& gpu_state, QOpenGLFunctions_
     gl.glMemoryBarrier(GL_BUFFER_UPDATE_BARRIER_BIT);
     clear_collision_candidate_counts(collision.cloth_vertex_body_face, gl);
     clear_collision_candidate_counts(collision.cloth_edge_body_edge, gl);
-    clear_collision_candidate_counts(collision.cloth_face_body_vertex, gl);
     clear_collision_candidate_counts(collision.cloth_cloth_vertex_face, gl);
     clear_collision_candidate_counts(collision.cloth_cloth_edge_edge, gl);
 
     detect_cloth_vertex_body_face(gpu_state, gl);
     detect_cloth_edge_body_edge(gpu_state, gl);
-    detect_cloth_face_body_vertex(gpu_state, gl);
     detect_cloth_cloth_vertex_face(gpu_state, gl);
     detect_cloth_cloth_edge_edge(gpu_state, gl);
     gl.glMemoryBarrier(GL_SHADER_STORAGE_BARRIER_BIT);
 
     build_dispatch_size(CandidateKind::ClothVertexBodyFace, collision.cloth_vertex_body_face.max_pairs, gl);
     build_dispatch_size(CandidateKind::ClothEdgeBodyEdge, collision.cloth_edge_body_edge.max_pairs, gl);
-    build_dispatch_size(CandidateKind::ClothFaceBodyVertex, collision.cloth_face_body_vertex.max_pairs, gl);
     build_dispatch_size(CandidateKind::ClothClothVertexFace, collision.cloth_cloth_vertex_face.max_pairs, gl);
     build_dispatch_size(CandidateKind::ClothClothEdgeEdge, collision.cloth_cloth_edge_edge.max_pairs, gl);
     gl.glMemoryBarrier(GL_COMMAND_BARRIER_BIT);
@@ -147,19 +136,6 @@ void CollisionDetector::detect_cloth_edge_body_edge(const SceneGpuState& gpu_sta
     gl.glProgramUniform1ui(shader.program, shader.item_count, constraint_count);
     gl.glProgramUniform1ui(shader.program, shader.max_candidates, candidates.max_pairs);
     gl.glDispatchCompute(compute_group_count(constraint_count, candidate_detect_local_size), 1, 1);
-}
-
-void CollisionDetector::detect_cloth_face_body_vertex(const SceneGpuState& gpu_state,
-                                                      QOpenGLFunctions_4_5_Core& gl) const
-{
-    const auto& shader = cloth_face_body_vertex_;
-    const auto& candidates = gpu_state.collision_buffers().cloth_face_body_vertex;
-    const std::uint32_t triangle_count = gpu_state.cloth_gpu_state().element_counts().triangle;
-
-    gl.glUseProgram(shader.program);
-    gl.glProgramUniform1ui(shader.program, shader.item_count, triangle_count);
-    gl.glProgramUniform1ui(shader.program, shader.max_candidates, candidates.max_pairs);
-    gl.glDispatchCompute(compute_group_count(triangle_count, candidate_detect_local_size), 1, 1);
 }
 
 void CollisionDetector::detect_cloth_cloth_vertex_face(const SceneGpuState& gpu_state,
@@ -247,14 +223,12 @@ void CollisionDetector::release(QOpenGLFunctions_4_5_Core& gl)
 {
     gl.glDeleteProgram(cloth_vertex_body_face_.program);
     gl.glDeleteProgram(cloth_edge_body_edge_.program);
-    gl.glDeleteProgram(cloth_face_body_vertex_.program);
     gl.glDeleteProgram(cloth_cloth_vertex_face_.program);
     gl.glDeleteProgram(cloth_cloth_edge_edge_.program);
     gl.glDeleteProgram(dispatch_size_.program);
 
     cloth_vertex_body_face_ = {};
     cloth_edge_body_edge_ = {};
-    cloth_face_body_vertex_ = {};
     cloth_cloth_vertex_face_ = {};
     cloth_cloth_edge_edge_ = {};
     dispatch_size_ = {};
