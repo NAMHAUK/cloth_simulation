@@ -18,7 +18,9 @@ public:
 
     void initialize(const std::filesystem::path& shader_dir, QOpenGLFunctions_4_5_Core& gl);
 
-    void detect(const SceneGpuState& gpu_state, QOpenGLFunctions_4_5_Core& gl) const;
+    void detect(const SceneGpuState& gpu_state,
+                QOpenGLFunctions_4_5_Core& gl,
+                const GLuint* edge_timestamps = nullptr) const;
     void detect_prefit(const SceneGpuState& gpu_state, QOpenGLFunctions_4_5_Core& gl) const;
 
     void release(QOpenGLFunctions_4_5_Core& gl);

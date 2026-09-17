@@ -70,21 +70,24 @@ void ClothClothCollisionSolver::initialize(const std::filesystem::path& shader_d
     }
 }
 
-void ClothClothCollisionSolver::solve(const SceneGpuState& gpu_state, QOpenGLFunctions_4_5_Core& gl) const
+void ClothClothCollisionSolver::solve(const SceneGpuState& gpu_state,
+                                      QOpenGLFunctions_4_5_Core& gl,
+                                      const GLuint* edge_timestamps) const
 {
-    solve(gpu_state, accumulate_, true, gl);
+    solve(gpu_state, accumulate_, true, gl, edge_timestamps);
 }
 
 void ClothClothCollisionSolver::solve_initial(const SceneGpuState& gpu_state,
                                               QOpenGLFunctions_4_5_Core& gl) const
 {
-    solve(gpu_state, initial_accumulate_, false, gl);
+    solve(gpu_state, initial_accumulate_, false, gl, nullptr);
 }
 
 void ClothClothCollisionSolver::solve(const SceneGpuState& gpu_state,
                                       const AccumulateProgram& shader,
                                       bool solve_edges,
-                                      QOpenGLFunctions_4_5_Core& gl) const
+                                      QOpenGLFunctions_4_5_Core& gl,
+                                      const GLuint* edge_timestamps) const
 {
     const ClothGpuState& cloth_state = gpu_state.cloth_gpu_state();
     if (cloth_state.element_counts().vertex == 0u) {
@@ -115,7 +118,13 @@ void ClothClothCollisionSolver::solve(const SceneGpuState& gpu_state,
                                edge_accumulate_.max_candidates_loc,
                                edge_candidates.max_pairs);
         gl.glBindBuffer(GL_DISPATCH_INDIRECT_BUFFER, edge_candidates.dispatch_size_buffer);
+        if (edge_timestamps) {
+            gl.glQueryCounter(edge_timestamps[0], GL_TIMESTAMP);
+        }
         gl.glDispatchComputeIndirect(0);
+        if (edge_timestamps) {
+            gl.glQueryCounter(edge_timestamps[1], GL_TIMESTAMP);
+        }
     }
     gl.glBindBuffer(GL_DISPATCH_INDIRECT_BUFFER, 0);
     gl.glMemoryBarrier(GL_SHADER_STORAGE_BARRIER_BIT);
