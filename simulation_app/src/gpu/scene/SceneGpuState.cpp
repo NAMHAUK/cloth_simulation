@@ -179,6 +179,15 @@ void SceneGpuState::create_collision_candidate_buffers(QOpenGLFunctions_4_5_Core
         create_buffer(buffers.count_buffer, byte_size<std::uint32_t>(1u), gl);
         create_buffer(buffers.dispatch_size_buffer, dispatch_size_bytes, gl);
     }
+
+    // Cloth edge / cloth edge
+    {
+        auto& buffers = collision_buffers_.cloth_cloth_edge_edge;
+        buffers.max_pairs = counts.edge * candidate_capacity_multiplier * 4u;
+        create_buffer(buffers.candidate_buffer, byte_size<glm::uvec2>(buffers.max_pairs), gl);
+        create_buffer(buffers.count_buffer, byte_size<std::uint32_t>(1u), gl);
+        create_buffer(buffers.dispatch_size_buffer, dispatch_size_bytes, gl);
+    }
 }
 
 void SceneGpuState::upload_garment_placement(const GarmentObject& garment, QOpenGLFunctions_4_5_Core& gl)
@@ -328,6 +337,7 @@ void SceneGpuState::release_collision_buffers(QOpenGLFunctions_4_5_Core& gl)
     delete_collision_candidate_buffer(collision_buffers_.cloth_edge_body_edge, gl);
     delete_collision_candidate_buffer(collision_buffers_.cloth_face_body_vertex, gl);
     delete_collision_candidate_buffer(collision_buffers_.cloth_cloth_vertex_face, gl);
+    delete_collision_candidate_buffer(collision_buffers_.cloth_cloth_edge_edge, gl);
     gl.glDeleteBuffers(1, &collision_buffers_.normal_correction_sum_buffer);
     gl.glDeleteBuffers(1, &collision_buffers_.friction_correction_sum_buffer);
     gl.glDeleteBuffers(1, &collision_buffers_.contact_motion_delta_sum_buffer);

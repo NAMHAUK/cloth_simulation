@@ -15,6 +15,7 @@ struct ClothBufferElementCounts final
 {
     std::uint32_t vertex = 0;
     std::uint32_t triangle = 0;
+    std::uint32_t edge = 0;
     std::uint32_t stretch_constraint = 0;
     std::uint32_t bending_constraint = 0;
     std::uint32_t attachment_constraint = 0;
@@ -82,6 +83,9 @@ private:
     static void create_vertex_face_exclusion_buffer(const std::vector<GarmentObject>& garments,
                                                     BufferState& rebuild_state,
                                                     QOpenGLFunctions_4_5_Core& gl);
+    static void create_edge_exclusion_buffer(const std::vector<GarmentObject>& garments,
+                                             BufferState& rebuild_state,
+                                             QOpenGLFunctions_4_5_Core& gl);
     static void create_bvh_buffers(const std::vector<GarmentObject>& garments,
                                    BufferState& rebuild_state,
                                    QOpenGLFunctions_4_5_Core& gl);

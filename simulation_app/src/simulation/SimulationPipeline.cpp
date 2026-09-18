@@ -19,6 +19,7 @@ SimulationPipeline::SimulationPipeline(SimulationParams params)
       bending_constraint_solver_(params.constraints.bending_stiffness),
       attachment_constraint_solver_(params.constraints.attachment_stiffness),
       ground_collision_solver_(params.collisions.ground),
+      collision_detector_(params.collisions.cloth),
       cloth_body_collision_solver_(params.collisions.body),
       cloth_cloth_collision_solver_(params.collisions.cloth),
       garment_prefit_solver_(params.prefit)
@@ -99,8 +100,8 @@ void SimulationPipeline::step(SceneState& scene,
             stretch_constraint_solver_.solve(cloth_state, gl);
             bending_constraint_solver_.solve(cloth_state, gl);
             attachment_constraint_solver_.solve(cloth_state, gl);
-            cloth_cloth_collision_solver_.solve(gpu_state, gl);
             cloth_body_collision_solver_.solve(gpu_state, gl);
+            cloth_cloth_collision_solver_.solve(gpu_state, gl);
             ground_collision_solver_.solve(cloth_state, gl);
         }
     }

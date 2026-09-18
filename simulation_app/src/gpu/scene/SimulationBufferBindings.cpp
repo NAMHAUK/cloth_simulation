@@ -12,13 +12,14 @@
 namespace {
 namespace binding {
 
-// Cloth: 0 ~ 18
+// Cloth: 0 ~ 21
 namespace cloth {
 constexpr GLuint current_positions = 0;
 constexpr GLuint previous_positions = 1;
 constexpr GLuint collision_pushouts = 2;
 constexpr GLuint cloth_pushouts = 3;
 constexpr GLuint contact_motion_deltas = 4;
+constexpr GLuint edge_exclusions = 5;
 constexpr GLuint triangle_vertex_indices = 6;
 constexpr GLuint adjacent_triangle_offsets = 7;
 constexpr GLuint adjacent_triangle_indices = 8;
@@ -33,53 +34,59 @@ constexpr GLuint vertex_normals = 16;
 constexpr GLuint bvh_nodes = 17;
 constexpr GLuint triangle_bounds = 18;
 constexpr GLuint start = current_positions;
-constexpr GLuint end = triangle_bounds + 1;
+constexpr GLuint edge_indices = 19;
+constexpr GLuint edge_bounds = 20;
+constexpr GLuint edge_bvh_nodes = 21;
+constexpr GLuint end = edge_bvh_nodes + 1;
 constexpr std::size_t count = end - start;
 }
 
-// Character: 19 ~ 35
+// Character: 22 ~ 38
 namespace character {
-constexpr GLuint all_frame_positions = 19;
-constexpr GLuint previous_positions = 20;
-constexpr GLuint current_positions = 21;
-constexpr GLuint triangle_indices = 22;
-constexpr GLuint body_triangle_bvh_nodes = 23;
-constexpr GLuint body_triangle_bounds = 24;
-constexpr GLuint body_vertex_bvh_nodes = 25;
-constexpr GLuint body_bvh_vertex_indices = 26;
-constexpr GLuint body_vertex_bounds = 27;
-constexpr GLuint body_edge_bvh_nodes = 28;
-constexpr GLuint body_edge_indices = 29;
-constexpr GLuint body_edge_bounds = 30;
-constexpr GLuint adjacent_triangle_offsets = 31;
-constexpr GLuint adjacent_triangle_indices = 32;
-constexpr GLuint body_triangle_positions = 33;
-constexpr GLuint body_triangle_normals = 34;
-constexpr GLuint vertex_normals = 35;
+constexpr GLuint all_frame_positions = 22;
+constexpr GLuint previous_positions = 23;
+constexpr GLuint current_positions = 24;
+constexpr GLuint triangle_indices = 25;
+constexpr GLuint body_triangle_bvh_nodes = 26;
+constexpr GLuint body_triangle_bounds = 27;
+constexpr GLuint body_vertex_bvh_nodes = 28;
+constexpr GLuint body_bvh_vertex_indices = 29;
+constexpr GLuint body_vertex_bounds = 30;
+constexpr GLuint body_edge_bvh_nodes = 31;
+constexpr GLuint body_edge_indices = 32;
+constexpr GLuint body_edge_bounds = 33;
+constexpr GLuint adjacent_triangle_offsets = 34;
+constexpr GLuint adjacent_triangle_indices = 35;
+constexpr GLuint body_triangle_positions = 36;
+constexpr GLuint body_triangle_normals = 37;
+constexpr GLuint vertex_normals = 38;
 constexpr GLuint start = all_frame_positions;
 constexpr GLuint end = vertex_normals + 1;
 constexpr std::size_t count = end - start;
 }
 
-// Collision: 36 ~ 50
+// Collision: 39 ~ 56
 namespace collision {
-constexpr GLuint vertex_body_face_candidates = 36;
-constexpr GLuint vertex_body_face_count = 37;
-constexpr GLuint vertex_body_face_dispatch = 38;
-constexpr GLuint edge_body_edge_candidates = 39;
-constexpr GLuint edge_body_edge_count = 40;
-constexpr GLuint edge_body_edge_dispatch = 41;
-constexpr GLuint face_body_vertex_candidates = 42;
-constexpr GLuint face_body_vertex_count = 43;
-constexpr GLuint face_body_vertex_dispatch = 44;
-constexpr GLuint cloth_vertex_face_candidates = 45;
-constexpr GLuint cloth_vertex_face_count = 46;
-constexpr GLuint cloth_vertex_face_dispatch = 47;
-constexpr GLuint normal_correction_sums = 48;
-constexpr GLuint friction_correction_sums = 49;
-constexpr GLuint contact_motion_delta_sums = 50;
+constexpr GLuint vertex_body_face_candidates = 39;
+constexpr GLuint vertex_body_face_count = 40;
+constexpr GLuint vertex_body_face_dispatch = 41;
+constexpr GLuint edge_body_edge_candidates = 42;
+constexpr GLuint edge_body_edge_count = 43;
+constexpr GLuint edge_body_edge_dispatch = 44;
+constexpr GLuint face_body_vertex_candidates = 45;
+constexpr GLuint face_body_vertex_count = 46;
+constexpr GLuint face_body_vertex_dispatch = 47;
+constexpr GLuint cloth_vertex_face_candidates = 48;
+constexpr GLuint cloth_vertex_face_count = 49;
+constexpr GLuint cloth_vertex_face_dispatch = 50;
+constexpr GLuint normal_correction_sums = 51;
+constexpr GLuint friction_correction_sums = 52;
+constexpr GLuint contact_motion_delta_sums = 53;
 constexpr GLuint start = vertex_body_face_candidates;
-constexpr GLuint end = contact_motion_delta_sums + 1;
+constexpr GLuint cloth_edge_edge_candidates = 54;
+constexpr GLuint cloth_edge_edge_count = 55;
+constexpr GLuint cloth_edge_edge_dispatch = 56;
+constexpr GLuint end = cloth_edge_edge_dispatch + 1;
 constexpr std::size_t count = end - start;
 }
 
@@ -166,7 +173,7 @@ void SimulationBufferBindings::bind_cloth(const ClothBufferSet& buffers, QOpenGL
         buffers.collision_pushout,
         buffers.cloth_cloth_pushout,
         buffers.contact_motion_delta,
-        dummy_buffer_, // Reserved binding 5.
+        buffers.edge_exclusions,
         buffers.triangle_vertex_indices,
         buffers.adjacent_triangle_offsets,
         buffers.adjacent_triangle_indices,
@@ -178,8 +185,11 @@ void SimulationBufferBindings::bind_cloth(const ClothBufferSet& buffers, QOpenGL
         buffers.attachment_barycentric_offset,
         buffers.triangle_normal,
         buffers.vertex_normal,
-        buffers.bvh_node,
+        buffers.triangle_bvh_node,
         buffers.triangle_bounds,
+        buffers.edge_index,
+        buffers.edge_bounds,
+        buffers.edge_bvh_node,
     };
     bind_buffers(binding::cloth::start, binding_buffers, "cloth", gl);
     bind_buffers(binding::vertex_face_exclusions, std::array{buffers.vertex_face_exclusions}, "cloth", gl);
@@ -204,6 +214,9 @@ void SimulationBufferBindings::bind_collision(const CollisionBuffers& buffers,
         buffers.normal_correction_sum_buffer,
         buffers.friction_correction_sum_buffer,
         buffers.contact_motion_delta_sum_buffer,
+        buffers.cloth_cloth_edge_edge.candidate_buffer,
+        buffers.cloth_cloth_edge_edge.count_buffer,
+        buffers.cloth_cloth_edge_edge.dispatch_size_buffer,
     };
     bind_buffers(binding::collision::start, binding_buffers, "collision", gl);
 }

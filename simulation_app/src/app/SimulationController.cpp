@@ -22,6 +22,7 @@ GarmentObject build_garment(GarmentLayer layer, GarmentMesh mesh)
     garment.layer = layer;
     garment.mesh = std::move(mesh);
     garment.triangle_bvh = MeshBvhBuilder(garment.mesh).build_triangle_bvh();
+    garment.edge_bvh = MeshBvhBuilder(garment.mesh).build_edge_bvh();
     return garment;
 }
 
