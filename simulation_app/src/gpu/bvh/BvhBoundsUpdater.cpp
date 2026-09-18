@@ -41,8 +41,6 @@ void BvhBoundsUpdater::initialize(const std::filesystem::path& shader_dir,
     body_triangle_first_node_index_loc_ =
         require_uniform_location(body_program_, "uTriangleFirstNodeIndex", gl);
     body_triangle_node_count_loc_ = require_uniform_location(body_program_, "uTriangleNodeCount", gl);
-    body_vertex_first_node_index_loc_ = require_uniform_location(body_program_, "uVertexFirstNodeIndex", gl);
-    body_vertex_node_count_loc_ = require_uniform_location(body_program_, "uVertexNodeCount", gl);
     body_edge_first_node_index_loc_ = require_uniform_location(body_program_, "uEdgeFirstNodeIndex", gl);
     body_edge_node_count_loc_ = require_uniform_location(body_program_, "uEdgeNodeCount", gl);
     const GLint detection_distance_loc = require_uniform_location(body_program_, "uDetectionDistance", gl);
@@ -56,16 +54,13 @@ void BvhBoundsUpdater::initialize(const std::filesystem::path& shader_dir,
 }
 
 void BvhBoundsUpdater::set_body_level_offsets(const std::vector<std::uint32_t>& triangle_level_offsets,
-                                              const std::vector<std::uint32_t>& vertex_level_offsets,
                                               const std::vector<std::uint32_t>& edge_level_offsets)
 {
     body_triangle_level_offsets_ = triangle_level_offsets;
-    body_vertex_level_offsets_ = vertex_level_offsets;
     body_edge_level_offsets_ = edge_level_offsets;
 
-    const std::size_t max_level_offset_count = std::max({body_triangle_level_offsets_.size(),
-                                                         body_vertex_level_offsets_.size(),
-                                                         body_edge_level_offsets_.size()});
+    const std::size_t max_level_offset_count = std::max(body_triangle_level_offsets_.size(),
+                                                       body_edge_level_offsets_.size());
     body_bvh_level_count_ = max_level_offset_count - 1u;
 }
 
@@ -77,19 +72,14 @@ void BvhBoundsUpdater::update_body_bvh(QOpenGLFunctions_4_5_Core& gl) const
 
     for (std::size_t level_index = 0; level_index < body_bvh_level_count_; ++level_index) {
         const auto triangle_level = level_range(body_triangle_level_offsets_, level_index);
-        const auto vertex_level = level_range(body_vertex_level_offsets_, level_index);
         const auto edge_level = level_range(body_edge_level_offsets_, level_index);
 
-        const std::uint32_t dispatch_node_count = triangle_level.node_count + vertex_level.node_count + edge_level.node_count;
+        const std::uint32_t dispatch_node_count = triangle_level.node_count + edge_level.node_count;
 
         gl.glProgramUniform1ui(body_program_,
                                body_triangle_first_node_index_loc_,
                                triangle_level.first_node_index);
         gl.glProgramUniform1ui(body_program_, body_triangle_node_count_loc_, triangle_level.node_count);
-        gl.glProgramUniform1ui(body_program_,
-                               body_vertex_first_node_index_loc_,
-                               vertex_level.first_node_index);
-        gl.glProgramUniform1ui(body_program_, body_vertex_node_count_loc_, vertex_level.node_count);
         gl.glProgramUniform1ui(body_program_, body_edge_first_node_index_loc_, edge_level.first_node_index);
         gl.glProgramUniform1ui(body_program_, body_edge_node_count_loc_, edge_level.node_count);
         gl.glDispatchCompute(compute_group_count(dispatch_node_count, local_size), 1, 1);
@@ -140,13 +130,10 @@ void BvhBoundsUpdater::release(QOpenGLFunctions_4_5_Core& gl)
     body_program_ = 0;
     body_triangle_first_node_index_loc_ = -1;
     body_triangle_node_count_loc_ = -1;
-    body_vertex_first_node_index_loc_ = -1;
-    body_vertex_node_count_loc_ = -1;
     body_edge_first_node_index_loc_ = -1;
     body_edge_node_count_loc_ = -1;
     body_bvh_level_count_ = 0;
     body_triangle_level_offsets_.clear();
-    body_vertex_level_offsets_.clear();
     body_edge_level_offsets_.clear();
     cloth_program_ = 0;
     cloth_level_first_node_index_loc_ = -1;

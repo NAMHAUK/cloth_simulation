@@ -43,7 +43,7 @@ class SceneState final
 {
 public:
     void set_character_motion(CharacterMotion motion);
-    void set_body_bvhs(Bvh triangle_bvh, Bvh vertex_bvh, Bvh edge_bvh);
+    void set_body_bvhs(Bvh triangle_bvh, Bvh edge_bvh);
 
     void set_motion_frame_index(std::uint32_t motion_frame_index);
     float motion_frame_alpha(float motion_frame_position) const;
@@ -60,7 +60,6 @@ public:
 
     const CharacterMotion& character_motion() const;
     const Bvh& default_body_triangle_bvh() const;
-    const Bvh& default_body_vertex_bvh() const;
     const Bvh& default_body_edge_bvh() const;
     const std::vector<GarmentObject>& garments() const;
     const ReferenceFrameKinematics& reference_frame_kinematics(GarmentCategory category) const;
@@ -69,7 +68,6 @@ public:
 private:
     CharacterMotion character_motion_;
     Bvh default_body_triangle_bvh_;
-    Bvh default_body_vertex_bvh_;
     Bvh default_body_edge_bvh_;
     std::vector<GarmentObject> garments_;
     std::uint32_t motion_frame_index_ = 0;

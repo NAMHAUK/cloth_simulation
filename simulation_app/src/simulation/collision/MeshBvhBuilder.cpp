@@ -22,7 +22,6 @@ constexpr std::size_t shader_max_bvh_stack_depth = 32u;
 
 constexpr std::uint8_t left_arm_part_label = body_part_label_value(BodyPartLabel::LeftArm);
 constexpr std::uint8_t right_arm_part_label = body_part_label_value(BodyPartLabel::RightArm);
-constexpr std::uint8_t invalid_part_label = 0xFFu;
 using LabelCounts = std::array<std::uint32_t, body_part_label_count>;
 
 bool is_excluded_part(std::uint8_t part_label)
@@ -104,8 +103,7 @@ std::uint32_t find_longest_axis(const glm::vec3& aabb_size)
 // Initialization
 MeshBvhBuilder::MeshBvhBuilder(const CharacterMotion& motion,
                                const std::vector<std::uint8_t>& triangle_part_labels)
-    : vertex_count_(motion.vertex_count),
-      source_triangle_vertex_indices_(motion.triangle_vertex_indices),
+    : source_triangle_vertex_indices_(motion.triangle_vertex_indices),
       source_vertex_positions_(motion.vertices),
       triangle_part_labels_(triangle_part_labels)
 {
@@ -122,8 +120,7 @@ MeshBvhBuilder::MeshBvhBuilder(const CharacterMotion& motion,
 }
 
 MeshBvhBuilder::MeshBvhBuilder(const GarmentMesh& mesh)
-    : vertex_count_(static_cast<std::uint32_t>(mesh.vertices.size() / position_components)),
-      source_triangle_vertex_indices_(mesh.triangle_vertex_indices),
+    : source_triangle_vertex_indices_(mesh.triangle_vertex_indices),
       source_vertex_positions_(mesh.vertices)
 {
     // Garment: build triangle index list
@@ -159,15 +156,6 @@ Bvh MeshBvhBuilder::build_triangle_bvh()
 
     std::vector<std::uint32_t> triangle_indices = std::move(bvh_.indices);
     bvh_.indices = make_triangle_vertex_indices(std::move(triangle_indices));
-    return std::move(bvh_);
-}
-
-Bvh MeshBvhBuilder::build_vertex_bvh()
-{
-    reset_build();
-    make_vertex_primitives();
-    build_bvh();
-
     return std::move(bvh_);
 }
 
@@ -369,22 +357,6 @@ void MeshBvhBuilder::make_triangle_primitives()
     }
 }
 
-void MeshBvhBuilder::make_vertex_primitives()
-{
-    const std::vector<std::uint8_t> vertex_part_labels = make_vertex_part_labels();
-
-    primitives_.reserve(vertex_count_);
-
-    for (std::uint32_t vertex_index = 0; vertex_index < vertex_count_; ++vertex_index) {
-        if (vertex_part_labels[vertex_index] == invalid_part_label) {
-            continue;
-        }
-
-        const glm::vec3 position = get_vertex_position(source_vertex_positions_, vertex_index);
-        primitives_.push_back({vertex_index, position, position, position, vertex_part_labels[vertex_index]});
-    }
-}
-
 void MeshBvhBuilder::make_edge_primitives(const std::vector<LabeledEdge>& edges)
 {
     primitives_.reserve(edges.size());
@@ -402,30 +374,6 @@ void MeshBvhBuilder::make_edge_primitives(const std::vector<LabeledEdge>& edges)
 }
 
 // Part label assignment
-std::vector<std::uint8_t> MeshBvhBuilder::make_vertex_part_labels() const
-{
-    // 1. count part labels for all collsion triangles
-    std::vector<LabelCounts> label_counts(vertex_count_, LabelCounts{});
-
-    for (const std::uint32_t triangle_index : collision_triangle_indices_) {
-        const std::uint8_t part_label = triangle_part_labels_[triangle_index];
-        const std::size_t index_base = triangle_index * triangle_vertex_count;
-        ++label_counts[source_triangle_vertex_indices_[index_base]][part_label];
-        ++label_counts[source_triangle_vertex_indices_[index_base + 1u]][part_label];
-        ++label_counts[source_triangle_vertex_indices_[index_base + 2u]][part_label];
-    }
-
-    // 2. get most frequent part label for each vertex
-    // Vertex part label: most frequent across adjacent triangles
-    std::vector<std::uint8_t> vertex_part_labels(vertex_count_);
-    for (std::uint32_t vertex_index = 0; vertex_index < vertex_count_; ++vertex_index) {
-        const LabelCounts& counts = label_counts[vertex_index];
-        const std::uint8_t best_label = find_most_frequent_label(counts);
-        vertex_part_labels[vertex_index] = counts[best_label] == 0u ? invalid_part_label : best_label;
-    }
-    return vertex_part_labels;
-}
-
 std::vector<MeshBvhBuilder::LabeledEdge> MeshBvhBuilder::make_labeled_edges() const
 {
     std::map<MeshEdge, LabelCounts> edge_part_label_counts;

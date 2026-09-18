@@ -85,13 +85,10 @@ void SceneGpuState::initialize_attachment_target_program(const std::filesystem::
 void SceneGpuState::initialize_character_resources(const SceneState& scene, QOpenGLFunctions_4_5_Core& gl)
 {
     const Bvh& triangle_bvh = scene.default_body_triangle_bvh();
-    const Bvh& vertex_bvh = scene.default_body_vertex_bvh();
     const Bvh& edge_bvh = scene.default_body_edge_bvh();
 
-    character_gpu_state_.initialize_mesh(scene.character_motion(), triangle_bvh, vertex_bvh, edge_bvh, gl);
-    bvh_bounds_updater_.set_body_level_offsets(triangle_bvh.level_offsets,
-                                               vertex_bvh.level_offsets,
-                                               edge_bvh.level_offsets);
+    character_gpu_state_.initialize_mesh(scene.character_motion(), triangle_bvh, edge_bvh, gl);
+    bvh_bounds_updater_.set_body_level_offsets(triangle_bvh.level_offsets, edge_bvh.level_offsets);
 }
 
 // Character
@@ -157,15 +154,6 @@ void SceneGpuState::create_collision_candidate_buffers(QOpenGLFunctions_4_5_Core
     {
         auto& buffers = collision_buffers_.cloth_edge_body_edge;
         buffers.max_pairs = counts.stretch_constraint * candidate_capacity_multiplier;
-        create_buffer(buffers.candidate_buffer, byte_size<glm::uvec2>(buffers.max_pairs), gl);
-        create_buffer(buffers.count_buffer, byte_size<std::uint32_t>(1u), gl);
-        create_buffer(buffers.dispatch_size_buffer, dispatch_size_bytes, gl);
-    }
-
-    // Cloth face / body vertex
-    {
-        auto& buffers = collision_buffers_.cloth_face_body_vertex;
-        buffers.max_pairs = counts.triangle * candidate_capacity_multiplier;
         create_buffer(buffers.candidate_buffer, byte_size<glm::uvec2>(buffers.max_pairs), gl);
         create_buffer(buffers.count_buffer, byte_size<std::uint32_t>(1u), gl);
         create_buffer(buffers.dispatch_size_buffer, dispatch_size_bytes, gl);
@@ -335,7 +323,6 @@ void SceneGpuState::release_collision_buffers(QOpenGLFunctions_4_5_Core& gl)
     buffer_bindings_.reset_collision_bindings(gl);
     delete_collision_candidate_buffer(collision_buffers_.cloth_vertex_body_face, gl);
     delete_collision_candidate_buffer(collision_buffers_.cloth_edge_body_edge, gl);
-    delete_collision_candidate_buffer(collision_buffers_.cloth_face_body_vertex, gl);
     delete_collision_candidate_buffer(collision_buffers_.cloth_cloth_vertex_face, gl);
     delete_collision_candidate_buffer(collision_buffers_.cloth_cloth_edge_edge, gl);
     gl.glDeleteBuffers(1, &collision_buffers_.normal_correction_sum_buffer);

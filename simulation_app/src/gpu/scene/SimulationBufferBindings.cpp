@@ -41,7 +41,7 @@ constexpr GLuint end = edge_bvh_nodes + 1;
 constexpr std::size_t count = end - start;
 }
 
-// Character: 22 ~ 38
+// Character: 22 ~ 35
 namespace character {
 constexpr GLuint all_frame_positions = 22;
 constexpr GLuint previous_positions = 23;
@@ -49,43 +49,37 @@ constexpr GLuint current_positions = 24;
 constexpr GLuint triangle_indices = 25;
 constexpr GLuint body_triangle_bvh_nodes = 26;
 constexpr GLuint body_triangle_bounds = 27;
-constexpr GLuint body_vertex_bvh_nodes = 28;
-constexpr GLuint body_bvh_vertex_indices = 29;
-constexpr GLuint body_vertex_bounds = 30;
-constexpr GLuint body_edge_bvh_nodes = 31;
-constexpr GLuint body_edge_indices = 32;
-constexpr GLuint body_edge_bounds = 33;
-constexpr GLuint adjacent_triangle_offsets = 34;
-constexpr GLuint adjacent_triangle_indices = 35;
-constexpr GLuint body_triangle_positions = 36;
-constexpr GLuint body_triangle_normals = 37;
-constexpr GLuint vertex_normals = 38;
+constexpr GLuint body_edge_bvh_nodes = 28;
+constexpr GLuint body_edge_indices = 29;
+constexpr GLuint body_edge_bounds = 30;
+constexpr GLuint adjacent_triangle_offsets = 31;
+constexpr GLuint adjacent_triangle_indices = 32;
+constexpr GLuint body_triangle_positions = 33;
+constexpr GLuint body_triangle_normals = 34;
+constexpr GLuint vertex_normals = 35;
 constexpr GLuint start = all_frame_positions;
 constexpr GLuint end = vertex_normals + 1;
 constexpr std::size_t count = end - start;
 }
 
-// Collision: 39 ~ 56
+// Collision: 36 ~ 50
 namespace collision {
-constexpr GLuint vertex_body_face_candidates = 39;
-constexpr GLuint vertex_body_face_count = 40;
-constexpr GLuint vertex_body_face_dispatch = 41;
-constexpr GLuint edge_body_edge_candidates = 42;
-constexpr GLuint edge_body_edge_count = 43;
-constexpr GLuint edge_body_edge_dispatch = 44;
-constexpr GLuint face_body_vertex_candidates = 45;
-constexpr GLuint face_body_vertex_count = 46;
-constexpr GLuint face_body_vertex_dispatch = 47;
-constexpr GLuint cloth_vertex_face_candidates = 48;
-constexpr GLuint cloth_vertex_face_count = 49;
-constexpr GLuint cloth_vertex_face_dispatch = 50;
-constexpr GLuint normal_correction_sums = 51;
-constexpr GLuint friction_correction_sums = 52;
-constexpr GLuint contact_motion_delta_sums = 53;
+constexpr GLuint vertex_body_face_candidates = 36;
+constexpr GLuint vertex_body_face_count = 37;
+constexpr GLuint vertex_body_face_dispatch = 38;
+constexpr GLuint edge_body_edge_candidates = 39;
+constexpr GLuint edge_body_edge_count = 40;
+constexpr GLuint edge_body_edge_dispatch = 41;
+constexpr GLuint cloth_vertex_face_candidates = 42;
+constexpr GLuint cloth_vertex_face_count = 43;
+constexpr GLuint cloth_vertex_face_dispatch = 44;
+constexpr GLuint normal_correction_sums = 45;
+constexpr GLuint friction_correction_sums = 46;
+constexpr GLuint contact_motion_delta_sums = 47;
 constexpr GLuint start = vertex_body_face_candidates;
-constexpr GLuint cloth_edge_edge_candidates = 54;
-constexpr GLuint cloth_edge_edge_count = 55;
-constexpr GLuint cloth_edge_edge_dispatch = 56;
+constexpr GLuint cloth_edge_edge_candidates = 48;
+constexpr GLuint cloth_edge_edge_count = 49;
+constexpr GLuint cloth_edge_edge_dispatch = 50;
 constexpr GLuint end = cloth_edge_edge_dispatch + 1;
 constexpr std::size_t count = end - start;
 }
@@ -150,9 +144,6 @@ void SimulationBufferBindings::bind_character(const CharacterBufferSet& buffers,
         buffers.triangle_index,
         buffers.body_triangle_bvh_node,
         buffers.body_triangle_bounds,
-        buffers.body_vertex_bvh_node,
-        buffers.body_vertex_bvh_vertex_index,
-        buffers.body_vertex_bounds,
         buffers.body_edge_bvh_node,
         buffers.body_edge_index,
         buffers.body_edge_bounds,
@@ -205,9 +196,6 @@ void SimulationBufferBindings::bind_collision(const CollisionBuffers& buffers,
         buffers.cloth_edge_body_edge.candidate_buffer,
         buffers.cloth_edge_body_edge.count_buffer,
         buffers.cloth_edge_body_edge.dispatch_size_buffer,
-        buffers.cloth_face_body_vertex.candidate_buffer,
-        buffers.cloth_face_body_vertex.count_buffer,
-        buffers.cloth_face_body_vertex.dispatch_size_buffer,
         buffers.cloth_cloth_vertex_face.candidate_buffer,
         buffers.cloth_cloth_vertex_face.count_buffer,
         buffers.cloth_cloth_vertex_face.dispatch_size_buffer,

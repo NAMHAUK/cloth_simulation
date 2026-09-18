@@ -83,9 +83,7 @@ void SimulationController::load_default_character(const std::filesystem::path& d
     CharacterMotion motion = asset_io::read_default_character(default_character_path, triangle_part_labels);
 
     MeshBvhBuilder body_bvh_builder(motion, triangle_part_labels);
-    scene_.set_body_bvhs(body_bvh_builder.build_triangle_bvh(),
-                         body_bvh_builder.build_vertex_bvh(),
-                         body_bvh_builder.build_edge_bvh());
+    scene_.set_body_bvhs(body_bvh_builder.build_triangle_bvh(), body_bvh_builder.build_edge_bvh());
 
     default_character_motion_ = std::move(motion);
     scene_.set_character_motion(default_character_motion_);

@@ -38,18 +38,6 @@ layout(std430, binding = BODY_TRIANGLE_BOUNDS) buffer BodyTriangleBounds {
     Aabb body_triangle_bounds[];
 };
 
-layout(std430, binding = BODY_BVH_VERTEX_INDICES) readonly buffer BodyVertexIndices {
-    uint body_vertex_indices[];
-};
-
-layout(std430, binding = BODY_VERTEX_BVH_NODES) buffer BodyVertexBvhNodes {
-    BvhNode body_vertex_bvh_nodes[];
-};
-
-layout(std430, binding = BODY_VERTEX_BOUNDS) buffer BodyVertexBounds {
-    Aabb body_vertex_bounds[];
-};
-
 layout(std430, binding = BODY_EDGE_INDICES) readonly buffer BodyEdgeIndices {
     uint body_edge_indices[];
 };
@@ -64,8 +52,6 @@ layout(std430, binding = BODY_EDGE_BOUNDS) buffer BodyEdgeBounds {
 
 uniform uint uTriangleFirstNodeIndex;
 uniform uint uTriangleNodeCount;
-uniform uint uVertexFirstNodeIndex;
-uniform uint uVertexNodeCount;
 uniform uint uEdgeFirstNodeIndex;
 uniform uint uEdgeNodeCount;
 uniform float uDetectionDistance;
@@ -120,36 +106,6 @@ void update_triangle_internal_bounds(uint node_index, BvhNode node)
     body_triangle_bvh_nodes[node_index].bounds = Aabb(min_bounds, max_bounds);
 }
 
-void update_vertex_leaf_bounds(uint node_index, BvhNode node)
-{
-    vec3 min_bounds = vec3(max_float);
-    vec3 max_bounds = vec3(-max_float);
-    for (uint vertex_offset = 0u; vertex_offset < node.element_count; ++vertex_offset) {
-        uint vertex_index = body_vertex_indices[node.first_element_index + vertex_offset];
-        vec3 previous_position = read_body_previous_position(vertex_index);
-        vec3 current_position = read_body_current_position(vertex_index);
-        vec3 vertex_min_bounds = min(previous_position, current_position);
-        vec3 vertex_max_bounds = max(previous_position, current_position);
-        body_vertex_bounds[vertex_index].min_bounds = vec4(vertex_min_bounds - uDetectionDistance, 0.0);
-        body_vertex_bounds[vertex_index].max_bounds = vec4(vertex_max_bounds + uDetectionDistance, 0.0);
-        min_bounds = min(min_bounds, vertex_min_bounds);
-        max_bounds = max(max_bounds, vertex_max_bounds);
-    }
-
-    body_vertex_bvh_nodes[node_index].bounds = Aabb(vec4(min_bounds - uDetectionDistance, 0.0),
-                                                    vec4(max_bounds + uDetectionDistance, 0.0));
-}
-
-void update_vertex_internal_bounds(uint node_index, BvhNode node)
-{
-    vec4 min_bounds = min(body_vertex_bvh_nodes[node.left_child_index].bounds.min_bounds,
-                          body_vertex_bvh_nodes[node.right_child_index].bounds.min_bounds);
-    vec4 max_bounds = max(body_vertex_bvh_nodes[node.left_child_index].bounds.max_bounds,
-                          body_vertex_bvh_nodes[node.right_child_index].bounds.max_bounds);
-
-    body_vertex_bvh_nodes[node_index].bounds = Aabb(min_bounds, max_bounds);
-}
-
 void update_edge_leaf_bounds(uint node_index, BvhNode node)
 {
     vec3 min_bounds = vec3(max_float);
@@ -197,17 +153,6 @@ void update_triangle_bounds(uint local_node_index)
     }
 }
 
-void update_vertex_bounds(uint local_node_index)
-{
-    uint node_index = uVertexFirstNodeIndex + local_node_index;
-    BvhNode node = body_vertex_bvh_nodes[node_index];
-    if (is_leaf_node(node)) {
-        update_vertex_leaf_bounds(node_index, node);
-    } else {
-        update_vertex_internal_bounds(node_index, node);
-    }
-}
-
 void update_edge_bounds(uint local_node_index)
 {
     uint node_index = uEdgeFirstNodeIndex + local_node_index;
@@ -224,9 +169,7 @@ void main()
     uint local_node_index = gl_GlobalInvocationID.x;
     if (local_node_index < uTriangleNodeCount) {
         update_triangle_bounds(local_node_index);
-    } else if (local_node_index < uTriangleNodeCount + uVertexNodeCount) {
-        update_vertex_bounds(local_node_index - uTriangleNodeCount);
-    } else if (local_node_index < uTriangleNodeCount + uVertexNodeCount + uEdgeNodeCount) {
-        update_edge_bounds(local_node_index - uTriangleNodeCount - uVertexNodeCount);
+    } else if (local_node_index < uTriangleNodeCount + uEdgeNodeCount) {
+        update_edge_bounds(local_node_index - uTriangleNodeCount);
     }
 }
