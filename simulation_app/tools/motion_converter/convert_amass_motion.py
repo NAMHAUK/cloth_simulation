@@ -4,6 +4,7 @@ from pathlib import Path
 
 import numpy as np
 import torch
+from scipy.signal import resample_poly
 
 from motion_converter_common import (
     SMPL_POSE_COMPONENT_COUNT,
@@ -173,13 +174,15 @@ def build_interpolated_intro_motion(start_pose):
 
 def build_converted_motion(motion, target_fps):
     frame_indices, effective_fps = choose_frame_indices(motion.poses.shape[0], motion.fps, target_fps)
+    frame_step = int(round(motion.fps / effective_fps))
 
-    start_translation = motion.translations[0]
-    normalized_translations = motion.translations - start_translation
+    sampled_translations = resample_poly(motion.translations, up=1, down=frame_step, axis=0, padtype="edge")
+    start_translation = sampled_translations[0]
+    normalized_translations = sampled_translations - start_translation
 
-    sampled_poses = motion.poses[frame_indices, :SMPL_POSE_COMPONENT_COUNT]
+    sampled_poses = resample_pose_rotations(motion.poses[:, :SMPL_POSE_COMPONENT_COUNT], frame_step)
     sampled_poses[:, :3] = project_global_orient(sampled_poses[:, :3])
-    sampled_translations = project_translations(normalized_translations[frame_indices])
+    sampled_translations = project_translations(normalized_translations)
     sampled_translations = apply_start_facing_correction(sampled_poses, sampled_translations)
 
     intro_poses, intro_translations = build_interpolated_intro_motion(sampled_poses[0])
@@ -193,6 +196,18 @@ def build_converted_motion(motion, target_fps):
         effective_fps=effective_fps,
         start_translation=start_translation,
     )
+
+def resample_pose_rotations(poses, frame_step):
+    if frame_step == 1:
+        return poses.copy()
+
+    quaternions = axis_angle_to_quaternions(poses.reshape(-1, SMPL_JOINT_COUNT, 3))
+    dot = np.sum(quaternions[1:] * quaternions[:-1], axis=-1, keepdims=True)
+    signs = np.where(dot < 0.0, -1.0, 1.0)
+    quaternions[1:] *= np.cumprod(signs, axis=0)
+
+    sampled_quaternions = resample_poly(quaternions, up=1, down=frame_step, axis=0, padtype="edge")
+    return quaternions_to_axis_angle(sampled_quaternions).reshape(-1, SMPL_POSE_COMPONENT_COUNT)
 
 def compute_grounded_default_pose(model, betas, device):
     with torch.no_grad():
