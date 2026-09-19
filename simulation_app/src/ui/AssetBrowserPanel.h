@@ -15,6 +15,7 @@
 
 class QLabel;
 class ElidedLabel;
+class MotionCard;
 class QPushButton;
 class QTableWidget;
 class QVBoxLayout;
@@ -26,7 +27,7 @@ class AssetBrowserPanel final : public QWidget
     Q_OBJECT
 
 public:
-    using MotionLoadedCallback = std::function<void(CharacterMotion)>;
+    using MotionLoadedCallback = std::function<bool(CharacterMotion)>;
     using GarmentLoadedCallback =
         std::function<void(const std::filesystem::path& asset_path, GarmentMesh mesh)>;
 
@@ -36,13 +37,14 @@ public:
     void set_garment_selection_enabled(bool enabled);
 
     bool is_expanded() const;
+    int motion_card_height() const;
 
     void set_motion_loaded_callback(MotionLoadedCallback callback);
     void set_garment_loaded_callback(GarmentLoadedCallback callback);
 
 Q_SIGNALS:
     void motion_loading_changed(bool is_loading);
-    void expansion_changed();
+    void layout_changed();
 
 private:
     enum class State
@@ -61,21 +63,25 @@ private:
 
     void setup_asset_buttons(QVBoxLayout& root_layout);
     void setup_list_panel(QVBoxLayout& root_layout);
+    void setup_motion_card(QVBoxLayout& root_layout);
     void setup_asset_converters();
     void load_motion_paths();
 
     void toggle_motion_list();
     void toggle_garment_list();
     void return_to_subject_list();
+    void open_motion(const std::filesystem::path& asset_path);
     void handle_table_row_click(int row);
     void set_state(State state);
 
+    void refresh_motion_list();
     void refresh_garment_list();
     void load_motion(const std::filesystem::path& asset_path);
     void load_garment(const std::filesystem::path& asset_path);
     void request_garment_conversion();
     void request_motion_conversion(const std::filesystem::path& source_path);
     void finish_motion_conversion();
+    void update_motion_card_layout();
 
     void rebuild_list();
     void rebuild_subject_list();
@@ -91,6 +97,7 @@ private:
     QPushButton* motion_button_ = nullptr;
     QPushButton* garment_button_ = nullptr;
     QWidget* list_panel_ = nullptr;
+    MotionCard* motion_card_ = nullptr;
     QPushButton* subject_back_button_ = nullptr;
     ElidedLabel* title_label_ = nullptr;
     QTableWidget* table_widget_ = nullptr;

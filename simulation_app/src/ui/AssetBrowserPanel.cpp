@@ -2,6 +2,8 @@
 
 #include "asset/AssetConverter.h"
 #include "asset/AssetIO.h"
+#include "ui/ElidedLabel.h"
+#include "ui/MotionCard.h"
 #include "utils/QtUtils.h"
 
 #include <algorithm>
@@ -21,13 +23,11 @@
 #include <QIcon>
 #include <QJsonDocument>
 #include <QJsonObject>
-#include <QLabel>
 #include <QMessageBox>
 #include <QPaintEvent>
 #include <QPainter>
 #include <QPen>
 #include <QPushButton>
-#include <QResizeEvent>
 #include <QScrollBar>
 #include <QSize>
 #include <QSizePolicy>
@@ -38,28 +38,6 @@
 
 #include <iostream>
 #include <utility>
-
-class ElidedLabel final : public QLabel
-{
-public:
-    explicit ElidedLabel(const QString& text, QWidget* parent = nullptr) : QLabel(parent) { set_text(text); }
-
-    void set_text(const QString& text)
-    {
-        setToolTip(text);
-        update_text();
-    }
-
-protected:
-    void resizeEvent(QResizeEvent* event) override
-    {
-        QLabel::resizeEvent(event);
-        update_text();
-    }
-
-private:
-    void update_text() { QLabel::setText(fontMetrics().elidedText(toolTip(), Qt::ElideRight, width())); }
-};
 
 namespace {
 constexpr int close_icon_size = 12;
@@ -186,6 +164,7 @@ AssetBrowserPanel::AssetBrowserPanel(const ProjectPaths& project_paths, QWidget*
 
     setup_asset_buttons(*root_layout);
     setup_list_panel(*root_layout);
+    setup_motion_card(*root_layout);
     setup_asset_converters();
 
     load_motion_paths();
@@ -283,14 +262,25 @@ void AssetBrowserPanel::setup_list_panel(QVBoxLayout& root_layout)
     connect(import_button_, &QPushButton::clicked, this, &AssetBrowserPanel::request_garment_conversion);
 }
 
+void AssetBrowserPanel::setup_motion_card(QVBoxLayout& root_layout)
+{
+    motion_card_ = new MotionCard(this);
+    root_layout.addWidget(motion_card_);
+    connect(motion_card_, &MotionCard::motion_activated, this, &AssetBrowserPanel::open_motion);
+    connect(motion_card_, &MotionCard::layout_changed, this, &AssetBrowserPanel::update_motion_card_layout);
+}
+
 void AssetBrowserPanel::setup_asset_converters()
 {
     motion_converter_ = new AssetConverter(project_paths_, this);
     garment_converter_ = new AssetConverter(project_paths_, this);
 
     connect(motion_converter_, &AssetConverter::conversion_succeeded, this, [this]() {
-        converted_motion_paths_.insert(make_motion_id(converting_motion_asset_path_),
-                                       to_q_string(converting_motion_asset_path_));
+        const QString motion_id = make_motion_id(converting_motion_asset_path_);
+        converted_motion_paths_.insert(motion_id, to_q_string(converting_motion_asset_path_));
+        motion_card_->show_motion(converting_motion_asset_path_,
+                                  motion_id,
+                                  motion_descriptions_.value(motion_id).toString());
         finish_motion_conversion();
     });
     connect(motion_converter_, &AssetConverter::conversion_failed, this, [this]() {
@@ -341,6 +331,7 @@ void AssetBrowserPanel::load_motion_paths()
 void AssetBrowserPanel::set_motion_selection_enabled(bool enabled)
 {
     motion_button_->setEnabled(enabled);
+    motion_card_->setEnabled(enabled);
     motion_button_->setToolTip(enabled ? "Motion" : "Confirm or cancel garment placement first.");
 }
 
@@ -375,6 +366,30 @@ void AssetBrowserPanel::return_to_subject_list()
     table_widget_->scrollToItem(subject_item, QAbstractItemView::PositionAtCenter);
 }
 
+void AssetBrowserPanel::open_motion(const std::filesystem::path& asset_path)
+{
+    const int subject_id = make_motion_id(asset_path).section('_', 0, 0).toInt();
+    const auto subject = std::find_if(subjects_.begin(), subjects_.end(), [subject_id](const auto& entry) {
+        return entry.id == subject_id;
+    });
+    if (subject == subjects_.end()) {
+        return;
+    }
+
+    selected_subject_index_ = static_cast<int>(subject - subjects_.begin());
+    set_state(State::Motions);
+    const QString asset_path_text = to_q_string(asset_path);
+    for (int row = 0; row < table_widget_->rowCount(); ++row) {
+        const auto* item = table_widget_->item(row, 0);
+        if (item->data(Qt::UserRole).toString() == asset_path_text) {
+            table_widget_->selectRow(row);
+            table_widget_->scrollToItem(item, QAbstractItemView::PositionAtCenter);
+            load_motion(asset_path);
+            return;
+        }
+    }
+}
+
 void AssetBrowserPanel::handle_table_row_click(int row)
 {
     const QTableWidgetItem* item = table_widget_->item(row, 0);
@@ -405,7 +420,6 @@ void AssetBrowserPanel::handle_table_row_click(int row)
 
 void AssetBrowserPanel::set_state(State state)
 {
-    const bool was_expanded = state_ != State::Closed;
     state_ = state;
     const bool is_expanded = state_ != State::Closed;
     const bool is_motion_list = state_ == State::Subjects || state_ == State::Motions;
@@ -417,12 +431,19 @@ void AssetBrowserPanel::set_state(State state)
         rebuild_list();
     }
 
-    if (was_expanded != is_expanded) {
-        Q_EMIT expansion_changed();
-    }
+    update_motion_card_layout();
 }
 
 // Asset Operations
+void AssetBrowserPanel::refresh_motion_list()
+{
+    if (state_ == State::Subjects || state_ == State::Motions) {
+        const int scroll_value = table_widget_->verticalScrollBar()->value();
+        rebuild_list();
+        table_widget_->verticalScrollBar()->setValue(scroll_value);
+    }
+}
+
 void AssetBrowserPanel::refresh_garment_list()
 {
     garment_asset_paths_ = asset_io::scan_asset_paths(project_paths_.garment_asset_dir, ".garment");
@@ -433,23 +454,21 @@ void AssetBrowserPanel::refresh_garment_list()
 
 void AssetBrowserPanel::load_motion(const std::filesystem::path& asset_path)
 {
-    if (motion_load_.isRunning()) {
-        return;
-    }
+    auto on_loaded = [this, asset_path](CharacterMotion motion) {
+        if (motion_loaded_callback_(std::move(motion))) {
+            motion_card_->dismiss(asset_path);
+        }
+        Q_EMIT motion_loading_changed(false);
+    };
+    auto on_failed = [this, asset_path] {
+        Q_EMIT motion_loading_changed(false);
+        QMessageBox::warning(this, "Load Failed", "Failed to load motion:\n" + to_q_string(asset_path));
+    };
 
     Q_EMIT motion_loading_changed(true);
     motion_load_ = QtConcurrent::run(asset_io::read_character_motion, asset_path)
-                       .then(this,
-                             [this](CharacterMotion motion) {
-                                 motion_loaded_callback_(std::move(motion));
-                                 Q_EMIT motion_loading_changed(false);
-                             })
-                       .onFailed(this, [this, asset_path] {
-                           Q_EMIT motion_loading_changed(false);
-                           QMessageBox::warning(this,
-                                                "Load Failed",
-                                                "Failed to load motion:\n" + to_q_string(asset_path));
-                       });
+                       .then(this, std::move(on_loaded))
+                       .onFailed(this, std::move(on_failed));
 }
 
 void AssetBrowserPanel::load_garment(const std::filesystem::path& asset_path)
@@ -496,22 +515,23 @@ void AssetBrowserPanel::request_motion_conversion(const std::filesystem::path& s
     const auto motion_asset_path =
         project_paths_.motion_asset_dir / (source_path.stem().string() + ".motion");
     converting_motion_asset_path_ = motion_asset_path;
-    if (state_ == State::Subjects || state_ == State::Motions) {
-        const int scroll_value = table_widget_->verticalScrollBar()->value();
-        rebuild_list();
-        table_widget_->verticalScrollBar()->setValue(scroll_value);
-    }
+    refresh_motion_list();
     motion_converter_->start_motion_conversion(source_path, motion_asset_path);
 }
 
 void AssetBrowserPanel::finish_motion_conversion()
 {
     converting_motion_asset_path_.clear();
-    if (state_ == State::Subjects || state_ == State::Motions) {
-        const int scroll_value = table_widget_->verticalScrollBar()->value();
-        rebuild_list();
-        table_widget_->verticalScrollBar()->setValue(scroll_value);
-    }
+    refresh_motion_list();
+}
+
+void AssetBrowserPanel::update_motion_card_layout()
+{
+    auto* root_layout = static_cast<QVBoxLayout*>(layout());
+    root_layout->removeWidget(motion_card_);
+    root_layout->insertWidget(state_ == State::Garments ? 1 : 2, motion_card_);
+    Q_EMIT layout_changed();
+    layout()->activate();
 }
 
 // List Display
@@ -662,6 +682,11 @@ void AssetBrowserPanel::rebuild_garment_list()
 bool AssetBrowserPanel::is_expanded() const
 {
     return state_ != State::Closed;
+}
+
+int AssetBrowserPanel::motion_card_height() const
+{
+    return motion_card_->isHidden() ? 0 : motion_card_->height() + layout()->spacing();
 }
 
 // Callback Registration

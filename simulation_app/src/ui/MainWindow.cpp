@@ -138,9 +138,10 @@ void MainWindow::setup_asset_browser_callbacks()
     asset_browser_panel.set_motion_loaded_callback([this](CharacterMotion motion) {
         if (!simulation_controller_->set_character_motion(std::move(motion))) {
             QMessageBox::warning(this, "Load Failed", "Motion topology does not match the character.");
-            return;
+            return false;
         }
         simulation_controller_->start_simulation();
+        return true;
     });
     asset_browser_panel.set_garment_loaded_callback(
         [this](const std::filesystem::path& asset_path, GarmentMesh mesh) {
