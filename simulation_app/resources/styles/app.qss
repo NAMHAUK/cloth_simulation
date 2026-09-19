@@ -91,6 +91,33 @@ QPushButton[role="assetButton"]:disabled {
     background-color: #8caee6;
 }
 
+#motionCard {
+    background-color: rgba(245, 245, 245, 235);
+    border: 1px solid #9a9a9a;
+    border-radius: 8px;
+}
+
+#motionCard:hover, #motionCard:focus {
+    background-color: rgba(235, 240, 245, 245);
+    border-color: #6b7c8e;
+}
+
+#motionCard QLabel {
+    background: transparent;
+    color: #444444;
+    font-size: 16px;
+}
+
+#motionCard #motionCardTitle {
+    color: #242424;
+    font-size: 18px;
+    font-weight: bold;
+}
+
+#motionCard QLabel:disabled {
+    color: #8a8a8a;
+}
+
 /* Garment Cards */
 #garmentCardBody {
     background-color: #3a3a3a;

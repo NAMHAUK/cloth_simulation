@@ -307,7 +307,6 @@ std::uint32_t SimulationController::calculate_iteration_count() const
         const double total_rest_length = std::accumulate(rest_lengths.begin(), rest_lengths.end(), 0.0);
         const double average_rest_length = total_rest_length / rest_lengths.size();
 
-        // ponytail: Empirical spacing bands in meters; retune against observed garment stretch.
         std::uint32_t garment_iteration_count = 8u;
         if (average_rest_length <= 0.005f) {
             garment_iteration_count = 16u;

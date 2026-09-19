@@ -194,7 +194,7 @@ void Viewport::setup_panels(const ProjectPaths& project_paths)
     right_panel_->setHorizontalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
     right_panel_->viewport()->setAutoFillBackground(false);
 
-    connect(asset_browser_panel_, &AssetBrowserPanel::expansion_changed, this, &Viewport::update_layout);
+    connect(asset_browser_panel_, &AssetBrowserPanel::layout_changed, this, &Viewport::update_layout);
 }
 
 void Viewport::setup_simulation_control_buttons()
@@ -274,15 +274,17 @@ void Viewport::update_layout()
 void Viewport::update_asset_browser_layout()
 {
     const QSize collapsed_size = asset_browser_panel_->sizeHint();
+    const int motion_card_height = asset_browser_panel_->motion_card_height();
 
-    int panel_width = collapsed_size.width();
+    int panel_width = motion_card_height > 0 ? asset_panel_width : collapsed_size.width();
     int panel_height = collapsed_size.height();
 
     if (asset_browser_panel_->is_expanded()) {
         panel_width = asset_panel_width;
-        panel_height = std::min(height() / 2, asset_panel_max_height);
+        panel_height = std::min(height() / 2, asset_panel_max_height) + motion_card_height;
     }
 
+    panel_height = std::min(panel_height, height() - 2 * panel_margin);
     asset_browser_panel_->setGeometry(panel_margin, panel_margin, panel_width, panel_height);
     asset_browser_panel_->raise();
 }
