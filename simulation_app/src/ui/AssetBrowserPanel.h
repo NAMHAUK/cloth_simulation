@@ -74,6 +74,7 @@ private:
     void handle_table_row_click(int row);
     void set_state(State state);
 
+    void refresh_motion_list();
     void refresh_garment_list();
     void load_motion(const std::filesystem::path& asset_path);
     void load_garment(const std::filesystem::path& asset_path);

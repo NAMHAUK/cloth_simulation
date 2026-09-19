@@ -435,6 +435,15 @@ void AssetBrowserPanel::set_state(State state)
 }
 
 // Asset Operations
+void AssetBrowserPanel::refresh_motion_list()
+{
+    if (state_ == State::Subjects || state_ == State::Motions) {
+        const int scroll_value = table_widget_->verticalScrollBar()->value();
+        rebuild_list();
+        table_widget_->verticalScrollBar()->setValue(scroll_value);
+    }
+}
+
 void AssetBrowserPanel::refresh_garment_list()
 {
     garment_asset_paths_ = asset_io::scan_asset_paths(project_paths_.garment_asset_dir, ".garment");
@@ -445,25 +454,21 @@ void AssetBrowserPanel::refresh_garment_list()
 
 void AssetBrowserPanel::load_motion(const std::filesystem::path& asset_path)
 {
-    if (motion_load_.isRunning()) {
-        return;
-    }
+    auto on_loaded = [this, asset_path](CharacterMotion motion) {
+        if (motion_loaded_callback_(std::move(motion))) {
+            motion_card_->dismiss(asset_path);
+        }
+        Q_EMIT motion_loading_changed(false);
+    };
+    auto on_failed = [this, asset_path] {
+        Q_EMIT motion_loading_changed(false);
+        QMessageBox::warning(this, "Load Failed", "Failed to load motion:\n" + to_q_string(asset_path));
+    };
 
     Q_EMIT motion_loading_changed(true);
     motion_load_ = QtConcurrent::run(asset_io::read_character_motion, asset_path)
-                       .then(this,
-                             [this, asset_path](CharacterMotion motion) {
-                                 if (motion_loaded_callback_(std::move(motion))) {
-                                     motion_card_->dismiss(asset_path);
-                                 }
-                                 Q_EMIT motion_loading_changed(false);
-                             })
-                       .onFailed(this, [this, asset_path] {
-                           Q_EMIT motion_loading_changed(false);
-                           QMessageBox::warning(this,
-                                                "Load Failed",
-                                                "Failed to load motion:\n" + to_q_string(asset_path));
-                       });
+                       .then(this, std::move(on_loaded))
+                       .onFailed(this, std::move(on_failed));
 }
 
 void AssetBrowserPanel::load_garment(const std::filesystem::path& asset_path)
@@ -510,22 +515,14 @@ void AssetBrowserPanel::request_motion_conversion(const std::filesystem::path& s
     const auto motion_asset_path =
         project_paths_.motion_asset_dir / (source_path.stem().string() + ".motion");
     converting_motion_asset_path_ = motion_asset_path;
-    if (state_ == State::Subjects || state_ == State::Motions) {
-        const int scroll_value = table_widget_->verticalScrollBar()->value();
-        rebuild_list();
-        table_widget_->verticalScrollBar()->setValue(scroll_value);
-    }
+    refresh_motion_list();
     motion_converter_->start_motion_conversion(source_path, motion_asset_path);
 }
 
 void AssetBrowserPanel::finish_motion_conversion()
 {
     converting_motion_asset_path_.clear();
-    if (state_ == State::Subjects || state_ == State::Motions) {
-        const int scroll_value = table_widget_->verticalScrollBar()->value();
-        rebuild_list();
-        table_widget_->verticalScrollBar()->setValue(scroll_value);
-    }
+    refresh_motion_list();
 }
 
 void AssetBrowserPanel::update_motion_card_layout()
