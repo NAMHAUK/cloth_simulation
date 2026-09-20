@@ -14,7 +14,7 @@ const glm::vec3 light_direction_world = glm::normalize(glm::vec3{-0.2f, 0.6f, 0.
 const glm::vec3 fill_light_direction_world = glm::normalize(glm::vec3{0.3f, 0.6f, -0.8f});
 constexpr float ambient_strength = 0.35f;
 constexpr float diffuse_strength = 0.65f;
-constexpr float fill_diffuse_strength = 0.35f;
+constexpr float fill_diffuse_strength = 0.5f;
 constexpr float placement_character_opacity = 0.3f;
 }
 
