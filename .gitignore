@@ -22,7 +22,6 @@ envs/
 
 # Local datasets/cache
 data/*
-image/
 
 # Python cache
 __pycache__/
