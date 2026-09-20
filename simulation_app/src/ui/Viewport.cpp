@@ -36,7 +36,7 @@ constexpr float pi = 3.14159265358979323846f;
 // Camera parameters
 constexpr float default_camera_yaw = 0.75f * pi;
 constexpr float default_camera_pitch = 15.0f * pi / 180.0f;
-constexpr float default_camera_distance = 4.0f;
+constexpr float default_camera_distance = 3.0976f;
 
 constexpr float character_camera_yaw = 0.5f * pi;
 constexpr float character_camera_pitch = 10.0f * pi / 180.0f;
