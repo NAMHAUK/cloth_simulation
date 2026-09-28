@@ -38,7 +38,7 @@ glm::mat4 make_placement_matrix(const glm::vec3& center, const glm::vec3& positi
 
 SimulationController::SimulationController(SimulationParams params)
     : params_(params),
-      simulation_pipeline_(params)
+      simulation_pipeline_(scene_, gpu_state_, params)
 {
     QObject::connect(&frame_timer_, &QTimer::timeout, this, &SimulationController::tick_frame);
 }
@@ -123,7 +123,7 @@ void SimulationController::tick_frame()
                 const float frame_alpha = scene_.motion_frame_alpha(frame_position);
                 gpu_state_.update_character_pose(scene_, frame_alpha, gl);
             } else {
-                simulation_pipeline_.step(scene_, gpu_state_, motion_step_index_, gl);
+                simulation_pipeline_.step(motion_step_index_, gl);
             }
             ++motion_step_index_;
             scene_.set_motion_frame_index(motion_step_index_ / params_.step.motion_stride());
@@ -259,7 +259,7 @@ void SimulationController::confirm_garment_placement()
         }
 
         gpu_state_.rebuild_collision_buffers(gl);
-        simulation_pipeline_.prefit_garments(gpu_state_, calculate_iteration_count(), gl);
+        simulation_pipeline_.prefit_garments(calculate_iteration_count(), gl);
 
         for (const GarmentObject* garment : placement_garments) {
             gpu_state_.initialize_garment_attachments(*garment, gl);
