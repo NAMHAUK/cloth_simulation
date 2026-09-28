@@ -37,7 +37,6 @@ private:
     void update_character_motion(std::uint32_t motion_step_index,
                                  std::uint32_t substep,
                                  QOpenGLFunctions_4_5_Core& gl) const;
-    void integrate_cloth(QOpenGLFunctions_4_5_Core& gl) const;
 
     SceneState& scene_;
     SceneGpuState& gpu_state_;

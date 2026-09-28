@@ -12,11 +12,7 @@ SimulationPipeline::SimulationPipeline(SceneState& scene, SceneGpuState& gpu_sta
     : scene_(scene),
       gpu_state_(gpu_state),
       params_(params),
-      cloth_integrator_(params.integration.gravity,
-                        params.integration.velocity_damping,
-                        params.integration.reference_frame_inertia_scale,
-                        params.integration.reference_frame_max_linear_acceleration,
-                        params.integration.reference_frame_max_angular_acceleration),
+      cloth_integrator_(params.integration),
       stretch_constraint_solver_(params.constraints.stretch_stiffness),
       bending_constraint_solver_(params.constraints.bending_stiffness),
       attachment_constraint_solver_(params.constraints.attachment_stiffness),
@@ -83,12 +79,11 @@ void SimulationPipeline::prefit_garments(std::uint32_t iteration_count, QOpenGLF
 void SimulationPipeline::step(std::uint32_t motion_step_index, QOpenGLFunctions_4_5_Core& gl)
 {
     assert(is_initialized());
-
     const ClothGpuState& cloth_state = gpu_state_.cloth_gpu_state();
 
     for (std::uint32_t substep = 0; substep < params_.step.substep_count; ++substep) {
         update_character_motion(motion_step_index, substep + 1u, gl);
-        integrate_cloth(gl);
+        cloth_integrator_.integrate(cloth_state, scene_, gl);
 
         gpu_state_.update_cloth_bvh_bounds(params_.collisions.cloth.detection_distance, gl);
         collision_detector_.detect(gpu_state_, gl);
@@ -114,20 +109,6 @@ void SimulationPipeline::update_character_motion(std::uint32_t motion_step_index
     const float frame_alpha = scene_.motion_frame_alpha(motion_frame_position);
     scene_.update_reference_frame_kinematics(frame_alpha, substep_dt_);
     gpu_state_.update_character_pose(scene_, frame_alpha, gl);
-}
-
-void SimulationPipeline::integrate_cloth(QOpenGLFunctions_4_5_Core& gl) const
-{
-    const ClothGpuState& cloth_state = gpu_state_.cloth_gpu_state();
-
-    for (const GarmentObject& garment : scene_.garments()) {
-        const GarmentBufferState& garment_state = cloth_state.garment_states()[garment.layer];
-        assert(garment_state.vertex_count != 0u);
-
-        const auto& kinematics = scene_.reference_frame_kinematics(garment.mesh.garment_category);
-        cloth_integrator_.integrate(cloth_state, garment.layer, kinematics, gl);
-    }
-    gl.glMemoryBarrier(GL_SHADER_STORAGE_BARRIER_BIT);
 }
 
 // Accessors
