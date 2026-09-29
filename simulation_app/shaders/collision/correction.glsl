@@ -4,6 +4,14 @@
 const float correction_fixed_point_scale = 1000000.0;
 const float correction_component_limit = 1073741823.0;
 
+vec3 compute_position_delta(vec3 current_position,
+                            vec3 previous_position,
+                            vec3 collision_pushout,
+                            vec3 inward_motion_correction)
+{
+    return current_position - previous_position - collision_pushout + inward_motion_correction;
+}
+
 #ifdef COLLISION_CORRECTION_ACCUMULATE
 ivec3 encode_correction(vec3 correction)
 {
@@ -22,12 +30,9 @@ void accumulate_vertex_normal_correction(uint vertex_index, vec3 correction)
 }
 
 #ifdef COLLISION_INWARD_MOTION_ACCUMULATE
-vec3 compute_inward_motion_correction(vec3 normal,
-                                      vec3 cloth_delta,
-                                      vec3 body_delta,
-                                      vec3 retained_delta)
+vec3 compute_inward_motion_correction(vec3 normal, vec3 cloth_delta, vec3 body_delta)
 {
-    vec3 relative_delta = cloth_delta + retained_delta - body_delta;
+    vec3 relative_delta = cloth_delta - body_delta;
     float inward_delta = dot(relative_delta, normal);
     return normal * max(-inward_delta, 0.0);
 }

@@ -145,13 +145,16 @@ bool compute_candidate_contact(uint candidate_index, out uvec2 cloth_vertices, o
     vec3 cloth_collision_pushout = mix(collision_pushouts[cloth_vertices.x].xyz,
                                        collision_pushouts[cloth_vertices.y].xyz,
                                        current_cloth_segment.t);
-    vec3 cloth_delta = current_cloth_segment.point - interpolate_edge_position(previous_cloth, current_cloth_segment.t) - cloth_collision_pushout;
+    vec3 inward_motion_correction = mix(inward_motion_corrections[cloth_vertices.x].xyz,
+                                        inward_motion_corrections[cloth_vertices.y].xyz,
+                                        current_cloth_segment.t);
+    vec3 cloth_delta = compute_position_delta(current_cloth_segment.point,
+                                              interpolate_edge_position(previous_cloth, current_cloth_segment.t),
+                                              cloth_collision_pushout,
+                                              inward_motion_correction);
     vec3 body_delta = current_body_segment.point - interpolate_edge_position(previous_body, current_body_segment.t);
-    vec3 retained_delta = mix(inward_motion_corrections[cloth_vertices.x].xyz,
-                              inward_motion_corrections[cloth_vertices.y].xyz,
-                              current_cloth_segment.t);
     contact.friction_correction = compute_friction_correction(normal, cloth_delta, body_delta);
-    contact.inward_motion_correction = compute_inward_motion_correction(normal, cloth_delta, body_delta, retained_delta);
+    contact.inward_motion_correction = compute_inward_motion_correction(normal, cloth_delta, body_delta);
     contact.depth = uCollisionThickness - current_signed_distance - penetration_tolerance;
     return true;
 }

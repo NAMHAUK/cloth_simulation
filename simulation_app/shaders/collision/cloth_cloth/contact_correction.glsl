@@ -3,9 +3,10 @@
 
 vec3 compute_vertex_motion_delta(uint vertex_index)
 {
-    vec3 position_delta = read_cloth_current_position(vertex_index) - read_cloth_previous_position(vertex_index);
-    vec3 collision_delta = collision_pushouts[vertex_index].xyz;
-    return position_delta - collision_delta + inward_motion_corrections[vertex_index].xyz;
+    return compute_position_delta(read_cloth_current_position(vertex_index),
+                                  read_cloth_previous_position(vertex_index),
+                                  collision_pushouts[vertex_index].xyz,
+                                  inward_motion_corrections[vertex_index].xyz);
 }
 
 void accumulate_contact_correction(uint vertex_index,
