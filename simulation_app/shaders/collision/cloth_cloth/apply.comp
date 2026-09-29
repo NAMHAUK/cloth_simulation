@@ -8,7 +8,8 @@ layout(std430, binding = CLOTH_CURRENT_POSITIONS) buffer ClothCurrentPositions {
     vec4 cloth_current_positions[];
 };
 
-layout(std430, binding = CLOTH_CLOTH_PUSHOUTS) buffer CollisionPushouts {
+layout(std430, binding = CLOTH_COLLISION_PUSHOUTS) buffer CollisionPushouts
+{
     vec4 collision_pushouts[];
 };
 

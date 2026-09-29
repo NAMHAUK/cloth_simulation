@@ -35,10 +35,6 @@ layout(std430, binding = CLOTH_COLLISION_PUSHOUTS) readonly buffer CollisionPush
     vec4 collision_pushouts[];
 };
 
-layout(std430, binding = CLOTH_CLOTH_PUSHOUTS) readonly buffer ClothClothPushouts {
-    vec4 cloth_cloth_pushouts[];
-};
-
 layout(std430, binding = CLOTH_INWARD_MOTION_CORRECTIONS) readonly buffer InwardMotionCorrections
 {
     vec4 inward_motion_corrections[];

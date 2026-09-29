@@ -16,10 +16,6 @@ layout(std430, binding = CLOTH_COLLISION_PUSHOUTS) buffer CollisionPushouts {
     vec4 collision_pushouts[];
 };
 
-layout(std430, binding = CLOTH_CLOTH_PUSHOUTS) readonly buffer ClothClothPushouts {
-    vec4 cloth_cloth_pushouts[];
-};
-
 layout(std430, binding = CLOTH_INWARD_MOTION_CORRECTIONS) buffer InwardMotionCorrections
 {
     vec4 inward_motion_corrections[];
@@ -43,7 +39,7 @@ void main()
 
     if (current_y < uFloorHeight) {
         float pushout_depth = uFloorHeight - current_y;
-        float relative_delta_y = current_y - previous_positions[vertex_index].y - collision_pushouts[vertex_index].y - cloth_cloth_pushouts[vertex_index].y + inward_motion_corrections[vertex_index].y;
+        float relative_delta_y = current_y - previous_positions[vertex_index].y - collision_pushouts[vertex_index].y + inward_motion_corrections[vertex_index].y;
         inward_motion_corrections[vertex_index].y += max(-relative_delta_y, 0.0);
 
         vec3 friction_correction = -vec3(current_positions[vertex_index].x - previous_positions[vertex_index].x,
