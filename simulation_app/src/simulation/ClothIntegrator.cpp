@@ -5,7 +5,6 @@
 #include "simulation/SimulationParams.h"
 #include "utils/ShaderUtils.h"
 
-#include <glm/geometric.hpp>
 #include <glm/gtc/type_ptr.hpp>
 
 #include <cstdint>
@@ -14,19 +13,12 @@
 namespace {
 constexpr std::uint32_t local_size = 128;
 
-glm::vec3 limit_acceleration(const glm::vec3& acceleration, float maximum_acceleration)
-{
-    const float length = glm::length(acceleration);
-    return length > maximum_acceleration ? acceleration * (maximum_acceleration / length) : acceleration;
-}
 }
 
 ClothIntegrator::ClothIntegrator(const ClothIntegrationParams& params)
     : gravity_(params.gravity),
       velocity_damping_(params.velocity_damping),
-      frame_inertia_scale_(params.reference_frame_inertia_scale),
-      frame_max_linear_acceleration_(params.reference_frame_max_linear_acceleration),
-      frame_max_angular_acceleration_(params.reference_frame_max_angular_acceleration)
+      frame_inertia_scale_(params.reference_frame_inertia_scale)
 {}
 
 void ClothIntegrator::initialize(const std::filesystem::path& shader_dir,
@@ -80,23 +72,18 @@ void ClothIntegrator::integrate_garment(const GarmentBufferState& garment_state,
                                         const ReferenceFrameKinematics& kinematics,
                                         QOpenGLFunctions_4_5_Core& gl) const
 {
-    const auto linear_acceleration =
-        limit_acceleration(kinematics.linear_acceleration, frame_max_linear_acceleration_);
-    const auto angular_acceleration =
-        limit_acceleration(kinematics.angular_acceleration, frame_max_angular_acceleration_);
-
     gl.glProgramUniform1ui(program_, vertex_offset_loc_, garment_state.vertex_start_index);
     gl.glProgramUniform1ui(program_, vertex_count_loc_, garment_state.vertex_count);
     gl.glProgramUniform3f(program_,
                           frame_start_position_loc_,
-                          kinematics.start_position.x,
-                          kinematics.start_position.y,
-                          kinematics.start_position.z);
+                          kinematics.current_position.x,
+                          kinematics.current_position.y,
+                          kinematics.current_position.z);
     gl.glProgramUniform3f(program_,
                           frame_end_position_loc_,
-                          kinematics.end_position.x,
-                          kinematics.end_position.y,
-                          kinematics.end_position.z);
+                          kinematics.next_position.x,
+                          kinematics.next_position.y,
+                          kinematics.next_position.z);
     gl.glProgramUniformMatrix3fv(program_,
                                  frame_rotation_delta_loc_,
                                  1,
@@ -104,24 +91,24 @@ void ClothIntegrator::integrate_garment(const GarmentBufferState& garment_state,
                                  glm::value_ptr(kinematics.rotation_delta));
     gl.glProgramUniform3f(program_,
                           frame_start_linear_velocity_loc_,
-                          kinematics.start_linear_velocity.x,
-                          kinematics.start_linear_velocity.y,
-                          kinematics.start_linear_velocity.z);
+                          kinematics.current_linear_velocity.x,
+                          kinematics.current_linear_velocity.y,
+                          kinematics.current_linear_velocity.z);
     gl.glProgramUniform3f(program_,
                           frame_linear_acceleration_loc_,
-                          linear_acceleration.x,
-                          linear_acceleration.y,
-                          linear_acceleration.z);
+                          kinematics.linear_acceleration.x,
+                          kinematics.linear_acceleration.y,
+                          kinematics.linear_acceleration.z);
     gl.glProgramUniform3f(program_,
                           frame_start_angular_velocity_loc_,
-                          kinematics.start_angular_velocity.x,
-                          kinematics.start_angular_velocity.y,
-                          kinematics.start_angular_velocity.z);
+                          kinematics.current_angular_velocity.x,
+                          kinematics.current_angular_velocity.y,
+                          kinematics.current_angular_velocity.z);
     gl.glProgramUniform3f(program_,
                           frame_angular_acceleration_loc_,
-                          angular_acceleration.x,
-                          angular_acceleration.y,
-                          angular_acceleration.z);
+                          kinematics.angular_acceleration.x,
+                          kinematics.angular_acceleration.y,
+                          kinematics.angular_acceleration.z);
 
     gl.glDispatchCompute(compute_group_count(garment_state.vertex_count, local_size), 1, 1);
 }

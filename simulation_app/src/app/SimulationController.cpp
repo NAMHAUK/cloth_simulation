@@ -38,6 +38,8 @@ glm::mat4 make_placement_matrix(const glm::vec3& center, const glm::vec3& positi
 
 SimulationController::SimulationController(SimulationParams params)
     : params_(params),
+      scene_(params.integration.reference_frame_max_linear_acceleration,
+             params.integration.reference_frame_max_angular_acceleration),
       simulation_pipeline_(scene_, gpu_state_, params)
 {
     QObject::connect(&frame_timer_, &QTimer::timeout, this, &SimulationController::tick_frame);

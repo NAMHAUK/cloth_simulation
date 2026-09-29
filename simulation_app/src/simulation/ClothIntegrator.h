@@ -41,6 +41,4 @@ private:
     float gravity_ = 0.0f;
     float velocity_damping_ = 0.0f;
     float frame_inertia_scale_ = 0.0f;
-    float frame_max_linear_acceleration_ = 0.0f;
-    float frame_max_angular_acceleration_ = 0.0f;
 };
