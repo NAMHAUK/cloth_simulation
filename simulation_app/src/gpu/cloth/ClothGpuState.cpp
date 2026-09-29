@@ -27,7 +27,7 @@ void clear_dynamic_state(const ClothBufferSet& buffers,
     const std::array<GLuint, 3> state_buffers{
         buffers.collision_pushout,
         buffers.cloth_cloth_pushout,
-        buffers.contact_motion_delta,
+        buffers.inward_motion_correction,
     };
     const GLsizeiptr offset = byte_size<glm::vec4>(vertex_start_index);
     const GLsizeiptr size = byte_size<glm::vec4>(vertex_count);
@@ -52,7 +52,7 @@ ClothBufferSet create_dynamic_buffer_set(const ClothBufferElementCounts& counts,
     create_buffer(buffers.previous_position, byte_size<glm::vec4>(counts.vertex));
     create_buffer(buffers.collision_pushout, byte_size<glm::vec4>(counts.vertex));
     create_buffer(buffers.cloth_cloth_pushout, byte_size<glm::vec4>(counts.vertex));
-    create_buffer(buffers.contact_motion_delta, byte_size<glm::vec4>(counts.vertex));
+    create_buffer(buffers.inward_motion_correction, byte_size<glm::vec4>(counts.vertex));
     create_buffer(buffers.attachment_indices, byte_size<glm::uvec2>(attachment_capacity));
     create_buffer(buffers.attachment_barycentric_offset, byte_size<glm::vec4>(attachment_capacity));
     create_buffer(buffers.triangle_normal, byte_size<glm::vec4>(counts.triangle));
@@ -221,7 +221,7 @@ void ClothGpuState::copy_dynamic_state_buffers(GarmentLayer layer,
         std::pair{state_.buffers.previous_position, rebuild_state.buffers.previous_position},
         std::pair{state_.buffers.collision_pushout, rebuild_state.buffers.collision_pushout},
         std::pair{state_.buffers.cloth_cloth_pushout, rebuild_state.buffers.cloth_cloth_pushout},
-        std::pair{state_.buffers.contact_motion_delta, rebuild_state.buffers.contact_motion_delta},
+        std::pair{state_.buffers.inward_motion_correction, rebuild_state.buffers.inward_motion_correction},
     };
 
     for (const auto& [source_buffer, destination_buffer] : buffer_pairs) {
@@ -645,7 +645,7 @@ bool ClothGpuState::has_gpu_objects() const
            state_.buffers.previous_position != 0 &&
            state_.buffers.collision_pushout != 0 &&
            state_.buffers.cloth_cloth_pushout != 0 &&
-           state_.buffers.contact_motion_delta != 0 &&
+           state_.buffers.inward_motion_correction != 0 &&
            state_.buffers.triangle_vertex_indices != 0 &&
            state_.buffers.adjacent_triangle_offsets != 0 &&
            state_.buffers.adjacent_triangle_indices != 0 &&
@@ -713,7 +713,7 @@ void ClothGpuState::delete_buffer_set(ClothBufferSet& buffers, QOpenGLFunctions_
         buffers.previous_position,
         buffers.collision_pushout,
         buffers.cloth_cloth_pushout,
-        buffers.contact_motion_delta,
+        buffers.inward_motion_correction,
         buffers.triangle_vertex_indices,
         buffers.adjacent_triangle_offsets,
         buffers.adjacent_triangle_indices,

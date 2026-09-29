@@ -133,7 +133,7 @@ void SceneGpuState::rebuild_collision_buffers(QOpenGLFunctions_4_5_Core& gl)
     const GLsizeiptr correction_bytes = byte_size<glm::ivec4>(counts.vertex);
     create_buffer(collision_buffers_.normal_correction_sum_buffer, correction_bytes, gl);
     create_buffer(collision_buffers_.friction_correction_sum_buffer, correction_bytes, gl);
-    create_buffer(collision_buffers_.contact_motion_delta_sum_buffer, correction_bytes, gl);
+    create_buffer(collision_buffers_.inward_motion_correction_sum_buffer, correction_bytes, gl);
     buffer_bindings_.bind_collision(collision_buffers_, gl);
 }
 
@@ -327,6 +327,6 @@ void SceneGpuState::release_collision_buffers(QOpenGLFunctions_4_5_Core& gl)
     delete_collision_candidate_buffer(collision_buffers_.cloth_cloth_edge_edge, gl);
     gl.glDeleteBuffers(1, &collision_buffers_.normal_correction_sum_buffer);
     gl.glDeleteBuffers(1, &collision_buffers_.friction_correction_sum_buffer);
-    gl.glDeleteBuffers(1, &collision_buffers_.contact_motion_delta_sum_buffer);
+    gl.glDeleteBuffers(1, &collision_buffers_.inward_motion_correction_sum_buffer);
     collision_buffers_ = {};
 }

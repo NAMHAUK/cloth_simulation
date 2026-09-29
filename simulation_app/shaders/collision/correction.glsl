@@ -21,28 +21,28 @@ void accumulate_vertex_normal_correction(uint vertex_index, vec3 correction)
     atomicAdd(normal_correction_sums[vertex_index].z, encoded_correction.z);
 }
 
-#ifdef COLLISION_CONTACT_MOTION_ACCUMULATE
-vec3 compute_required_contact_motion_delta(vec3 normal,
-                                           vec3 cloth_delta,
-                                           vec3 body_delta,
-                                           vec3 retained_delta)
+#ifdef COLLISION_INWARD_MOTION_ACCUMULATE
+vec3 compute_inward_motion_correction(vec3 normal,
+                                      vec3 cloth_delta,
+                                      vec3 body_delta,
+                                      vec3 retained_delta)
 {
     vec3 relative_delta = cloth_delta + retained_delta - body_delta;
     float inward_delta = dot(relative_delta, normal);
     return normal * max(-inward_delta, 0.0);
 }
 
-void accumulate_vertex_contact_motion_delta(uint vertex_index, vec3 contact_motion_delta)
+void accumulate_vertex_inward_motion_correction(uint vertex_index, vec3 inward_motion_correction)
 {
-    ivec3 encoded_delta = encode_correction(contact_motion_delta);
+    ivec3 encoded_delta = encode_correction(inward_motion_correction);
     if (all(equal(encoded_delta, ivec3(0)))) {
         return;
     }
 
-    atomicAdd(contact_motion_delta_sums[vertex_index].x, encoded_delta.x);
-    atomicAdd(contact_motion_delta_sums[vertex_index].y, encoded_delta.y);
-    atomicAdd(contact_motion_delta_sums[vertex_index].z, encoded_delta.z);
-    atomicAdd(contact_motion_delta_sums[vertex_index].w, 1);
+    atomicAdd(inward_motion_correction_sums[vertex_index].x, encoded_delta.x);
+    atomicAdd(inward_motion_correction_sums[vertex_index].y, encoded_delta.y);
+    atomicAdd(inward_motion_correction_sums[vertex_index].z, encoded_delta.z);
+    atomicAdd(inward_motion_correction_sums[vertex_index].w, 1);
 }
 #endif
 

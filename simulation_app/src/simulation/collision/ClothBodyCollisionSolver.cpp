@@ -74,7 +74,7 @@ void ClothBodyCollisionSolver::clear_correction_sums(const SceneGpuState& gpu_st
     gl.glMemoryBarrier(GL_SHADER_STORAGE_BARRIER_BIT | GL_BUFFER_UPDATE_BARRIER_BIT);
     clear_collision_correction_sum(collision.normal_correction_sum_buffer, gl);
     clear_collision_correction_sum(collision.friction_correction_sum_buffer, gl);
-    clear_collision_correction_sum(collision.contact_motion_delta_sum_buffer, gl);
+    clear_collision_correction_sum(collision.inward_motion_correction_sum_buffer, gl);
 }
 
 void ClothBodyCollisionSolver::accumulate_cloth_vertex_body_face(const SceneGpuState& gpu_state,

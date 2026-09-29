@@ -23,7 +23,7 @@ struct CollisionBuffers final
     CollisionCandidateBuffers cloth_cloth_edge_edge;
     GLuint normal_correction_sum_buffer = 0;
     GLuint friction_correction_sum_buffer = 0;
-    GLuint contact_motion_delta_sum_buffer = 0;
+    GLuint inward_motion_correction_sum_buffer = 0;
 };
 
 class SimulationBufferBindings final
