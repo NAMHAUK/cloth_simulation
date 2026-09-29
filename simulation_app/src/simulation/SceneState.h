@@ -14,21 +14,25 @@
 
 struct ReferenceFrameKinematics final
 {
+    ReferenceFrameKinematics(float max_linear_acceleration, float max_angular_acceleration);
+
     void reset(const glm::vec3& position, const glm::quat& orientation);
     void update(const glm::vec3& position, const glm::quat& orientation, float dt);
 
-    glm::vec3 start_position{};
-    glm::vec3 end_position{};
+    glm::vec3 current_position{};
+    glm::vec3 next_position{};
     glm::mat3 rotation_delta{1.0f};
-    glm::vec3 start_linear_velocity{};
+    glm::vec3 current_linear_velocity{};
     glm::vec3 linear_acceleration{};
-    glm::vec3 start_angular_velocity{};
+    glm::vec3 current_angular_velocity{};
     glm::vec3 angular_acceleration{};
 
 private:
+    float max_linear_acceleration_;
+    float max_angular_acceleration_;
     glm::quat orientation_ = quat_xyzw(0.0f, 0.0f, 0.0f, 1.0f);
-    glm::vec3 linear_velocity_{};
-    glm::vec3 angular_velocity_{};
+    glm::vec3 next_linear_velocity_{};
+    glm::vec3 next_angular_velocity_{};
 };
 
 struct GarmentObject
@@ -42,6 +46,8 @@ struct GarmentObject
 class SceneState final
 {
 public:
+    SceneState(float max_linear_acceleration, float max_angular_acceleration);
+
     void set_character_motion(CharacterMotion motion);
     void set_body_bvhs(Bvh triangle_bvh, Bvh edge_bvh);
 
@@ -71,6 +77,6 @@ private:
     Bvh default_body_edge_bvh_;
     std::vector<GarmentObject> garments_;
     std::uint32_t motion_frame_index_ = 0;
-    ReferenceFrameKinematics pelvis_kinematics_;
-    ReferenceFrameKinematics torso_kinematics_;
+    ReferenceFrameKinematics pelvis_frame_;
+    ReferenceFrameKinematics torso_frame_;
 };

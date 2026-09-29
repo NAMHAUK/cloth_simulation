@@ -45,7 +45,18 @@ glm::vec3 angular_velocity(const glm::quat& start_orientation, const glm::quat& 
         return vector * (angle / (vector_length * dt));
     }
 }
+
+glm::vec3 limit_acceleration(const glm::vec3& acceleration, float maximum_acceleration)
+{
+    const float length = glm::length(acceleration);
+    return length > maximum_acceleration ? acceleration * (maximum_acceleration / length) : acceleration;
 }
+}
+
+SceneState::SceneState(float max_linear_acceleration, float max_angular_acceleration)
+    : pelvis_frame_(max_linear_acceleration, max_angular_acceleration),
+      torso_frame_(max_linear_acceleration, max_angular_acceleration)
+{}
 
 // Character
 
@@ -54,10 +65,10 @@ void SceneState::set_character_motion(CharacterMotion motion)
     character_motion_ = std::move(motion);
     motion_frame_index_ = 0;
 
-    pelvis_kinematics_.reset(frame_position(character_motion_.pelvis_positions, 0u),
-                             frame_orientation(character_motion_.pelvis_orientations, 0u));
-    torso_kinematics_.reset(frame_position(character_motion_.torso_positions, 0u),
-                            frame_orientation(character_motion_.torso_orientations, 0u));
+    pelvis_frame_.reset(frame_position(character_motion_.pelvis_positions, 0u),
+                        frame_orientation(character_motion_.pelvis_orientations, 0u));
+    torso_frame_.reset(frame_position(character_motion_.torso_positions, 0u),
+                       frame_orientation(character_motion_.torso_orientations, 0u));
 }
 
 void SceneState::set_body_bvhs(Bvh triangle_bvh, Bvh edge_bvh)
@@ -103,14 +114,20 @@ void SceneState::update_reference_frame_kinematics(float motion_frame_alpha, flo
                                         frame_orientation(motion.torso_orientations, next_frame_index),
                                         motion_frame_alpha);
 
-    pelvis_kinematics_.update(pelvis_position, glm::normalize(pelvis_orientation), dt);
-    torso_kinematics_.update(torso_position, glm::normalize(torso_orientation), dt);
+    pelvis_frame_.update(pelvis_position, glm::normalize(pelvis_orientation), dt);
+    torso_frame_.update(torso_position, glm::normalize(torso_orientation), dt);
 }
+
+ReferenceFrameKinematics::ReferenceFrameKinematics(float max_linear_acceleration,
+                                                   float max_angular_acceleration)
+    : max_linear_acceleration_(max_linear_acceleration),
+      max_angular_acceleration_(max_angular_acceleration)
+{}
 
 void ReferenceFrameKinematics::reset(const glm::vec3& position, const glm::quat& orientation)
 {
-    *this = {};
-    start_position = end_position = position;
+    *this = ReferenceFrameKinematics(max_linear_acceleration_, max_angular_acceleration_);
+    current_position = next_position = position;
     orientation_ = orientation;
 }
 
@@ -118,17 +135,19 @@ void ReferenceFrameKinematics::update(const glm::vec3& position, const glm::quat
 {
     assert(dt > 0.0f);
 
-    start_position = end_position;
-    end_position = position;
+    current_position = next_position;
+    next_position = position;
     rotation_delta = glm::mat3_cast(glm::normalize(orientation * glm::conjugate(orientation_)));
 
-    start_linear_velocity = linear_velocity_;
-    linear_velocity_ = (end_position - start_position) / dt;
-    linear_acceleration = (linear_velocity_ - start_linear_velocity) / dt;
+    current_linear_velocity = next_linear_velocity_;
+    next_linear_velocity_ = (next_position - current_position) / dt;
+    linear_acceleration = (next_linear_velocity_ - current_linear_velocity) / dt;
+    linear_acceleration = limit_acceleration(linear_acceleration, max_linear_acceleration_);
 
-    start_angular_velocity = angular_velocity_;
-    angular_velocity_ = angular_velocity(orientation_, orientation, dt);
-    angular_acceleration = (angular_velocity_ - start_angular_velocity) / dt;
+    current_angular_velocity = next_angular_velocity_;
+    next_angular_velocity_ = angular_velocity(orientation_, orientation, dt);
+    angular_acceleration = (next_angular_velocity_ - current_angular_velocity) / dt;
+    angular_acceleration = limit_acceleration(angular_acceleration, max_angular_acceleration_);
 
     orientation_ = orientation;
 }
@@ -243,11 +262,11 @@ const ReferenceFrameKinematics& SceneState::reference_frame_kinematics(GarmentCa
 {
     switch (category) {
     case GarmentCategory::Top:
-        return torso_kinematics_;
+        return torso_frame_;
 
     case GarmentCategory::Bottom:
     case GarmentCategory::FullBody:
-        return pelvis_kinematics_;
+        return pelvis_frame_;
     }
 
     throw std::runtime_error("Unsupported garment category.");

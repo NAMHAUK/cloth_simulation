@@ -18,35 +18,28 @@
 
 class SceneGpuState;
 class SceneState;
-class ClothGpuState;
 class SimulationPipeline final
 {
 public:
-    explicit SimulationPipeline(SimulationParams params = default_simulation_params);
+    SimulationPipeline(SceneState& scene,
+                       SceneGpuState& gpu_state,
+                       SimulationParams params = default_simulation_params);
     SimulationPipeline(const SimulationPipeline&) = delete;
     SimulationPipeline& operator=(const SimulationPipeline&) = delete;
 
     void initialize(const std::filesystem::path& shader_dir, QOpenGLFunctions_4_5_Core& gl);
     void release(QOpenGLFunctions_4_5_Core& gl);
-    void prefit_garments(SceneGpuState& gpu_state,
-                         std::uint32_t iteration_count,
-                         QOpenGLFunctions_4_5_Core& gl);
-    void step(SceneState& scene,
-              SceneGpuState& gpu_state,
-              std::uint32_t motion_step_index,
-              QOpenGLFunctions_4_5_Core& gl);
+    void prefit_garments(std::uint32_t iteration_count, QOpenGLFunctions_4_5_Core& gl);
+    void step(std::uint32_t motion_step_index, QOpenGLFunctions_4_5_Core& gl);
     bool is_initialized() const;
 
 private:
-    void update_character_motion(SceneState& scene,
-                                 SceneGpuState& gpu_state,
-                                 std::uint32_t motion_step_index,
+    void update_character_motion(std::uint32_t motion_step_index,
                                  std::uint32_t substep,
                                  QOpenGLFunctions_4_5_Core& gl) const;
-    void integrate_cloth(const SceneState& scene,
-                         const ClothGpuState& cloth_state,
-                         QOpenGLFunctions_4_5_Core& gl) const;
 
+    SceneState& scene_;
+    SceneGpuState& gpu_state_;
     SimulationParams params_;
     ClothIntegrator cloth_integrator_;
     StretchConstraintSolver stretch_constraint_solver_;
