@@ -32,9 +32,9 @@ uniform float uMaxCorrectionLength;
 
 #define POSITION_IO_CLOTH_CURRENT
 #define POSITION_IO_CLOTH_WRITE
-#include "../../mesh/position_io.glsl"
-
 #define COLLISION_CORRECTION_APPLY
+
+#include "../../mesh/position_io.glsl"
 #include "../correction.glsl"
 
 void main()

@@ -4,8 +4,6 @@
 
 layout(local_size_x = 128) in;
 
-#include "../../mesh/primitive_geometry.glsl"
-
 // Buffer bindings
 layout(std430, binding = CLOTH_CURRENT_POSITIONS) readonly buffer ClothCurrentPositions {
     vec4 cloth_current_positions[];
@@ -53,16 +51,12 @@ uniform float uCollisionStiffness;
 // Shared dependencies
 #define POSITION_IO_CLOTH_CURRENT
 #define POSITION_IO_CLOTH_PREVIOUS
-#include "../../mesh/position_io.glsl"
-
-#include "../contact_geometry.glsl"
-
-#define COLLISION_CORRECTION_ACCUMULATE
 #define COLLISION_INWARD_MOTION_ACCUMULATE
-#include "../correction.glsl"
 
-#include "contact_correction.glsl"
+#include "../../mesh/position_io.glsl"
+#include "../contact_geometry.glsl"
 #include "edge_contact.glsl"
+#include "contact_correction.glsl"
 
 void main()
 {
@@ -80,17 +74,5 @@ void main()
         return;
     }
 
-    float inverse_denominator = 1.0 / dot(contact.weights, contact.weights);
-    vec3 correction = contact.normal * contact.depth * uCollisionStiffness * inverse_denominator;
-    vec3 relative_delta = vec3(0.0);
-    for (uint corner = 0u; corner < 4u; ++corner) {
-        relative_delta += contact.weights[corner] * compute_vertex_motion_delta(vertices[corner]);
-    }
-    vec3 inward_motion_correction = contact.normal * max(-dot(relative_delta, contact.normal), 0.0) * inverse_denominator;
-    for (uint corner = 0u; corner < 4u; ++corner) {
-        accumulate_contact_correction(vertices[corner],
-                                      contact.weights[corner],
-                                      correction,
-                                      inward_motion_correction);
-    }
+    accumulate_edge_edge_correction(vertices, contact);
 }
