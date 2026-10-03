@@ -11,7 +11,6 @@ void accumulate_contact_correction(uint vertex_index, float vertex_weight, vec3 
     }
 
     accumulate_vertex_normal_correction(vertex_index, vertex_weight * correction);
-    atomicAdd(normal_correction_sums[vertex_index].w, 1);
 }
 
 #ifdef COLLISION_INWARD_MOTION_ACCUMULATE
@@ -36,15 +35,12 @@ void accumulate_edge_edge_correction(uvec4 vertices, ClothEdgeEdgeContact contac
     float inverse_denominator = 1.0 / dot(contact.weights, contact.weights);
     vec3 correction = contact.normal * contact.depth * uCollisionStiffness * inverse_denominator;
     vec3 relative_delta = vec3(0.0);
-    for (uint corner = 0u; corner < 4u; ++corner) {
-        relative_delta += contact.weights[corner] * compute_vertex_motion_delta(vertices[corner]);
+    for (uint i = 0u; i < 4u; ++i) {
+        relative_delta += contact.weights[i] * compute_vertex_motion_delta(vertices[i]);
     }
     vec3 inward_motion_correction = contact.normal * max(-dot(relative_delta, contact.normal), 0.0) * inverse_denominator;
-    for (uint corner = 0u; corner < 4u; ++corner) {
-        accumulate_contact_correction(vertices[corner],
-                                      contact.weights[corner],
-                                      correction,
-                                      inward_motion_correction);
+    for (uint i = 0u; i < 4u; ++i) {
+        accumulate_contact_correction(vertices[i], contact.weights[i], correction, inward_motion_correction);
     }
 }
 

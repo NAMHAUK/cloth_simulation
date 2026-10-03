@@ -19,6 +19,7 @@ void accumulate_vertex_normal_correction(uint vertex_index, vec3 correction)
     atomicAdd(normal_correction_sums[vertex_index].x, encoded_correction.x);
     atomicAdd(normal_correction_sums[vertex_index].y, encoded_correction.y);
     atomicAdd(normal_correction_sums[vertex_index].z, encoded_correction.z);
+    atomicAdd(normal_correction_sums[vertex_index].w, 1);
 }
 
 #ifdef COLLISION_INWARD_MOTION_ACCUMULATE

@@ -143,7 +143,6 @@ void accumulate_contact(uint cloth_vertex_index, VertexFaceContact contact)
 {
     vec3 normal_correction = contact.normal * contact.depth;
     accumulate_vertex_normal_correction(cloth_vertex_index, normal_correction);
-    atomicAdd(normal_correction_sums[cloth_vertex_index].w, 1);
     accumulate_vertex_friction_correction(cloth_vertex_index, contact.friction_correction);
     accumulate_vertex_inward_motion_correction(cloth_vertex_index, contact.inward_motion_correction);
 }
