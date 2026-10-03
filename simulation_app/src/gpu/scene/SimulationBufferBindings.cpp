@@ -18,7 +18,7 @@ constexpr GLuint current_positions = 0;
 constexpr GLuint previous_positions = 1;
 constexpr GLuint collision_pushouts = 2;
 constexpr GLuint cloth_pushouts = 3;
-constexpr GLuint contact_motion_deltas = 4;
+constexpr GLuint inward_motion_corrections = 4;
 constexpr GLuint edge_exclusions = 5;
 constexpr GLuint triangle_vertex_indices = 6;
 constexpr GLuint adjacent_triangle_offsets = 7;
@@ -75,7 +75,7 @@ constexpr GLuint cloth_vertex_face_count = 43;
 constexpr GLuint cloth_vertex_face_dispatch = 44;
 constexpr GLuint normal_correction_sums = 45;
 constexpr GLuint friction_correction_sums = 46;
-constexpr GLuint contact_motion_delta_sums = 47;
+constexpr GLuint inward_motion_correction_sums = 47;
 constexpr GLuint start = vertex_body_face_candidates;
 constexpr GLuint cloth_edge_edge_candidates = 48;
 constexpr GLuint cloth_edge_edge_count = 49;
@@ -163,7 +163,7 @@ void SimulationBufferBindings::bind_cloth(const ClothBufferSet& buffers, QOpenGL
         buffers.previous_position,
         buffers.collision_pushout,
         buffers.cloth_cloth_pushout,
-        buffers.contact_motion_delta,
+        buffers.inward_motion_correction,
         buffers.edge_exclusions,
         buffers.triangle_vertex_indices,
         buffers.adjacent_triangle_offsets,
@@ -201,7 +201,7 @@ void SimulationBufferBindings::bind_collision(const CollisionBuffers& buffers,
         buffers.cloth_cloth_vertex_face.dispatch_size_buffer,
         buffers.normal_correction_sum_buffer,
         buffers.friction_correction_sum_buffer,
-        buffers.contact_motion_delta_sum_buffer,
+        buffers.inward_motion_correction_sum_buffer,
         buffers.cloth_cloth_edge_edge.candidate_buffer,
         buffers.cloth_cloth_edge_edge.count_buffer,
         buffers.cloth_cloth_edge_edge.dispatch_size_buffer,

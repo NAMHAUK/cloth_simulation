@@ -14,7 +14,7 @@ struct ClothBufferSet final
     GLuint previous_position = 0;
     GLuint collision_pushout = 0;
     GLuint cloth_cloth_pushout = 0;
-    GLuint contact_motion_delta = 0;
+    GLuint inward_motion_correction = 0;
     GLuint triangle_vertex_indices = 0;
     GLuint adjacent_triangle_offsets = 0;
     GLuint adjacent_triangle_indices = 0;

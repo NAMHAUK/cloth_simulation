@@ -39,12 +39,14 @@ layout(std430, binding = CLOTH_CLOTH_PUSHOUTS) readonly buffer ClothClothPushout
     vec4 cloth_cloth_pushouts[];
 };
 
-layout(std430, binding = CLOTH_CONTACT_MOTION_DELTAS) readonly buffer ContactMotionDeltas {
-    vec4 contact_motion_deltas[];
+layout(std430, binding = CLOTH_INWARD_MOTION_CORRECTIONS) readonly buffer InwardMotionCorrections
+{
+    vec4 inward_motion_corrections[];
 };
 
-layout(std430, binding = CONTACT_MOTION_DELTA_SUMS) buffer ContactMotionDeltaSums {
-    ivec4 contact_motion_delta_sums[];
+layout(std430, binding = INWARD_MOTION_CORRECTION_SUMS) buffer InwardMotionCorrectionSums
+{
+    ivec4 inward_motion_correction_sums[];
 };
 
 // Uniforms
@@ -60,7 +62,7 @@ uniform float uCollisionStiffness;
 #include "../contact_geometry.glsl"
 
 #define COLLISION_CORRECTION_ACCUMULATE
-#define COLLISION_CONTACT_MOTION_ACCUMULATE
+#define COLLISION_INWARD_MOTION_ACCUMULATE
 #include "../correction.glsl"
 
 #include "contact_correction.glsl"
@@ -88,8 +90,11 @@ void main()
     for (uint corner = 0u; corner < 4u; ++corner) {
         relative_delta += contact.weights[corner] * compute_vertex_motion_delta(vertices[corner]);
     }
-    vec3 contact_motion_delta = contact.normal * max(-dot(relative_delta, contact.normal), 0.0) * inverse_denominator;
+    vec3 inward_motion_correction = contact.normal * max(-dot(relative_delta, contact.normal), 0.0) * inverse_denominator;
     for (uint corner = 0u; corner < 4u; ++corner) {
-        accumulate_contact_correction(vertices[corner], contact.weights[corner], correction, contact_motion_delta);
+        accumulate_contact_correction(vertices[corner],
+                                      contact.weights[corner],
+                                      correction,
+                                      inward_motion_correction);
     }
 }
