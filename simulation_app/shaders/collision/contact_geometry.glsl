@@ -74,7 +74,7 @@ bool compute_cloth_boundary_contact(vec3 point,
                                      float collision_thickness,
                                      out ClothVertexFaceContact contact)
 {
-    vec3 closest_point = closest_point_on_triangle(point, face.a, face.b, face.c);
+    vec3 closest_point = closest_point_on_triangle(point, face);
     vec3 separation = point - closest_point;
     float distance = length(separation);
     if (distance >= collision_thickness ||
