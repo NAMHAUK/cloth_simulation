@@ -62,6 +62,8 @@ layout(std430, binding = INWARD_MOTION_CORRECTION_SUMS) buffer InwardMotionCorre
 
 uniform uint uMaxCandidateCount;
 uniform float uCollisionThickness;
+uniform float uStaticFriction;
+uniform float uDynamicFriction;
 
 #define POSITION_IO_CLOTH_CURRENT
 #define POSITION_IO_CLOTH_PREVIOUS
@@ -78,7 +80,7 @@ uniform float uCollisionThickness;
 
 struct VertexFaceContact {
     vec3 normal;
-    vec3 relative_delta;
+    vec3 friction_correction;
     vec3 inward_relative_delta;
     float depth;
 };
@@ -127,7 +129,7 @@ bool compute_vertex_triangle_contact(uint cloth_vertex_index, uint triangle_inde
 
     contact.normal = face_normal;
     contact.depth = penetration_depth;
-    contact.relative_delta = relative_delta;
+    contact.friction_correction = compute_friction_correction(face_normal, relative_delta, penetration_depth);
     contact.inward_relative_delta = inward_corrected_relative_delta;
     return true;
 }
@@ -135,7 +137,7 @@ bool compute_vertex_triangle_contact(uint cloth_vertex_index, uint triangle_inde
 void accumulate_contact(uint cloth_vertex_index, VertexFaceContact contact)
 {
     accumulate_vertex_normal_correction(cloth_vertex_index, contact.normal, contact.depth);
-    accumulate_vertex_friction_correction(cloth_vertex_index, contact.normal, contact.relative_delta);
+    accumulate_vertex_friction_correction(cloth_vertex_index, contact.friction_correction);
     accumulate_vertex_inward_motion_correction(cloth_vertex_index, contact.normal, contact.inward_relative_delta, 1.0);
 }
 

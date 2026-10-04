@@ -41,9 +41,21 @@ void accumulate_vertex_inward_motion_correction(uint vertex_index,
 #endif
 
 #ifdef COLLISION_CORRECTION_FRICTION_ACCUMULATE
-void accumulate_vertex_friction_correction(uint vertex_index, vec3 normal, vec3 relative_delta)
+vec3 compute_friction_correction(vec3 normal, vec3 relative_delta, float penetration_depth)
 {
     vec3 correction = -(relative_delta - normal * dot(relative_delta, normal));
+    float friction_length = length(correction);
+    if (penetration_depth <= 1.0e-8 || friction_length <= 1.0e-8) {
+        return vec3(0.0);
+    } else if (friction_length <= uStaticFriction * penetration_depth) {
+        return correction;
+    } else {
+        return correction * (uDynamicFriction * penetration_depth / friction_length);
+    }
+}
+
+void accumulate_vertex_friction_correction(uint vertex_index, vec3 correction)
+{
     ivec3 int_correction = correction_to_int(correction);
     atomicAdd(friction_correction_sums[vertex_index].x, int_correction.x);
     atomicAdd(friction_correction_sums[vertex_index].y, int_correction.y);
@@ -63,30 +75,6 @@ vec3 clamp_correction(vec3 correction)
 
     return correction;
 }
-
-#ifdef COLLISION_CORRECTION_FRICTION_APPLY
-const float friction_epsilon = 1.0e-8;
-
-vec3 clamp_friction_correction(vec3 normal_correction, vec3 friction_correction)
-{
-    float normal_length_sq = dot(normal_correction, normal_correction);
-    float friction_length_sq = dot(friction_correction, friction_correction);
-    if (normal_length_sq <= friction_epsilon * friction_epsilon ||
-        friction_length_sq <= friction_epsilon * friction_epsilon) {
-        return vec3(0.0);
-    }
-
-    float normal_length = sqrt(normal_length_sq);
-    float friction_length = sqrt(friction_length_sq);
-    float static_limit = uStaticFriction * normal_length;
-    if (friction_length <= static_limit) {
-        return friction_correction;
-    }
-
-    float dynamic_limit = uDynamicFriction * normal_length;
-    return friction_correction * (dynamic_limit / friction_length);
-}
-#endif
 
 void apply_position_correction(uint vertex_index, vec3 normal_correction, vec3 friction_correction)
 {

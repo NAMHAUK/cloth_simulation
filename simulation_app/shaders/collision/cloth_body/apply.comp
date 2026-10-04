@@ -32,8 +32,6 @@ layout(std430, binding = CLOTH_INWARD_MOTION_CORRECTIONS) buffer InwardMotionCor
 
 uniform uint uVertexCount;
 uniform float uMaxCorrectionLength;
-uniform float uStaticFriction;
-uniform float uDynamicFriction;
 
 #define POSITION_IO_CLOTH_CURRENT
 #define POSITION_IO_CLOTH_WRITE
@@ -53,10 +51,14 @@ void main()
     ivec4 normal_accumulated = normal_correction_sums[vertex_index];
     if (normal_accumulated.w > 0) {
         float inverse_accumulation_scale = 1.0 / (int_correction_scale * float(normal_accumulated.w));
-        vec3 final_normal_correction = clamp_correction(vec3(normal_accumulated.xyz) * inverse_accumulation_scale);
-        vec3 final_friction_correction = clamp_friction_correction(
-            final_normal_correction,
-            vec3(friction_correction_sums[vertex_index].xyz) * inverse_accumulation_scale);
+        vec3 final_normal_correction = vec3(normal_accumulated.xyz) * inverse_accumulation_scale;
+        float correction_length_sq = dot(final_normal_correction, final_normal_correction);
+        float correction_scale = 1.0;
+        if (correction_length_sq > uMaxCorrectionLength * uMaxCorrectionLength) {
+            correction_scale = uMaxCorrectionLength * inversesqrt(correction_length_sq);
+            final_normal_correction *= correction_scale;
+        }
+        vec3 final_friction_correction = vec3(friction_correction_sums[vertex_index].xyz) * inverse_accumulation_scale * correction_scale;
 
         apply_position_correction(vertex_index, final_normal_correction, final_friction_correction);
     }
