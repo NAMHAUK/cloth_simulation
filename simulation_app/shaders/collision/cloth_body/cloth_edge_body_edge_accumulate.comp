@@ -76,7 +76,7 @@ const float ccd_parallel_epsilon = 1.0e-8;
 #define COLLISION_CORRECTION_FRICTION_ACCUMULATE
 #include "../correction.glsl"
 
-struct EdgeContact {
+struct ClothBodyEdgeContact {
     vec3 normal;
     float cloth_t;
     vec3 relative_delta;
@@ -84,7 +84,7 @@ struct EdgeContact {
     float depth;
 };
 
-bool compute_candidate_contact(uint candidate_index, out uvec2 cloth_vertices, out EdgeContact contact)
+bool compute_candidate_contact(uint candidate_index, out uvec2 cloth_vertices, out ClothBodyEdgeContact contact)
 {
     uvec2 candidate = candidates[candidate_index];
     uint cloth_edge_base = candidate.x * 2u;
@@ -146,7 +146,7 @@ bool compute_candidate_contact(uint candidate_index, out uvec2 cloth_vertices, o
 }
 
 void accumulate_contact_for_vertex(uint vertex_index,
-                                   EdgeContact contact,
+                                   ClothBodyEdgeContact contact,
                                    float vertex_weight,
                                    float inverse_denominator)
 {
@@ -168,7 +168,7 @@ void main()
     }
 
     uvec2 cloth_vertices;
-    EdgeContact contact;
+    ClothBodyEdgeContact contact;
     if (!compute_candidate_contact(candidate_index, cloth_vertices, contact)) {
         return;
     }
