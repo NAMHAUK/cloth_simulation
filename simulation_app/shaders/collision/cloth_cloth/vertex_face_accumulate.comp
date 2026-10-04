@@ -76,27 +76,27 @@ void accumulate_candidate_correction(uint vertex_index, uint triangle_index)
     }
 
     float inverse_denominator = 1.0 / (1.0 + dot(contact.barycentric, contact.barycentric));
-    vec3 correction = contact.correction_normal * contact.depth * uCollisionStiffness * inverse_denominator;
+    float correction_distance = contact.depth * uCollisionStiffness;
     vec3 face_delta = compute_vertex_motion_delta(face_vertices.x) * contact.barycentric.x
                     + compute_vertex_motion_delta(face_vertices.y) * contact.barycentric.y
                     + compute_vertex_motion_delta(face_vertices.z) * contact.barycentric.z;
     vec3 relative_delta = compute_vertex_motion_delta(vertex_index) - face_delta;
-    float inward_delta = dot(relative_delta, contact.correction_normal);
-    vec3 inward_motion_correction = contact.correction_normal * max(-inward_delta, 0.0) * inverse_denominator;
-
-    accumulate_contact_correction(vertex_index, 1.0, correction, inward_motion_correction);
+    accumulate_contact_correction(vertex_index, inverse_denominator, contact.correction_normal, correction_distance, relative_delta);
     accumulate_contact_correction(face_vertices.x,
-                                  -contact.barycentric.x,
-                                  correction,
-                                  inward_motion_correction);
+                                  -contact.barycentric.x * inverse_denominator,
+                                  contact.correction_normal,
+                                  correction_distance,
+                                  relative_delta);
     accumulate_contact_correction(face_vertices.y,
-                                  -contact.barycentric.y,
-                                  correction,
-                                  inward_motion_correction);
+                                  -contact.barycentric.y * inverse_denominator,
+                                  contact.correction_normal,
+                                  correction_distance,
+                                  relative_delta);
     accumulate_contact_correction(face_vertices.z,
-                                  -contact.barycentric.z,
-                                  correction,
-                                  inward_motion_correction);
+                                  -contact.barycentric.z * inverse_denominator,
+                                  contact.correction_normal,
+                                  correction_distance,
+                                  relative_delta);
 }
 
 void main()

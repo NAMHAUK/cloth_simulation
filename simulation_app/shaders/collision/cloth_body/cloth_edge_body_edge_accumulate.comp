@@ -79,8 +79,8 @@ const float ccd_parallel_epsilon = 1.0e-8;
 struct EdgeContact {
     vec3 normal;
     float cloth_t;
-    vec3 friction_correction;
-    vec3 inward_motion_correction;
+    vec3 relative_delta;
+    vec3 inward_relative_delta;
     float depth;
 };
 
@@ -150,8 +150,8 @@ bool compute_candidate_contact(uint candidate_index, out uvec2 cloth_vertices, o
     vec3 retained_delta = mix(inward_motion_corrections[cloth_vertices.x].xyz,
                               inward_motion_corrections[cloth_vertices.y].xyz,
                               current_cloth_segment.t);
-    contact.friction_correction = compute_friction_correction(normal, cloth_delta, body_delta);
-    contact.inward_motion_correction = compute_inward_motion_correction(normal, cloth_delta, body_delta, retained_delta);
+    contact.relative_delta = cloth_delta - body_delta;
+    contact.inward_relative_delta = contact.relative_delta + retained_delta;
     contact.depth = uCollisionThickness - current_signed_distance - penetration_tolerance;
     return true;
 }
@@ -165,13 +165,9 @@ void accumulate_contact_for_vertex(uint vertex_index,
         return;
     }
 
-    vec3 correction = contact.normal * contact.depth * vertex_weight * inverse_denominator;
-    accumulate_vertex_normal_correction(vertex_index, correction);
-    atomicAdd(normal_correction_sums[vertex_index].w, 1);
-    accumulate_vertex_friction_correction(vertex_index, contact.friction_correction * vertex_weight * inverse_denominator);
-    accumulate_vertex_inward_motion_correction(
-        vertex_index,
-        contact.inward_motion_correction * vertex_weight * inverse_denominator);
+    accumulate_vertex_normal_correction(vertex_index, contact.normal, contact.depth * vertex_weight * inverse_denominator);
+    accumulate_vertex_friction_correction(vertex_index, contact.normal, contact.relative_delta * vertex_weight * inverse_denominator);
+    accumulate_vertex_inward_motion_correction(vertex_index, contact.normal, contact.inward_relative_delta, vertex_weight * inverse_denominator);
 }
 
 void main()

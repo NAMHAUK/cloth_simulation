@@ -116,9 +116,7 @@ bool compute_candidate_contact(uint vertex_index,
 
 void accumulate_upper_vertex(uint vertex_index, ClothVertexFaceContact contact)
 {
-    vec3 correction = contact.correction_normal * contact.depth * uCollisionStiffness;
-    accumulate_vertex_normal_correction(vertex_index, correction);
-    atomicAdd(normal_correction_sums[vertex_index].w, 1);
+    accumulate_vertex_normal_correction(vertex_index, contact.correction_normal, contact.depth * uCollisionStiffness);
 }
 
 void accumulate_upper_face_vertex(uint vertex_index,
@@ -131,9 +129,7 @@ void accumulate_upper_face_vertex(uint vertex_index,
     }
 
     float weight_scale = vertex_weight * inverse_denominator;
-    vec3 correction = contact.correction_normal * contact.depth * uCollisionStiffness * weight_scale;
-    accumulate_vertex_normal_correction(vertex_index, correction);
-    atomicAdd(normal_correction_sums[vertex_index].w, 1);
+    accumulate_vertex_normal_correction(vertex_index, contact.correction_normal, contact.depth * uCollisionStiffness * weight_scale);
 }
 
 void accumulate_self_contact(uint vertex_index, uvec3 face_vertices)
@@ -147,13 +143,12 @@ void accumulate_self_contact(uint vertex_index, uvec3 face_vertices)
     }
 
     float inverse_denominator = 1.0 / (1.0 + dot(contact.barycentric, contact.barycentric));
-    vec3 correction = contact.correction_normal * contact.depth * uCollisionStiffness * inverse_denominator;
+    float correction_distance = contact.depth * uCollisionStiffness * inverse_denominator;
     uvec4 vertices = uvec4(vertex_index, face_vertices);
     vec4 weights = vec4(1.0, -contact.barycentric);
     for (uint corner = 0u; corner < 4u; ++corner) {
         if (weights[corner] != 0.0) {
-            accumulate_vertex_normal_correction(vertices[corner], weights[corner] * correction);
-            atomicAdd(normal_correction_sums[vertices[corner]].w, 1);
+            accumulate_vertex_normal_correction(vertices[corner], contact.correction_normal, weights[corner] * correction_distance);
         }
     }
 }

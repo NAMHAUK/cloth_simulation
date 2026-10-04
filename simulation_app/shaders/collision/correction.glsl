@@ -1,62 +1,53 @@
 #ifndef COLLISION_CORRECTION_COMMON_GLSL
 #define COLLISION_CORRECTION_COMMON_GLSL
 
-const float correction_fixed_point_scale = 1000000.0;
-const float correction_component_limit = 1073741823.0;
+const float int_correction_scale = 1000000.0;
+const float int_correction_limit = 1073741823.0;
 
 #ifdef COLLISION_CORRECTION_ACCUMULATE
-ivec3 encode_correction(vec3 correction)
+ivec3 correction_to_int(vec3 correction)
 {
-    vec3 scaled_correction = round(correction * correction_fixed_point_scale);
-    return ivec3(clamp(scaled_correction,
-                       vec3(-correction_component_limit),
-                       vec3(correction_component_limit)));
+    vec3 scaled_correction = round(correction * int_correction_scale);
+    return ivec3(clamp(scaled_correction, vec3(-int_correction_limit), vec3(int_correction_limit)));
 }
 
-void accumulate_vertex_normal_correction(uint vertex_index, vec3 correction)
+void accumulate_vertex_normal_correction(uint vertex_index, vec3 normal, float correction_distance)
 {
-    ivec3 encoded_correction = encode_correction(correction);
-    atomicAdd(normal_correction_sums[vertex_index].x, encoded_correction.x);
-    atomicAdd(normal_correction_sums[vertex_index].y, encoded_correction.y);
-    atomicAdd(normal_correction_sums[vertex_index].z, encoded_correction.z);
+    vec3 correction = normal * correction_distance;
+    ivec3 int_correction = correction_to_int(correction);
+    atomicAdd(normal_correction_sums[vertex_index].x, int_correction.x);
+    atomicAdd(normal_correction_sums[vertex_index].y, int_correction.y);
+    atomicAdd(normal_correction_sums[vertex_index].z, int_correction.z);
+    atomicAdd(normal_correction_sums[vertex_index].w, 1);
 }
 
 #ifdef COLLISION_INWARD_MOTION_ACCUMULATE
-vec3 compute_inward_motion_correction(vec3 normal, vec3 cloth_delta, vec3 body_delta, vec3 retained_delta)
+void accumulate_vertex_inward_motion_correction(uint vertex_index,
+                                                vec3 normal,
+                                                vec3 relative_delta,
+                                                float weight)
 {
-    vec3 relative_delta = cloth_delta + retained_delta - body_delta;
-    float inward_delta = dot(relative_delta, normal);
-    return normal * max(-inward_delta, 0.0);
-}
-
-void accumulate_vertex_inward_motion_correction(uint vertex_index, vec3 inward_motion_correction)
-{
-    ivec3 encoded_delta = encode_correction(inward_motion_correction);
-    if (all(equal(encoded_delta, ivec3(0)))) {
+    vec3 correction = normal * max(-dot(relative_delta, normal), 0.0) * weight;
+    ivec3 int_correction = correction_to_int(correction);
+    if (all(equal(int_correction, ivec3(0)))) {
         return;
     }
 
-    atomicAdd(inward_motion_correction_sums[vertex_index].x, encoded_delta.x);
-    atomicAdd(inward_motion_correction_sums[vertex_index].y, encoded_delta.y);
-    atomicAdd(inward_motion_correction_sums[vertex_index].z, encoded_delta.z);
+    atomicAdd(inward_motion_correction_sums[vertex_index].x, int_correction.x);
+    atomicAdd(inward_motion_correction_sums[vertex_index].y, int_correction.y);
+    atomicAdd(inward_motion_correction_sums[vertex_index].z, int_correction.z);
     atomicAdd(inward_motion_correction_sums[vertex_index].w, 1);
 }
 #endif
 
 #ifdef COLLISION_CORRECTION_FRICTION_ACCUMULATE
-vec3 compute_friction_correction(vec3 normal, vec3 cloth_delta, vec3 body_delta)
+void accumulate_vertex_friction_correction(uint vertex_index, vec3 normal, vec3 relative_delta)
 {
-    vec3 relative_movement = cloth_delta - body_delta;
-    vec3 tangent_movement = relative_movement - normal * dot(relative_movement, normal);
-    return -tangent_movement;
-}
-
-void accumulate_vertex_friction_correction(uint vertex_index, vec3 friction_correction)
-{
-    ivec3 encoded_correction = encode_correction(friction_correction);
-    atomicAdd(friction_correction_sums[vertex_index].x, encoded_correction.x);
-    atomicAdd(friction_correction_sums[vertex_index].y, encoded_correction.y);
-    atomicAdd(friction_correction_sums[vertex_index].z, encoded_correction.z);
+    vec3 correction = -(relative_delta - normal * dot(relative_delta, normal));
+    ivec3 int_correction = correction_to_int(correction);
+    atomicAdd(friction_correction_sums[vertex_index].x, int_correction.x);
+    atomicAdd(friction_correction_sums[vertex_index].y, int_correction.y);
+    atomicAdd(friction_correction_sums[vertex_index].z, int_correction.z);
 }
 #endif
 #endif

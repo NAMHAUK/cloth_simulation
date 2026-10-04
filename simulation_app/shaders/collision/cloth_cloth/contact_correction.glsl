@@ -10,16 +10,16 @@ vec3 compute_vertex_motion_delta(uint vertex_index)
 
 void accumulate_contact_correction(uint vertex_index,
                                    float vertex_weight,
-                                   vec3 correction,
-                                   vec3 inward_motion_correction)
+                                   vec3 normal,
+                                   float correction_distance,
+                                   vec3 relative_delta)
 {
     if (vertex_weight == 0.0) {
         return;
     }
 
-    accumulate_vertex_normal_correction(vertex_index, vertex_weight * correction);
-    atomicAdd(normal_correction_sums[vertex_index].w, 1);
-    accumulate_vertex_inward_motion_correction(vertex_index, vertex_weight * inward_motion_correction);
+    accumulate_vertex_normal_correction(vertex_index, normal, vertex_weight * correction_distance);
+    accumulate_vertex_inward_motion_correction(vertex_index, normal, relative_delta, vertex_weight);
 }
 
 #endif
