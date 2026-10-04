@@ -4,7 +4,6 @@
 #include "../mesh/primitive_geometry.glsl"
 
 const float triangle_area_sq_epsilon = 1.0e-20;
-const float triangle_edge_tolerance = -1.0e-6;
 const float penetration_tolerance = 0.0005;
 const float segment_parallel_tolerance = 1.0e-8;
 const float max_float = 3.402823e+38;
@@ -32,11 +31,11 @@ vec3 align_normal(vec3 normal, vec3 reference_normal)
     return dot(normal, reference_normal) < 0.0 ? -normal : normal;
 }
 
-bool compute_barycentric_if_inside(vec3 point, vec3 a, vec3 b, vec3 c, out vec3 barycentric)
+bool compute_barycentric(vec3 point, TrianglePositions triangle, out vec3 barycentric)
 {
-    vec3 ab = b - a;
-    vec3 ac = c - a;
-    vec3 ap = point - a;
+    vec3 ab = triangle.b - triangle.a;
+    vec3 ac = triangle.c - triangle.a;
+    vec3 ap = point - triangle.a;
 
     float d00 = dot(ab, ab);
     float d01 = dot(ab, ac);
@@ -44,21 +43,19 @@ bool compute_barycentric_if_inside(vec3 point, vec3 a, vec3 b, vec3 c, out vec3 
     float d20 = dot(ap, ab);
     float d21 = dot(ap, ac);
     float denominator = d00 * d11 - d01 * d01;
-    if (denominator <= triangle_area_sq_epsilon) {
+    if (denominator <= 1.0e-20) {
         return false;
     }
 
     barycentric.z = (d00 * d21 - d01 * d20) / denominator;
     barycentric.y = (d11 * d20 - d01 * d21) / denominator;
     barycentric.x = 1.0 - barycentric.y - barycentric.z;
-    return barycentric.x >= triangle_edge_tolerance &&
-           barycentric.y >= triangle_edge_tolerance &&
-           barycentric.z >= triangle_edge_tolerance;
+    return true;
 }
 
-bool compute_barycentric_if_inside(vec3 point, TrianglePositions triangle, out vec3 barycentric)
+bool is_inside_triangle(vec3 barycentric)
 {
-    return compute_barycentric_if_inside(point, triangle.a, triangle.b, triangle.c, barycentric);
+    return barycentric.x >= 0.0 && barycentric.y >= 0.0 && barycentric.z >= 0.0;
 }
 
 struct ClothVertexFaceContact {
@@ -77,12 +74,11 @@ bool compute_cloth_boundary_contact(vec3 point,
     vec3 separation = point - closest_point;
     float distance = length(separation);
     if (distance >= collision_thickness ||
-        !compute_barycentric_if_inside(closest_point, face, contact.barycentric)) {
+        !compute_barycentric(closest_point, face, contact.barycentric) ||
+        !is_inside_triangle(contact.barycentric)) {
         return false;
     }
 
-    contact.barycentric = max(contact.barycentric, vec3(0.0));
-    contact.barycentric /= dot(contact.barycentric, vec3(1.0));
     contact.correction_normal = distance > 0.0 ? separation / distance : face_normal;
     contact.depth = collision_thickness - distance;
     return true;
@@ -133,7 +129,8 @@ bool compute_cloth_vertex_face_contact(uint vertex_index,
             hit_normal *= normal_sign;
             float hit_distance = dot(hit_vertex_position - hit_face.a, hit_normal);
             vec3 hit_surface_point = hit_vertex_position - hit_normal * hit_distance;
-            has_swept_contact = compute_barycentric_if_inside(hit_surface_point, hit_face, contact.barycentric);
+            has_swept_contact = compute_barycentric(hit_surface_point, hit_face, contact.barycentric) &&
+                                is_inside_triangle(contact.barycentric);
         }
     }
 

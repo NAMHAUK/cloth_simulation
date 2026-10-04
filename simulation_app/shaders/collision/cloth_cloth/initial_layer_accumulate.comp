@@ -15,7 +15,7 @@ layout(std430, binding = CLOTH_PREVIOUS_POSITIONS) readonly buffer ClothPrevious
 };
 
 layout(std430, binding = CLOTH_TRIANGLE_VERTEX_INDICES) readonly buffer ClothTriangleIndices {
-    uint cloth_triangle_indices[];
+    uint triangle_indices[];
 };
 
 layout(std430, binding = CLOTH_CLOTH_VERTEX_FACE_CANDIDATES) readonly buffer Candidates {
@@ -53,20 +53,13 @@ uniform uint uUpperVertexCount;
 
 #define POSITION_IO_CLOTH_CURRENT
 #define POSITION_IO_CLOTH_PREVIOUS
+#define POSITION_IO_TRIANGLE_INDICES
 #include "../../mesh/position_io.glsl"
 #include "../../bvh/body_surface_search.glsl"
 #include "../contact_geometry.glsl"
 
 #define COLLISION_CORRECTION_ACCUMULATE
 #include "../correction.glsl"
-
-uvec3 load_face_vertices(uint triangle_index)
-{
-    uint triangle_base = triangle_index * 3u;
-    return uvec3(cloth_triangle_indices[triangle_base],
-                 cloth_triangle_indices[triangle_base + 1u],
-                 cloth_triangle_indices[triangle_base + 2u]);
-}
 
 bool find_body_outward_normal(vec3 surface_point, out vec3 outward_normal)
 {
@@ -96,7 +89,8 @@ bool compute_candidate_contact(uint vertex_index,
 
     float unoriented_distance = dot(query - target.a, face_normal);
     vec3 surface_point = query - face_normal * unoriented_distance;
-    if (!compute_barycentric_if_inside(surface_point, target, contact.barycentric)) {
+    if (!compute_barycentric(surface_point, target, contact.barycentric) ||
+        !is_inside_triangle(contact.barycentric)) {
         return false;
     }
 
@@ -177,7 +171,7 @@ void main()
     uint triangle_index = candidate_indices.y;
     bool is_upper_vertex = vertex_index >= uUpperVertexOffset &&
                            vertex_index < uUpperVertexOffset + uUpperVertexCount;
-    uvec3 target_vertices = load_face_vertices(triangle_index);
+    uvec3 target_vertices = read_triangle_indices(triangle_index);
     bool is_upper_face = target_vertices.x >= uUpperVertexOffset &&
                          target_vertices.x < uUpperVertexOffset + uUpperVertexCount;
     if (is_upper_vertex == is_upper_face) {

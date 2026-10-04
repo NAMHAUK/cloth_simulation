@@ -27,7 +27,7 @@ layout(std430, binding = CHARACTER_PREVIOUS_POSITIONS) readonly buffer BodyPrevi
 };
 
 layout(std430, binding = CHARACTER_TRIANGLE_INDICES) readonly buffer BodyTriangleIndices {
-    uint body_triangle_indices[];
+    uint triangle_indices[];
 };
 
 layout(std430, binding = CLOTH_VERTEX_BODY_FACE_CANDIDATES) readonly buffer Candidates {
@@ -66,6 +66,7 @@ uniform float uCollisionThickness;
 #define POSITION_IO_CLOTH_CURRENT
 #define POSITION_IO_CLOTH_PREVIOUS
 #define POSITION_IO_BODY_PREVIOUS
+#define POSITION_IO_TRIANGLE_INDICES
 #include "../../mesh/position_io.glsl"
 
 #include "../contact_geometry.glsl"
@@ -90,11 +91,7 @@ bool compute_vertex_triangle_contact(uint cloth_vertex_index,
     vec3 current_cloth_position = read_cloth_current_position(cloth_vertex_index);
     TrianglePositions current_body = body_triangle;
     vec3 body_normal = body_triangle_normals[triangle_index].xyz;
-    uint body_triangle_index_base = triangle_index * 3u;
-    uvec3 body_triangle_vertices = uvec3(body_triangle_indices[body_triangle_index_base],
-                                         body_triangle_indices[body_triangle_index_base + 1u],
-                                         body_triangle_indices[body_triangle_index_base + 2u]);
-    TrianglePositions previous_body = read_body_previous_triangle(body_triangle_vertices);
+    TrianglePositions previous_body = read_body_previous_triangle(read_triangle_indices(triangle_index));
 
     float current_signed_distance = dot(current_cloth_position - current_body.a, body_normal);
     float penetration_depth = uCollisionThickness - current_signed_distance - penetration_tolerance;
@@ -113,12 +110,14 @@ bool compute_vertex_triangle_contact(uint cloth_vertex_index,
         vec3 swept_cloth_position = mix(previous_cloth_position, current_cloth_position, hit_time);
         TrianglePositions hit_body = interpolate_triangle_positions(previous_body, current_body, hit_time);
         vec3 swept_surface_position = swept_cloth_position - body_normal * uCollisionThickness;
-        has_swept_contact = compute_barycentric_if_inside(swept_surface_position, hit_body, barycentric);
+        has_swept_contact = compute_barycentric(swept_surface_position, hit_body, barycentric) &&
+                            is_inside_triangle(barycentric);
     }
 
     if (!has_swept_contact) {
         vec3 current_surface_position = current_cloth_position - body_normal * current_signed_distance;
-        if (!compute_barycentric_if_inside(current_surface_position, current_body, barycentric)) {
+        if (!compute_barycentric(current_surface_position, current_body, barycentric) ||
+            !is_inside_triangle(barycentric)) {
             return false;
         }
     }
