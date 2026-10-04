@@ -58,6 +58,7 @@ uniform float uDetectionDistance;
 
 #define POSITION_IO_BODY_CURRENT
 #define POSITION_IO_BODY_PREVIOUS
+#define POSITION_IO_TRIANGLE_INDICES
 #include "../mesh/position_io.glsl"
 
 void update_triangle_leaf_bounds(uint node_index, BvhNode node)
@@ -73,10 +74,10 @@ void update_triangle_leaf_bounds(uint node_index, BvhNode node)
             continue;
         }
 
-        uint index_base = triangle_index * 3u;
-        vec3 previous_a = read_body_previous_position(triangle_indices[index_base]);
-        vec3 previous_b = read_body_previous_position(triangle_indices[index_base + 1u]);
-        vec3 previous_c = read_body_previous_position(triangle_indices[index_base + 2u]);
+        uvec3 vertex_indices = read_triangle_indices(triangle_index);
+        vec3 previous_a = read_body_previous_position(vertex_indices.x);
+        vec3 previous_b = read_body_previous_position(vertex_indices.y);
+        vec3 previous_c = read_body_previous_position(vertex_indices.z);
 
         vec3 current_a = triangle.a;
         vec3 current_b = triangle.b;
