@@ -6,7 +6,6 @@
 const float triangle_area_sq_epsilon = 1.0e-20;
 const float triangle_edge_tolerance = -1.0e-6;
 const float penetration_tolerance = 0.0005;
-const float segment_length_sq_epsilon = 1.0e-8;
 const float segment_parallel_tolerance = 1.0e-8;
 const float max_float = 3.402823e+38;
 
@@ -183,8 +182,7 @@ bool closest_segment_points(inout SegmentState first, inout SegmentState second)
     vec3 segment_delta = first.positions.a - second.positions.a;
     float first_length_sq = dot(first_direction, first_direction);
     float second_length_sq = dot(second_direction, second_direction);
-    if (first_length_sq <= segment_length_sq_epsilon ||
-        second_length_sq <= segment_length_sq_epsilon) {
+    if (first_length_sq <= 1.0e-8 || second_length_sq <= 1.0e-8) {
         return false;
     }
 
@@ -192,31 +190,42 @@ bool closest_segment_points(inout SegmentState first, inout SegmentState second)
     float first_delta_dot = dot(first_direction, segment_delta);
     float second_delta_dot = dot(second_direction, segment_delta);
     float direction_determinant = first_length_sq * second_length_sq - direction_dot * direction_dot;
+
+    // parallel edges
     if (direction_determinant <= segment_parallel_tolerance * first_length_sq * second_length_sq) {
         float best_distance_sq = max_float;
-        update_closest_segments(0.0, clamp(second_delta_dot / second_length_sq, 0.0, 1.0),
-                                first, second, best_distance_sq);
-        update_closest_segments(1.0, clamp((direction_dot + second_delta_dot) / second_length_sq, 0.0, 1.0),
-                                first, second, best_distance_sq);
-        update_closest_segments(clamp(-first_delta_dot / first_length_sq, 0.0, 1.0), 0.0,
-                                first, second, best_distance_sq);
-        update_closest_segments(clamp((direction_dot - first_delta_dot) / first_length_sq, 0.0, 1.0), 1.0,
-                                first, second, best_distance_sq);
+        update_closest_segments(0.0,
+                                clamp(second_delta_dot / second_length_sq, 0.0, 1.0),
+                                first,
+                                second,
+                                best_distance_sq);
+        update_closest_segments(1.0,
+                                clamp((direction_dot + second_delta_dot) / second_length_sq, 0.0, 1.0),
+                                first,
+                                second,
+                                best_distance_sq);
+        update_closest_segments(clamp(-first_delta_dot / first_length_sq, 0.0, 1.0),
+                                0.0,
+                                first,
+                                second,
+                                best_distance_sq);
+        update_closest_segments(clamp((direction_dot - first_delta_dot) / first_length_sq, 0.0, 1.0),
+                                1.0,
+                                first,
+                                second,
+                                best_distance_sq);
 
         return true;
     }
 
-    first.t = clamp((direction_dot * second_delta_dot - first_delta_dot * second_length_sq) /
-                    direction_determinant,
+    // non-parallel edges
+    first.t = clamp((direction_dot * second_delta_dot - first_delta_dot * second_length_sq) / direction_determinant,
                     0.0,
                     1.0);
     second.t = (direction_dot * first.t + second_delta_dot) / second_length_sq;
-    if (second.t < 0.0) {
-        second.t = 0.0;
-        first.t = clamp(-first_delta_dot / first_length_sq, 0.0, 1.0);
-    } else if (second.t > 1.0) {
-        second.t = 1.0;
-        first.t = clamp((direction_dot - first_delta_dot) / first_length_sq, 0.0, 1.0);
+    if (second.t < 0.0 || second.t > 1.0) {
+        second.t = clamp(second.t, 0.0, 1.0);
+        first.t = clamp((direction_dot * second.t - first_delta_dot) / first_length_sq, 0.0, 1.0);
     }
 
     first.point = first.positions.a + first_direction * first.t;
