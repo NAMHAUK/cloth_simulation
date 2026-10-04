@@ -21,10 +21,8 @@ bool compute_cloth_edge_edge_contact(uvec2 first_edge,
     }
 
     vec3 current_delta = first.point - second.point;
-    float contact_distance = thickness - penetration_tolerance;
     float current_distance_sq = dot(current_delta, current_delta);
-    if (contact_distance <= 0.0 ||
-        current_distance_sq >= contact_distance * contact_distance) {
+    if (current_distance_sq >= thickness * thickness) {
         return false;
     }
     
@@ -48,7 +46,7 @@ bool compute_cloth_edge_edge_contact(uvec2 first_edge,
     contact.normal = previous_delta * inversesqrt(previous_distance_sq);
 
     contact.weights = vec4(1.0 - first.t, first.t, second.t - 1.0, -second.t);
-    contact.depth = thickness - dot(current_delta, contact.normal) - penetration_tolerance;
+    contact.depth = thickness - dot(current_delta, contact.normal);
     return contact.depth > 0.0;
 }
 

@@ -46,24 +46,20 @@ struct GroundCollisionParams final
 
 struct BodyCollisionParams final
 {
-    float detection_distance = 0.005f;
+    float detection_distance = 0.006f;
     float thickness = 0.005f;
     float max_correction_length = 0.005f;
-
-    // Defaults target dry cotton fabric against a skin-like body surface:
-    // reported kinetic COF is about 0.46-0.58, and dynamic COF is commonly
-    // lower than static COF by about 0.85 in textile contact references.
     float static_friction = 0.55f;
     float dynamic_friction = 0.47f;
 };
 
 struct ClothCollisionParams final
 {
-    float initial_detection_distance = 0.012f;
-    float thickness = 0.007f;
     float detection_distance = 0.009f;
+    float thickness = 0.007f;
     float stiffness = 1.0f;
     float max_correction_length = 0.005f;
+    float initial_detection_distance = 0.012f;
     float body_search_radius = 0.15f;
 };
 

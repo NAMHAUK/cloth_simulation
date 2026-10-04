@@ -102,7 +102,7 @@ bool compute_vertex_triangle_contact(uint cloth_vertex_index, uint triangle_inde
     vec3 relative_prev_vertex_pos = prev_vertex_pos + delta_triangle;
 
     float cur_signed_distance = dot(cur_vertex_pos - cur_triangle_pos.a, face_normal);
-    float penetration_depth = uCollisionThickness - cur_signed_distance - penetration_tolerance;
+    float penetration_depth = uCollisionThickness - cur_signed_distance;
     if (penetration_depth <= 0.0) {
         return false;
     }

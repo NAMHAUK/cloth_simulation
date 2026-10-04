@@ -104,10 +104,8 @@ bool compute_candidate_contact(uint candidate_index, out uvec2 cloth_vertices, o
     }
 
     vec3 current_delta = current_cloth_segment.point - current_body_segment.point;
-    float contact_distance = uCollisionThickness - penetration_tolerance;
     float current_distance_sq = dot(current_delta, current_delta);
-    if (contact_distance <= 0.0 ||
-        current_distance_sq >= contact_distance * contact_distance) {
+    if (current_distance_sq >= uCollisionThickness * uCollisionThickness) {
         return false;
     }
 
@@ -141,7 +139,7 @@ bool compute_candidate_contact(uint candidate_index, out uvec2 cloth_vertices, o
                               current_cloth_segment.t);
     contact.relative_delta = cloth_delta - body_delta;
     contact.inward_relative_delta = contact.relative_delta + retained_delta;
-    contact.depth = uCollisionThickness - current_signed_distance - penetration_tolerance;
+    contact.depth = uCollisionThickness - current_signed_distance;
     return true;
 }
 

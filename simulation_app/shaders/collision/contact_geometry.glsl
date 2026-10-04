@@ -3,7 +3,6 @@
 
 #include "../mesh/primitive_geometry.glsl"
 
-const float penetration_tolerance = 0.0005;
 const float segment_parallel_tolerance = 1.0e-8;
 const float max_float = 3.402823e+38;
 
