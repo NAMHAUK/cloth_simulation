@@ -3,7 +3,6 @@
 
 #include "../mesh/primitive_geometry.glsl"
 
-const float triangle_area_sq_epsilon = 1.0e-20;
 const float penetration_tolerance = 0.0005;
 const float segment_parallel_tolerance = 1.0e-8;
 const float max_float = 3.402823e+38;
@@ -16,14 +15,9 @@ struct SegmentState {
 
 bool compute_triangle_normal(TrianglePositions triangle, out vec3 normal)
 {
-    normal = cross(triangle.b - triangle.a, triangle.c - triangle.a);
-    float normal_length_sq = dot(normal, normal);
-    if (normal_length_sq <= triangle_area_sq_epsilon) {
-        return false;
-    }
-
-    normal *= inversesqrt(normal_length_sq);
-    return true;
+    vec4 result = triangle_normal(triangle.a, triangle.b, triangle.c);
+    normal = result.xyz;
+    return result.w > 0.0;
 }
 
 vec3 align_normal(vec3 normal, vec3 reference_normal)
@@ -103,35 +97,25 @@ bool compute_cloth_vertex_face_contact(uint vertex_index,
         return false;
     }
 
-    // Use the starting side only for this sweep and the zero-distance fallback.
-    float signed_distance = dot(previous_vertex_position - previous_face.a, previous_normal);
-    if (abs(signed_distance) <= distance_delta_epsilon) {
-        signed_distance = dot(current_vertex_position - current_face.a, current_normal);
-    }
-    float normal_sign = signed_distance < 0.0 ? -1.0 : 1.0;
-    previous_normal *= normal_sign;
-    current_normal *= normal_sign;
     float previous_distance = dot(previous_vertex_position - previous_face.a, previous_normal);
     float current_distance = dot(current_vertex_position - current_face.a, current_normal);
+    float signed_distance = abs(previous_distance) <= distance_delta_epsilon ? current_distance : previous_distance;
+    float normal_sign = signed_distance < 0.0 ? -1.0 : 1.0;
+    previous_distance *= normal_sign;
+    current_distance *= normal_sign;
+    current_normal *= normal_sign;
 
     bool has_swept_contact = false;
     float distance_delta = previous_distance - current_distance;
     // Inside the thickness shell, sweep against the face itself.
     float contact_distance = previous_distance > collision_thickness ? collision_thickness : 0.0;
-    if (previous_distance >= contact_distance &&
-        current_distance <= contact_distance &&
+    if (current_distance <= contact_distance &&
         distance_delta > distance_delta_epsilon) {
         float hit_time = clamp((previous_distance - contact_distance) / distance_delta, 0.0, 1.0);
         vec3 hit_vertex_position = mix(previous_vertex_position, current_vertex_position, hit_time);
         TrianglePositions hit_face = interpolate_triangle_positions(previous_face, current_face, hit_time);
-        vec3 hit_normal;
-        if (compute_triangle_normal(hit_face, hit_normal)) {
-            hit_normal *= normal_sign;
-            float hit_distance = dot(hit_vertex_position - hit_face.a, hit_normal);
-            vec3 hit_surface_point = hit_vertex_position - hit_normal * hit_distance;
-            has_swept_contact = compute_barycentric(hit_surface_point, hit_face, contact.barycentric) &&
-                                is_inside_triangle(contact.barycentric);
-        }
+        has_swept_contact = compute_barycentric(hit_vertex_position, hit_face, contact.barycentric) &&
+                            is_inside_triangle(contact.barycentric);
     }
 
     if (!has_swept_contact) {
@@ -142,8 +126,7 @@ bool compute_cloth_vertex_face_contact(uint vertex_index,
                                                contact);
     }
 
-    vec3 current_surface_point = interpolate_triangle_position(current_face, contact.barycentric);
-    contact.depth = collision_thickness - dot(current_vertex_position - current_surface_point, current_normal);
+    contact.depth = collision_thickness - current_distance;
     if (contact.depth <= 0.0) {
         return false;
     }
