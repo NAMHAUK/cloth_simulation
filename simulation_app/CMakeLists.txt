@@ -125,7 +125,7 @@ add_executable(simulation_app
     shaders/mesh/position_io.glsl
     shaders/collision/contact_geometry.glsl
     shaders/collision/correction.glsl
-    shaders/collision/candidate_output.glsl
+    shaders/collision/detection.glsl
     shaders/cloth/setup/garment_prefit.comp
     shaders/cloth/setup/attachment_target_build.comp
     shaders/bvh/body_surface_search.glsl
