@@ -123,22 +123,11 @@ bool compute_candidate_contact(uint candidate_index, out uvec2 cloth_vertices, o
     vec3 previous_delta = previous_cloth_segment.point - previous_body_segment.point;
     float previous_distance_sq = dot(previous_delta, previous_delta);
 
-    vec3 normal = current_delta;
-    if (current_distance_sq <= ccd_parallel_epsilon) {
-        if (previous_distance_sq <= ccd_parallel_epsilon) {
-            return false;
-        }
-        normal = previous_delta * inversesqrt(previous_distance_sq);
-    } else {
-        normal *= inversesqrt(current_distance_sq);
-    }
-
-    float current_signed_distance = dot(current_delta, normal);
-    float collision_thickness_sq = uCollisionThickness * uCollisionThickness;
-    if (previous_distance_sq > collision_thickness_sq &&
-        dot(previous_delta, normal) <= uCollisionThickness) {
+    if (previous_distance_sq <= ccd_parallel_epsilon) {
         return false;
     }
+    vec3 normal = previous_delta * inversesqrt(previous_distance_sq);
+    float current_signed_distance = dot(current_delta, normal);
 
     contact.normal = normal;
     contact.cloth_t = current_cloth_segment.t;
