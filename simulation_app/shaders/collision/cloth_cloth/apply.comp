@@ -32,9 +32,9 @@ uniform float uMaxCorrectionLength;
 
 #define POSITION_IO_CLOTH_CURRENT
 #define POSITION_IO_CLOTH_WRITE
-#include "../../mesh/position_io.glsl"
-
 #define COLLISION_CORRECTION_APPLY
+
+#include "../../mesh/position_io.glsl"
 #include "../correction.glsl"
 
 void main()
@@ -44,19 +44,5 @@ void main()
         return;
     }
 
-    ivec4 accumulated = normal_correction_sums[vertex_index];
-    if (accumulated.w > 0) {
-        vec3 correction_sum = vec3(accumulated.xyz) / int_correction_scale;
-        vec3 averaged_correction = correction_sum / float(accumulated.w);
-        vec3 final_correction = clamp_correction(averaged_correction);
-        vec3 corrected_position = read_cloth_current_position(vertex_index) + final_correction;
-        write_cloth_current_position(vertex_index, corrected_position);
-        collision_pushouts[vertex_index].xyz += final_correction;
-    }
-
-    ivec4 inward_motion_accumulated = inward_motion_correction_sums[vertex_index];
-    if (inward_motion_accumulated.w > 0) {
-        float inverse_contact_count = 1.0 / (int_correction_scale * float(inward_motion_accumulated.w));
-        inward_motion_corrections[vertex_index].xyz += vec3(inward_motion_accumulated.xyz) * inverse_contact_count;
-    }
+    apply_collision_corrections(vertex_index);
 }
