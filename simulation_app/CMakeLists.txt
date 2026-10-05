@@ -111,7 +111,6 @@ add_executable(simulation_app
     shaders/collision/cloth_cloth/vertex_face_accumulate.comp
     shaders/collision/cloth_cloth/edge_edge_detect.comp
     shaders/collision/cloth_cloth/edge_edge_accumulate.comp
-    shaders/collision/cloth_cloth/edge_contact.glsl
     shaders/collision/cloth_cloth/contact_correction.glsl
     shaders/collision/cloth_cloth/initial_layer_accumulate.comp
     shaders/collision/cloth_cloth/apply.comp
@@ -119,6 +118,7 @@ add_executable(simulation_app
     shaders/collision/cloth_body/cloth_vertex_body_face_accumulate.comp
     shaders/collision/cloth_body/cloth_edge_body_edge_detect.comp
     shaders/collision/cloth_body/cloth_edge_body_edge_accumulate.comp
+    shaders/collision/cloth_body/contact_correction.glsl
     shaders/collision/cloth_body/apply.comp
     shaders/bvh/bvh.glsl
     shaders/mesh/primitive_geometry.glsl

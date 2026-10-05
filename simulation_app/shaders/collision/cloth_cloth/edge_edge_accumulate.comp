@@ -4,9 +4,6 @@
 
 layout(local_size_x = 128) in;
 
-#include "../../mesh/primitive_geometry.glsl"
-
-// Buffer bindings
 layout(std430, binding = CLOTH_CURRENT_POSITIONS) readonly buffer ClothCurrentPositions {
     vec4 cloth_current_positions[];
 };
@@ -45,24 +42,13 @@ layout(std430, binding = INWARD_MOTION_CORRECTION_SUMS) buffer InwardMotionCorre
     ivec4 inward_motion_correction_sums[];
 };
 
-// Uniforms
 uniform uint uMaxCandidateCount;
 uniform float uCollisionThickness;
 uniform float uCollisionStiffness;
 
-// Shared dependencies
-#define POSITION_IO_CLOTH_CURRENT
-#define POSITION_IO_CLOTH_PREVIOUS
-#include "../../mesh/position_io.glsl"
-
-#include "../contact_geometry.glsl"
-
-#define COLLISION_CORRECTION_ACCUMULATE
 #define COLLISION_INWARD_MOTION_ACCUMULATE
-#include "../correction.glsl"
 
 #include "contact_correction.glsl"
-#include "edge_contact.glsl"
 
 void main()
 {
@@ -75,22 +61,5 @@ void main()
                           cloth_edge_indices[edges.x * 2u + 1u],
                           cloth_edge_indices[edges.y * 2u],
                           cloth_edge_indices[edges.y * 2u + 1u]);
-    ClothEdgeEdgeContact contact;
-    if (!compute_cloth_edge_edge_contact(vertices.xy, vertices.zw, uCollisionThickness, contact)) {
-        return;
-    }
-
-    float inverse_denominator = 1.0 / dot(contact.weights, contact.weights);
-    float correction_distance = contact.depth * uCollisionStiffness;
-    vec3 relative_delta = vec3(0.0);
-    for (uint corner = 0u; corner < 4u; ++corner) {
-        relative_delta += contact.weights[corner] * compute_vertex_motion_delta(vertices[corner]);
-    }
-    for (uint corner = 0u; corner < 4u; ++corner) {
-        accumulate_contact_correction(vertices[corner],
-                                      contact.weights[corner] * inverse_denominator,
-                                      contact.normal,
-                                      correction_distance,
-                                      relative_delta);
-    }
+    accumulate_edge_edge_collision_correction(vertices);
 }
