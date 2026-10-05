@@ -81,16 +81,16 @@ void main()
     }
 
     float inverse_denominator = 1.0 / dot(contact.weights, contact.weights);
-    vec3 correction = contact.normal * contact.depth * uCollisionStiffness * inverse_denominator;
+    float correction_distance = contact.depth * uCollisionStiffness;
     vec3 relative_delta = vec3(0.0);
     for (uint corner = 0u; corner < 4u; ++corner) {
         relative_delta += contact.weights[corner] * compute_vertex_motion_delta(vertices[corner]);
     }
-    vec3 inward_motion_correction = contact.normal * max(-dot(relative_delta, contact.normal), 0.0) * inverse_denominator;
     for (uint corner = 0u; corner < 4u; ++corner) {
         accumulate_contact_correction(vertices[corner],
-                                      contact.weights[corner],
-                                      correction,
-                                      inward_motion_correction);
+                                      contact.weights[corner] * inverse_denominator,
+                                      contact.normal,
+                                      correction_distance,
+                                      relative_delta);
     }
 }

@@ -60,6 +60,8 @@ layout(std430, binding = INWARD_MOTION_CORRECTION_SUMS) buffer InwardMotionCorre
 
 uniform uint uMaxCandidateCount;
 uniform float uCollisionThickness;
+uniform float uStaticFriction;
+uniform float uDynamicFriction;
 
 const float ccd_parallel_epsilon = 1.0e-8;
 
@@ -76,15 +78,15 @@ const float ccd_parallel_epsilon = 1.0e-8;
 #define COLLISION_CORRECTION_FRICTION_ACCUMULATE
 #include "../correction.glsl"
 
-struct EdgeContact {
+struct ClothBodyEdgeContact {
     vec3 normal;
     float cloth_t;
     vec3 friction_correction;
-    vec3 inward_motion_correction;
+    vec3 inward_relative_delta;
     float depth;
 };
 
-bool compute_candidate_contact(uint candidate_index, out uvec2 cloth_vertices, out EdgeContact contact)
+bool compute_candidate_contact(uint candidate_index, out uvec2 cloth_vertices, out ClothBodyEdgeContact contact)
 {
     uvec2 candidate = candidates[candidate_index];
     uint cloth_edge_base = candidate.x * 2u;
@@ -104,10 +106,8 @@ bool compute_candidate_contact(uint candidate_index, out uvec2 cloth_vertices, o
     }
 
     vec3 current_delta = current_cloth_segment.point - current_body_segment.point;
-    float contact_distance = uCollisionThickness - penetration_tolerance;
     float current_distance_sq = dot(current_delta, current_delta);
-    if (contact_distance <= 0.0 ||
-        current_distance_sq >= contact_distance * contact_distance) {
+    if (current_distance_sq >= uCollisionThickness * uCollisionThickness) {
         return false;
     }
 
@@ -123,22 +123,11 @@ bool compute_candidate_contact(uint candidate_index, out uvec2 cloth_vertices, o
     vec3 previous_delta = previous_cloth_segment.point - previous_body_segment.point;
     float previous_distance_sq = dot(previous_delta, previous_delta);
 
-    vec3 normal = current_delta;
-    if (current_distance_sq <= ccd_parallel_epsilon) {
-        if (previous_distance_sq <= ccd_parallel_epsilon) {
-            return false;
-        }
-        normal = previous_delta * inversesqrt(previous_distance_sq);
-    } else {
-        normal *= inversesqrt(current_distance_sq);
-    }
-
-    float current_signed_distance = dot(current_delta, normal);
-    float collision_thickness_sq = uCollisionThickness * uCollisionThickness;
-    if (previous_distance_sq > collision_thickness_sq &&
-        dot(previous_delta, normal) <= uCollisionThickness) {
+    if (previous_distance_sq <= ccd_parallel_epsilon) {
         return false;
     }
+    vec3 normal = previous_delta * inversesqrt(previous_distance_sq);
+    float current_signed_distance = dot(current_delta, normal);
 
     contact.normal = normal;
     contact.cloth_t = current_cloth_segment.t;
@@ -150,14 +139,15 @@ bool compute_candidate_contact(uint candidate_index, out uvec2 cloth_vertices, o
     vec3 retained_delta = mix(inward_motion_corrections[cloth_vertices.x].xyz,
                               inward_motion_corrections[cloth_vertices.y].xyz,
                               current_cloth_segment.t);
-    contact.friction_correction = compute_friction_correction(normal, cloth_delta, body_delta);
-    contact.inward_motion_correction = compute_inward_motion_correction(normal, cloth_delta, body_delta, retained_delta);
-    contact.depth = uCollisionThickness - current_signed_distance - penetration_tolerance;
+    vec3 relative_delta = cloth_delta - body_delta;
+    contact.inward_relative_delta = relative_delta + retained_delta;
+    contact.depth = uCollisionThickness - current_signed_distance;
+    contact.friction_correction = compute_friction_correction(normal, relative_delta, contact.depth);
     return true;
 }
 
 void accumulate_contact_for_vertex(uint vertex_index,
-                                   EdgeContact contact,
+                                   ClothBodyEdgeContact contact,
                                    float vertex_weight,
                                    float inverse_denominator)
 {
@@ -165,13 +155,9 @@ void accumulate_contact_for_vertex(uint vertex_index,
         return;
     }
 
-    vec3 correction = contact.normal * contact.depth * vertex_weight * inverse_denominator;
-    accumulate_vertex_normal_correction(vertex_index, correction);
-    atomicAdd(normal_correction_sums[vertex_index].w, 1);
+    accumulate_vertex_normal_correction(vertex_index, contact.normal, contact.depth * vertex_weight * inverse_denominator);
     accumulate_vertex_friction_correction(vertex_index, contact.friction_correction * vertex_weight * inverse_denominator);
-    accumulate_vertex_inward_motion_correction(
-        vertex_index,
-        contact.inward_motion_correction * vertex_weight * inverse_denominator);
+    accumulate_vertex_inward_motion_correction(vertex_index, contact.normal, contact.inward_relative_delta, vertex_weight * inverse_denominator);
 }
 
 void main()
@@ -183,7 +169,7 @@ void main()
     }
 
     uvec2 cloth_vertices;
-    EdgeContact contact;
+    ClothBodyEdgeContact contact;
     if (!compute_candidate_contact(candidate_index, cloth_vertices, contact)) {
         return;
     }

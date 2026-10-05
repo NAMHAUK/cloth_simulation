@@ -16,7 +16,7 @@ layout(std430, binding = CLOTH_PREVIOUS_POSITIONS) readonly buffer ClothPrevious
 };
 
 layout(std430, binding = CLOTH_TRIANGLE_VERTEX_INDICES) readonly buffer ClothTriangleIndices {
-    uint cloth_triangle_indices[];
+    uint triangle_indices[];
 };
 
 layout(std430, binding = CLOTH_CLOTH_VERTEX_FACE_CANDIDATES) readonly buffer Candidates {
@@ -53,6 +53,7 @@ uniform float uCollisionStiffness;
 // Shared dependencies
 #define POSITION_IO_CLOTH_CURRENT
 #define POSITION_IO_CLOTH_PREVIOUS
+#define POSITION_IO_TRIANGLE_INDICES
 #include "../../mesh/position_io.glsl"
 
 #include "../contact_geometry.glsl"
@@ -61,19 +62,11 @@ uniform float uCollisionStiffness;
 #define COLLISION_INWARD_MOTION_ACCUMULATE
 #include "../correction.glsl"
 
-uvec3 load_face_vertices(uint triangle_index)
-{
-    uint triangle_base = triangle_index * 3u;
-    return uvec3(cloth_triangle_indices[triangle_base],
-                 cloth_triangle_indices[triangle_base + 1u],
-                 cloth_triangle_indices[triangle_base + 2u]);
-}
-
 #include "contact_correction.glsl"
 
 void accumulate_candidate_correction(uint vertex_index, uint triangle_index)
 {
-    uvec3 face_vertices = load_face_vertices(triangle_index);
+    uvec3 face_vertices = read_triangle_indices(triangle_index);
     ClothVertexFaceContact contact;
     if (!compute_cloth_vertex_face_contact(vertex_index,
                                            face_vertices,
@@ -83,27 +76,27 @@ void accumulate_candidate_correction(uint vertex_index, uint triangle_index)
     }
 
     float inverse_denominator = 1.0 / (1.0 + dot(contact.barycentric, contact.barycentric));
-    vec3 correction = contact.correction_normal * contact.depth * uCollisionStiffness * inverse_denominator;
+    float correction_distance = contact.depth * uCollisionStiffness;
     vec3 face_delta = compute_vertex_motion_delta(face_vertices.x) * contact.barycentric.x
                     + compute_vertex_motion_delta(face_vertices.y) * contact.barycentric.y
                     + compute_vertex_motion_delta(face_vertices.z) * contact.barycentric.z;
     vec3 relative_delta = compute_vertex_motion_delta(vertex_index) - face_delta;
-    float inward_delta = dot(relative_delta, contact.correction_normal);
-    vec3 inward_motion_correction = contact.correction_normal * max(-inward_delta, 0.0) * inverse_denominator;
-
-    accumulate_contact_correction(vertex_index, 1.0, correction, inward_motion_correction);
+    accumulate_contact_correction(vertex_index, inverse_denominator, contact.correction_normal, correction_distance, relative_delta);
     accumulate_contact_correction(face_vertices.x,
-                                  -contact.barycentric.x,
-                                  correction,
-                                  inward_motion_correction);
+                                  -contact.barycentric.x * inverse_denominator,
+                                  contact.correction_normal,
+                                  correction_distance,
+                                  relative_delta);
     accumulate_contact_correction(face_vertices.y,
-                                  -contact.barycentric.y,
-                                  correction,
-                                  inward_motion_correction);
+                                  -contact.barycentric.y * inverse_denominator,
+                                  contact.correction_normal,
+                                  correction_distance,
+                                  relative_delta);
     accumulate_contact_correction(face_vertices.z,
-                                  -contact.barycentric.z,
-                                  correction,
-                                  inward_motion_correction);
+                                  -contact.barycentric.z * inverse_denominator,
+                                  contact.correction_normal,
+                                  correction_distance,
+                                  relative_delta);
 }
 
 void main()

@@ -29,7 +29,11 @@ void ClothBodyCollisionSolver::initialize(const std::filesystem::path& shader_di
         
         shader.max_candidates_loc = require_uniform_location(shader.program, "uMaxCandidateCount", gl);
         const GLint thickness_loc = require_uniform_location(shader.program, "uCollisionThickness", gl);
+        const GLint static_friction_loc = require_uniform_location(shader.program, "uStaticFriction", gl);
+        const GLint dynamic_friction_loc = require_uniform_location(shader.program, "uDynamicFriction", gl);
         gl.glProgramUniform1f(shader.program, thickness_loc, collision_thickness_);
+        gl.glProgramUniform1f(shader.program, static_friction_loc, static_friction_);
+        gl.glProgramUniform1f(shader.program, dynamic_friction_loc, dynamic_friction_);
     }
 
     {
@@ -38,7 +42,11 @@ void ClothBodyCollisionSolver::initialize(const std::filesystem::path& shader_di
         
         shader.max_candidates_loc = require_uniform_location(shader.program, "uMaxCandidateCount", gl);
         const GLint thickness_loc = require_uniform_location(shader.program, "uCollisionThickness", gl);
+        const GLint static_friction_loc = require_uniform_location(shader.program, "uStaticFriction", gl);
+        const GLint dynamic_friction_loc = require_uniform_location(shader.program, "uDynamicFriction", gl);
         gl.glProgramUniform1f(shader.program, thickness_loc, collision_thickness_);
+        gl.glProgramUniform1f(shader.program, static_friction_loc, static_friction_);
+        gl.glProgramUniform1f(shader.program, dynamic_friction_loc, dynamic_friction_);
     }
 
     {
@@ -46,11 +54,7 @@ void ClothBodyCollisionSolver::initialize(const std::filesystem::path& shader_di
 
         cloth_vertex_count_loc_ = require_uniform_location(apply_program_, "uVertexCount", gl);
         const GLint max_correction_loc = require_uniform_location(apply_program_, "uMaxCorrectionLength", gl);
-        const GLint static_friction_loc = require_uniform_location(apply_program_, "uStaticFriction", gl);
-        const GLint dynamic_friction_loc = require_uniform_location(apply_program_, "uDynamicFriction", gl);
         gl.glProgramUniform1f(apply_program_, max_correction_loc, max_correction_length_);
-        gl.glProgramUniform1f(apply_program_, static_friction_loc, static_friction_);
-        gl.glProgramUniform1f(apply_program_, dynamic_friction_loc, dynamic_friction_);
     }
 }
 
