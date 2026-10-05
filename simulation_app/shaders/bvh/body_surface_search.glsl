@@ -76,17 +76,15 @@ bool update_nearest_body_surface(uint triangle_index,
         return false;
     }
 
-    vec3 a = body_triangle_positions[triangle_index].a;
-    vec3 b = body_triangle_positions[triangle_index].b;
-    vec3 c = body_triangle_positions[triangle_index].c;
+    TrianglePositions triangle = body_triangle_positions[triangle_index];
     vec3 unit_normal = normal.xyz;
 
-    float plane_distance = dot(point - a, unit_normal);
+    float plane_distance = dot(point - triangle.a, unit_normal);
     if (plane_distance * plane_distance > best_distance_sq) {
         return false;
     }
 
-    vec3 closest_point = closest_point_on_triangle(point, a, b, c);
+    vec3 closest_point = closest_point_on_triangle(point, triangle);
     float distance_sq = length_squared(point - closest_point);
     if (distance_sq > best_distance_sq) {
         return false;

@@ -8,7 +8,8 @@ layout(std430, binding = CLOTH_CURRENT_POSITIONS) buffer ClothCurrentPositions {
     vec4 cloth_current_positions[];
 };
 
-layout(std430, binding = CLOTH_CLOTH_PUSHOUTS) buffer CollisionPushouts {
+layout(std430, binding = CLOTH_COLLISION_PUSHOUTS) buffer CollisionPushouts
+{
     vec4 collision_pushouts[];
 };
 
@@ -16,12 +17,14 @@ layout(std430, binding = NORMAL_CORRECTION_SUMS) readonly buffer NormalCorrectio
     ivec4 normal_correction_sums[];
 };
 
-layout(std430, binding = CONTACT_MOTION_DELTA_SUMS) readonly buffer ContactMotionDeltaSums {
-    ivec4 contact_motion_delta_sums[];
+layout(std430, binding = INWARD_MOTION_CORRECTION_SUMS) readonly buffer InwardMotionCorrectionSums
+{
+    ivec4 inward_motion_correction_sums[];
 };
 
-layout(std430, binding = CLOTH_CONTACT_MOTION_DELTAS) buffer ContactMotionDeltas {
-    vec4 contact_motion_deltas[];
+layout(std430, binding = CLOTH_INWARD_MOTION_CORRECTIONS) buffer InwardMotionCorrections
+{
+    vec4 inward_motion_corrections[];
 };
 
 uniform uint uVertexCount;
@@ -51,9 +54,9 @@ void main()
         collision_pushouts[vertex_index].xyz += final_correction;
     }
 
-    ivec4 contact_motion_accumulated = contact_motion_delta_sums[vertex_index];
-    if (contact_motion_accumulated.w > 0) {
-        float inverse_contact_count = 1.0 / (correction_fixed_point_scale * float(contact_motion_accumulated.w));
-        contact_motion_deltas[vertex_index].xyz += vec3(contact_motion_accumulated.xyz) * inverse_contact_count;
+    ivec4 inward_motion_accumulated = inward_motion_correction_sums[vertex_index];
+    if (inward_motion_accumulated.w > 0) {
+        float inverse_contact_count = 1.0 / (correction_fixed_point_scale * float(inward_motion_accumulated.w));
+        inward_motion_corrections[vertex_index].xyz += vec3(inward_motion_accumulated.xyz) * inverse_contact_count;
     }
 }

@@ -4,14 +4,12 @@
 
 layout(local_size_x = 128) in;
 
-#include "primitive_geometry.glsl"
-
 layout(std430, binding = CLOTH_CURRENT_POSITIONS) readonly buffer Positions {
     vec4 positions[];
 };
 
 layout(std430, binding = CLOTH_TRIANGLE_VERTEX_INDICES) readonly buffer Indices {
-    uint indices[];
+    uint triangle_indices[];
 };
 
 layout(std430, binding = CLOTH_TRIANGLE_NORMALS) writeonly buffer TriangleNormals {
@@ -20,6 +18,9 @@ layout(std430, binding = CLOTH_TRIANGLE_NORMALS) writeonly buffer TriangleNormal
 
 uniform uint uTriangleCount;
 
+#define POSITION_IO_TRIANGLE_INDICES
+#include "position_io.glsl"
+
 void main()
 {
     uint triangle_index = gl_GlobalInvocationID.x;
@@ -27,14 +28,10 @@ void main()
         return;
     }
 
-    uint index_base = triangle_index * 3u;
-    uint i0 = indices[index_base];
-    uint i1 = indices[index_base + 1u];
-    uint i2 = indices[index_base + 2u];
-
-    vec3 p0 = positions[i0].xyz;
-    vec3 p1 = positions[i1].xyz;
-    vec3 p2 = positions[i2].xyz;
+    uvec3 vertex_indices = read_triangle_indices(triangle_index);
+    vec3 p0 = positions[vertex_indices.x].xyz;
+    vec3 p1 = positions[vertex_indices.y].xyz;
+    vec3 p2 = positions[vertex_indices.z].xyz;
 
     triangle_normals[triangle_index] = triangle_normal(p0, p1, p2);
 }

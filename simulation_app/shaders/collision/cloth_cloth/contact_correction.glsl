@@ -4,14 +4,14 @@
 vec3 compute_vertex_motion_delta(uint vertex_index)
 {
     vec3 position_delta = read_cloth_current_position(vertex_index) - read_cloth_previous_position(vertex_index);
-    vec3 collision_delta = collision_pushouts[vertex_index].xyz + cloth_cloth_pushouts[vertex_index].xyz;
-    return position_delta - collision_delta + contact_motion_deltas[vertex_index].xyz;
+    vec3 collision_delta = collision_pushouts[vertex_index].xyz;
+    return position_delta - collision_delta + inward_motion_corrections[vertex_index].xyz;
 }
 
 void accumulate_contact_correction(uint vertex_index,
                                    float vertex_weight,
                                    vec3 correction,
-                                   vec3 contact_motion_delta)
+                                   vec3 inward_motion_correction)
 {
     if (vertex_weight == 0.0) {
         return;
@@ -19,7 +19,7 @@ void accumulate_contact_correction(uint vertex_index,
 
     accumulate_vertex_normal_correction(vertex_index, vertex_weight * correction);
     atomicAdd(normal_correction_sums[vertex_index].w, 1);
-    accumulate_vertex_contact_motion_delta(vertex_index, vertex_weight * contact_motion_delta);
+    accumulate_vertex_inward_motion_correction(vertex_index, vertex_weight * inward_motion_correction);
 }
 
 #endif

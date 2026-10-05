@@ -25,6 +25,7 @@ layout(std430, binding = BODY_TRIANGLE_NORMALS) writeonly buffer BodyTriangleNor
 uniform uint uTriangleCount;
 
 #define POSITION_IO_BODY_CURRENT
+#define POSITION_IO_TRIANGLE_INDICES
 #include "../mesh/position_io.glsl"
 
 void main()
@@ -34,10 +35,10 @@ void main()
         return;
     }
 
-    uint index_base = triangle_index * 3u;
-    vec3 a = read_body_current_position(triangle_indices[index_base]);
-    vec3 b = read_body_current_position(triangle_indices[index_base + 1u]);
-    vec3 c = read_body_current_position(triangle_indices[index_base + 2u]);
+    uvec3 vertex_indices = read_triangle_indices(triangle_index);
+    vec3 a = read_body_current_position(vertex_indices.x);
+    vec3 b = read_body_current_position(vertex_indices.y);
+    vec3 c = read_body_current_position(vertex_indices.z);
 
     body_triangle_positions[triangle_index] = TrianglePositions(a, b, c);
     body_triangle_normals[triangle_index] = triangle_normal(a, b, c);

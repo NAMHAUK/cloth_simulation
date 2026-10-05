@@ -35,16 +35,14 @@ layout(std430, binding = CLOTH_COLLISION_PUSHOUTS) readonly buffer CollisionPush
     vec4 collision_pushouts[];
 };
 
-layout(std430, binding = CLOTH_CLOTH_PUSHOUTS) readonly buffer ClothClothPushouts {
-    vec4 cloth_cloth_pushouts[];
+layout(std430, binding = CLOTH_INWARD_MOTION_CORRECTIONS) readonly buffer InwardMotionCorrections
+{
+    vec4 inward_motion_corrections[];
 };
 
-layout(std430, binding = CLOTH_CONTACT_MOTION_DELTAS) readonly buffer ContactMotionDeltas {
-    vec4 contact_motion_deltas[];
-};
-
-layout(std430, binding = CONTACT_MOTION_DELTA_SUMS) buffer ContactMotionDeltaSums {
-    ivec4 contact_motion_delta_sums[];
+layout(std430, binding = INWARD_MOTION_CORRECTION_SUMS) buffer InwardMotionCorrectionSums
+{
+    ivec4 inward_motion_correction_sums[];
 };
 
 // Uniforms
@@ -60,7 +58,7 @@ uniform float uCollisionStiffness;
 #include "../contact_geometry.glsl"
 
 #define COLLISION_CORRECTION_ACCUMULATE
-#define COLLISION_CONTACT_MOTION_ACCUMULATE
+#define COLLISION_INWARD_MOTION_ACCUMULATE
 #include "../correction.glsl"
 
 uvec3 load_face_vertices(uint triangle_index)
@@ -91,12 +89,21 @@ void accumulate_candidate_correction(uint vertex_index, uint triangle_index)
                     + compute_vertex_motion_delta(face_vertices.z) * contact.barycentric.z;
     vec3 relative_delta = compute_vertex_motion_delta(vertex_index) - face_delta;
     float inward_delta = dot(relative_delta, contact.correction_normal);
-    vec3 contact_motion_delta = contact.correction_normal * max(-inward_delta, 0.0) * inverse_denominator;
+    vec3 inward_motion_correction = contact.correction_normal * max(-inward_delta, 0.0) * inverse_denominator;
 
-    accumulate_contact_correction(vertex_index, 1.0, correction, contact_motion_delta);
-    accumulate_contact_correction(face_vertices.x, -contact.barycentric.x, correction, contact_motion_delta);
-    accumulate_contact_correction(face_vertices.y, -contact.barycentric.y, correction, contact_motion_delta);
-    accumulate_contact_correction(face_vertices.z, -contact.barycentric.z, correction, contact_motion_delta);
+    accumulate_contact_correction(vertex_index, 1.0, correction, inward_motion_correction);
+    accumulate_contact_correction(face_vertices.x,
+                                  -contact.barycentric.x,
+                                  correction,
+                                  inward_motion_correction);
+    accumulate_contact_correction(face_vertices.y,
+                                  -contact.barycentric.y,
+                                  correction,
+                                  inward_motion_correction);
+    accumulate_contact_correction(face_vertices.z,
+                                  -contact.barycentric.z,
+                                  correction,
+                                  inward_motion_correction);
 }
 
 void main()

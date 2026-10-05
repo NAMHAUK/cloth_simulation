@@ -17,7 +17,7 @@ layout(std430, binding = CLOTH_PREVIOUS_POSITIONS) readonly buffer ClothPrevious
 };
 
 layout(std430, binding = CLOTH_TRIANGLE_VERTEX_INDICES) readonly buffer ClothTriangleIndices {
-    uint cloth_triangle_indices[];
+    uint triangle_indices[];
 };
 
 layout(std430, binding = CLOTH_BVH_NODES) buffer ClothBvhNodes {
@@ -46,6 +46,7 @@ uniform float uBoundsMargin;
 
 #define POSITION_IO_CLOTH_CURRENT
 #define POSITION_IO_CLOTH_PREVIOUS
+#define POSITION_IO_TRIANGLE_INDICES
 #include "../mesh/position_io.glsl"
 
 void update_leaf_bounds(uint node_index, BvhNode node)
@@ -55,18 +56,14 @@ void update_leaf_bounds(uint node_index, BvhNode node)
 
     for (uint triangle_offset = 0u; triangle_offset < node.element_count; ++triangle_offset) {
         uint triangle_index = node.first_element_index + triangle_offset;
-        uint index_base = triangle_index * 3u;
+        uvec3 vertex_indices = read_triangle_indices(triangle_index);
 
-        uint vertex_a = cloth_triangle_indices[index_base];
-        uint vertex_b = cloth_triangle_indices[index_base + 1u];
-        uint vertex_c = cloth_triangle_indices[index_base + 2u];
-
-        vec3 current_a = read_cloth_current_position(vertex_a);
-        vec3 current_b = read_cloth_current_position(vertex_b);
-        vec3 current_c = read_cloth_current_position(vertex_c);
-        vec3 previous_a = read_cloth_previous_position(vertex_a);
-        vec3 previous_b = read_cloth_previous_position(vertex_b);
-        vec3 previous_c = read_cloth_previous_position(vertex_c);
+        vec3 current_a = read_cloth_current_position(vertex_indices.x);
+        vec3 current_b = read_cloth_current_position(vertex_indices.y);
+        vec3 current_c = read_cloth_current_position(vertex_indices.z);
+        vec3 previous_a = read_cloth_previous_position(vertex_indices.x);
+        vec3 previous_b = read_cloth_previous_position(vertex_indices.y);
+        vec3 previous_c = read_cloth_previous_position(vertex_indices.z);
 
         vec3 triangle_min_bounds = min(min(current_a, min(current_b, current_c)),
                                        min(previous_a, min(previous_b, previous_c))) - uBoundsMargin;

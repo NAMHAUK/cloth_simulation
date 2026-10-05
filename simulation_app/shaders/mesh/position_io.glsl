@@ -3,6 +3,16 @@
 
 #include "primitive_geometry.glsl"
 
+#ifdef POSITION_IO_TRIANGLE_INDICES
+uvec3 read_triangle_indices(uint triangle_index)
+{
+    uint index_base = triangle_index * 3u;
+    return uvec3(triangle_indices[index_base],
+                 triangle_indices[index_base + 1u],
+                 triangle_indices[index_base + 2u]);
+}
+#endif
+
 #ifdef POSITION_IO_CLOTH_CURRENT
 vec3 read_cloth_current_position(uint vertex_index)
 {

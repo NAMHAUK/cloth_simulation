@@ -16,12 +16,9 @@ layout(std430, binding = CLOTH_COLLISION_PUSHOUTS) buffer CollisionPushouts {
     vec4 collision_pushouts[];
 };
 
-layout(std430, binding = CLOTH_CLOTH_PUSHOUTS) buffer ClothClothPushouts {
-    vec4 cloth_cloth_pushouts[];
-};
-
-layout(std430, binding = CLOTH_CONTACT_MOTION_DELTAS) buffer ContactMotionDeltas {
-    vec4 contact_motion_deltas[];
+layout(std430, binding = CLOTH_INWARD_MOTION_CORRECTIONS) buffer InwardMotionCorrections
+{
+    vec4 inward_motion_corrections[];
 };
 
 uniform uint uVertexOffset;
@@ -44,8 +41,7 @@ void main()
 
     // update pos
     vec3 collision_pushout = collision_pushouts[vertex_index].xyz;
-    vec3 cloth_cloth_pushout = cloth_cloth_pushouts[vertex_index].xyz;
-    vec3 position_delta = current - previous - collision_pushout - cloth_cloth_pushout + contact_motion_deltas[vertex_index].xyz;
+    vec3 position_delta = current - previous - collision_pushout + inward_motion_corrections[vertex_index].xyz;
     vec3 next = uPositionCoefficient * current + uDisplacementCoefficient * position_delta + uPositionOffset;
 
     previous_positions[vertex_index] = vec4(current, 0.0);
@@ -53,6 +49,5 @@ void main()
 
     // reset
     collision_pushouts[vertex_index] = vec4(0.0);
-    cloth_cloth_pushouts[vertex_index] = vec4(0.0);
-    contact_motion_deltas[vertex_index] = vec4(0.0);
+    inward_motion_corrections[vertex_index] = vec4(0.0);
 }
