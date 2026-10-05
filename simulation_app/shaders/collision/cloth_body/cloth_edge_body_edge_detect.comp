@@ -23,7 +23,7 @@ layout(std430, binding = BODY_EDGE_BOUNDS) readonly buffer BodyEdgeBounds {
 };
 
 layout(std430, binding = BODY_EDGE_BVH_NODES) readonly buffer BvhNodes {
-    BvhNode body_edge_bvh_nodes[];
+    BvhNode bvh_nodes[];
 };
 
 layout(std430, binding = CLOTH_EDGE_BODY_EDGE_CANDIDATES) buffer Candidates {
@@ -37,14 +37,21 @@ layout(std430, binding = CLOTH_EDGE_BODY_EDGE_CANDIDATE_COUNT) buffer CandidateC
 uniform uint uEdgeCount;
 uniform uint uMaxCandidateCount;
 
-const uint max_bvh_stack_depth = 32u;
 const uint bvh_root_node = 0u;
-const uint group_candidate_capacity = 512u;
+
+struct DetectionInput
+{
+    Aabb bounds;
+    uint edge_index;
+};
+
+bvec2 select_children_to_visit(DetectionInput detection_input, BvhNode node);
+void detect_leaf_candidates(DetectionInput detection_input, BvhNode node);
 
 #define POSITION_IO_CLOTH_CURRENT
 #define POSITION_IO_CLOTH_PREVIOUS
 #include "../../mesh/position_io.glsl"
-#include "../candidate_output.glsl"
+#include "../detection.glsl"
 
 Aabb build_cloth_edge_swept_aabb(uint cloth_edge_index)
 {
@@ -62,9 +69,22 @@ Aabb build_cloth_edge_swept_aabb(uint cloth_edge_index)
     return Aabb(vec4(min_bounds, 0.0), vec4(max_bounds, 0.0));
 }
 
-Aabb build_body_edge_swept_aabb(uint body_edge_index)
+bvec2 select_children_to_visit(DetectionInput detection_input, BvhNode node)
 {
-    return body_edge_bounds[body_edge_index];
+    bool can_visit_left = overlaps_aabb(detection_input.bounds, bvh_nodes[node.left_child_index].bounds);
+    bool can_visit_right = overlaps_aabb(detection_input.bounds, bvh_nodes[node.right_child_index].bounds);
+    return bvec2(can_visit_left, can_visit_right);
+}
+
+void detect_leaf_candidates(DetectionInput detection_input, BvhNode node)
+{
+    for (uint edge_offset = 0u; edge_offset < node.element_count; ++edge_offset) {
+        uint body_edge_index = node.first_element_index + edge_offset;
+        Aabb body_bounds = body_edge_bounds[body_edge_index];
+        if (overlaps_aabb(detection_input.bounds, body_bounds)) {
+            append_candidate(uvec2(detection_input.edge_index, body_edge_index));
+        }
+    }
 }
 
 void main()
@@ -76,42 +96,9 @@ void main()
 
     uint cloth_edge_index = gl_GlobalInvocationID.x;
     if (cloth_edge_index < uEdgeCount) {
-        Aabb cloth_swept_bounds = build_cloth_edge_swept_aabb(cloth_edge_index);
-
-        uint node_index_stack[max_bvh_stack_depth];
-        uint stack_count = 0u;
-        uint current_node_index = bvh_root_node;
-        bool has_next_node = overlaps_aabb(cloth_swept_bounds, body_edge_bvh_nodes[current_node_index].bounds);
-
-        while (has_next_node) {
-            BvhNode current_node = body_edge_bvh_nodes[current_node_index];
-            if (is_leaf_node(current_node)) {
-                for (uint edge_offset = 0u; edge_offset < current_node.element_count; ++edge_offset) {
-                    uint body_edge_index = current_node.first_element_index + edge_offset;
-                    Aabb body_bounds = build_body_edge_swept_aabb(body_edge_index);
-                    if (overlaps_aabb(cloth_swept_bounds, body_bounds)) {
-                        append_candidate(uvec2(cloth_edge_index, body_edge_index));
-                    }
-                }
-            } else {
-                bool left_overlap = overlaps_aabb(cloth_swept_bounds,
-                                                  body_edge_bvh_nodes[current_node.left_child_index].bounds);
-                bool right_overlap = overlaps_aabb(cloth_swept_bounds,
-                                                   body_edge_bvh_nodes[current_node.right_child_index].bounds);
-                if (left_overlap && right_overlap) {
-                    node_index_stack[stack_count++] = current_node.left_child_index;
-                }
-                if (left_overlap || right_overlap) {
-                    current_node_index = right_overlap ? current_node.right_child_index : current_node.left_child_index;
-                    continue;
-                }
-            }
-
-            has_next_node = stack_count > 0u;
-            if (has_next_node) {
-                current_node_index = node_index_stack[--stack_count];
-            }
-        }
+        Aabb bounds = build_cloth_edge_swept_aabb(cloth_edge_index);
+        DetectionInput detection_input = DetectionInput(bounds, cloth_edge_index);
+        detect_candidates(detection_input, bvh_root_node);
     }
 
     flush_group_candidates();

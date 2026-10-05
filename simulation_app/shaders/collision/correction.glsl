@@ -65,23 +65,38 @@ void accumulate_vertex_friction_correction(uint vertex_index, vec3 correction)
 #endif
 
 #ifdef COLLISION_CORRECTION_APPLY
-vec3 clamp_correction(vec3 correction)
-{
-    float correction_length_sq = dot(correction, correction);
-    float max_correction_length_sq = uMaxCorrectionLength * uMaxCorrectionLength;
-    if (correction_length_sq > max_correction_length_sq) {
-        return correction * (uMaxCorrectionLength * inversesqrt(correction_length_sq));
+void apply_collision_corrections(uint vertex_index)
+{   
+    // apply position correction
+    ivec4 normal_accumulated = normal_correction_sums[vertex_index];
+    if (normal_accumulated.w == 0) {
+        return;
     }
 
-    return correction;
-}
+    float inverse_accumulation_scale = 1.0 / (int_correction_scale * float(normal_accumulated.w));
+    vec3 normal_correction = vec3(normal_accumulated.xyz) * inverse_accumulation_scale;
+    float correction_length_sq = dot(normal_correction, normal_correction);
+    float correction_scale = 1.0;
+    if (correction_length_sq > uMaxCorrectionLength * uMaxCorrectionLength) {
+        correction_scale = uMaxCorrectionLength * inversesqrt(correction_length_sq);
+        normal_correction *= correction_scale;
+    }
+    vec3 corrected_position = read_cloth_current_position(vertex_index) + normal_correction;
 
-void apply_position_correction(uint vertex_index, vec3 normal_correction, vec3 friction_correction)
-{
-    vec3 corrected_position = read_cloth_current_position(vertex_index) + normal_correction + friction_correction;
+#ifdef COLLISION_CORRECTION_FRICTION_APPLY
+    vec3 friction_correction = vec3(friction_correction_sums[vertex_index].xyz) * inverse_accumulation_scale;
+    corrected_position += friction_correction * correction_scale;
+#endif
+
     write_cloth_current_position(vertex_index, corrected_position);
-
     collision_pushouts[vertex_index].xyz += normal_correction;
+
+    // apply inward motion correction
+    ivec4 inward_motion_accumulated = inward_motion_correction_sums[vertex_index];
+    if (inward_motion_accumulated.w > 0) {
+        float inverse_contact_count = 1.0 / (int_correction_scale * float(inward_motion_accumulated.w));
+        inward_motion_corrections[vertex_index].xyz += vec3(inward_motion_accumulated.xyz) * inverse_contact_count;
+    }
 }
 #endif
 

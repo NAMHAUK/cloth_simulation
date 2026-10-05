@@ -35,10 +35,10 @@ uniform float uMaxCorrectionLength;
 
 #define POSITION_IO_CLOTH_CURRENT
 #define POSITION_IO_CLOTH_WRITE
-#include "../../mesh/position_io.glsl"
-
 #define COLLISION_CORRECTION_APPLY
 #define COLLISION_CORRECTION_FRICTION_APPLY
+
+#include "../../mesh/position_io.glsl"
 #include "../correction.glsl"
 
 void main()
@@ -48,24 +48,5 @@ void main()
         return;
     }
 
-    ivec4 normal_accumulated = normal_correction_sums[vertex_index];
-    if (normal_accumulated.w > 0) {
-        float inverse_accumulation_scale = 1.0 / (int_correction_scale * float(normal_accumulated.w));
-        vec3 final_normal_correction = vec3(normal_accumulated.xyz) * inverse_accumulation_scale;
-        float correction_length_sq = dot(final_normal_correction, final_normal_correction);
-        float correction_scale = 1.0;
-        if (correction_length_sq > uMaxCorrectionLength * uMaxCorrectionLength) {
-            correction_scale = uMaxCorrectionLength * inversesqrt(correction_length_sq);
-            final_normal_correction *= correction_scale;
-        }
-        vec3 final_friction_correction = vec3(friction_correction_sums[vertex_index].xyz) * inverse_accumulation_scale * correction_scale;
-
-        apply_position_correction(vertex_index, final_normal_correction, final_friction_correction);
-    }
-
-    ivec4 inward_motion_accumulated = inward_motion_correction_sums[vertex_index];
-    if (inward_motion_accumulated.w > 0) {
-        float inverse_contact_count = 1.0 / (int_correction_scale * float(inward_motion_accumulated.w));
-        inward_motion_corrections[vertex_index].xyz += vec3(inward_motion_accumulated.xyz) * inverse_contact_count;
-    }
+    apply_collision_corrections(vertex_index);
 }
