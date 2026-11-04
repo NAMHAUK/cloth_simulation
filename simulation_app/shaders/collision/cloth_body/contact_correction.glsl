@@ -23,8 +23,8 @@
 #ifdef CLOTH_BODY_VERTEX_FACE_CONTACT
 void accumulate_vertex_face_collision_correction(uint cloth_vertex_index, uint triangle_index)
 {
-    vec3 face_normal = body_triangle_normals[triangle_index].xyz;
-    if (dot(face_normal, face_normal) <= 1.0e-20) {
+    vec4 face_normal = body_triangle_normals[triangle_index];
+    if (face_normal.w == 0.0) {
         return;
     }
 
@@ -39,7 +39,7 @@ void accumulate_vertex_face_collision_correction(uint cloth_vertex_index, uint t
     vec3 delta_triangle = (delta_a + delta_b + delta_c) / 3.0;
     vec3 relative_prev_vertex_pos = prev_vertex_pos + delta_triangle;
 
-    float cur_signed_distance = dot(cur_vertex_pos - cur_triangle_pos.a, face_normal);
+    float cur_signed_distance = dot(cur_vertex_pos - cur_triangle_pos.a, face_normal.xyz);
     float penetration_depth = uCollisionThickness - cur_signed_distance;
     if (penetration_depth <= 0.0) {
         return;
@@ -49,7 +49,7 @@ void accumulate_vertex_face_collision_correction(uint cloth_vertex_index, uint t
     if (!find_contact_barycentric(relative_prev_vertex_pos,
                                   cur_vertex_pos,
                                   cur_triangle_pos,
-                                  face_normal,
+                                  face_normal.xyz,
                                   cur_signed_distance,
                                   uCollisionThickness,
                                   barycentric)) {
@@ -61,14 +61,14 @@ void accumulate_vertex_face_collision_correction(uint cloth_vertex_index, uint t
     vec3 vertex_delta = cur_vertex_pos - prev_vertex_pos - collision_pushouts[cloth_vertex_index].xyz;
 
     vec3 relative_delta = vertex_delta - triangle_delta;
-    vec3 friction_correction = compute_friction_correction(face_normal, relative_delta, penetration_depth);
+    vec3 friction_correction = compute_friction_correction(face_normal.xyz, relative_delta, penetration_depth);
     vec3 inward_corrected_relative_delta = relative_delta + inward_motion_corrections[cloth_vertex_index].xyz;
 
     // collision correction accumulation
-    accumulate_vertex_normal_correction(cloth_vertex_index, face_normal, penetration_depth);
+    accumulate_vertex_normal_correction(cloth_vertex_index, face_normal.xyz, penetration_depth);
     accumulate_vertex_friction_correction(cloth_vertex_index, friction_correction);
     accumulate_vertex_inward_motion_correction(cloth_vertex_index,
-                                               face_normal,
+                                               face_normal.xyz,
                                                inward_corrected_relative_delta,
                                                1.0);
 }

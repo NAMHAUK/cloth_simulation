@@ -18,12 +18,18 @@ vec3 compute_vertex_motion_delta(uint vertex_index)
 }
 #endif
 
-bool accumulate_vertex_face_penetration_correction(uint vertex_index,
-                                                   uvec3 face_vertex_indices,
-                                                   out vec3 normal,
-                                                   out vec3 barycentric,
-                                                   out float inverse_denominator)
-{   
+struct VertexFaceContact
+{
+    bool has_contact;
+    vec3 normal;
+    vec3 barycentric;
+    vec4 weights;
+};
+
+const VertexFaceContact no_contact = VertexFaceContact(false, vec3(0.0), vec3(0.0), vec4(0.0));
+
+VertexFaceContact accumulate_vertex_face_penetration_correction(uint vertex_index, uvec3 face_vertex_indices)
+{
     // read
     vec3 prev_vertex_pos = read_cloth_previous_position(vertex_index);
     vec3 cur_vertex_pos = read_cloth_current_position(vertex_index);
@@ -33,90 +39,73 @@ bool accumulate_vertex_face_penetration_correction(uint vertex_index,
     vec4 previous_normal = triangle_normal(prev_triangle_pos.a, prev_triangle_pos.b, prev_triangle_pos.c);
     vec4 current_normal = triangle_normal(cur_triangle_pos.a, cur_triangle_pos.b, cur_triangle_pos.c);
     if (previous_normal.w == 0.0 || current_normal.w == 0.0) {
-        return false;
+        return no_contact;
     }
+
+    vec3 delta_a = cur_triangle_pos.a - prev_triangle_pos.a;
+    vec3 delta_b = cur_triangle_pos.b - prev_triangle_pos.b;
+    vec3 delta_c = cur_triangle_pos.c - prev_triangle_pos.c;
+    vec3 delta_triangle = (delta_a + delta_b + delta_c) / 3.0;
+    vec3 relative_prev_vertex_pos = prev_vertex_pos + delta_triangle;
 
     float prev_distance = dot(prev_vertex_pos - prev_triangle_pos.a, previous_normal.xyz);
     float cur_distance = dot(cur_vertex_pos - cur_triangle_pos.a, current_normal.xyz);
     float signed_distance = abs(prev_distance) <= 1.0e-8 ? cur_distance : prev_distance;
     float normal_sign = signed_distance < 0.0 ? -1.0 : 1.0;
 
-    prev_distance *= normal_sign;
     cur_distance *= normal_sign;
-    current_normal.xyz *= normal_sign;
-
-    // check contact
-    bool has_swept_contact = false;
-    float distance_delta = prev_distance - cur_distance;
-    float contact_distance = prev_distance > uCollisionThickness ? uCollisionThickness : 0.0;
-
-    if (cur_distance <= contact_distance && distance_delta > 1.0e-8) {
-        float contact_time = clamp((prev_distance - contact_distance) / distance_delta, 0.0, 1.0);
-        vec3 contact_vertex_pos = mix(prev_vertex_pos, cur_vertex_pos, contact_time);
-        TrianglePositions contact_face = interpolate_triangle_positions(prev_triangle_pos, cur_triangle_pos, contact_time);
-
-        has_swept_contact = compute_barycentric(contact_vertex_pos, contact_face, barycentric) &&
-                            is_inside_triangle(barycentric);
-    }
+    vec3 normal = current_normal.xyz * normal_sign;
 
     // compute penetration depth
-    float penetration_depth;
-    if (has_swept_contact) {
-        normal = current_normal.xyz;
-        penetration_depth = uCollisionThickness - cur_distance;
-        if (penetration_depth <= 0.0) {
-            return false;
-        }
-    } else {
-        vec3 closest_point = closest_point_on_triangle(cur_vertex_pos, cur_triangle_pos);
-        vec3 separation = cur_vertex_pos - closest_point;
-        float distance = length(separation);
-        if (distance >= uCollisionThickness ||
-            !compute_barycentric(closest_point, cur_triangle_pos, barycentric) ||
-            !is_inside_triangle(barycentric)) {
-            return false;
-        }
+    float penetration_depth = uCollisionThickness - cur_distance;
+    if (penetration_depth <= 0.0) {
+        return no_contact;
+    }
 
-        normal = distance > 0.0 ? separation / distance : current_normal.xyz;
-        penetration_depth = uCollisionThickness - distance;
+    // check contact
+    vec3 barycentric;
+    if (!find_contact_barycentric(relative_prev_vertex_pos,
+                                  cur_vertex_pos,
+                                  cur_triangle_pos,
+                                  normal,
+                                  cur_distance,
+                                  uCollisionThickness,
+                                  barycentric)) {
+        return no_contact;
     }
 
     // accumulate collision correction
-    inverse_denominator = 1.0 / (1.0 + dot(barycentric, barycentric));
+    float inverse_denominator = 1.0 / (1.0 + dot(barycentric, barycentric));
     float correction_distance = penetration_depth * uCollisionStiffness;
     uvec4 vertex_indices = uvec4(vertex_index, face_vertex_indices);
     vec4 weights = vec4(1.0, -barycentric) * inverse_denominator;
-    
+
     for (uint i = 0u; i < 4u; ++i) {
         if (weights[i] != 0.0) {
             accumulate_vertex_normal_correction(vertex_indices[i], normal, correction_distance * weights[i]);
         }
     }
-    return true;
+    return VertexFaceContact(true, normal, barycentric, weights);
 }
 
 #ifdef COLLISION_INWARD_MOTION_ACCUMULATE
 void accumulate_vertex_face_collision_correction(uint vertex_index, uvec3 face_vertex_indices)
 {
-    vec3 normal;
-    vec3 barycentric;
-    float inverse_denominator;
-    if (!accumulate_vertex_face_penetration_correction(vertex_index,
-                                                       face_vertex_indices,
-                                                       normal,
-                                                       barycentric,
-                                                       inverse_denominator)) {
+    VertexFaceContact contact = accumulate_vertex_face_penetration_correction(vertex_index, face_vertex_indices);
+    if (!contact.has_contact) {
         return;
     }
 
-    vec3 face_delta = compute_vertex_motion_delta(face_vertex_indices.x) * barycentric.x +
-                      compute_vertex_motion_delta(face_vertex_indices.y) * barycentric.y +
-                      compute_vertex_motion_delta(face_vertex_indices.z) * barycentric.z;
+    vec3 face_delta = compute_vertex_motion_delta(face_vertex_indices.x) * contact.barycentric.x +
+                      compute_vertex_motion_delta(face_vertex_indices.y) * contact.barycentric.y +
+                      compute_vertex_motion_delta(face_vertex_indices.z) * contact.barycentric.z;
     vec3 relative_delta = compute_vertex_motion_delta(vertex_index) - face_delta;
     uvec4 vertex_indices = uvec4(vertex_index, face_vertex_indices);
-    vec4 weights = vec4(1.0, -barycentric) * inverse_denominator;
     for (uint i = 0u; i < 4u; ++i) {
-        accumulate_vertex_inward_motion_correction(vertex_indices[i], normal, relative_delta, weights[i]);
+        accumulate_vertex_inward_motion_correction(vertex_indices[i],
+                                                   contact.normal,
+                                                   relative_delta,
+                                                   contact.weights[i]);
     }
 }
 

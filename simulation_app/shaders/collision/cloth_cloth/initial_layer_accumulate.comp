@@ -81,14 +81,7 @@ void main()
     uint face_layer = get_garment_layer(face_vertex_indices.x);
 
     if (vertex_layer == face_layer) {
-        vec3 normal;
-        vec3 barycentric;
-        float inverse_denominator;
-        accumulate_vertex_face_penetration_correction(vertex_index,
-                                                      face_vertex_indices,
-                                                      normal,
-                                                      barycentric,
-                                                      inverse_denominator);
+        accumulate_vertex_face_penetration_correction(vertex_index, face_vertex_indices);
     } else {
         bool is_outer_vertex = vertex_layer > face_layer;
         accumulate_initial_layer_collision_correction(vertex_index, face_vertex_indices, is_outer_vertex);
