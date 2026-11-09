@@ -1,13 +1,10 @@
 #include "gpu/scene/SceneGpuState.h"
-
 #include "simulation/SceneState.h"
 #include "utils/BufferUtils.h"
 #include "utils/ShaderUtils.h"
 
 #include <cassert>
-#include <cstddef>
 #include <cstdint>
-#include <stdexcept>
 
 #include <glm/vec4.hpp>
 

@@ -2,8 +2,6 @@
 
 #include <cstddef>
 #include <cstdint>
-#include <filesystem>
-#include <string>
 #include <vector>
 
 #include <glm/vec3.hpp>

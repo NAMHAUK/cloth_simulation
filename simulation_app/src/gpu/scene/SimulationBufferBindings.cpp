@@ -1,5 +1,4 @@
 #include "gpu/scene/SimulationBufferBindings.h"
-
 #include "gpu/character/CharacterGpuDataTypes.h"
 #include "gpu/cloth/ClothGpuDataTypes.h"
 

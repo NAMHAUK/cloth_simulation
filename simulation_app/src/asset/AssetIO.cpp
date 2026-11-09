@@ -1,5 +1,4 @@
 #include "asset/AssetIO.h"
-
 #include "utils/NumericUtils.h"
 
 #include <algorithm>
@@ -10,7 +9,6 @@
 #include <fstream>
 #include <iostream>
 #include <stdexcept>
-#include <string>
 #include <vector>
 
 namespace {

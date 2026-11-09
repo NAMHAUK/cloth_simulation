@@ -3,7 +3,6 @@
 #include "asset/AssetDataTypes.h"
 
 #include <array>
-#include <cstddef>
 #include <optional>
 
 #include <glm/vec3.hpp>

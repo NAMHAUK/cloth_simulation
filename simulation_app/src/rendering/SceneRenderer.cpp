@@ -1,5 +1,4 @@
 #include "rendering/SceneRenderer.h"
-
 #include "gpu/scene/SceneGpuState.h"
 #include "simulation/SceneState.h"
 #include "utils/ShaderUtils.h"

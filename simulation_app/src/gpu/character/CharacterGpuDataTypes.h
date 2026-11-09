@@ -1,7 +1,5 @@
 #pragma once
 
-#include <cstdint>
-
 #include <QOpenGLFunctions_4_5_Core>
 
 struct CharacterBufferSet final

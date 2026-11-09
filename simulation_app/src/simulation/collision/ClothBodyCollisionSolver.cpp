@@ -1,11 +1,8 @@
 #include "simulation/collision/ClothBodyCollisionSolver.h"
-
 #include "gpu/scene/SceneGpuState.h"
 #include "simulation/SimulationParams.h"
 #include "utils/BufferUtils.h"
 #include "utils/ShaderUtils.h"
-
-#include <stdexcept>
 
 namespace {
 constexpr std::uint32_t local_size = 128;

@@ -1,5 +1,4 @@
 #include "GarmentConverter.h"
-
 #include "asset/AssetIO.h"
 #include "utils/MeshGeometryUtils.h"
 #include "utils/NumericUtils.h"
@@ -8,7 +7,6 @@
 #include <array>
 #include <charconv>
 #include <cmath>
-#include <cstddef>
 #include <cstdint>
 #include <filesystem>
 #include <fstream>

@@ -1,5 +1,4 @@
 #include "gpu/cloth/ClothGpuState.h"
-
 #include "utils/MeshGeometryUtils.h"
 #include "simulation/SceneState.h"
 #include "simulation/collision/Bvh.h"

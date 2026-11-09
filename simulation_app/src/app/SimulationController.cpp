@@ -1,5 +1,4 @@
 #include "app/SimulationController.h"
-
 #include "asset/AssetIO.h"
 #include "simulation/SimulationParams.h"
 #include "simulation/collision/MeshBvhBuilder.h"

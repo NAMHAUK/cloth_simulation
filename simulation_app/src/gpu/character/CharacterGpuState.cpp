@@ -1,10 +1,8 @@
 #include "gpu/character/CharacterGpuState.h"
-
 #include "utils/MeshGeometryUtils.h"
 #include "utils/BufferUtils.h"
 #include "utils/ShaderUtils.h"
 #include <cstddef>
-#include <stdexcept>
 
 #include <glm/vec4.hpp>
 

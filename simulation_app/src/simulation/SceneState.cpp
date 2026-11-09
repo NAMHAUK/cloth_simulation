@@ -1,9 +1,6 @@
 #include "simulation/SceneState.h"
 #include "utils/NumericUtils.h"
 
-#include <glm/gtc/quaternion.hpp>
-#include <glm/vec3.hpp>
-
 #include <algorithm>
 #include <cassert>
 #include <cmath>
@@ -11,6 +8,8 @@
 #include <utility>
 
 #include <glm/geometric.hpp>
+#include <glm/gtc/quaternion.hpp>
+#include <glm/vec3.hpp>
 
 namespace {
 glm::vec3 frame_position(const std::vector<float>& positions, std::uint32_t frame_index)

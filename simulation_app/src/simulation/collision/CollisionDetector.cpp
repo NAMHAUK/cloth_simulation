@@ -1,12 +1,10 @@
 #include "simulation/collision/CollisionDetector.h"
-
 #include "gpu/scene/SceneGpuState.h"
 #include "simulation/SimulationParams.h"
 #include "utils/BufferUtils.h"
 #include "utils/ShaderUtils.h"
 
 #include <array>
-#include <stdexcept>
 
 namespace {
 constexpr std::uint32_t candidate_detect_local_size = 128u;
