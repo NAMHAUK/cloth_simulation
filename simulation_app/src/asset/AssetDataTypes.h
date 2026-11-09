@@ -94,12 +94,6 @@ struct CharacterMotion
     std::vector<glm::vec3> vertex_positions;
 };
 
-struct MotionAsset
-{
-    std::filesystem::path motion_asset_path;
-    std::string display_name;
-};
-
 struct GarmentDistanceConstraints final
 {
     std::vector<MeshEdge> colorized_edges;
@@ -131,10 +125,4 @@ struct GarmentMesh
     glm::vec3 color{1.0f};
     glm::vec3 bounds_center{};
     float bounds_radius = 1.0f;
-};
-
-struct GarmentAsset
-{
-    std::filesystem::path garment_asset_path;
-    std::string display_name;
 };
