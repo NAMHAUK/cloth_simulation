@@ -49,6 +49,6 @@ void main()
     position_a += correction;
     position_b -= correction;
 
-    current_positions[edge.x] = vec4(position_a, 0.0);
-    current_positions[edge.y] = vec4(position_b, 0.0);
+    current_positions[edge.x].xyz = position_a;
+    current_positions[edge.y].xyz = position_b;
 }

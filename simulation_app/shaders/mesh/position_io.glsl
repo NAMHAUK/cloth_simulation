@@ -86,7 +86,7 @@ TrianglePositions read_body_previous_triangle(TriangleVertexIndices vertex_indic
 #ifdef POSITION_IO_CLOTH_WRITE
 void write_cloth_current_position(uint vertex_index, vec3 position)
 {
-    cloth_current_positions[vertex_index] = vec4(position, 0.0);
+    cloth_current_positions[vertex_index].xyz = position;
 }
 #endif
 
