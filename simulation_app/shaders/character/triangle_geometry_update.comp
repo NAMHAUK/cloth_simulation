@@ -10,8 +10,9 @@ layout(std430, binding = CHARACTER_CURRENT_POSITIONS) readonly buffer CharacterC
     vec4 body_current_positions[];
 };
 
-layout(std430, binding = CHARACTER_TRIANGLE_INDICES) readonly buffer CharacterIndices {
-    uint triangle_indices[];
+layout(std430, binding = CHARACTER_TRIANGLE_VERTEX_INDICES) readonly buffer CharacterIndices
+{
+    TriangleVertexIndices triangles[];
 };
 
 layout(std430, binding = BODY_TRIANGLE_POSITIONS) writeonly buffer BodyTrianglePositions {
@@ -25,7 +26,6 @@ layout(std430, binding = BODY_TRIANGLE_NORMALS) writeonly buffer BodyTriangleNor
 uniform uint uTriangleCount;
 
 #define POSITION_IO_BODY_CURRENT
-#define POSITION_IO_TRIANGLE_INDICES
 #include "../mesh/position_io.glsl"
 
 void main()
@@ -35,11 +35,8 @@ void main()
         return;
     }
 
-    uvec3 vertex_indices = read_triangle_indices(triangle_index);
-    vec3 a = read_body_current_position(vertex_indices.x);
-    vec3 b = read_body_current_position(vertex_indices.y);
-    vec3 c = read_body_current_position(vertex_indices.z);
+    TrianglePositions triangle = read_body_current_triangle(triangles[triangle_index]);
 
-    body_triangle_positions[triangle_index] = TrianglePositions(a, b, c);
-    body_triangle_normals[triangle_index] = triangle_normal(a, b, c);
+    body_triangle_positions[triangle_index] = triangle;
+    body_triangle_normals[triangle_index] = triangle_normal(triangle.a, triangle.b, triangle.c);
 }

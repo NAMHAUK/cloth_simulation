@@ -14,8 +14,8 @@ public:
     MeshBvhBuilder(const CharacterMotion& motion, const std::vector<std::uint8_t>& triangle_part_labels);
     explicit MeshBvhBuilder(const GarmentMesh& mesh);
 
-    Bvh build_triangle_bvh();
-    Bvh build_edge_bvh();
+    TriangleBvh build_triangle_bvh();
+    EdgeBvh build_edge_bvh();
 
 private:
     struct BvhPrimitive final
@@ -50,16 +50,9 @@ private:
     // Part label assignment
     std::vector<LabeledEdge> make_labeled_edges() const;
 
-    // Index construction
-    std::vector<std::uint32_t> make_triangle_vertex_indices(
-        std::vector<std::uint32_t> triangle_indices) const;
-    static std::vector<std::uint32_t> make_edge_vertex_indices(
-        const std::vector<std::uint32_t>& ordered_edge_indices,
-        const std::vector<LabeledEdge>& edges);
-
     // Source data
-    const std::vector<std::uint32_t>& source_triangle_vertex_indices_;
-    const std::vector<float>& source_vertex_positions_;
+    const std::vector<TriangleVertexIndices>& source_triangles_;
+    const std::vector<glm::vec3>& source_vertex_positions_;
     std::vector<std::uint32_t> collision_triangle_indices_;
     std::vector<std::uint32_t> excluded_triangle_indices_;
     std::vector<std::uint8_t> triangle_part_labels_;

@@ -39,8 +39,8 @@ struct GarmentObject
 {
     GarmentLayer layer = GarmentLayer::Lower;
     GarmentMesh mesh;
-    Bvh triangle_bvh;
-    Bvh edge_bvh;
+    TriangleBvh triangle_bvh;
+    EdgeBvh edge_bvh;
 };
 
 class SceneState final
@@ -49,7 +49,7 @@ public:
     SceneState(float max_linear_acceleration, float max_angular_acceleration);
 
     void set_character_motion(CharacterMotion motion);
-    void set_body_bvhs(Bvh triangle_bvh, Bvh edge_bvh);
+    void set_body_bvhs(TriangleBvh triangle_bvh, EdgeBvh edge_bvh);
 
     void set_motion_frame_index(std::uint32_t motion_frame_index);
     float motion_frame_alpha(float motion_frame_position) const;
@@ -65,16 +65,16 @@ public:
     const GarmentObject* find_garment(GarmentLayer layer) const;
 
     const CharacterMotion& character_motion() const;
-    const Bvh& default_body_triangle_bvh() const;
-    const Bvh& default_body_edge_bvh() const;
+    const TriangleBvh& default_body_triangle_bvh() const;
+    const EdgeBvh& default_body_edge_bvh() const;
     const std::vector<GarmentObject>& garments() const;
     const ReferenceFrameKinematics& reference_frame_kinematics(GarmentCategory category) const;
     std::uint32_t motion_frame_index() const;
 
 private:
     CharacterMotion character_motion_;
-    Bvh default_body_triangle_bvh_;
-    Bvh default_body_edge_bvh_;
+    TriangleBvh default_body_triangle_bvh_;
+    EdgeBvh default_body_edge_bvh_;
     std::vector<GarmentObject> garments_;
     std::uint32_t motion_frame_index_ = 0;
     ReferenceFrameKinematics pelvis_frame_;

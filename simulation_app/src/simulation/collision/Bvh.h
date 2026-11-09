@@ -1,5 +1,7 @@
 #pragma once
 
+#include "asset/AssetDataTypes.h"
+
 #include <cstddef>
 #include <cstdint>
 #include <vector>
@@ -30,12 +32,10 @@ struct BvhNode final
 
 static_assert(sizeof(BvhNode) == 48u);
 
-struct Bvh final
+struct Bvh
 {
     std::vector<BvhNode> nodes;
     std::vector<std::uint32_t> level_offsets;
-    std::vector<std::uint32_t> indices;
-    glm::uvec4 arm_triangle_ranges{};
 
     std::uint32_t leaf_element_count() const
     {
@@ -49,3 +49,13 @@ struct Bvh final
     }
 };
 
+struct TriangleBvh final : Bvh
+{
+    std::vector<TriangleVertexIndices> triangle_vertex_indices;
+    glm::uvec4 arm_triangle_ranges{};
+};
+
+struct EdgeBvh final : Bvh
+{
+    std::vector<MeshEdge> edge_vertex_indices;
+};

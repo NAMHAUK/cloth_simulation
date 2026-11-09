@@ -20,8 +20,8 @@ public:
     void initialize(const std::filesystem::path& shader_dir, QOpenGLFunctions_4_5_Core& gl);
 
     void initialize_mesh(const CharacterMotion& motion,
-                         const Bvh& body_triangle_bvh,
-                         const Bvh& body_edge_bvh,
+                         const TriangleBvh& body_triangle_bvh,
+                         const EdgeBvh& body_edge_bvh,
                          QOpenGLFunctions_4_5_Core& gl);
 
     void set_motion(const CharacterMotion& motion, QOpenGLFunctions_4_5_Core& gl);
