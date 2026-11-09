@@ -51,25 +51,20 @@ void SimulationPipeline::prefit_garments(std::uint32_t iteration_count, QOpenGLF
     const ClothGpuState& cloth_state = gpu_state_.cloth_gpu_state();
 
     // Garment pre-fit
-    for (std::uint32_t iteration = 0; iteration < params_.prefit.iteration_count; ++iteration) {
-        gpu_state_.cloth_gpu_state().copy_current_positions_to_previous(gl);
-        for (GarmentLayer layer : {GarmentLayer::Lower, GarmentLayer::Upper}) {
-            if (cloth_state.garment_states()[layer].vertex_count > 0u) {
-                garment_prefit_solver_.solve(cloth_state, layer, gl);
-            }
-        }
+    for (std::uint32_t step = 0; step < params_.prefit.iteration_count; ++step) {
+        cloth_state.copy_current_positions_to_previous(gl);
+        garment_prefit_solver_.solve(cloth_state, gl);
         stretch_constraint_solver_.solve(cloth_state, gl);
         bending_constraint_solver_.solve(cloth_state, gl);
 
-        for (std::uint32_t collision_iteration = 0; collision_iteration < params_.step.iteration_count;
-             ++collision_iteration) {
+        for (std::uint32_t iteration = 0; iteration < iteration_count; ++iteration) {
             gpu_state_.update_cloth_bvh_bounds(params_.collisions.cloth.initial_detection_distance, gl);
             collision_detector_.detect_prefit(gpu_state_, gl);
             cloth_cloth_collision_solver_.solve_initial(gpu_state_, gl);
         }
     }
 
-    gpu_state_.cloth_gpu_state().copy_current_positions_to_previous(gl);
+    cloth_state.copy_current_positions_to_previous(gl);
     gpu_state_.update_cloth_normals(gl);
 }
 

@@ -16,7 +16,6 @@ GarmentPrefitSolver::GarmentPrefitSolver(const PrefitParams& params)
 void GarmentPrefitSolver::initialize(const std::filesystem::path& shader_dir, QOpenGLFunctions_4_5_Core& gl)
 {
     program_ = load_compute_program(shader_dir / "cloth" / "setup" / "garment_prefit.comp", gl);
-    vertex_offset_loc_ = require_uniform_location(program_, "uVertexOffset", gl);
     vertex_count_loc_ = require_uniform_location(program_, "uVertexCount", gl);
 
     const GLint search_radius_squared_loc = require_uniform_location(program_, "uSearchRadiusSquared", gl);
@@ -28,18 +27,15 @@ void GarmentPrefitSolver::initialize(const std::filesystem::path& shader_dir, QO
     gl.glProgramUniform1f(program_, max_correction_length_loc, max_correction_length_);
 }
 
-void GarmentPrefitSolver::solve(const ClothGpuState& cloth_state,
-                                GarmentLayer layer,
-                                QOpenGLFunctions_4_5_Core& gl) const
+void GarmentPrefitSolver::solve(const ClothGpuState& cloth_state, QOpenGLFunctions_4_5_Core& gl) const
 {
-    const GarmentBufferState& garment_state = cloth_state.garment_states()[layer];
+    const std::uint32_t vertex_count = cloth_state.element_counts().vertex;
 
     gl.glUseProgram(program_);
 
-    gl.glProgramUniform1ui(program_, vertex_offset_loc_, garment_state.vertex_start_index);
-    gl.glProgramUniform1ui(program_, vertex_count_loc_, garment_state.vertex_count);
+    gl.glProgramUniform1ui(program_, vertex_count_loc_, vertex_count);
 
-    gl.glDispatchCompute(compute_group_count(garment_state.vertex_count, local_size), 1, 1);
+    gl.glDispatchCompute(compute_group_count(vertex_count, local_size), 1, 1);
     gl.glMemoryBarrier(GL_SHADER_STORAGE_BARRIER_BIT);
 }
 
@@ -48,6 +44,5 @@ void GarmentPrefitSolver::release(QOpenGLFunctions_4_5_Core& gl)
     gl.glDeleteProgram(program_);
 
     program_ = 0;
-    vertex_offset_loc_ = -1;
     vertex_count_loc_ = -1;
 }

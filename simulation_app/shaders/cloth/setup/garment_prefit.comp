@@ -26,7 +26,6 @@ layout(std430, binding = BODY_TRIANGLE_BVH_NODES) readonly buffer BvhNodeBuffer 
 
 uniform float uSearchRadiusSquared;
 
-uniform uint uVertexOffset;
 uniform uint uVertexCount;
 uniform float uMaxCorrectionLength;
 uniform float uPushoutMargin;
@@ -42,11 +41,10 @@ void store_cloth_position(uint vertex_index, vec3 position)
 
 void main()
 {
-    uint local_vertex_index = gl_GlobalInvocationID.x;
-    if (local_vertex_index >= uVertexCount) {
+    uint cloth_vertex_index = gl_GlobalInvocationID.x;
+    if (cloth_vertex_index >= uVertexCount) {
         return;
     }
-    uint cloth_vertex_index = uVertexOffset + local_vertex_index;
 
     vec3 cloth_position = read_cloth_current_position(cloth_vertex_index);
 
