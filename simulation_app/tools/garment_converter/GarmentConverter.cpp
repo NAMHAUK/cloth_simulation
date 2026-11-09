@@ -19,7 +19,6 @@
 #include <string>
 #include <string_view>
 #include <system_error>
-#include <utility>
 #include <vector>
 
 #include <glm/common.hpp>
@@ -129,20 +128,6 @@ void validate_garment_topology(const GarmentMesh& mesh)
     if (std::find(used_vertices.begin(), used_vertices.end(), 0u) != used_vertices.end()) {
         throw std::runtime_error("Garment OBJ contains an unused vertex.");
     }
-}
-
-GarmentDistanceConstraints build_distance_constraints(const std::vector<MeshEdge>& edges,
-                                                      const std::vector<glm::vec3>& vertex_positions)
-{
-    const auto vertex_count = static_cast<std::uint32_t>(vertex_positions.size());
-    ColorizedMeshEdges colorized_edges = colorize_mesh_edges(vertex_count, edges);
-
-    GarmentDistanceConstraints constraints;
-    constraints.colorized_edges = std::move(colorized_edges.edges);
-    constraints.color_states = std::move(colorized_edges.color_states);
-    constraints.rest_lengths = compute_mesh_edge_lengths(constraints.colorized_edges, vertex_positions);
-
-    return constraints;
 }
 
 std::vector<std::uint32_t> build_waistband_attachment_vertex_indices(const GarmentMesh& mesh)

@@ -80,12 +80,6 @@ struct ConstraintColorState final
     std::uint32_t count = 0;
 };
 
-struct ColorizedMeshEdges final
-{
-    std::vector<MeshEdge> edges;
-    std::vector<ConstraintColorState> color_states;
-};
-
 struct CharacterMotion
 {
     float fps = 0.0f;

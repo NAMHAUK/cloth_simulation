@@ -149,19 +149,6 @@ std::vector<std::uint32_t> build_vertex_neighborhood_masks(
     return exclusions;
 }
 
-std::vector<float> compute_mesh_edge_lengths(const std::vector<MeshEdge>& edges,
-                                             const std::vector<glm::vec3>& vertex_positions)
-{
-    std::vector<float> lengths;
-    lengths.reserve(edges.size());
-    for (const MeshEdge& edge : edges) {
-        const glm::vec3 vertex_a = vertex_positions[edge.vertex_a];
-        const glm::vec3 vertex_b = vertex_positions[edge.vertex_b];
-        lengths.push_back(glm::length(vertex_b - vertex_a));
-    }
-    return lengths;
-}
-
 std::vector<MeshEdge> build_unique_triangle_edges(const std::vector<TriangleVertexIndices>& triangles)
 {
     std::vector<MeshEdge> edges;
@@ -312,12 +299,27 @@ void orient_triangles_outward(const std::vector<glm::vec3>& vertex_positions,
     }
 }
 
-ColorizedMeshEdges colorize_mesh_edges(std::uint32_t vertex_count, const std::vector<MeshEdge>& edges)
+std::vector<float> compute_mesh_edge_lengths(const std::vector<MeshEdge>& edges,
+                                             const std::vector<glm::vec3>& vertex_positions)
+{
+    std::vector<float> lengths;
+    lengths.reserve(edges.size());
+    for (const MeshEdge& edge : edges) {
+        const glm::vec3 vertex_a = vertex_positions[edge.vertex_a];
+        const glm::vec3 vertex_b = vertex_positions[edge.vertex_b];
+        lengths.push_back(glm::length(vertex_b - vertex_a));
+    }
+    return lengths;
+}
+
+GarmentDistanceConstraints build_distance_constraints(const std::vector<MeshEdge>& edges,
+                                                      const std::vector<glm::vec3>& vertex_positions)
 {
     if (edges.empty()) {
         throw std::runtime_error("Cannot color an empty edge set.");
     }
 
+    const auto vertex_count = static_cast<std::uint32_t>(vertex_positions.size());
     std::vector<std::vector<MeshEdge>> edge_groups;
     std::vector<std::bitset<max_color_count>> assigned_colors(vertex_count);
 
@@ -329,16 +331,19 @@ ColorizedMeshEdges colorize_mesh_edges(std::uint32_t vertex_count, const std::ve
         edge_groups[color_index].push_back(edge);
     }
 
-    ColorizedMeshEdges colorized_edges;
-    colorized_edges.edges.reserve(edges.size());
-    colorized_edges.color_states.reserve(edge_groups.size());
+    GarmentDistanceConstraints constraints;
+    constraints.colorized_edges.reserve(edges.size());
+    constraints.color_states.reserve(edge_groups.size());
 
     for (const std::vector<MeshEdge>& edge_group : edge_groups) {
-        colorized_edges.color_states.push_back({static_cast<std::uint32_t>(colorized_edges.edges.size()),
-                                                static_cast<std::uint32_t>(edge_group.size())});
+        constraints.color_states.push_back({static_cast<std::uint32_t>(constraints.colorized_edges.size()),
+                                            static_cast<std::uint32_t>(edge_group.size())});
 
-        colorized_edges.edges.insert(colorized_edges.edges.end(), edge_group.begin(), edge_group.end());
+        constraints.colorized_edges.insert(constraints.colorized_edges.end(),
+                                           edge_group.begin(),
+                                           edge_group.end());
     }
 
-    return colorized_edges;
+    constraints.rest_lengths = compute_mesh_edge_lengths(constraints.colorized_edges, vertex_positions);
+    return constraints;
 }
