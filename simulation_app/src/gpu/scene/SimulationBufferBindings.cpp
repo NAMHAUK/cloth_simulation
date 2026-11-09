@@ -156,7 +156,7 @@ void SimulationBufferBindings::bind_character(const CharacterBufferSet& buffers,
 
 void SimulationBufferBindings::bind_cloth(const ClothBufferSet& buffers, QOpenGLFunctions_4_5_Core& gl) const
 {
-    const std::array<GLuint, binding::cloth::count> binding_buffers{
+    std::array<GLuint, binding::cloth::count> binding_buffers{
         buffers.current_position,
         buffers.previous_position,
         buffers.collision_pushout,
@@ -179,8 +179,13 @@ void SimulationBufferBindings::bind_cloth(const ClothBufferSet& buffers, QOpenGL
         buffers.edge_bounds,
         buffers.edge_bvh_node,
     };
+    std::replace(binding_buffers.begin(), binding_buffers.end(), GLuint{0}, dummy_buffer_);
     bind_buffers(binding::cloth::start, binding_buffers, "cloth", gl);
-    bind_buffers(binding::vertex_face_exclusions, std::array{buffers.vertex_face_exclusions}, "cloth", gl);
+    bind_buffers(
+        binding::vertex_face_exclusions,
+        std::array{buffers.vertex_face_exclusions != 0 ? buffers.vertex_face_exclusions : dummy_buffer_},
+        "cloth",
+        gl);
 }
 
 void SimulationBufferBindings::bind_collision(const CollisionBuffers& buffers,

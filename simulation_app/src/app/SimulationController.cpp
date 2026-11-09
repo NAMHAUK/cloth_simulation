@@ -15,16 +15,6 @@
 #include <QObject>
 
 namespace {
-GarmentObject build_garment(GarmentLayer layer, GarmentMesh mesh)
-{
-    GarmentObject garment;
-    garment.layer = layer;
-    garment.mesh = std::move(mesh);
-    garment.triangle_bvh = MeshBvhBuilder(garment.mesh).build_triangle_bvh();
-    garment.edge_bvh = MeshBvhBuilder(garment.mesh).build_edge_bvh();
-    return garment;
-}
-
 glm::mat4 make_placement_matrix(const glm::vec3& center, const glm::vec3& position_offset, float scale)
 {
     glm::mat4 matrix = glm::translate(glm::mat4{1.0f}, position_offset);
@@ -217,7 +207,9 @@ void SimulationController::set_garment_mesh(GarmentLayer layer, GarmentMesh mesh
 {
     assert(is_gpu_initialized() && !is_simulation_running() && is_default_pose_);
 
-    GarmentObject garment = build_garment(layer, std::move(mesh));
+    GarmentObject garment;
+    garment.layer = layer;
+    garment.mesh = std::move(mesh);
 
     run_with_gl_context_([this, layer, &garment](QOpenGLFunctions_4_5_Core& gl) {
         scene_.set_garment(std::move(garment));
@@ -254,12 +246,15 @@ void SimulationController::confirm_garment_placement()
                 continue;
             }
 
-            const auto& garment = scene_.place_garment(layer, placement->position_offset, placement->scale);
+            auto& garment = scene_.place_garment(layer, placement->position_offset, placement->scale);
+            MeshBvhBuilder bvh_builder(garment.mesh);
+            garment.triangle_bvh = bvh_builder.build_triangle_bvh();
+            garment.edge_bvh = bvh_builder.build_edge_bvh();
             placement_garments.push_back(&garment);
             gpu_state_.upload_garment_placement(garment, gl);
         }
 
-        gpu_state_.rebuild_collision_buffers(gl);
+        gpu_state_.create_simulation_buffers(scene_, gl);
         simulation_pipeline_.prefit_garments(calculate_iteration_count(), gl);
 
         for (const GarmentObject* garment : placement_garments) {
@@ -296,6 +291,7 @@ void SimulationController::cancel_placement_session()
         } else {
             scene_.remove_garment(GarmentLayer::Upper);
             gpu_state_.rebuild_garment_resources(scene_, gl, GarmentLayer::Upper);
+            gpu_state_.create_simulation_buffers(scene_, gl);
         }
     });
 }

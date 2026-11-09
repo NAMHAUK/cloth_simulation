@@ -27,7 +27,7 @@ public:
     void rebuild_garment_resources(const SceneState& scene,
                                    QOpenGLFunctions_4_5_Core& gl,
                                    GarmentLayer changed_layer);
-    void rebuild_collision_buffers(QOpenGLFunctions_4_5_Core& gl);
+    void create_simulation_buffers(const SceneState& scene, QOpenGLFunctions_4_5_Core& gl);
     void upload_garment_placement(const GarmentObject& garment, QOpenGLFunctions_4_5_Core& gl);
     void initialize_garment_attachments(const GarmentObject& garment, QOpenGLFunctions_4_5_Core& gl);
     void capture_garment_base_positions(QOpenGLFunctions_4_5_Core& gl);

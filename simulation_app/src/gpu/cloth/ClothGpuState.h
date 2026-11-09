@@ -33,6 +33,7 @@ public:
     void rebuild_buffers(const std::vector<GarmentObject>& garments,
                          GarmentLayer changed_layer,
                          QOpenGLFunctions_4_5_Core& gl);
+    void create_simulation_buffers(const std::vector<GarmentObject>& garments, QOpenGLFunctions_4_5_Core& gl);
     void upload_garment_placement(const GarmentObject& garment, QOpenGLFunctions_4_5_Core& gl);
     void upload_attachment_indices(const GarmentObject& garment, QOpenGLFunctions_4_5_Core& gl);
     void activate_attachment_targets(GarmentLayer layer);
@@ -76,9 +77,9 @@ private:
     void copy_attachment_target_state(GarmentLayer layer,
                                       BufferState& rebuild_state,
                                       QOpenGLFunctions_4_5_Core& gl) const;
-    static void create_topology_buffers(const std::vector<GarmentObject>& garments,
-                                        BufferState& rebuild_state,
-                                        QOpenGLFunctions_4_5_Core& gl);
+    static void upload_topology(const std::vector<GarmentObject>& garments,
+                                BufferState& rebuild_state,
+                                QOpenGLFunctions_4_5_Core& gl);
     static void create_vertex_face_exclusion_buffer(const std::vector<GarmentObject>& garments,
                                                     BufferState& rebuild_state,
                                                     QOpenGLFunctions_4_5_Core& gl);
