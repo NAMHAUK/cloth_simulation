@@ -52,7 +52,6 @@ struct Bvh
 struct TriangleBvh final : Bvh
 {
     std::vector<TriangleVertexIndices> triangle_vertex_indices;
-    glm::uvec4 arm_triangle_ranges{};
 };
 
 struct EdgeBvh final : Bvh

@@ -626,12 +626,6 @@ bool ClothGpuState::is_initialized() const
            !state_.bending_color_states.empty();
 }
 
-bool ClothGpuState::has_multiple_garments() const
-{
-    return state_.garments[GarmentLayer::Lower].vertex_count != 0u &&
-           state_.garments[GarmentLayer::Upper].vertex_count != 0u;
-}
-
 bool ClothGpuState::has_gpu_objects() const
 {
     return state_.buffers.vao != 0 &&

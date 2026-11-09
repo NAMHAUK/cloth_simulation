@@ -109,7 +109,6 @@ void CharacterGpuState::initialize_mesh(const CharacterMotion& motion,
 
     vertex_count_ = motion.vertex_count;
     triangle_count_ = adjacency.triangle_count;
-    arm_triangle_ranges_ = body_triangle_bvh.arm_triangle_ranges;
     index_count_ = static_cast<GLsizei>(body_triangle_bvh.triangle_vertex_indices.size() * triangle_vertex_count);
 }
 
@@ -188,19 +187,9 @@ std::uint32_t CharacterGpuState::vertex_count() const
     return vertex_count_;
 }
 
-std::uint32_t CharacterGpuState::triangle_count() const
-{
-    return triangle_count_;
-}
-
 const CharacterBufferSet& CharacterGpuState::buffer_set() const
 {
     return buffers_;
-}
-
-glm::uvec4 CharacterGpuState::body_arm_triangle_ranges() const
-{
-    return arm_triangle_ranges_;
 }
 
 // Release
@@ -248,7 +237,6 @@ void CharacterGpuState::reset_resources() noexcept
     frame_count_ = 0;
     vertex_count_ = 0;
     triangle_count_ = 0;
-    arm_triangle_ranges_ = {};
     current_frame_index_ = 0;
     index_count_ = 0;
 }

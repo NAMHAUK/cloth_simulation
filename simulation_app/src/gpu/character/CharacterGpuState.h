@@ -8,8 +8,6 @@
 #include <cstdint>
 #include <filesystem>
 
-#include <glm/vec4.hpp>
-
 class CharacterGpuState final
 {
 public:
@@ -30,9 +28,7 @@ public:
     void draw(QOpenGLFunctions_4_5_Core& gl) const;
 
     std::uint32_t vertex_count() const;
-    std::uint32_t triangle_count() const;
     const CharacterBufferSet& buffer_set() const;
-    glm::uvec4 body_arm_triangle_ranges() const;
 
     void release(QOpenGLFunctions_4_5_Core& gl);
 
@@ -64,5 +60,4 @@ private:
     std::uint32_t current_frame_index_ = 0;
 
     std::uint32_t triangle_count_ = 0;
-    glm::uvec4 arm_triangle_ranges_{};
 };

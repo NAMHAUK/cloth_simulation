@@ -15,8 +15,6 @@ namespace {
 constexpr std::size_t leaf_size = 4u;
 constexpr std::size_t shader_max_bvh_stack_depth = 32u;
 
-constexpr std::uint8_t left_arm_part_label = body_part_label_value(BodyPartLabel::LeftArm);
-constexpr std::uint8_t right_arm_part_label = body_part_label_value(BodyPartLabel::RightArm);
 using LabelCounts = std::array<std::uint32_t, body_part_label_count>;
 
 bool is_excluded_part(std::uint8_t part_label)
@@ -133,35 +131,20 @@ TriangleBvh MeshBvhBuilder::build_triangle_bvh()
     reset_build();
     make_triangle_primitives();
     build_bvh();
-
-    // Triangle indices and arm ranges
+    
     std::vector<TriangleVertexIndices> triangles;
     triangles.reserve(primitives_.size() + excluded_triangle_indices_.size());
 
-    std::array<glm::uvec2, 2> arm_ranges{};
-    for (std::uint32_t primitive_index = 0; primitive_index < primitives_.size(); ++primitive_index) {
-        const BvhPrimitive& primitive = primitives_[primitive_index];
+    // Triangles in BVH order
+    for (const BvhPrimitive& primitive : primitives_) {
         triangles.push_back(source_triangles_[primitive.element_index]);
-
-        const std::uint8_t part_label = primitive.part_label;
-        if (part_label != left_arm_part_label && part_label != right_arm_part_label) {
-            continue;
-        }
-
-        glm::uvec2& range = arm_ranges[part_label - left_arm_part_label];
-        if (range.y == 0u) {
-            range.x = primitive_index;
-        }
-        range.y = primitive_index + 1u;
     }
 
-    // Rendering-only triangles
+    // Rendering-only triangles: Hands
     for (std::uint32_t triangle_index : excluded_triangle_indices_) {
         triangles.push_back(source_triangles_[triangle_index]);
     }
-    return {std::move(bvh_),
-            std::move(triangles),
-            {arm_ranges[0].x, arm_ranges[0].y, arm_ranges[1].x, arm_ranges[1].y}};
+    return {std::move(bvh_), std::move(triangles)};
 }
 
 EdgeBvh MeshBvhBuilder::build_edge_bvh()
