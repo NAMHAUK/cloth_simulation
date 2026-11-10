@@ -7,7 +7,6 @@
 
 #include <utility>
 
-#include <QMessageBox>
 #include <QString>
 
 PlacementController::PlacementController(SimulationController& simulation_controller,
@@ -63,12 +62,7 @@ void PlacementController::connect_placement_panel()
     connect(&placement_panel_, &PlacementPanel::confirm_requested, this, [this]() {
         color_panel_.close_panel();
 
-        try {
-            simulation_controller_.confirm_garment_placement();
-        } catch (const std::exception& error) {
-            handle_placement_failure(error);
-            return;
-        }
+        simulation_controller_.confirm_garment_placement();
 
         cards_panel_.confirm_cards();
         simulation_controller_.start_simulation();
@@ -120,12 +114,7 @@ void PlacementController::load_garment(const std::filesystem::path& asset_path, 
 
     const GarmentLayer layer = target_layer();
 
-    try {
-        simulation_controller_.set_garment_mesh(layer, std::move(mesh));
-    } catch (const std::exception& error) {
-        handle_placement_failure(error);
-        return;
-    }
+    simulation_controller_.set_garment_mesh(layer, std::move(mesh));
 
     const QString garment_name = QString::fromStdWString(asset_path.stem().wstring());
     cards_panel_.set_card(layer, garment_name);
@@ -147,17 +136,6 @@ GarmentLayer PlacementController::target_layer() const
         return GarmentLayer::Lower;
     }
     return GarmentLayer::Upper;
-}
-
-void PlacementController::handle_placement_failure(const std::exception& error)
-{
-    simulation_controller_.reset_scene();
-    reset();
-    Q_EMIT active_changed();
-    QMessageBox::critical(placement_panel_.window(),
-                          "Placement Failed",
-                          QStringLiteral("Garment placement failed due to an internal error:\n") +
-                              QString::fromUtf8(error.what()));
 }
 
 void PlacementController::end_session()

@@ -59,7 +59,12 @@ void MainWindow::setup_simulation_controller(SimulationParams params)
     Viewport* const viewport = viewport_;
 
     auto run_gl_task = [viewport](SimulationController::GlContextTask task) {
-        run_with_gl_context(*viewport, [viewport, &task]() { task(viewport->gl_functions()); });
+        // Simulation failures terminate the application.
+        try {
+            run_with_gl_context(*viewport, [viewport, &task]() { task(viewport->gl_functions()); });
+        } catch (const std::exception& error) {
+            qFatal("Simulation task failed: %s", error.what());
+        }
     };
     simulation_controller_->set_run_with_gl_context(std::move(run_gl_task));
 
