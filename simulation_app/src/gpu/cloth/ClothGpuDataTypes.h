@@ -17,9 +17,9 @@ struct ClothBufferSet final
     GLuint triangle_vertex_indices = 0;
     GLuint adjacent_triangle_offsets = 0;
     GLuint adjacent_triangle_indices = 0;
-    GLuint stretch_edge_index = 0;
+    GLuint stretch_edge_vertex_indices = 0;
     GLuint stretch_rest_length = 0;
-    GLuint bending_edge_index = 0;
+    GLuint bending_edge_vertex_indices = 0;
     GLuint bending_rest_length = 0;
     GLuint attachment_indices = 0;
     GLuint attachment_barycentric_offset = 0;
@@ -28,7 +28,7 @@ struct ClothBufferSet final
     GLuint triangle_bvh_node = 0;
     GLuint triangle_bounds = 0;
     GLuint vertex_face_exclusions = 0;
-    GLuint edge_index = 0;
+    GLuint edge_vertex_indices = 0;
     GLuint edge_bounds = 0;
     GLuint edge_bvh_node = 0;
     GLuint edge_exclusions = 0;

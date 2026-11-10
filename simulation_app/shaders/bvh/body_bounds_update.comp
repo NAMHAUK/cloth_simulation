@@ -18,8 +18,9 @@ layout(std430, binding = BODY_TRIANGLE_NORMALS) readonly buffer BodyTriangleNorm
     vec4 body_triangle_normals[];
 };
 
-layout(std430, binding = CHARACTER_TRIANGLE_INDICES) readonly buffer BodyTriangleIndices {
-    uint triangle_indices[];
+layout(std430, binding = CHARACTER_TRIANGLE_VERTEX_INDICES) readonly buffer BodyTriangleVertexIndices
+{
+    TriangleVertexIndices triangle_vertex_indices[];
 };
 
 layout(std430, binding = CHARACTER_CURRENT_POSITIONS) readonly buffer BodyCurrentPositions {
@@ -38,8 +39,9 @@ layout(std430, binding = BODY_TRIANGLE_BOUNDS) buffer BodyTriangleBounds {
     Aabb body_triangle_bounds[];
 };
 
-layout(std430, binding = BODY_EDGE_INDICES) readonly buffer BodyEdgeIndices {
-    uint body_edge_indices[];
+layout(std430, binding = BODY_EDGE_VERTEX_INDICES) readonly buffer BodyEdgeVertexIndices
+{
+    uvec2 body_edge_vertex_indices[];
 };
 
 layout(std430, binding = BODY_EDGE_BVH_NODES) buffer BodyEdgeBvhNodes {
@@ -58,7 +60,6 @@ uniform float uDetectionDistance;
 
 #define POSITION_IO_BODY_CURRENT
 #define POSITION_IO_BODY_PREVIOUS
-#define POSITION_IO_TRIANGLE_INDICES
 #include "../mesh/position_io.glsl"
 
 void update_triangle_leaf_bounds(uint node_index, BvhNode node)
@@ -74,19 +75,12 @@ void update_triangle_leaf_bounds(uint node_index, BvhNode node)
             continue;
         }
 
-        uvec3 vertex_indices = read_triangle_indices(triangle_index);
-        vec3 previous_a = read_body_previous_position(vertex_indices.x);
-        vec3 previous_b = read_body_previous_position(vertex_indices.y);
-        vec3 previous_c = read_body_previous_position(vertex_indices.z);
+        TrianglePositions previous = read_body_previous_triangle(triangle_vertex_indices[triangle_index]);
 
-        vec3 current_a = triangle.a;
-        vec3 current_b = triangle.b;
-        vec3 current_c = triangle.c;
-
-        vec3 current_min_bounds = min(current_a, min(current_b, current_c));
-        vec3 current_max_bounds = max(current_a, max(current_b, current_c));
-        vec3 swept_min_bounds = min(min(previous_a, min(previous_b, previous_c)), current_min_bounds);
-        vec3 swept_max_bounds = max(max(previous_a, max(previous_b, previous_c)), current_max_bounds);
+        vec3 current_min_bounds = min(triangle.a, min(triangle.b, triangle.c));
+        vec3 current_max_bounds = max(triangle.a, max(triangle.b, triangle.c));
+        vec3 swept_min_bounds = min(min(previous.a, min(previous.b, previous.c)), current_min_bounds);
+        vec3 swept_max_bounds = max(max(previous.a, max(previous.b, previous.c)), current_max_bounds);
         body_triangle_bounds[triangle_index].min_bounds = vec4(swept_min_bounds - uDetectionDistance, 0.0);
         body_triangle_bounds[triangle_index].max_bounds = vec4(swept_max_bounds + uDetectionDistance, 0.0);
         min_bounds = min(min_bounds, swept_min_bounds);
@@ -113,15 +107,12 @@ void update_edge_leaf_bounds(uint node_index, BvhNode node)
     vec3 max_bounds = vec3(-max_float);
     for (uint edge_offset = 0u; edge_offset < node.element_count; ++edge_offset) {
         uint edge_index = node.first_element_index + edge_offset;
-        uint edge_base = edge_index * 2u;
-        uint vertex_a = body_edge_indices[edge_base];
-        uint vertex_b = body_edge_indices[edge_base + 1u];
-        vec3 previous_a = read_body_previous_position(vertex_a);
-        vec3 previous_b = read_body_previous_position(vertex_b);
-        vec3 current_a = read_body_current_position(vertex_a);
-        vec3 current_b = read_body_current_position(vertex_b);
-        vec3 edge_min_bounds = min(min(previous_a, previous_b), min(current_a, current_b));
-        vec3 edge_max_bounds = max(max(previous_a, previous_b), max(current_a, current_b));
+        uvec2 vertex_indices = body_edge_vertex_indices[edge_index];
+        EdgePositions previous = read_body_previous_edge(vertex_indices);
+        EdgePositions current = read_body_current_edge(vertex_indices);
+
+        vec3 edge_min_bounds = min(min(previous.a, previous.b), min(current.a, current.b));
+        vec3 edge_max_bounds = max(max(previous.a, previous.b), max(current.a, current.b));
         body_edge_bounds[edge_index].min_bounds = vec4(edge_min_bounds - uDetectionDistance, 0.0);
         body_edge_bounds[edge_index].max_bounds = vec4(edge_max_bounds + uDetectionDistance, 0.0);
         min_bounds = min(min_bounds, edge_min_bounds);

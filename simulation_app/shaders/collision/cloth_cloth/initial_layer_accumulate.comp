@@ -14,8 +14,9 @@ layout(std430, binding = CLOTH_PREVIOUS_POSITIONS) readonly buffer ClothPrevious
     vec4 cloth_previous_positions[];
 };
 
-layout(std430, binding = CLOTH_TRIANGLE_VERTEX_INDICES) readonly buffer ClothTriangleIndices {
-    uint triangle_indices[];
+layout(std430, binding = CLOTH_TRIANGLE_VERTEX_INDICES) readonly buffer ClothTriangleVertexIndices
+{
+    TriangleVertexIndices triangle_vertex_indices[];
 };
 
 layout(std430, binding = CLOTH_CLOTH_VERTEX_FACE_CANDIDATES) readonly buffer Candidates {
@@ -50,7 +51,6 @@ uniform uint uUpperVertexOffset;
 uniform uint uUpperVertexCount;
 
 #define CLOTH_INITIAL_LAYER_CONTACT
-#define POSITION_IO_TRIANGLE_INDICES
 
 #include "contact_correction.glsl"
 
@@ -75,10 +75,10 @@ void main()
 
     uvec2 candidate_indices = candidates[candidate_index];
     uint vertex_index = candidate_indices.x;
-    uvec3 face_vertex_indices = read_triangle_indices(candidate_indices.y);
+    TriangleVertexIndices face_vertex_indices = triangle_vertex_indices[candidate_indices.y];
 
     uint vertex_layer = get_garment_layer(vertex_index);
-    uint face_layer = get_garment_layer(face_vertex_indices.x);
+    uint face_layer = get_garment_layer(face_vertex_indices.a);
 
     if (vertex_layer == face_layer) {
         accumulate_vertex_face_penetration_correction(vertex_index, face_vertex_indices);

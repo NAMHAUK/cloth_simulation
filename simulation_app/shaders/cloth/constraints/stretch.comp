@@ -8,8 +8,9 @@ layout(std430, binding = CLOTH_CURRENT_POSITIONS) buffer CurrentPositions {
     vec4 current_positions[];
 };
 
-layout(std430, binding = STRETCH_EDGE_INDICES) readonly buffer StretchEdgeIndices {
-    uint edge_indices[];
+layout(std430, binding = STRETCH_EDGE_VERTEX_INDICES) readonly buffer StretchEdgeVertexIndices
+{
+    uvec2 vertex_indices[];
 };
 
 layout(std430, binding = STRETCH_REST_LENGTHS) readonly buffer StretchRestLengths {
@@ -28,12 +29,10 @@ void main()
     }
 
     uint constraint_index = uConstraintOffset + local_index;
-    uint edge_base = constraint_index * 2u;
-    uint vertex_a = edge_indices[edge_base];
-    uint vertex_b = edge_indices[edge_base + 1u];
+    uvec2 edge = vertex_indices[constraint_index];
 
-    vec3 position_a = current_positions[vertex_a].xyz;
-    vec3 position_b = current_positions[vertex_b].xyz;
+    vec3 position_a = current_positions[edge.x].xyz;
+    vec3 position_b = current_positions[edge.y].xyz;
 
     vec3 delta = position_b - position_a;
     float current_length = length(delta);
@@ -48,6 +47,6 @@ void main()
     position_a += correction;
     position_b -= correction;
 
-    current_positions[vertex_a] = vec4(position_a, 0.0);
-    current_positions[vertex_b] = vec4(position_b, 0.0);
+    current_positions[edge.x].xyz = position_a;
+    current_positions[edge.y].xyz = position_b;
 }

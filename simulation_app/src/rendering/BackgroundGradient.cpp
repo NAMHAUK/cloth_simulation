@@ -1,5 +1,4 @@
 #include "rendering/BackgroundGradient.h"
-
 #include "utils/ShaderUtils.h"
 
 #include <cassert>

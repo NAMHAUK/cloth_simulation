@@ -1,11 +1,9 @@
 #include "gpu/bvh/BvhBoundsUpdater.h"
-
 #include "gpu/cloth/ClothGpuState.h"
 #include "utils/ShaderUtils.h"
 
 #include <algorithm>
 #include <cstdint>
-#include <stdexcept>
 
 namespace {
 constexpr std::uint32_t local_size = 128;

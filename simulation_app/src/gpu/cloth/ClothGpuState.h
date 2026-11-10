@@ -44,7 +44,6 @@ public:
     void draw_garment(GarmentLayer layer, QOpenGLFunctions_4_5_Core& gl) const;
 
     bool is_initialized() const;
-    bool has_multiple_garments() const;
 
     const std::array<GarmentBufferState, 2>& garment_states() const;
     const ClothBufferElementCounts& element_counts() const;

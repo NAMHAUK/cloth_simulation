@@ -44,8 +44,8 @@ void main()
     vec3 position_delta = current - previous - collision_pushout + inward_motion_corrections[vertex_index].xyz;
     vec3 next = uPositionCoefficient * current + uDisplacementCoefficient * position_delta + uPositionOffset;
 
-    previous_positions[vertex_index] = vec4(current, 0.0);
-    current_positions[vertex_index] = vec4(next, 0.0);
+    previous_positions[vertex_index].xyz = current;
+    current_positions[vertex_index].xyz = next;
 
     // reset
     collision_pushouts[vertex_index] = vec4(0.0);

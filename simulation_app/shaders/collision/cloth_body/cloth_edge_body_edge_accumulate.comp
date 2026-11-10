@@ -12,8 +12,9 @@ layout(std430, binding = CLOTH_PREVIOUS_POSITIONS) readonly buffer ClothPrevious
     vec4 cloth_previous_positions[];
 };
 
-layout(std430, binding = STRETCH_EDGE_INDICES) readonly buffer ClothEdgeIndices {
-    uint cloth_edge_indices[];
+layout(std430, binding = STRETCH_EDGE_VERTEX_INDICES) readonly buffer ClothEdgeVertexIndices
+{
+    uvec2 cloth_edge_vertex_indices[];
 };
 
 layout(std430, binding = CHARACTER_PREVIOUS_POSITIONS) readonly buffer BodyPreviousPositions {
@@ -24,8 +25,9 @@ layout(std430, binding = CHARACTER_CURRENT_POSITIONS) readonly buffer BodyCurren
     vec4 body_current_positions[];
 };
 
-layout(std430, binding = BODY_EDGE_INDICES) readonly buffer BodyEdgeIndices {
-    uint body_edge_indices[];
+layout(std430, binding = BODY_EDGE_VERTEX_INDICES) readonly buffer BodyEdgeVertexIndices
+{
+    uvec2 body_edge_vertex_indices[];
 };
 
 layout(std430, binding = CLOTH_EDGE_BODY_EDGE_CANDIDATES) readonly buffer Candidates {

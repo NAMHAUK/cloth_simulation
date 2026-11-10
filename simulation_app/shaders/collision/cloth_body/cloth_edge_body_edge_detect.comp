@@ -14,8 +14,9 @@ layout(std430, binding = CLOTH_PREVIOUS_POSITIONS) readonly buffer ClothPrevious
     vec4 cloth_previous_positions[];
 };
 
-layout(std430, binding = STRETCH_EDGE_INDICES) readonly buffer ClothEdgeIndices {
-    uint cloth_edge_indices[];
+layout(std430, binding = STRETCH_EDGE_VERTEX_INDICES) readonly buffer ClothEdgeVertexIndices
+{
+    uvec2 cloth_edge_vertex_indices[];
 };
 
 layout(std430, binding = BODY_EDGE_BOUNDS) readonly buffer BodyEdgeBounds {
@@ -55,17 +56,12 @@ void detect_leaf_candidates(DetectionInput detection_input, BvhNode node);
 
 Aabb build_cloth_edge_swept_aabb(uint cloth_edge_index)
 {
-    uint edge_base = cloth_edge_index * 2u;
-    uint vertex_a = cloth_edge_indices[edge_base];
-    uint vertex_b = cloth_edge_indices[edge_base + 1u];
+    uvec2 vertex_indices = cloth_edge_vertex_indices[cloth_edge_index];
+    EdgePositions previous = read_cloth_previous_edge(vertex_indices);
+    EdgePositions current = read_cloth_current_edge(vertex_indices);
 
-    vec3 previous_a = read_cloth_previous_position(vertex_a);
-    vec3 previous_b = read_cloth_previous_position(vertex_b);
-    vec3 current_a = read_cloth_current_position(vertex_a);
-    vec3 current_b = read_cloth_current_position(vertex_b);
-
-    vec3 min_bounds = min(min(previous_a, previous_b), min(current_a, current_b));
-    vec3 max_bounds = max(max(previous_a, previous_b), max(current_a, current_b));
+    vec3 min_bounds = min(min(previous.a, previous.b), min(current.a, current.b));
+    vec3 max_bounds = max(max(previous.a, previous.b), max(current.a, current.b));
     return Aabb(vec4(min_bounds, 0.0), vec4(max_bounds, 0.0));
 }
 

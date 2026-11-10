@@ -1,9 +1,6 @@
 #include "simulation/SceneState.h"
 #include "utils/NumericUtils.h"
 
-#include <glm/gtc/quaternion.hpp>
-#include <glm/vec3.hpp>
-
 #include <algorithm>
 #include <cassert>
 #include <cmath>
@@ -11,6 +8,8 @@
 #include <utility>
 
 #include <glm/geometric.hpp>
+#include <glm/gtc/quaternion.hpp>
+#include <glm/vec3.hpp>
 
 namespace {
 glm::vec3 frame_position(const std::vector<float>& positions, std::uint32_t frame_index)
@@ -71,7 +70,7 @@ void SceneState::set_character_motion(CharacterMotion motion)
                        frame_orientation(character_motion_.torso_orientations, 0u));
 }
 
-void SceneState::set_body_bvhs(Bvh triangle_bvh, Bvh edge_bvh)
+void SceneState::set_body_bvhs(TriangleBvh triangle_bvh, EdgeBvh edge_bvh)
 {
     default_body_triangle_bvh_ = std::move(triangle_bvh);
     default_body_edge_bvh_ = std::move(edge_bvh);
@@ -170,16 +169,8 @@ GarmentObject& SceneState::place_garment(GarmentLayer layer, const glm::vec3& po
     assert(garment != nullptr);
 
     GarmentMesh& mesh = garment->mesh;
-    for (std::size_t index = 0; index < mesh.vertices.size(); index += 3u) {
-        glm::vec3 position{
-            mesh.vertices[index],
-            mesh.vertices[index + 1u],
-            mesh.vertices[index + 2u],
-        };
+    for (glm::vec3& position : mesh.vertex_positions) {
         position = mesh.bounds_center + (position - mesh.bounds_center) * scale + position_offset;
-        mesh.vertices[index] = position.x;
-        mesh.vertices[index + 1u] = position.y;
-        mesh.vertices[index + 2u] = position.z;
     }
 
     mesh.bounds_center += position_offset;
@@ -243,12 +234,12 @@ const CharacterMotion& SceneState::character_motion() const
     return character_motion_;
 }
 
-const Bvh& SceneState::default_body_triangle_bvh() const
+const TriangleBvh& SceneState::default_body_triangle_bvh() const
 {
     return default_body_triangle_bvh_;
 }
 
-const Bvh& SceneState::default_body_edge_bvh() const
+const EdgeBvh& SceneState::default_body_edge_bvh() const
 {
     return default_body_edge_bvh_;
 }

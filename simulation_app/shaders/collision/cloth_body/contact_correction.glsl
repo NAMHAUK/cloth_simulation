@@ -8,10 +8,6 @@
 #define COLLISION_INWARD_MOTION_ACCUMULATE
 #define COLLISION_CORRECTION_FRICTION_ACCUMULATE
 
-#ifdef CLOTH_BODY_VERTEX_FACE_CONTACT
-#define POSITION_IO_TRIANGLE_INDICES
-#endif
-
 #ifdef CLOTH_BODY_EDGE_EDGE_CONTACT
 #define POSITION_IO_BODY_CURRENT
 #endif
@@ -29,7 +25,7 @@ void accumulate_vertex_face_collision_correction(uint cloth_vertex_index, uint t
     }
 
     TrianglePositions cur_triangle_pos = body_triangle_positions[triangle_index];
-    TrianglePositions prev_triangle_pos = read_body_previous_triangle(read_triangle_indices(triangle_index));
+    TrianglePositions prev_triangle_pos = read_body_previous_triangle(triangle_vertex_indices[triangle_index]);
     vec3 cur_vertex_pos = read_cloth_current_position(cloth_vertex_index);
     vec3 prev_vertex_pos = read_cloth_previous_position(cloth_vertex_index);
 
@@ -78,10 +74,8 @@ void accumulate_vertex_face_collision_correction(uint cloth_vertex_index, uint t
 void accumulate_edge_edge_collision_correction(uvec2 candidate)
 {
     // read & calculate edge closest point
-    uvec2 cloth_vertices = uvec2(cloth_edge_indices[candidate.x * 2u],
-                                 cloth_edge_indices[candidate.x * 2u + 1u]);
-    uvec2 body_vertices = uvec2(body_edge_indices[candidate.y * 2u],
-                                body_edge_indices[candidate.y * 2u + 1u]);
+    uvec2 cloth_vertices = cloth_edge_vertex_indices[candidate.x];
+    uvec2 body_vertices = body_edge_vertex_indices[candidate.y];
 
     EdgePositions cur_cloth_edge_pos = read_cloth_current_edge(cloth_vertices);
     EdgePositions cur_body_edge_pos = read_body_current_edge(body_vertices);

@@ -1,5 +1,4 @@
 ﻿#include "ui/Viewport.h"
-
 #include "app/ProjectPaths.h"
 #include "ui/AssetBrowserPanel.h"
 #include "ui/GarmentCardsPanel.h"

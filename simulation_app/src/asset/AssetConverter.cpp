@@ -1,5 +1,4 @@
 #include "asset/AssetConverter.h"
-
 #include "simulation/SimulationParams.h"
 #include "utils/QtUtils.h"
 

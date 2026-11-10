@@ -1,5 +1,4 @@
 #include "ui/MotionCard.h"
-
 #include "ui/ElidedLabel.h"
 
 #include <QEasingCurve>

@@ -12,8 +12,9 @@ layout(std430, binding = CLOTH_PREVIOUS_POSITIONS) readonly buffer ClothPrevious
     vec4 cloth_previous_positions[];
 };
 
-layout(std430, binding = CLOTH_EDGE_INDICES) readonly buffer ClothEdgeIndices {
-    uint cloth_edge_indices[];
+layout(std430, binding = CLOTH_EDGE_VERTEX_INDICES) readonly buffer ClothEdgeVertexIndices
+{
+    uvec2 cloth_edge_vertex_indices[];
 };
 
 layout(std430, binding = CLOTH_CLOTH_EDGE_EDGE_CANDIDATES) readonly buffer Candidates {
@@ -57,9 +58,6 @@ void main()
         return;
     }
     uvec2 edges = candidates[candidate_index];
-    uvec4 vertices = uvec4(cloth_edge_indices[edges.x * 2u],
-                          cloth_edge_indices[edges.x * 2u + 1u],
-                          cloth_edge_indices[edges.y * 2u],
-                          cloth_edge_indices[edges.y * 2u + 1u]);
+    uvec4 vertices = uvec4(cloth_edge_vertex_indices[edges.x], cloth_edge_vertex_indices[edges.y]);
     accumulate_edge_edge_collision_correction(vertices);
 }

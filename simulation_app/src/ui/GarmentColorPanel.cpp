@@ -1,7 +1,5 @@
 #include "ui/GarmentColorPanel.h"
 
-#include <utility>
-
 #include <QElapsedTimer>
 #include <QEvent>
 #include <QHBoxLayout>
