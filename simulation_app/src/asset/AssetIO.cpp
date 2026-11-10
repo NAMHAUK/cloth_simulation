@@ -11,6 +11,8 @@
 #include <stdexcept>
 #include <vector>
 
+#include <glm/geometric.hpp>
+
 namespace {
 constexpr std::size_t quat_components = 4u;
 
@@ -98,8 +100,7 @@ bool are_valid_distance_constraints(const GarmentDistanceConstraints& constraint
            !constraints.color_states.empty() &&
            constraints.colorized_edges.size() == constraints.rest_lengths.size() &&
            are_valid_edges(constraints.colorized_edges, vertex_count) &&
-           are_valid_constraint_color_states(constraints.color_states, constraints.colorized_edges.size()) &&
-           is_finite_values(constraints.rest_lengths);
+           are_valid_constraint_color_states(constraints.color_states, constraints.colorized_edges.size());
 }
 
 void validate_motion_asset_file_size(const std::filesystem::path& path, const CharacterMotion& motion)
@@ -165,6 +166,38 @@ void validate_character_motion(const CharacterMotion& motion)
     }
 }
 
+void validate_garment_geometry(const GarmentMesh& garment_mesh)
+{
+    for (const auto& [vertex_a, vertex_b, vertex_c] : garment_mesh.triangle_vertex_indices) {
+        const glm::dvec3 position_a = garment_mesh.vertex_positions[vertex_a];
+        const glm::dvec3 position_b = garment_mesh.vertex_positions[vertex_b];
+        const glm::dvec3 position_c = garment_mesh.vertex_positions[vertex_c];
+
+        if (glm::cross(position_b - position_a, position_c - position_a) == glm::dvec3{0.0}) {
+            throw std::runtime_error("Degenerate garment rest triangle.");
+        }
+    }
+
+    // Stretch constraints
+    for (float rest_length : garment_mesh.stretch_constraints.rest_lengths) {
+        if (!std::isfinite(rest_length) || rest_length <= 0.0f) {
+            throw std::runtime_error("Invalid garment distance constraint.");
+        }
+    }
+
+    // Bending constraints
+    for (std::size_t index = 0; index < garment_mesh.bending_constraints.colorized_edges.size(); ++index) {
+        const float rest_length = garment_mesh.bending_constraints.rest_lengths[index];
+        const auto& [vertex_a, vertex_b] = garment_mesh.bending_constraints.colorized_edges[index];
+
+        if (!std::isfinite(rest_length) ||
+            rest_length <= 0.0f ||
+            garment_mesh.vertex_positions[vertex_a] == garment_mesh.vertex_positions[vertex_b]) {
+            throw std::runtime_error("Invalid garment distance constraint.");
+        }
+    }
+}
+
 void validate_garment_mesh(const GarmentMesh& garment_mesh)
 {
     const bool has_valid_garment_category = garment_mesh.garment_category == GarmentCategory::Top ||
@@ -190,6 +223,8 @@ void validate_garment_mesh(const GarmentMesh& garment_mesh)
         !are_valid_distance_constraints(garment_mesh.bending_constraints, vertex_count)) {
         throw std::runtime_error("Invalid garment constraints");
     }
+
+    validate_garment_geometry(garment_mesh);
 
     if (!are_valid_vertex_indices(garment_mesh.attachment_vertex_indices, vertex_count)) {
         throw std::runtime_error("Invalid garment attachment vertices");
