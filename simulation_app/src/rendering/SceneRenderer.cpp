@@ -134,4 +134,3 @@ void SceneRenderer::release(QOpenGLFunctions_4_5_Core& gl)
     diffuse_strength_loc_ = -1;
     fill_diffuse_strength_loc_ = -1;
 }
-

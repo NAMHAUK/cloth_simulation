@@ -1,8 +1,8 @@
 #include "gpu/cloth/ClothGpuState.h"
-#include "utils/MeshGeometryUtils.h"
 #include "simulation/SceneState.h"
 #include "simulation/collision/Bvh.h"
 #include "utils/BufferUtils.h"
+#include "utils/MeshGeometryUtils.h"
 #include <algorithm>
 #include <cstddef>
 #include <cstdint>
@@ -34,8 +34,7 @@ void clear_dynamic_state(const ClothBufferSet& buffers,
     }
 }
 
-ClothBufferSet create_dynamic_buffer_set(const ClothBufferElementCounts& counts,
-                                         QOpenGLFunctions_4_5_Core& gl)
+ClothBufferSet create_dynamic_buffer_set(const ClothBufferElementCounts& counts, QOpenGLFunctions_4_5_Core& gl)
 {
     ClothBufferSet buffers;
     const auto create_buffer = [&](GLuint& buffer, GLsizeiptr size) {
@@ -125,8 +124,7 @@ void ClothGpuState::rebuild_buffers(const std::vector<GarmentObject>& garments,
     configure_vao(gl);
 }
 
-void ClothGpuState::create_simulation_buffers(const std::vector<GarmentObject>& garments,
-                                              QOpenGLFunctions_4_5_Core& gl)
+void ClothGpuState::create_simulation_buffers(const std::vector<GarmentObject>& garments, QOpenGLFunctions_4_5_Core& gl)
 {
     upload_topology(garments, state_, gl);
     create_bvh_buffers(garments, state_, gl);
@@ -138,8 +136,7 @@ void ClothGpuState::create_simulation_buffers(const std::vector<GarmentObject>& 
     }
 }
 
-void ClothGpuState::assign_garment_buffer_states(const std::vector<GarmentObject>& garments,
-                                                 BufferState& state)
+void ClothGpuState::assign_garment_buffer_states(const std::vector<GarmentObject>& garments, BufferState& state)
 {
     const auto append_elements = [](std::uint32_t& total_count, std::uint32_t count) {
         const std::uint32_t start_index = total_count;
@@ -153,18 +150,15 @@ void ClothGpuState::assign_garment_buffer_states(const std::vector<GarmentObject
         auto& element_counts = state.element_counts;
         GarmentBufferState& garment_state = state.garments[layer];
 
-        garment_state.vertex_count = static_cast<std::uint32_t>(mesh.vertex_positions.size());
+        garment_state.vertex_count = mesh.vertex_positions.size();
         garment_state.vertex_start_index = append_elements(element_counts.vertex, garment_state.vertex_count);
-        garment_state.triangle_count = static_cast<std::uint32_t>(mesh.triangle_vertex_indices.size());
+        garment_state.triangle_count = mesh.triangle_vertex_indices.size();
         garment_state.triangle_start_index = append_elements(element_counts.triangle, garment_state.triangle_count);
-        garment_state.stretch_constraint_count =
-            static_cast<std::uint32_t>(mesh.stretch_constraints.colorized_edges.size());
+        garment_state.stretch_constraint_count = mesh.stretch_constraints.colorized_edges.size();
         element_counts.stretch_constraint += garment_state.stretch_constraint_count;
-        garment_state.bending_constraint_count =
-            static_cast<std::uint32_t>(mesh.bending_constraints.colorized_edges.size());
+        garment_state.bending_constraint_count = mesh.bending_constraints.colorized_edges.size();
         element_counts.bending_constraint += garment_state.bending_constraint_count;
-        garment_state.attachment_constraint_count =
-            static_cast<std::uint32_t>(mesh.attachment_vertex_indices.size());
+        garment_state.attachment_constraint_count = mesh.attachment_vertex_indices.size();
         garment_state.attachment_constraint_start_index =
             append_elements(element_counts.attachment_constraint, garment_state.attachment_constraint_count);
     }
@@ -251,10 +245,10 @@ void ClothGpuState::upload_topology(const std::vector<GarmentObject>& garments,
         const std::uint32_t vertex_start_index = rebuild_state.garments[garment.layer].vertex_start_index;
         const auto& bvh_triangles = garment.triangle_bvh.triangle_vertex_indices;
         const auto& indices = bvh_triangles.empty() ? garment.mesh.triangle_vertex_indices : bvh_triangles;
+        
         for (const TriangleVertexIndices& triangle : indices) {
-            triangle_vertex_indices.push_back({vertex_start_index + triangle.a,
-                                               vertex_start_index + triangle.b,
-                                               vertex_start_index + triangle.c});
+            triangle_vertex_indices.push_back(
+                {vertex_start_index + triangle.a, vertex_start_index + triangle.b, vertex_start_index + triangle.c});
         }
     }
 
@@ -289,8 +283,8 @@ void ClothGpuState::create_vertex_face_exclusion_buffer(const std::vector<Garmen
         if (byte_size<std::uint32_t>(mask_count) > max_block_size) {
             throw std::runtime_error("Cloth vertex-face exclusion bitset exceeds the GPU SSBO size limit.");
         }
-        const auto garment_exclusions = build_vertex_neighborhood_masks(state.vertex_count,
-                                                                       garment.triangle_bvh.triangle_vertex_indices);
+        const auto garment_exclusions =
+            build_vertex_neighborhood_masks(state.vertex_count, garment.triangle_bvh.triangle_vertex_indices);
         exclusions.insert(exclusions.end(), garment_exclusions.begin(), garment_exclusions.end());
     }
 
@@ -356,8 +350,8 @@ void ClothGpuState::create_bvh_buffers(const std::vector<GarmentObject>& garment
         garment_state.edge_start_index = static_cast<std::uint32_t>(edges.size());
         garment_state.edge_count = static_cast<std::uint32_t>(garment.edge_bvh.edge_vertex_indices.size());
         for (const MeshEdge& edge : garment.edge_bvh.edge_vertex_indices) {
-            edges.push_back({garment_state.vertex_start_index + edge.vertex_a,
-                             garment_state.vertex_start_index + edge.vertex_b});
+            edges.push_back(
+                {garment_state.vertex_start_index + edge.vertex_a, garment_state.vertex_start_index + edge.vertex_b});
         }
 
         garment_state.triangle_bvh_level_offsets = garment.triangle_bvh.level_offsets;
@@ -457,10 +451,7 @@ void ClothGpuState::create_distance_constraint_buffers(const std::vector<Garment
         }
 
         gl.glCreateBuffers(1, &vertex_indices_buffer);
-        gl.glNamedBufferData(vertex_indices_buffer,
-                             byte_size<MeshEdge>(edges.size()),
-                             edges.data(),
-                             GL_STATIC_DRAW);
+        gl.glNamedBufferData(vertex_indices_buffer, byte_size<MeshEdge>(edges.size()), edges.data(), GL_STATIC_DRAW);
 
         gl.glCreateBuffers(1, &rest_length_buffer);
         gl.glNamedBufferData(rest_length_buffer,
@@ -595,7 +586,7 @@ void ClothGpuState::clear_base_positions(QOpenGLFunctions_4_5_Core& gl)
 void ClothGpuState::draw_garment(GarmentLayer layer, QOpenGLFunctions_4_5_Core& gl) const
 {
     const GarmentBufferState& garment_state = state_.garments[layer];
-    const auto index_offset_bytes = static_cast<std::uintptr_t>(garment_state.triangle_start_index) * sizeof(TriangleVertexIndices);
+    const auto index_offset_bytes = garment_state.triangle_start_index * sizeof(TriangleVertexIndices);
     gl.glBindVertexArray(state_.buffers.vao);
     gl.glDrawElements(GL_TRIANGLES,
                       static_cast<GLsizei>(garment_state.triangle_count * 3u),
@@ -607,10 +598,9 @@ void ClothGpuState::draw_garment(GarmentLayer layer, QOpenGLFunctions_4_5_Core& 
 bool ClothGpuState::is_initialized() const
 {
     return has_gpu_objects() &&
-           std::any_of(
-               state_.garments.begin(),
-               state_.garments.end(),
-               [](const GarmentBufferState& garment_state) { return garment_state.vertex_count != 0u; }) &&
+           std::any_of(state_.garments.begin(),
+                       state_.garments.end(),
+                       [](const GarmentBufferState& garment_state) { return garment_state.vertex_count != 0u; }) &&
            state_.element_counts.vertex > 0 &&
            state_.element_counts.triangle > 0 &&
            state_.element_counts.stretch_constraint > 0 &&

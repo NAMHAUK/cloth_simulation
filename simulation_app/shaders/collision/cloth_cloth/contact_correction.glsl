@@ -111,8 +111,8 @@ void accumulate_vertex_face_collision_correction(uint vertex_index, TriangleVert
 }
 
 void accumulate_edge_edge_collision_correction(uvec4 vertex_indices)
-{   
-    // read & calculate edge closest point 
+{
+    // read & calculate edge closest point
     EdgePositions cur_edge1_pos = read_cloth_current_edge(vertex_indices.xy);
     EdgePositions cur_edge2_pos = read_cloth_current_edge(vertex_indices.zw);
     SegmentState cur_segment1 = SegmentState(cur_edge1_pos, 0.0, cur_edge1_pos.a);
@@ -171,7 +171,7 @@ void accumulate_edge_edge_collision_correction(uvec4 vertex_indices)
 void accumulate_initial_layer_collision_correction(uint vertex_index,
                                                    TriangleVertexIndices face_vertex_indices,
                                                    bool is_outer_vertex)
-{   
+{
     // check triangle & vertex projection point
     vec3 vertex_position = read_cloth_current_position(vertex_index);
     TrianglePositions face = read_cloth_current_triangle(face_vertex_indices);
@@ -184,8 +184,7 @@ void accumulate_initial_layer_collision_correction(uint vertex_index,
     vec3 barycentric;
     float signed_distance = dot(vertex_position - face.a, face_normal.xyz);
     vec3 surface_point = vertex_position - face_normal.xyz * signed_distance;
-    if (!compute_barycentric(surface_point, face, barycentric) ||
-        !is_inside_triangle(barycentric)) {
+    if (!compute_barycentric(surface_point, face, barycentric) || !is_inside_triangle(barycentric)) {
         return;
     }
 
@@ -210,9 +209,7 @@ void accumulate_initial_layer_collision_correction(uint vertex_index,
     weights *= 1.0 / dot(weights, weights);
     for (uint i = 0u; i < 4u; ++i) {
         if (weights[i] != 0.0) {
-            accumulate_vertex_normal_correction(vertex_indices[i],
-                                                face_normal.xyz,
-                                                correction_distance * weights[i]);
+            accumulate_vertex_normal_correction(vertex_indices[i], face_normal.xyz, correction_distance * weights[i]);
         }
     }
 }

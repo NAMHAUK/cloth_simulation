@@ -4,35 +4,43 @@
 
 layout(local_size_x = 128) in;
 
-layout(std430, binding = CLOTH_TRIANGLE_NORMALS) readonly buffer ClothTriangleNormals {
+layout(std430, binding = CLOTH_TRIANGLE_NORMALS) readonly buffer ClothTriangleNormals
+{
     vec4 cloth_triangle_normals[];
 };
 
-layout(std430, binding = CLOTH_ADJACENT_TRIANGLE_OFFSETS) readonly buffer ClothAdjacentTriangleOffsets {
+layout(std430, binding = CLOTH_ADJACENT_TRIANGLE_OFFSETS) readonly buffer ClothAdjacentTriangleOffsets
+{
     uint cloth_adjacent_triangle_offsets[];
 };
 
-layout(std430, binding = CLOTH_ADJACENT_TRIANGLE_INDICES) readonly buffer ClothAdjacentTriangleIndices {
+layout(std430, binding = CLOTH_ADJACENT_TRIANGLE_INDICES) readonly buffer ClothAdjacentTriangleIndices
+{
     uint cloth_adjacent_triangle_indices[];
 };
 
-layout(std430, binding = CLOTH_VERTEX_NORMALS) writeonly buffer ClothVertexNormals {
+layout(std430, binding = CLOTH_VERTEX_NORMALS) writeonly buffer ClothVertexNormals
+{
     vec4 cloth_vertex_normals[];
 };
 
-layout(std430, binding = BODY_TRIANGLE_NORMALS) readonly buffer CharacterTriangleNormals {
+layout(std430, binding = BODY_TRIANGLE_NORMALS) readonly buffer CharacterTriangleNormals
+{
     vec4 character_triangle_normals[];
 };
 
-layout(std430, binding = CHARACTER_ADJACENT_TRIANGLE_OFFSETS) readonly buffer CharacterAdjacentTriangleOffsets {
+layout(std430, binding = CHARACTER_ADJACENT_TRIANGLE_OFFSETS) readonly buffer CharacterAdjacentTriangleOffsets
+{
     uint character_adjacent_triangle_offsets[];
 };
 
-layout(std430, binding = CHARACTER_ADJACENT_TRIANGLE_INDICES) readonly buffer CharacterAdjacentTriangleIndices {
+layout(std430, binding = CHARACTER_ADJACENT_TRIANGLE_INDICES) readonly buffer CharacterAdjacentTriangleIndices
+{
     uint character_adjacent_triangle_indices[];
 };
 
-layout(std430, binding = CHARACTER_VERTEX_NORMALS) writeonly buffer CharacterVertexNormals {
+layout(std430, binding = CHARACTER_VERTEX_NORMALS) writeonly buffer CharacterVertexNormals
+{
     vec4 character_vertex_normals[];
 };
 

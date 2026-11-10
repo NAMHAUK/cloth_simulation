@@ -52,8 +52,7 @@ void SimulationController::initialize(const std::filesystem::path& shader_dir,
     update_frame_timer();
 }
 
-void SimulationController::initialize_gpu(const std::filesystem::path& shader_dir,
-                                          QOpenGLFunctions_4_5_Core& gl)
+void SimulationController::initialize_gpu(const std::filesystem::path& shader_dir, QOpenGLFunctions_4_5_Core& gl)
 {
     if (is_gpu_initialized()) {
         throw std::runtime_error("Simulation GPU state is already initialized.");
@@ -219,9 +218,7 @@ void SimulationController::set_garment_mesh(GarmentLayer layer, GarmentMesh mesh
     });
 }
 
-void SimulationController::set_garment_placement(GarmentLayer layer,
-                                                 const glm::vec3& position_offset,
-                                                 float scale)
+void SimulationController::set_garment_placement(GarmentLayer layer, const glm::vec3& position_offset, float scale)
 {
     garment_placement_states_[layer]->position_offset = position_offset;
     garment_placement_states_[layer]->scale = scale;
@@ -350,17 +347,15 @@ void SimulationController::reset_garment_placements()
 // State
 bool SimulationController::is_gpu_initialized() const
 {
-    return gpu_state_.is_initialized() &&
-           simulation_pipeline_.is_initialized() &&
-           scene_renderer_.is_initialized();
+    return gpu_state_.is_initialized() && simulation_pipeline_.is_initialized() && scene_renderer_.is_initialized();
 }
 
 bool SimulationController::can_start_garment_placement() const
 {
-    const bool has_active_placement = std::any_of(
-        garment_placement_states_.begin(),
-        garment_placement_states_.end(),
-        [](const std::optional<GarmentPlacementState>& placement) { return placement.has_value(); });
+    const bool has_active_placement =
+        std::any_of(garment_placement_states_.begin(),
+                    garment_placement_states_.end(),
+                    [](const std::optional<GarmentPlacementState>& placement) { return placement.has_value(); });
     return has_active_placement || scene_.garments().size() < 2u;
 }
 

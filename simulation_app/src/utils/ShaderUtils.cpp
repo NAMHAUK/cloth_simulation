@@ -11,9 +11,7 @@
 
 namespace {
 
-GLuint compile_shader_file(GLenum type,
-                           const std::filesystem::path& shader_path,
-                           QOpenGLFunctions_4_5_Core& gl)
+GLuint compile_shader_file(GLenum type, const std::filesystem::path& shader_path, QOpenGLFunctions_4_5_Core& gl)
 {
     const std::string source = load_shader_source(shader_path);
     const char* source_data = source.c_str();

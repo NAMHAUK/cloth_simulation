@@ -6,7 +6,8 @@ layout(local_size_x = 128) in;
 
 #include "../mesh/primitive_geometry.glsl"
 
-layout(std430, binding = CHARACTER_CURRENT_POSITIONS) readonly buffer CharacterCurrentPositions {
+layout(std430, binding = CHARACTER_CURRENT_POSITIONS) readonly buffer CharacterCurrentPositions
+{
     vec4 body_current_positions[];
 };
 
@@ -15,11 +16,13 @@ layout(std430, binding = CHARACTER_TRIANGLE_VERTEX_INDICES) readonly buffer Char
     TriangleVertexIndices triangle_vertex_indices[];
 };
 
-layout(std430, binding = BODY_TRIANGLE_POSITIONS) writeonly buffer BodyTrianglePositions {
+layout(std430, binding = BODY_TRIANGLE_POSITIONS) writeonly buffer BodyTrianglePositions
+{
     TrianglePositions body_triangle_positions[];
 };
 
-layout(std430, binding = BODY_TRIANGLE_NORMALS) writeonly buffer BodyTriangleNormals {
+layout(std430, binding = BODY_TRIANGLE_NORMALS) writeonly buffer BodyTriangleNormals
+{
     vec4 body_triangle_normals[];
 };
 

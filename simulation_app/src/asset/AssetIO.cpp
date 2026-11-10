@@ -116,8 +116,7 @@ void validate_motion_asset_file_size(const std::filesystem::path& path, const Ch
     const auto asset_file_size = std::filesystem::file_size(path);
 
     if (non_vertex_size > asset_file_size ||
-        (frame_count != 0u &&
-         vertex_count > (asset_file_size - non_vertex_size) / frame_count / vertex_stride)) {
+        (frame_count != 0u && vertex_count > (asset_file_size - non_vertex_size) / frame_count / vertex_stride)) {
         throw std::runtime_error("Invalid motion asset size");
     }
 }
@@ -161,8 +160,7 @@ void validate_character_motion(const CharacterMotion& motion)
         throw std::runtime_error("Motion asset contains non-finite values");
     }
 
-    if (!are_valid_orientations(motion.pelvis_orientations) ||
-        !are_valid_orientations(motion.torso_orientations)) {
+    if (!are_valid_orientations(motion.pelvis_orientations) || !are_valid_orientations(motion.torso_orientations)) {
         throw std::runtime_error("Motion asset contains invalid orientations");
     }
 }
@@ -219,8 +217,7 @@ void read_binary_values(std::ifstream& input, std::vector<T>& values, std::size_
         return;
     }
 
-    input.read(reinterpret_cast<char*>(values.data()),
-               static_cast<std::streamsize>(values.size() * sizeof(T)));
+    input.read(reinterpret_cast<char*>(values.data()), static_cast<std::streamsize>(values.size() * sizeof(T)));
 }
 
 CharacterMotion read_motion_asset(const std::filesystem::path& motion_asset_path, std::ifstream& input)
@@ -235,7 +232,8 @@ CharacterMotion read_motion_asset(const std::filesystem::path& motion_asset_path
 
     const std::size_t reference_position_count = character_motion.frame_count * position_components;
     const std::size_t orientation_count = character_motion.frame_count * quat_components;
-    const std::size_t vertex_position_count = static_cast<std::size_t>(character_motion.frame_count) * character_motion.vertex_count;
+    const std::size_t vertex_position_count =
+        static_cast<std::size_t>(character_motion.frame_count) * character_motion.vertex_count;
     read_binary_values(input, character_motion.triangle_vertex_indices, character_motion.triangle_count);
     read_binary_values(input, character_motion.pelvis_positions, reference_position_count);
     read_binary_values(input, character_motion.pelvis_orientations, orientation_count);
@@ -295,8 +293,7 @@ void write_binary_values(std::ofstream& output, const std::vector<T>& values)
         return;
     }
 
-    output.write(reinterpret_cast<const char*>(values.data()),
-                 static_cast<std::streamsize>(values.size() * sizeof(T)));
+    output.write(reinterpret_cast<const char*>(values.data()), static_cast<std::streamsize>(values.size() * sizeof(T)));
 }
 
 void write_garment_asset(std::ofstream& output, const GarmentMesh& garment_mesh)
@@ -347,8 +344,8 @@ CharacterMotion read_character_motion(const std::filesystem::path& motion_asset_
 
     std::cout << "Loaded motion asset: " << motion_asset_path << '\n';
     std::cout << "  fps=" << character_motion.fps << " frames=" << character_motion.frame_count
-              << " vertices=" << character_motion.vertex_count
-              << " triangles=" << character_motion.triangle_count << '\n';
+              << " vertices=" << character_motion.vertex_count << " triangles=" << character_motion.triangle_count
+              << '\n';
 
     return character_motion;
 }

@@ -9,11 +9,13 @@ layout(local_size_x = 128) in;
 
 const float max_float = 3.402823e+38;
 
-layout(std430, binding = CLOTH_CURRENT_POSITIONS) readonly buffer ClothCurrentPositions {
+layout(std430, binding = CLOTH_CURRENT_POSITIONS) readonly buffer ClothCurrentPositions
+{
     vec4 cloth_current_positions[];
 };
 
-layout(std430, binding = CLOTH_PREVIOUS_POSITIONS) readonly buffer ClothPreviousPositions {
+layout(std430, binding = CLOTH_PREVIOUS_POSITIONS) readonly buffer ClothPreviousPositions
+{
     vec4 cloth_previous_positions[];
 };
 
@@ -22,11 +24,13 @@ layout(std430, binding = CLOTH_TRIANGLE_VERTEX_INDICES) readonly buffer ClothTri
     TriangleVertexIndices triangle_vertex_indices[];
 };
 
-layout(std430, binding = CLOTH_BVH_NODES) buffer ClothBvhNodes {
+layout(std430, binding = CLOTH_BVH_NODES) buffer ClothBvhNodes
+{
     BvhNode bvh_nodes[];
 };
 
-layout(std430, binding = CLOTH_TRIANGLE_BOUNDS) buffer ClothTriangleBounds {
+layout(std430, binding = CLOTH_TRIANGLE_BOUNDS) buffer ClothTriangleBounds
+{
     Aabb triangle_bounds[];
 };
 
@@ -35,11 +39,13 @@ layout(std430, binding = CLOTH_EDGE_VERTEX_INDICES) readonly buffer ClothEdgeVer
     uvec2 cloth_edge_vertex_indices[];
 };
 
-layout(std430, binding = CLOTH_EDGE_BVH_NODES) buffer ClothEdgeBvhNodes {
+layout(std430, binding = CLOTH_EDGE_BVH_NODES) buffer ClothEdgeBvhNodes
+{
     BvhNode edge_bvh_nodes[];
 };
 
-layout(std430, binding = CLOTH_EDGE_BOUNDS) buffer ClothEdgeBounds {
+layout(std430, binding = CLOTH_EDGE_BOUNDS) buffer ClothEdgeBounds
+{
     Aabb edge_bounds[];
 };
 
@@ -63,10 +69,12 @@ void update_leaf_bounds(uint node_index, BvhNode node)
         TrianglePositions current = read_cloth_current_triangle(vertex_indices);
         TrianglePositions previous = read_cloth_previous_triangle(vertex_indices);
 
-        vec3 triangle_min_bounds = min(min(current.a, min(current.b, current.c)),
-                                       min(previous.a, min(previous.b, previous.c))) - uBoundsMargin;
-        vec3 triangle_max_bounds = max(max(current.a, max(current.b, current.c)),
-                                       max(previous.a, max(previous.b, previous.c))) + uBoundsMargin;
+        vec3 triangle_min_bounds =
+            min(min(current.a, min(current.b, current.c)), min(previous.a, min(previous.b, previous.c))) -
+            uBoundsMargin;
+        vec3 triangle_max_bounds =
+            max(max(current.a, max(current.b, current.c)), max(previous.a, max(previous.b, previous.c))) +
+            uBoundsMargin;
 
         triangle_bounds[triangle_index].min_bounds = vec4(triangle_min_bounds, 0.0);
         triangle_bounds[triangle_index].max_bounds = vec4(triangle_max_bounds, 0.0);

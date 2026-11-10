@@ -33,9 +33,9 @@ constexpr int action_icon_size = 20;
 constexpr int add_button_height = 30;
 constexpr int confirm_icon_size = 28;
 
-const QString color_button_style = QStringLiteral(
-    "QPushButton { background-color: %1; border: 2px solid #666666; border-radius: 13px; padding: 0; }"
-    "QPushButton:hover { border-color: #1f6feb; }");
+const QString color_button_style =
+    QStringLiteral("QPushButton { background-color: %1; border: 2px solid #666666; border-radius: 13px; padding: 0; }"
+                   "QPushButton:hover { border-color: #1f6feb; }");
 
 QString format_float(float value)
 {
@@ -138,9 +138,7 @@ void PlacementPanel::setup_garment_section(GarmentLayer layer)
     state.color_button = new QPushButton(state.frame);
     state.color_button->setFixedSize(26, 26);
     state.color_button->setToolTip("Choose garment color");
-    connect(state.color_button, &QPushButton::clicked, this, [this, layer]() {
-        choose_garment_color(layer);
-    });
+    connect(state.color_button, &QPushButton::clicked, this, [this, layer]() { choose_garment_color(layer); });
     section_layout->addWidget(state.color_button, 0, Qt::AlignHCenter);
 
     // Register section click event

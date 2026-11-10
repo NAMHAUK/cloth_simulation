@@ -11,8 +11,7 @@ constexpr std::uint32_t local_size = 128;
 StretchConstraintSolver::StretchConstraintSolver(float stiffness) : stiffness_(stiffness)
 {}
 
-void StretchConstraintSolver::initialize(const std::filesystem::path& shader_dir,
-                                         QOpenGLFunctions_4_5_Core& gl)
+void StretchConstraintSolver::initialize(const std::filesystem::path& shader_dir, QOpenGLFunctions_4_5_Core& gl)
 {
     program_ = load_compute_program(shader_dir / "cloth" / "constraints" / "stretch.comp", gl);
     constraint_offset_loc_ = require_uniform_location(program_, "uConstraintOffset", gl);

@@ -6,7 +6,8 @@
 const float segment_parallel_tolerance = 1.0e-8;
 const float max_float = 3.402823e+38;
 
-struct SegmentState {
+struct SegmentState
+{
     EdgePositions positions;
     float t;
     vec3 point;
@@ -155,10 +156,7 @@ float find_thickness_contact_time(vec3 offset, vec3 displacement, float thicknes
     return contact_time <= 1.0 ? contact_time : max_float;
 }
 
-EdgeContact find_edge_contact(vec3 vertex_start_pos,
-                              vec3 vertex_displacement,
-                              EdgePositions edge,
-                              float thickness)
+EdgeContact find_edge_contact(vec3 vertex_start_pos, vec3 vertex_displacement, EdgePositions edge, float thickness)
 {
     vec3 edge_vector = edge.b - edge.a;
     float edge_length_sq = dot(edge_vector, edge_vector);
@@ -216,8 +214,7 @@ bool find_contact_barycentric(vec3 relative_prev_vertex_pos,
     float prev_distance = dot(relative_prev_vertex_pos - cur_triangle_pos.a, cur_face_normal);
 
     // 1. outside thickness: check current position contact
-    if (min(prev_distance, cur_signed_distance) > thickness ||
-        max(prev_distance, cur_signed_distance) < -thickness) {
+    if (min(prev_distance, cur_signed_distance) > thickness || max(prev_distance, cur_signed_distance) < -thickness) {
         return find_current_contact_barycentric(cur_vertex_pos,
                                                 cur_triangle_pos,
                                                 cur_face_normal,
@@ -235,7 +232,8 @@ bool find_contact_barycentric(vec3 relative_prev_vertex_pos,
         entry_time = (face_distance - prev_distance) / (cur_signed_distance - prev_distance);
     }
 
-    vec3 projected_position = relative_prev_vertex_pos + relative_displacement * entry_time - cur_face_normal * face_distance;
+    vec3 projected_position =
+        relative_prev_vertex_pos + relative_displacement * entry_time - cur_face_normal * face_distance;
 
     // 3.1. projection point is inside triangle: retrun barycentric
     if (!compute_barycentric(projected_position, cur_triangle_pos, barycentric)) {

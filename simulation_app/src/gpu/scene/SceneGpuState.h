@@ -24,9 +24,7 @@ public:
                     QOpenGLFunctions_4_5_Core& gl);
     void set_character_motion(const SceneState& scene, QOpenGLFunctions_4_5_Core& gl);
     void update_character_pose(const SceneState& scene, float frame_alpha, QOpenGLFunctions_4_5_Core& gl);
-    void rebuild_garment_resources(const SceneState& scene,
-                                   QOpenGLFunctions_4_5_Core& gl,
-                                   GarmentLayer changed_layer);
+    void rebuild_garment_resources(const SceneState& scene, QOpenGLFunctions_4_5_Core& gl, GarmentLayer changed_layer);
     void create_simulation_buffers(const SceneState& scene, QOpenGLFunctions_4_5_Core& gl);
     void upload_garment_placement(const GarmentObject& garment, QOpenGLFunctions_4_5_Core& gl);
     void initialize_garment_attachments(const GarmentObject& garment, QOpenGLFunctions_4_5_Core& gl);

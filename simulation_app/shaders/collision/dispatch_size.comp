@@ -6,41 +6,49 @@
 
 layout(local_size_x = 1) in;
 
-layout(std430, binding = CLOTH_VERTEX_BODY_FACE_CANDIDATE_COUNT) readonly buffer ClothVertexBodyFaceCandidateCount {
+layout(std430, binding = CLOTH_VERTEX_BODY_FACE_CANDIDATE_COUNT) readonly buffer ClothVertexBodyFaceCandidateCount
+{
     uint cloth_vertex_body_face_candidate_count;
 };
 
-layout(std430, binding = CLOTH_VERTEX_BODY_FACE_DISPATCH_SIZE) buffer ClothVertexBodyFaceDispatchSize {
+layout(std430, binding = CLOTH_VERTEX_BODY_FACE_DISPATCH_SIZE) buffer ClothVertexBodyFaceDispatchSize
+{
     uint cloth_vertex_body_face_dispatch_size_x;
     uint cloth_vertex_body_face_dispatch_size_y;
     uint cloth_vertex_body_face_dispatch_size_z;
 };
 
-layout(std430, binding = CLOTH_EDGE_BODY_EDGE_CANDIDATE_COUNT) readonly buffer ClothEdgeBodyEdgeCandidateCount {
+layout(std430, binding = CLOTH_EDGE_BODY_EDGE_CANDIDATE_COUNT) readonly buffer ClothEdgeBodyEdgeCandidateCount
+{
     uint cloth_edge_body_edge_candidate_count;
 };
 
-layout(std430, binding = CLOTH_EDGE_BODY_EDGE_DISPATCH_SIZE) buffer ClothEdgeBodyEdgeDispatchSize {
+layout(std430, binding = CLOTH_EDGE_BODY_EDGE_DISPATCH_SIZE) buffer ClothEdgeBodyEdgeDispatchSize
+{
     uint cloth_edge_body_edge_dispatch_size_x;
     uint cloth_edge_body_edge_dispatch_size_y;
     uint cloth_edge_body_edge_dispatch_size_z;
 };
 
-layout(std430, binding = CLOTH_CLOTH_VERTEX_FACE_CANDIDATE_COUNT) readonly buffer ClothClothVertexFaceCandidateCount {
+layout(std430, binding = CLOTH_CLOTH_VERTEX_FACE_CANDIDATE_COUNT) readonly buffer ClothClothVertexFaceCandidateCount
+{
     uint cloth_cloth_vertex_face_candidate_count;
 };
 
-layout(std430, binding = CLOTH_CLOTH_VERTEX_FACE_DISPATCH_SIZE) buffer ClothClothVertexFaceDispatchSize {
+layout(std430, binding = CLOTH_CLOTH_VERTEX_FACE_DISPATCH_SIZE) buffer ClothClothVertexFaceDispatchSize
+{
     uint cloth_cloth_vertex_face_dispatch_size_x;
     uint cloth_cloth_vertex_face_dispatch_size_y;
     uint cloth_cloth_vertex_face_dispatch_size_z;
 };
 
-layout(std430, binding = CLOTH_CLOTH_EDGE_EDGE_CANDIDATE_COUNT) readonly buffer ClothClothEdgeEdgeCandidateCount {
+layout(std430, binding = CLOTH_CLOTH_EDGE_EDGE_CANDIDATE_COUNT) readonly buffer ClothClothEdgeEdgeCandidateCount
+{
     uint cloth_cloth_edge_edge_candidate_count;
 };
 
-layout(std430, binding = CLOTH_CLOTH_EDGE_EDGE_DISPATCH_SIZE) buffer ClothClothEdgeEdgeDispatchSize {
+layout(std430, binding = CLOTH_CLOTH_EDGE_EDGE_DISPATCH_SIZE) buffer ClothClothEdgeEdgeDispatchSize
+{
     uint cloth_cloth_edge_edge_dispatch_size_x;
     uint cloth_cloth_edge_edge_dispatch_size_y;
     uint cloth_cloth_edge_edge_dispatch_size_z;
@@ -66,8 +74,8 @@ void main()
     }
 
     uint active_candidate_count = min(candidate_count, uMaxCandidateCount);
-    uint dispatch_size_x = (active_candidate_count + candidate_accumulate_local_size - 1u) /
-                           candidate_accumulate_local_size;
+    uint dispatch_size_x =
+        (active_candidate_count + candidate_accumulate_local_size - 1u) / candidate_accumulate_local_size;
     if (uCandidateKind == 0u) {
         cloth_vertex_body_face_dispatch_size_x = dispatch_size_x;
         cloth_vertex_body_face_dispatch_size_y = 1u;

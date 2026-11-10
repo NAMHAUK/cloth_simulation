@@ -26,8 +26,7 @@ private:
     };
 
     void clear_correction_sums(const SceneGpuState& gpu_state, QOpenGLFunctions_4_5_Core& gl) const;
-    void accumulate_cloth_vertex_body_face(const SceneGpuState& gpu_state,
-                                           QOpenGLFunctions_4_5_Core& gl) const;
+    void accumulate_cloth_vertex_body_face(const SceneGpuState& gpu_state, QOpenGLFunctions_4_5_Core& gl) const;
     void accumulate_cloth_edge_body_edge(const SceneGpuState& gpu_state, QOpenGLFunctions_4_5_Core& gl) const;
     void apply_combined_corrections(const SceneGpuState& gpu_state, QOpenGLFunctions_4_5_Core& gl) const;
 

@@ -23,8 +23,7 @@ MeshEdge make_edge(std::uint32_t vertex_a, std::uint32_t vertex_b)
     return {vertex_b, vertex_a};
 }
 
-std::size_t assign_edge_color(std::vector<std::bitset<max_color_count>>& assigned_colors,
-                              const MeshEdge& edge)
+std::size_t assign_edge_color(std::vector<std::bitset<max_color_count>>& assigned_colors, const MeshEdge& edge)
 {
     const auto unavailable_colors = assigned_colors[edge.vertex_a] | assigned_colors[edge.vertex_b];
 
@@ -82,9 +81,8 @@ void add_triangle_edge(std::map<MeshEdge, TriangleEdge>& triangle_edge_map,
 }
 }
 
-VertexTriangleAdjacency build_vertex_triangle_adjacency(
-    std::uint32_t vertex_count,
-    const std::vector<TriangleVertexIndices>& vertex_indices)
+VertexTriangleAdjacency build_vertex_triangle_adjacency(std::uint32_t vertex_count,
+                                                        const std::vector<TriangleVertexIndices>& vertex_indices)
 {
     if (vertex_count == 0 || vertex_indices.empty()) {
         throw std::invalid_argument("Cannot build vertex-triangle adjacency from invalid topology.");
@@ -126,9 +124,8 @@ VertexTriangleAdjacency build_vertex_triangle_adjacency(
     return adjacency;
 }
 
-std::vector<std::uint32_t> build_vertex_neighborhood_masks(
-    std::uint32_t vertex_count,
-    const std::vector<TriangleVertexIndices>& vertex_indices)
+std::vector<std::uint32_t> build_vertex_neighborhood_masks(std::uint32_t vertex_count,
+                                                           const std::vector<TriangleVertexIndices>& vertex_indices)
 {
     const auto adjacency = build_vertex_triangle_adjacency(vertex_count, vertex_indices);
     const std::size_t masks_per_vertex = (static_cast<std::size_t>(adjacency.triangle_count) + 31u) / 32u;
@@ -166,8 +163,7 @@ std::vector<MeshEdge> build_unique_triangle_edges(const std::vector<TriangleVert
     return edges;
 }
 
-std::vector<std::uint32_t> build_edge_exclusions(std::uint32_t vertex_count,
-                                                 const std::vector<MeshEdge>& edges)
+std::vector<std::uint32_t> build_edge_exclusions(std::uint32_t vertex_count, const std::vector<MeshEdge>& edges)
 {
     const auto edge_count = static_cast<std::uint32_t>(edges.size());
     std::vector<std::vector<std::uint32_t>> vertex_edges(vertex_count);
@@ -212,7 +208,7 @@ std::vector<MeshEdge> build_unique_bending_edges(const std::vector<TriangleVerte
     for (std::size_t index = 1u; index < edge_opposite_vertices.size(); ++index) {
         const auto& [edge_a, opposite_vertex_a] = edge_opposite_vertices[index - 1u];
         const auto& [edge_b, opposite_vertex_b] = edge_opposite_vertices[index];
-        
+
         if (edge_a == edge_b && opposite_vertex_a != opposite_vertex_b) {
             bending_edges.push_back(make_edge(opposite_vertex_a, opposite_vertex_b));
         }
@@ -220,7 +216,7 @@ std::vector<MeshEdge> build_unique_bending_edges(const std::vector<TriangleVerte
 
     std::sort(bending_edges.begin(), bending_edges.end());
     bending_edges.erase(std::unique(bending_edges.begin(), bending_edges.end()), bending_edges.end());
-    
+
     return bending_edges;
 }
 
@@ -254,9 +250,9 @@ void orient_triangles_outward(const std::vector<glm::vec3>& vertex_positions,
         triangle_queue.pop();
 
         for (const TriangleNeighbor& neighbor : triangle_neighbors[triangle_index]) {
-            const bool neighbor_needs_flip = determine_neighbor_flip(flip_decisions[triangle_index].value(),
-                                                                     neighbor.has_winding_conflict);
-            
+            const bool neighbor_needs_flip =
+                determine_neighbor_flip(flip_decisions[triangle_index].value(), neighbor.has_winding_conflict);
+
             if (!flip_decisions[neighbor.triangle_index].has_value()) {
                 flip_decisions[neighbor.triangle_index] = neighbor_needs_flip;
                 triangle_queue.push(neighbor.triangle_index);
@@ -278,7 +274,7 @@ void orient_triangles_outward(const std::vector<glm::vec3>& vertex_positions,
         const glm::vec3 position_c = vertex_positions[vertex_indices[triangle_index].c];
         const glm::vec3 area_normal = glm::cross(position_b - position_a, position_c - position_a);
         const glm::vec3 centroid = (position_a + position_b + position_c) / 3.0f;
-        
+
         const double triangle_score = static_cast<double>(glm::dot(area_normal, centroid - bounds_center));
         orientation_score += flip_decisions[triangle_index].value() ? -triangle_score : triangle_score;
     }
@@ -337,9 +333,7 @@ GarmentDistanceConstraints build_distance_constraints(const std::vector<MeshEdge
         constraints.color_states.push_back({static_cast<std::uint32_t>(constraints.colorized_edges.size()),
                                             static_cast<std::uint32_t>(edge_group.size())});
 
-        constraints.colorized_edges.insert(constraints.colorized_edges.end(),
-                                           edge_group.begin(),
-                                           edge_group.end());
+        constraints.colorized_edges.insert(constraints.colorized_edges.end(), edge_group.begin(), edge_group.end());
     }
 
     constraints.rest_lengths = compute_mesh_edge_lengths(constraints.colorized_edges, vertex_positions);

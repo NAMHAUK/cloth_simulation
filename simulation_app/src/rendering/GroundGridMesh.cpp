@@ -35,27 +35,15 @@ void GroundGridMesh::initialize(QOpenGLFunctions_4_5_Core& gl)
     gl.glCreateVertexArrays(1, &vao_);
     gl.glCreateBuffers(1, &vertex_buffer_);
 
-    gl.glNamedBufferData(vertex_buffer_,
-                         static_cast<GLsizeiptr>(vertices.size() * sizeof(glm::vec3)),
-                         vertices.data(),
-                         GL_STATIC_DRAW);
+    gl.glNamedBufferData(vertex_buffer_, vertices.size() * sizeof(glm::vec3), vertices.data(), GL_STATIC_DRAW);
 
     constexpr GLuint position_attribute_loc = 0;
     constexpr GLuint position_binding_index = 0;
     constexpr GLuint position_relative_offset = 0;
 
-    gl.glVertexArrayVertexBuffer(vao_,
-                                 position_binding_index,
-                                 vertex_buffer_,
-                                 0,
-                                 static_cast<GLsizei>(sizeof(glm::vec3)));
+    gl.glVertexArrayVertexBuffer(vao_, position_binding_index, vertex_buffer_, 0, sizeof(glm::vec3));
     gl.glEnableVertexArrayAttrib(vao_, position_attribute_loc);
-    gl.glVertexArrayAttribFormat(vao_,
-                                 position_attribute_loc,
-                                 3,
-                                 GL_FLOAT,
-                                 GL_FALSE,
-                                 position_relative_offset);
+    gl.glVertexArrayAttribFormat(vao_, position_attribute_loc, 3, GL_FLOAT, GL_FALSE, position_relative_offset);
     gl.glVertexArrayAttribBinding(vao_, position_attribute_loc, position_binding_index);
 }
 

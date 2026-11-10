@@ -4,7 +4,8 @@
 
 layout(local_size_x = 128) in;
 
-layout(std430, binding = CLOTH_CURRENT_POSITIONS) buffer CurrentPositions {
+layout(std430, binding = CLOTH_CURRENT_POSITIONS) buffer CurrentPositions
+{
     vec4 current_positions[];
 };
 
@@ -13,7 +14,8 @@ layout(std430, binding = BENDING_EDGE_VERTEX_INDICES) readonly buffer BendingEdg
     uvec2 vertex_indices[];
 };
 
-layout(std430, binding = BENDING_REST_LENGTHS) readonly buffer BendingRestLengths {
+layout(std430, binding = BENDING_REST_LENGTHS) readonly buffer BendingRestLengths
+{
     float rest_lengths[];
 };
 

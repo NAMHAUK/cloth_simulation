@@ -290,8 +290,8 @@ void Viewport::update_asset_browser_layout()
 
 void Viewport::update_simulation_control_button_layout()
 {
-    constexpr int button_group_width = simulation_button_size * simulation_button_count +
-                                       simulation_button_gap * (simulation_button_count - 1);
+    constexpr int button_group_width =
+        simulation_button_size * simulation_button_count + simulation_button_gap * (simulation_button_count - 1);
     constexpr int button_x_offset = simulation_button_size + simulation_button_gap;
 
     const int button_group_left = (width() - button_group_width) / 2;
@@ -307,9 +307,8 @@ void Viewport::update_simulation_control_button_layout()
 
 void Viewport::update_right_panel_layout()
 {
-    const bool has_any_visible_panel = !placement_panel_->isHidden() ||
-                                       !garment_cards_panel_->isHidden() ||
-                                       !garment_color_panel_->isHidden();
+    const bool has_any_visible_panel =
+        !placement_panel_->isHidden() || !garment_cards_panel_->isHidden() || !garment_color_panel_->isHidden();
     right_panel_->setVisible(has_any_visible_panel);
     if (!has_any_visible_panel) {
         return;

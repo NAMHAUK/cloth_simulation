@@ -94,8 +94,7 @@ std::uint32_t find_longest_axis(const glm::vec3& aabb_size)
 }
 
 // Initialization
-MeshBvhBuilder::MeshBvhBuilder(const CharacterMotion& motion,
-                               const std::vector<std::uint8_t>& triangle_part_labels)
+MeshBvhBuilder::MeshBvhBuilder(const CharacterMotion& motion, const std::vector<std::uint8_t>& triangle_part_labels)
     : source_triangle_vertex_indices_(motion.triangle_vertex_indices),
       source_vertex_positions_(motion.vertex_positions),
       triangle_part_labels_(triangle_part_labels)
@@ -131,7 +130,7 @@ TriangleBvh MeshBvhBuilder::build_triangle_bvh()
     reset_build();
     make_triangle_primitives();
     build_bvh();
-    
+
     std::vector<TriangleVertexIndices> triangle_vertex_indices;
     triangle_vertex_indices.reserve(primitives_.size() + excluded_triangle_indices_.size());
 
@@ -252,8 +251,7 @@ std::size_t MeshBvhBuilder::partition_primitives(const BvhNode& node, std::uint3
     }
 }
 
-std::uint32_t MeshBvhBuilder::choose_left_part_labels(const BvhNode& node,
-                                                      std::uint32_t part_label_mask) const
+std::uint32_t MeshBvhBuilder::choose_left_part_labels(const BvhNode& node, std::uint32_t part_label_mask) const
 {
     const std::size_t primitive_index_end = node.first_element_index + node.element_count;
 
@@ -293,8 +291,7 @@ std::uint32_t MeshBvhBuilder::choose_left_part_labels(const BvhNode& node,
     return best_left_labels;
 }
 
-std::size_t MeshBvhBuilder::partition_primitives_by_part_labels(const BvhNode& node,
-                                                                std::uint32_t left_part_label_mask)
+std::size_t MeshBvhBuilder::partition_primitives_by_part_labels(const BvhNode& node, std::uint32_t left_part_label_mask)
 {
     const auto primitive_begin = primitives_.begin() + node.first_element_index;
     const auto primitive_end = primitive_begin + node.element_count;
@@ -311,12 +308,11 @@ std::size_t MeshBvhBuilder::partition_primitives_by_axis(const BvhNode& node)
     const std::uint32_t axis = find_longest_axis(aabb_size);
     const std::size_t partition_index = node.first_element_index + node.element_count / 2u;
 
-    std::nth_element(primitives_.begin() + node.first_element_index,
-                     primitives_.begin() + partition_index,
-                     primitives_.begin() + node.first_element_index + node.element_count,
-                     [axis](const BvhPrimitive& lhs, const BvhPrimitive& rhs) {
-                         return lhs.center[axis] < rhs.center[axis];
-                     });
+    std::nth_element(
+        primitives_.begin() + node.first_element_index,
+        primitives_.begin() + partition_index,
+        primitives_.begin() + node.first_element_index + node.element_count,
+        [axis](const BvhPrimitive& lhs, const BvhPrimitive& rhs) { return lhs.center[axis] < rhs.center[axis]; });
     return partition_index;
 }
 
@@ -335,8 +331,7 @@ void MeshBvhBuilder::make_triangle_primitives()
         const glm::vec3 min_bounds = glm::min(glm::min(position_a, position_b), position_c);
         const glm::vec3 max_bounds = glm::max(glm::max(position_a, position_b), position_c);
 
-        primitives_.push_back(
-            {triangle_index, center, min_bounds, max_bounds, triangle_part_labels_[triangle_index]});
+        primitives_.push_back({triangle_index, center, min_bounds, max_bounds, triangle_part_labels_[triangle_index]});
     }
 }
 
@@ -351,8 +346,7 @@ void MeshBvhBuilder::make_edge_primitives(const std::vector<LabeledEdge>& edges)
         const glm::vec3 min_bounds = glm::min(position_a, position_b);
         const glm::vec3 max_bounds = glm::max(position_a, position_b);
 
-        primitives_.push_back(
-            {edge_index, (position_a + position_b) * 0.5f, min_bounds, max_bounds, edge.part_label});
+        primitives_.push_back({edge_index, (position_a + position_b) * 0.5f, min_bounds, max_bounds, edge.part_label});
     }
 }
 

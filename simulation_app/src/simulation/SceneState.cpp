@@ -21,10 +21,8 @@ glm::vec3 frame_position(const std::vector<float>& positions, std::uint32_t fram
 glm::quat frame_orientation(const std::vector<float>& orientations, std::uint32_t frame_index)
 {
     const std::size_t base = frame_index * 4u;
-    return glm::normalize(quat_xyzw(orientations[base],
-                                    orientations[base + 1u],
-                                    orientations[base + 2u],
-                                    orientations[base + 3u]));
+    return glm::normalize(
+        quat_xyzw(orientations[base], orientations[base + 1u], orientations[base + 2u], orientations[base + 3u]));
 }
 
 glm::vec3 angular_velocity(const glm::quat& start_orientation, const glm::quat& end_orientation, float dt)
@@ -117,8 +115,7 @@ void SceneState::update_reference_frame_kinematics(float motion_frame_alpha, flo
     torso_frame_.update(torso_position, glm::normalize(torso_orientation), dt);
 }
 
-ReferenceFrameKinematics::ReferenceFrameKinematics(float max_linear_acceleration,
-                                                   float max_angular_acceleration)
+ReferenceFrameKinematics::ReferenceFrameKinematics(float max_linear_acceleration, float max_angular_acceleration)
     : max_linear_acceleration_(max_linear_acceleration),
       max_angular_acceleration_(max_angular_acceleration)
 {}

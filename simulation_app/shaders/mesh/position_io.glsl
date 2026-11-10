@@ -11,8 +11,7 @@ vec3 read_cloth_current_position(uint vertex_index)
 
 EdgePositions read_cloth_current_edge(uvec2 vertex_indices)
 {
-    return EdgePositions(read_cloth_current_position(vertex_indices.x),
-                         read_cloth_current_position(vertex_indices.y));
+    return EdgePositions(read_cloth_current_position(vertex_indices.x), read_cloth_current_position(vertex_indices.y));
 }
 
 TrianglePositions read_cloth_current_triangle(TriangleVertexIndices vertex_indices)
@@ -51,8 +50,7 @@ vec3 read_body_current_position(uint vertex_index)
 
 EdgePositions read_body_current_edge(uvec2 vertex_indices)
 {
-    return EdgePositions(read_body_current_position(vertex_indices.x),
-                         read_body_current_position(vertex_indices.y));
+    return EdgePositions(read_body_current_position(vertex_indices.x), read_body_current_position(vertex_indices.y));
 }
 
 TrianglePositions read_body_current_triangle(TriangleVertexIndices vertex_indices)
@@ -71,8 +69,7 @@ vec3 read_body_previous_position(uint vertex_index)
 
 EdgePositions read_body_previous_edge(uvec2 vertex_indices)
 {
-    return EdgePositions(read_body_previous_position(vertex_indices.x),
-                         read_body_previous_position(vertex_indices.y));
+    return EdgePositions(read_body_previous_position(vertex_indices.x), read_body_previous_position(vertex_indices.y));
 }
 
 TrianglePositions read_body_previous_triangle(TriangleVertexIndices vertex_indices)

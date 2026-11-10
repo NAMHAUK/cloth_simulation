@@ -132,8 +132,7 @@ void SimulationBufferBindings::initialize(QOpenGLFunctions_4_5_Core& gl)
 
 // binding
 
-void SimulationBufferBindings::bind_character(const CharacterBufferSet& buffers,
-                                              QOpenGLFunctions_4_5_Core& gl) const
+void SimulationBufferBindings::bind_character(const CharacterBufferSet& buffers, QOpenGLFunctions_4_5_Core& gl) const
 {
     const std::array<GLuint, binding::character::count> binding_buffers{
         buffers.animation_positions,
@@ -181,15 +180,13 @@ void SimulationBufferBindings::bind_cloth(const ClothBufferSet& buffers, QOpenGL
     };
     std::replace(binding_buffers.begin(), binding_buffers.end(), GLuint{0}, dummy_buffer_);
     bind_buffers(binding::cloth::start, binding_buffers, "cloth", gl);
-    bind_buffers(
-        binding::vertex_face_exclusions,
-        std::array{buffers.vertex_face_exclusions != 0 ? buffers.vertex_face_exclusions : dummy_buffer_},
-        "cloth",
-        gl);
+    bind_buffers(binding::vertex_face_exclusions,
+                 std::array{buffers.vertex_face_exclusions != 0 ? buffers.vertex_face_exclusions : dummy_buffer_},
+                 "cloth",
+                 gl);
 }
 
-void SimulationBufferBindings::bind_collision(const CollisionBuffers& buffers,
-                                              QOpenGLFunctions_4_5_Core& gl) const
+void SimulationBufferBindings::bind_collision(const CollisionBuffers& buffers, QOpenGLFunctions_4_5_Core& gl) const
 {
     const std::array<GLuint, binding::collision::count> binding_buffers{
         buffers.cloth_vertex_body_face.candidate_buffer,

@@ -6,29 +6,35 @@ layout(local_size_x = 128) in;
 
 #include "../../bvh/bvh.glsl"
 
-layout(std430, binding = CLOTH_CURRENT_POSITIONS) readonly buffer CurrentPositions {
+layout(std430, binding = CLOTH_CURRENT_POSITIONS) readonly buffer CurrentPositions
+{
     vec4 cloth_current_positions[];
 };
 
-layout(std430, binding = ATTACHMENT_INDICES) buffer AttachmentIndices {
+layout(std430, binding = ATTACHMENT_INDICES) buffer AttachmentIndices
+{
     uvec2 attachment_indices[];
 };
 
-layout(std430, binding = ATTACHMENT_BARYCENTRIC_OFFSETS) writeonly buffer AttachmentBarycentricOffsets {
+layout(std430, binding = ATTACHMENT_BARYCENTRIC_OFFSETS) writeonly buffer AttachmentBarycentricOffsets
+{
     vec4 barycentric_offsets[];
 };
 
 #include "../../mesh/primitive_geometry.glsl"
 
-layout(std430, binding = BODY_TRIANGLE_POSITIONS) readonly buffer BodyTrianglePositions {
+layout(std430, binding = BODY_TRIANGLE_POSITIONS) readonly buffer BodyTrianglePositions
+{
     TrianglePositions body_triangle_positions[];
 };
 
-layout(std430, binding = BODY_TRIANGLE_NORMALS) readonly buffer BodyTriangleNormals {
+layout(std430, binding = BODY_TRIANGLE_NORMALS) readonly buffer BodyTriangleNormals
+{
     vec4 body_triangle_normals[];
 };
 
-layout(std430, binding = BODY_TRIANGLE_BVH_NODES) readonly buffer BvhNodeBuffer {
+layout(std430, binding = BODY_TRIANGLE_BVH_NODES) readonly buffer BvhNodeBuffer
+{
     BvhNode bvh_nodes[];
 };
 
@@ -39,8 +45,8 @@ uniform uint uConstraintCount;
 uniform float uSurfaceOffset;
 
 #define POSITION_IO_CLOTH_CURRENT
-#include "../../mesh/position_io.glsl"
 #include "../../bvh/body_surface_search.glsl"
+#include "../../mesh/position_io.glsl"
 
 vec3 barycentric_on_triangle(uint triangle_index, vec3 point)
 {
@@ -76,7 +82,8 @@ void main()
     bool has_surface = find_nearest_body_surface(cloth_position, max_float, nearest_surface);
 
     attachment_indices[constraint_index] = uvec2(cloth_vertex_index, nearest_surface.triangle_index);
-    barycentric_offsets[constraint_index] = has_surface
-        ? vec4(barycentric_on_triangle(nearest_surface.triangle_index, nearest_surface.point), uSurfaceOffset)
-        : vec4(1.0, 0.0, 0.0, 0.0);
+    barycentric_offsets[constraint_index] =
+        has_surface
+            ? vec4(barycentric_on_triangle(nearest_surface.triangle_index, nearest_surface.point), uSurfaceOffset)
+            : vec4(1.0, 0.0, 0.0, 0.0);
 }
