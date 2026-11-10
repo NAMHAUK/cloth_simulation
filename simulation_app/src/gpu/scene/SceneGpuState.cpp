@@ -119,8 +119,11 @@ void SceneGpuState::rebuild_garment_resources(const SceneState& scene,
     update_cloth_normals(gl);
 }
 
-void SceneGpuState::rebuild_collision_buffers(QOpenGLFunctions_4_5_Core& gl)
+void SceneGpuState::create_simulation_buffers(const SceneState& scene, QOpenGLFunctions_4_5_Core& gl)
 {
+    cloth_gpu_state_.create_simulation_buffers(scene.garments(), gl);
+    buffer_bindings_.bind_cloth(cloth_gpu_state_.buffer_set(), gl);
+    update_cloth_normals(gl);
     release_collision_buffers(gl);
 
     const ClothBufferElementCounts& counts = cloth_gpu_state_.element_counts();
