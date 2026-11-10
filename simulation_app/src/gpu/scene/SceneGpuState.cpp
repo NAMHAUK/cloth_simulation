@@ -51,8 +51,7 @@ void SceneGpuState::initialize(const std::filesystem::path& shader_dir,
     initialized_ = true;
 }
 
-void SceneGpuState::initialize_normal_programs(const std::filesystem::path& shader_dir,
-                                               QOpenGLFunctions_4_5_Core& gl)
+void SceneGpuState::initialize_normal_programs(const std::filesystem::path& shader_dir, QOpenGLFunctions_4_5_Core& gl)
 {
     const auto triangle_shader_path = shader_dir / "mesh" / "triangle_normal.comp";
     const auto vertex_shader_path = shader_dir / "mesh" / "vertex_normal.comp";
@@ -97,9 +96,7 @@ void SceneGpuState::set_character_motion(const SceneState& scene, QOpenGLFunctio
     update_character_vertex_normals(gl);
 }
 
-void SceneGpuState::update_character_pose(const SceneState& scene,
-                                          float frame_alpha,
-                                          QOpenGLFunctions_4_5_Core& gl)
+void SceneGpuState::update_character_pose(const SceneState& scene, float frame_alpha, QOpenGLFunctions_4_5_Core& gl)
 {
     character_gpu_state_.update_pose(scene.motion_frame_index(), frame_alpha, gl);
     bvh_bounds_updater_.update_body_bvh(gl);
@@ -183,8 +180,7 @@ void SceneGpuState::upload_garment_placement(const GarmentObject& garment, QOpen
     cloth_gpu_state_.upload_garment_placement(garment, gl);
 }
 
-void SceneGpuState::initialize_garment_attachments(const GarmentObject& garment,
-                                                   QOpenGLFunctions_4_5_Core& gl)
+void SceneGpuState::initialize_garment_attachments(const GarmentObject& garment, QOpenGLFunctions_4_5_Core& gl)
 {
     cloth_gpu_state_.upload_attachment_indices(garment, gl);
     build_attachment_targets(garment.layer, gl);

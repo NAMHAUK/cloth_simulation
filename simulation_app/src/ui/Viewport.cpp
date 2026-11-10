@@ -385,8 +385,8 @@ void Viewport::update_frame_stats()
 
 void Viewport::draw_frame_stats()
 {
-    const QString stats_text =
-        QStringLiteral("FPS: %1  Frame time: %2 ms").arg(render_fps_, 0, 'f', 1).arg(frame_ms_, 0, 'f', 1);
+    const QString
+        stats_text = QStringLiteral("FPS: %1  Frame time: %2 ms").arg(render_fps_, 0, 'f', 1).arg(frame_ms_, 0, 'f', 1);
 
     QPainter painter(this);
 

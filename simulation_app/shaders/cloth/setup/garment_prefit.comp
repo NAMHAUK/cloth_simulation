@@ -6,21 +6,25 @@ layout(local_size_x = 128) in;
 
 #include "../../bvh/bvh.glsl"
 
-layout(std430, binding = CLOTH_CURRENT_POSITIONS) buffer CurrentPositions {
+layout(std430, binding = CLOTH_CURRENT_POSITIONS) buffer CurrentPositions
+{
     vec4 cloth_current_positions[];
 };
 
 #include "../../mesh/primitive_geometry.glsl"
 
-layout(std430, binding = BODY_TRIANGLE_POSITIONS) readonly buffer BodyTrianglePositions {
+layout(std430, binding = BODY_TRIANGLE_POSITIONS) readonly buffer BodyTrianglePositions
+{
     TrianglePositions body_triangle_positions[];
 };
 
-layout(std430, binding = BODY_TRIANGLE_NORMALS) readonly buffer BodyTriangleNormals {
+layout(std430, binding = BODY_TRIANGLE_NORMALS) readonly buffer BodyTriangleNormals
+{
     vec4 body_triangle_normals[];
 };
 
-layout(std430, binding = BODY_TRIANGLE_BVH_NODES) readonly buffer BvhNodeBuffer {
+layout(std430, binding = BODY_TRIANGLE_BVH_NODES) readonly buffer BvhNodeBuffer
+{
     BvhNode bvh_nodes[];
 };
 
@@ -31,8 +35,8 @@ uniform float uMaxCorrectionLength;
 uniform float uPushoutMargin;
 
 #define POSITION_IO_CLOTH_CURRENT
-#include "../../mesh/position_io.glsl"
 #include "../../bvh/body_surface_search.glsl"
+#include "../../mesh/position_io.glsl"
 
 void store_cloth_position(uint vertex_index, vec3 position)
 {

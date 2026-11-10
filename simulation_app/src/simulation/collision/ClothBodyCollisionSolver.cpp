@@ -15,15 +15,14 @@ ClothBodyCollisionSolver::ClothBodyCollisionSolver(const BodyCollisionParams& pa
       dynamic_friction_(params.dynamic_friction)
 {}
 
-void ClothBodyCollisionSolver::initialize(const std::filesystem::path& shader_dir,
-                                          QOpenGLFunctions_4_5_Core& gl)
+void ClothBodyCollisionSolver::initialize(const std::filesystem::path& shader_dir, QOpenGLFunctions_4_5_Core& gl)
 {
     const auto collision_dir = shader_dir / "collision" / "cloth_body";
 
     {
         auto& shader = cloth_vertex_body_face_;
         shader.program = load_compute_program(collision_dir / "cloth_vertex_body_face_accumulate.comp", gl);
-        
+
         shader.max_candidates_loc = require_uniform_location(shader.program, "uMaxCandidateCount", gl);
         const GLint thickness_loc = require_uniform_location(shader.program, "uCollisionThickness", gl);
         const GLint static_friction_loc = require_uniform_location(shader.program, "uStaticFriction", gl);
@@ -36,7 +35,7 @@ void ClothBodyCollisionSolver::initialize(const std::filesystem::path& shader_di
     {
         auto& shader = cloth_edge_body_edge_;
         shader.program = load_compute_program(collision_dir / "cloth_edge_body_edge_accumulate.comp", gl);
-        
+
         shader.max_candidates_loc = require_uniform_location(shader.program, "uMaxCandidateCount", gl);
         const GLint thickness_loc = require_uniform_location(shader.program, "uCollisionThickness", gl);
         const GLint static_friction_loc = require_uniform_location(shader.program, "uStaticFriction", gl);

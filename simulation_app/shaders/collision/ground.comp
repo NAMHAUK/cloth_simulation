@@ -4,15 +4,18 @@
 
 layout(local_size_x = 128) in;
 
-layout(std430, binding = CLOTH_CURRENT_POSITIONS) buffer CurrentPositions {
+layout(std430, binding = CLOTH_CURRENT_POSITIONS) buffer CurrentPositions
+{
     vec4 current_positions[];
 };
 
-layout(std430, binding = CLOTH_PREVIOUS_POSITIONS) readonly buffer PreviousPositions {
+layout(std430, binding = CLOTH_PREVIOUS_POSITIONS) readonly buffer PreviousPositions
+{
     vec4 previous_positions[];
 };
 
-layout(std430, binding = CLOTH_COLLISION_PUSHOUTS) buffer CollisionPushouts {
+layout(std430, binding = CLOTH_COLLISION_PUSHOUTS) buffer CollisionPushouts
+{
     vec4 collision_pushouts[];
 };
 
@@ -39,7 +42,10 @@ void main()
 
     if (current_y < uFloorHeight) {
         float pushout_depth = uFloorHeight - current_y;
-        float relative_delta_y = current_y - previous_positions[vertex_index].y - collision_pushouts[vertex_index].y + inward_motion_corrections[vertex_index].y;
+        float relative_delta_y = current_y -
+                                 previous_positions[vertex_index].y -
+                                 collision_pushouts[vertex_index].y +
+                                 inward_motion_corrections[vertex_index].y;
         inward_motion_corrections[vertex_index].y += max(-relative_delta_y, 0.0);
 
         vec3 friction_correction = -vec3(current_positions[vertex_index].x - previous_positions[vertex_index].x,
@@ -53,7 +59,8 @@ void main()
             if (friction_length <= static_limit) {
                 final_friction_correction = friction_correction;
             } else {
-                final_friction_correction = friction_correction * ((uDynamicFriction * pushout_depth) / friction_length);
+                final_friction_correction = friction_correction *
+                                            ((uDynamicFriction * pushout_depth) / friction_length);
             }
         }
 

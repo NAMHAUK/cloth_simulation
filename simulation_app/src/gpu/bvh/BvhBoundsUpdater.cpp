@@ -36,8 +36,7 @@ void BvhBoundsUpdater::initialize(const std::filesystem::path& shader_dir,
 {
     // body bvh program
     body_program_ = load_compute_program(shader_dir / "bvh" / "body_bounds_update.comp", gl);
-    body_triangle_first_node_index_loc_ =
-        require_uniform_location(body_program_, "uTriangleFirstNodeIndex", gl);
+    body_triangle_first_node_index_loc_ = require_uniform_location(body_program_, "uTriangleFirstNodeIndex", gl);
     body_triangle_node_count_loc_ = require_uniform_location(body_program_, "uTriangleNodeCount", gl);
     body_edge_first_node_index_loc_ = require_uniform_location(body_program_, "uEdgeFirstNodeIndex", gl);
     body_edge_node_count_loc_ = require_uniform_location(body_program_, "uEdgeNodeCount", gl);
@@ -58,7 +57,7 @@ void BvhBoundsUpdater::set_body_level_offsets(const std::vector<std::uint32_t>& 
     body_edge_level_offsets_ = edge_level_offsets;
 
     const std::size_t max_level_offset_count = std::max(body_triangle_level_offsets_.size(),
-                                                       body_edge_level_offsets_.size());
+                                                        body_edge_level_offsets_.size());
     body_bvh_level_count_ = max_level_offset_count - 1u;
 }
 
@@ -74,9 +73,7 @@ void BvhBoundsUpdater::update_body_bvh(QOpenGLFunctions_4_5_Core& gl) const
 
         const std::uint32_t dispatch_node_count = triangle_level.node_count + edge_level.node_count;
 
-        gl.glProgramUniform1ui(body_program_,
-                               body_triangle_first_node_index_loc_,
-                               triangle_level.first_node_index);
+        gl.glProgramUniform1ui(body_program_, body_triangle_first_node_index_loc_, triangle_level.first_node_index);
         gl.glProgramUniform1ui(body_program_, body_triangle_node_count_loc_, triangle_level.node_count);
         gl.glProgramUniform1ui(body_program_, body_edge_first_node_index_loc_, edge_level.first_node_index);
         gl.glProgramUniform1ui(body_program_, body_edge_node_count_loc_, edge_level.node_count);
@@ -99,7 +96,10 @@ void BvhBoundsUpdater::update_cloth_bvh(const ClothGpuState& cloth_state,
         const auto upper_garment_level = level_range(states[GarmentLayer::Upper].triangle_bvh_level_offsets, level);
         const auto lower_edge_level = level_range(states[GarmentLayer::Lower].edge_bvh_level_offsets, level);
         const auto upper_edge_level = level_range(states[GarmentLayer::Upper].edge_bvh_level_offsets, level);
-        const auto level_node_count = lower_garment_level.node_count + upper_garment_level.node_count + lower_edge_level.node_count + upper_edge_level.node_count;
+        const auto level_node_count = lower_garment_level.node_count +
+                                      upper_garment_level.node_count +
+                                      lower_edge_level.node_count +
+                                      upper_edge_level.node_count;
 
         gl.glProgramUniform4ui(cloth_program_,
                                cloth_level_first_node_index_loc_,

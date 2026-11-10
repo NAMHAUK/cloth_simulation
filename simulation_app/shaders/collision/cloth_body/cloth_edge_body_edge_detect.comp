@@ -6,11 +6,13 @@
 
 layout(local_size_x = 128) in;
 
-layout(std430, binding = CLOTH_CURRENT_POSITIONS) readonly buffer ClothCurrentPositions {
+layout(std430, binding = CLOTH_CURRENT_POSITIONS) readonly buffer ClothCurrentPositions
+{
     vec4 cloth_current_positions[];
 };
 
-layout(std430, binding = CLOTH_PREVIOUS_POSITIONS) readonly buffer ClothPreviousPositions {
+layout(std430, binding = CLOTH_PREVIOUS_POSITIONS) readonly buffer ClothPreviousPositions
+{
     vec4 cloth_previous_positions[];
 };
 
@@ -19,19 +21,23 @@ layout(std430, binding = STRETCH_EDGE_VERTEX_INDICES) readonly buffer ClothEdgeV
     uvec2 cloth_edge_vertex_indices[];
 };
 
-layout(std430, binding = BODY_EDGE_BOUNDS) readonly buffer BodyEdgeBounds {
+layout(std430, binding = BODY_EDGE_BOUNDS) readonly buffer BodyEdgeBounds
+{
     Aabb body_edge_bounds[];
 };
 
-layout(std430, binding = BODY_EDGE_BVH_NODES) readonly buffer BvhNodes {
+layout(std430, binding = BODY_EDGE_BVH_NODES) readonly buffer BvhNodes
+{
     BvhNode bvh_nodes[];
 };
 
-layout(std430, binding = CLOTH_EDGE_BODY_EDGE_CANDIDATES) buffer Candidates {
+layout(std430, binding = CLOTH_EDGE_BODY_EDGE_CANDIDATES) buffer Candidates
+{
     uvec2 candidates[];
 };
 
-layout(std430, binding = CLOTH_EDGE_BODY_EDGE_CANDIDATE_COUNT) buffer CandidateCount {
+layout(std430, binding = CLOTH_EDGE_BODY_EDGE_CANDIDATE_COUNT) buffer CandidateCount
+{
     uint candidate_count;
 };
 

@@ -1,6 +1,6 @@
 #include "ui/PlacementController.h"
-#include "asset/AssetDataTypes.h"
 #include "app/SimulationController.h"
+#include "asset/AssetDataTypes.h"
 #include "ui/GarmentCardsPanel.h"
 #include "ui/GarmentColorPanel.h"
 #include "ui/PlacementPanel.h"

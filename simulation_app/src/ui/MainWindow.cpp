@@ -87,18 +87,13 @@ void MainWindow::setup_placement_controller()
         update_simulation_button_state();
         update_asset_button_state();
     });
-    connect(placement_controller_.get(),
-            &PlacementController::layout_changed,
-            viewport_,
-            &Viewport::update_layout);
+    connect(placement_controller_.get(), &PlacementController::layout_changed, viewport_, &Viewport::update_layout);
 }
 
 void MainWindow::initialize_scene(QOpenGLFunctions_4_5_Core& gl)
 {
     try {
-        simulation_controller_->initialize(project_paths_.shader_dir,
-                                           project_paths_.default_character_path,
-                                           gl);
+        simulation_controller_->initialize(project_paths_.shader_dir, project_paths_.default_character_path, gl);
     } catch (const std::exception& error) {
         qFatal("Application initialization failed: %s", error.what());
     }
@@ -142,12 +137,11 @@ void MainWindow::setup_asset_browser_callbacks()
         simulation_controller_->start_simulation();
         return true;
     });
-    asset_browser_panel.set_garment_loaded_callback(
-        [this](const std::filesystem::path& asset_path, GarmentMesh mesh) {
-            simulation_controller_->return_to_default_pose();
-            placement_controller_->load_garment(asset_path, std::move(mesh));
-            update_simulation_button_state();
-        });
+    asset_browser_panel.set_garment_loaded_callback([this](const std::filesystem::path& asset_path, GarmentMesh mesh) {
+        simulation_controller_->return_to_default_pose();
+        placement_controller_->load_garment(asset_path, std::move(mesh));
+        update_simulation_button_state();
+    });
 }
 
 void MainWindow::connect_simulation_controls()

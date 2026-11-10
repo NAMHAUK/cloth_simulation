@@ -138,9 +138,7 @@ void PlacementPanel::setup_garment_section(GarmentLayer layer)
     state.color_button = new QPushButton(state.frame);
     state.color_button->setFixedSize(26, 26);
     state.color_button->setToolTip("Choose garment color");
-    connect(state.color_button, &QPushButton::clicked, this, [this, layer]() {
-        choose_garment_color(layer);
-    });
+    connect(state.color_button, &QPushButton::clicked, this, [this, layer]() { choose_garment_color(layer); });
     section_layout->addWidget(state.color_button, 0, Qt::AlignHCenter);
 
     // Register section click event

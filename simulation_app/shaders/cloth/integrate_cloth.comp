@@ -4,15 +4,18 @@
 
 layout(local_size_x = 128) in;
 
-layout(std430, binding = CLOTH_CURRENT_POSITIONS) buffer CurrentPositions {
+layout(std430, binding = CLOTH_CURRENT_POSITIONS) buffer CurrentPositions
+{
     vec4 current_positions[];
 };
 
-layout(std430, binding = CLOTH_PREVIOUS_POSITIONS) buffer PreviousPositions {
+layout(std430, binding = CLOTH_PREVIOUS_POSITIONS) buffer PreviousPositions
+{
     vec4 previous_positions[];
 };
 
-layout(std430, binding = CLOTH_COLLISION_PUSHOUTS) buffer CollisionPushouts {
+layout(std430, binding = CLOTH_COLLISION_PUSHOUTS) buffer CollisionPushouts
+{
     vec4 collision_pushouts[];
 };
 

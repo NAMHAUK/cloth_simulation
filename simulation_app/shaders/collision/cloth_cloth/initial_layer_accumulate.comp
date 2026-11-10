@@ -6,11 +6,13 @@
 
 layout(local_size_x = 128) in;
 
-layout(std430, binding = CLOTH_CURRENT_POSITIONS) readonly buffer ClothCurrentPositions {
+layout(std430, binding = CLOTH_CURRENT_POSITIONS) readonly buffer ClothCurrentPositions
+{
     vec4 cloth_current_positions[];
 };
 
-layout(std430, binding = CLOTH_PREVIOUS_POSITIONS) readonly buffer ClothPreviousPositions {
+layout(std430, binding = CLOTH_PREVIOUS_POSITIONS) readonly buffer ClothPreviousPositions
+{
     vec4 cloth_previous_positions[];
 };
 
@@ -19,27 +21,33 @@ layout(std430, binding = CLOTH_TRIANGLE_VERTEX_INDICES) readonly buffer ClothTri
     TriangleVertexIndices triangle_vertex_indices[];
 };
 
-layout(std430, binding = CLOTH_CLOTH_VERTEX_FACE_CANDIDATES) readonly buffer Candidates {
+layout(std430, binding = CLOTH_CLOTH_VERTEX_FACE_CANDIDATES) readonly buffer Candidates
+{
     uvec2 candidates[];
 };
 
-layout(std430, binding = CLOTH_CLOTH_VERTEX_FACE_CANDIDATE_COUNT) readonly buffer CandidateCount {
+layout(std430, binding = CLOTH_CLOTH_VERTEX_FACE_CANDIDATE_COUNT) readonly buffer CandidateCount
+{
     uint candidate_count;
 };
 
-layout(std430, binding = NORMAL_CORRECTION_SUMS) buffer NormalCorrectionSums {
+layout(std430, binding = NORMAL_CORRECTION_SUMS) buffer NormalCorrectionSums
+{
     ivec4 normal_correction_sums[];
 };
 
-layout(std430, binding = BODY_TRIANGLE_POSITIONS) readonly buffer BodyTrianglePositions {
+layout(std430, binding = BODY_TRIANGLE_POSITIONS) readonly buffer BodyTrianglePositions
+{
     TrianglePositions body_triangle_positions[];
 };
 
-layout(std430, binding = BODY_TRIANGLE_NORMALS) readonly buffer BodyTriangleNormals {
+layout(std430, binding = BODY_TRIANGLE_NORMALS) readonly buffer BodyTriangleNormals
+{
     vec4 body_triangle_normals[];
 };
 
-layout(std430, binding = BODY_TRIANGLE_BVH_NODES) readonly buffer BodyTriangleBvhNodeBuffer {
+layout(std430, binding = BODY_TRIANGLE_BVH_NODES) readonly buffer BodyTriangleBvhNodeBuffer
+{
     BvhNode bvh_nodes[];
 };
 

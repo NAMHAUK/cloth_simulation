@@ -12,8 +12,7 @@ constexpr std::uint32_t local_size = 128;
 BendingConstraintSolver::BendingConstraintSolver(float stiffness) : stiffness_(stiffness)
 {}
 
-void BendingConstraintSolver::initialize(const std::filesystem::path& shader_dir,
-                                         QOpenGLFunctions_4_5_Core& gl)
+void BendingConstraintSolver::initialize(const std::filesystem::path& shader_dir, QOpenGLFunctions_4_5_Core& gl)
 {
     program_ = load_compute_program(shader_dir / "cloth" / "constraints" / "bending.comp", gl);
     constraint_offset_loc_ = require_uniform_location(program_, "uConstraintOffset", gl);

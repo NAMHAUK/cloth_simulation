@@ -17,9 +17,8 @@ void main()
     vec3 color = vertexColor;
     if (uUseNormalLighting) {
         float normalLengthSquared = dot(vertexNormalWorld, vertexNormalWorld);
-        vec3 normal = normalLengthSquared > 1.0e-20
-            ? vertexNormalWorld * inversesqrt(normalLengthSquared)
-            : vec3(0.0, 1.0, 0.0);
+        vec3 normal = normalLengthSquared > 1.0e-20 ? vertexNormalWorld * inversesqrt(normalLengthSquared)
+                                                    : vec3(0.0, 1.0, 0.0);
         float diffuse = max(dot(normal, uLightDirectionWorld), 0.0);
         float fillDiffuse = max(dot(normal, uFillLightDirectionWorld), 0.0);
         color *= uAmbientStrength + uDiffuseStrength * diffuse + uFillDiffuseStrength * fillDiffuse;

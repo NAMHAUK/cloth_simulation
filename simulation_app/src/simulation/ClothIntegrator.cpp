@@ -73,10 +73,7 @@ void ClothIntegrator::integrate(const ClothGpuState& cloth_state,
                                      1,
                                      GL_FALSE,
                                      glm::value_ptr(coefficients.position));
-        gl.glProgramUniform3fv(program_,
-                               position_offset_loc_,
-                               1,
-                               glm::value_ptr(coefficients.position_offset));
+        gl.glProgramUniform3fv(program_, position_offset_loc_, 1, glm::value_ptr(coefficients.position_offset));
 
         gl.glDispatchCompute(compute_group_count(garment_state.vertex_count, local_size), 1, 1);
     }
@@ -93,9 +90,8 @@ IntegrationCoefficients ClothIntegrator::integration_coefficients(const Referenc
     const auto displacement_coefficients = frame.rotation_delta * (glm::mat3(damping_) - coriolis_coefficient);
 
     // 2. 현재 위치에 반영할 계수 행렬
-    const auto rotation_correction =
-        (dt_ * dt_ * frame_inertia_scale_) *
-        (angular_acceleration_matrix + angular_velocity_matrix * angular_velocity_matrix);
+    const auto rotation_correction = (dt_ * dt_ * frame_inertia_scale_) *
+                                     (angular_acceleration_matrix + angular_velocity_matrix * angular_velocity_matrix);
 
     const auto rotated_position_coefficient = frame.rotation_delta * (glm::mat3(1.0f) - rotation_correction);
     const auto angular_velocity_coefficient = displacement_coefficients * (dt_ * angular_velocity_matrix);

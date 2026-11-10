@@ -6,27 +6,33 @@
 
 layout(local_size_x = 128) in;
 
-layout(std430, binding = CLOTH_CURRENT_POSITIONS) readonly buffer ClothCurrentPositions {
+layout(std430, binding = CLOTH_CURRENT_POSITIONS) readonly buffer ClothCurrentPositions
+{
     vec4 cloth_current_positions[];
 };
 
-layout(std430, binding = CLOTH_PREVIOUS_POSITIONS) readonly buffer ClothPreviousPositions {
+layout(std430, binding = CLOTH_PREVIOUS_POSITIONS) readonly buffer ClothPreviousPositions
+{
     vec4 cloth_previous_positions[];
 };
 
-layout(std430, binding = BODY_TRIANGLE_BOUNDS) readonly buffer BodyTriangleBounds {
+layout(std430, binding = BODY_TRIANGLE_BOUNDS) readonly buffer BodyTriangleBounds
+{
     Aabb body_triangle_bounds[];
 };
 
-layout(std430, binding = BODY_TRIANGLE_BVH_NODES) readonly buffer BvhNodeBuffer {
+layout(std430, binding = BODY_TRIANGLE_BVH_NODES) readonly buffer BvhNodeBuffer
+{
     BvhNode bvh_nodes[];
 };
 
-layout(std430, binding = CLOTH_VERTEX_BODY_FACE_CANDIDATES) buffer Candidates {
+layout(std430, binding = CLOTH_VERTEX_BODY_FACE_CANDIDATES) buffer Candidates
+{
     uvec2 candidates[];
 };
 
-layout(std430, binding = CLOTH_VERTEX_BODY_FACE_CANDIDATE_COUNT) buffer CandidateCount {
+layout(std430, binding = CLOTH_VERTEX_BODY_FACE_CANDIDATE_COUNT) buffer CandidateCount
+{
     uint candidate_count;
 };
 

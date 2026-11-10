@@ -28,8 +28,7 @@ class AssetBrowserPanel final : public QWidget
 
 public:
     using MotionLoadedCallback = std::function<bool(CharacterMotion)>;
-    using GarmentLoadedCallback =
-        std::function<void(const std::filesystem::path& asset_path, GarmentMesh mesh)>;
+    using GarmentLoadedCallback = std::function<void(const std::filesystem::path& asset_path, GarmentMesh mesh)>;
 
     explicit AssetBrowserPanel(const ProjectPaths& project_paths, QWidget* parent = nullptr);
 
@@ -86,9 +85,7 @@ private:
     void rebuild_list();
     void rebuild_subject_list();
     void rebuild_motion_list();
-    void set_motion_row(int row,
-                        const std::filesystem::path& source_path,
-                        const QString& converting_motion_id);
+    void set_motion_row(int row, const std::filesystem::path& source_path, const QString& converting_motion_id);
     void rebuild_garment_list();
 
     ProjectPaths project_paths_;

@@ -78,11 +78,10 @@ void AssetConverter::start_conversion(const ConverterCommand& command)
 
 void AssetConverter::connect_process()
 {
-    connect(
-        process_,
-        qOverload<int, QProcess::ExitStatus>(&QProcess::finished),
-        this,
-        [this](int exit_code, QProcess::ExitStatus exit_status) { finish_process(exit_code, exit_status); });
+    connect(process_,
+            qOverload<int, QProcess::ExitStatus>(&QProcess::finished),
+            this,
+            [this](int exit_code, QProcess::ExitStatus exit_status) { finish_process(exit_code, exit_status); });
 
     connect(process_, &QProcess::errorOccurred, this, [this](QProcess::ProcessError error) {
         if (error == QProcess::FailedToStart) {
@@ -140,10 +139,9 @@ AssetConverter::ConverterCommand AssetConverter::make_motion_command(
     return command;
 }
 
-AssetConverter::ConverterCommand AssetConverter::make_garment_command(
-    const std::filesystem::path& garment_obj_path,
-    const std::filesystem::path& garment_asset_path,
-    const QString& garment_category) const
+AssetConverter::ConverterCommand AssetConverter::make_garment_command(const std::filesystem::path& garment_obj_path,
+                                                                      const std::filesystem::path& garment_asset_path,
+                                                                      const QString& garment_category) const
 {
     ConverterCommand command;
 

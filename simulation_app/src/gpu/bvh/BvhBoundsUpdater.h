@@ -23,9 +23,7 @@ public:
                                 const std::vector<std::uint32_t>& edge_level_offsets);
 
     void update_body_bvh(QOpenGLFunctions_4_5_Core& gl) const;
-    void update_cloth_bvh(const ClothGpuState& cloth_state,
-                          float bounds_margin,
-                          QOpenGLFunctions_4_5_Core& gl) const;
+    void update_cloth_bvh(const ClothGpuState& cloth_state, float bounds_margin, QOpenGLFunctions_4_5_Core& gl) const;
 
     void release(QOpenGLFunctions_4_5_Core& gl);
 

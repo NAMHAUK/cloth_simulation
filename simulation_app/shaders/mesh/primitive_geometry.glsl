@@ -8,12 +8,14 @@ struct TriangleVertexIndices
     uint c;
 };
 
-struct EdgePositions {
+struct EdgePositions
+{
     vec3 a;
     vec3 b;
 };
 
-struct TrianglePositions {
+struct TrianglePositions
+{
     vec3 a;
     vec3 b;
     vec3 c;

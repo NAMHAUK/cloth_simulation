@@ -16,7 +16,8 @@ layout(std430, binding = CHARACTER_ANIMATION_POSITIONS) readonly buffer Characte
     VertexPosition animation_positions[];
 };
 
-layout(std430, binding = CHARACTER_CURRENT_POSITIONS) writeonly buffer CharacterCurrentPositions {
+layout(std430, binding = CHARACTER_CURRENT_POSITIONS) writeonly buffer CharacterCurrentPositions
+{
     vec4 current_positions[];
 };
 

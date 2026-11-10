@@ -22,10 +22,7 @@ void accumulate_vertex_normal_correction(uint vertex_index, vec3 normal, float c
 }
 
 #ifdef COLLISION_INWARD_MOTION_ACCUMULATE
-void accumulate_vertex_inward_motion_correction(uint vertex_index,
-                                                vec3 normal,
-                                                vec3 relative_delta,
-                                                float weight)
+void accumulate_vertex_inward_motion_correction(uint vertex_index, vec3 normal, vec3 relative_delta, float weight)
 {
     vec3 correction = normal * max(-dot(relative_delta, normal), 0.0) * weight;
     ivec3 int_correction = correction_to_int(correction);
@@ -66,7 +63,7 @@ void accumulate_vertex_friction_correction(uint vertex_index, vec3 correction)
 
 #ifdef COLLISION_CORRECTION_APPLY
 void apply_collision_corrections(uint vertex_index)
-{   
+{
     // apply position correction
     ivec4 normal_accumulated = normal_correction_sums[vertex_index];
     if (normal_accumulated.w == 0) {

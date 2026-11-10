@@ -114,7 +114,9 @@ void accumulate_edge_edge_collision_correction(uvec2 candidate)
     vec3 collision_pushout = mix(collision_pushouts[cloth_vertices.x].xyz,
                                  collision_pushouts[cloth_vertices.y].xyz,
                                  cur_cloth_segment.t);
-    vec3 cloth_delta = cur_cloth_segment.point - interpolate_edge_position(prev_cloth_edge_pos, cur_cloth_segment.t) - collision_pushout;
+    vec3 cloth_delta = cur_cloth_segment.point -
+                       interpolate_edge_position(prev_cloth_edge_pos, cur_cloth_segment.t) -
+                       collision_pushout;
     vec3 body_delta = cur_body_segment.point - interpolate_edge_position(prev_body_edge_pos, cur_body_segment.t);
     vec3 relative_delta = cloth_delta - body_delta;
     vec3 friction_correction = compute_friction_correction(normal, relative_delta, penetration_depth);

@@ -15,8 +15,7 @@ ClothClothCollisionSolver::ClothClothCollisionSolver(const ClothCollisionParams&
       surface_search_radius_(params.body_search_radius)
 {}
 
-void ClothClothCollisionSolver::initialize(const std::filesystem::path& shader_dir,
-                                           QOpenGLFunctions_4_5_Core& gl)
+void ClothClothCollisionSolver::initialize(const std::filesystem::path& shader_dir, QOpenGLFunctions_4_5_Core& gl)
 {
     const auto collision_dir = shader_dir / "collision" / "cloth_cloth";
 
@@ -43,9 +42,7 @@ void ClothClothCollisionSolver::initialize(const std::filesystem::path& shader_d
         const GLint search_radius_loc = require_uniform_location(shader.program, "uSearchRadiusSquared", gl);
         gl.glProgramUniform1f(shader.program, thickness_loc, collision_thickness_);
         gl.glProgramUniform1f(shader.program, stiffness_loc, collision_stiffness_);
-        gl.glProgramUniform1f(shader.program,
-                              search_radius_loc,
-                              surface_search_radius_ * surface_search_radius_);
+        gl.glProgramUniform1f(shader.program, search_radius_loc, surface_search_radius_ * surface_search_radius_);
     }
 
     {
@@ -72,8 +69,7 @@ void ClothClothCollisionSolver::solve(const SceneGpuState& gpu_state, QOpenGLFun
     solve(gpu_state, accumulate_, true, gl);
 }
 
-void ClothClothCollisionSolver::solve_initial(const SceneGpuState& gpu_state,
-                                              QOpenGLFunctions_4_5_Core& gl) const
+void ClothClothCollisionSolver::solve_initial(const SceneGpuState& gpu_state, QOpenGLFunctions_4_5_Core& gl) const
 {
     solve(gpu_state, initial_accumulate_, false, gl);
 }

@@ -5,9 +5,10 @@ ContinuationIndentWidth: 4
 AlignAfterOpenBracket: Align
 AccessModifierOffset: -4
 UseTab: Never
-ColumnLimit: 110
+ColumnLimit: 120
 BreakBinaryOperations: RespectPrecedence
 BreakBeforeBinaryOperators: None
+PenaltyBreakAssignment: 1000
 PenaltyReturnTypeOnItsOwnLine: 1000
 
 BreakBeforeBraces: Custom

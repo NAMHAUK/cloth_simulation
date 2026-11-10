@@ -13,8 +13,7 @@ constexpr GLsizeiptr byte_size(std::size_t count) noexcept
     return static_cast<GLsizeiptr>(count * sizeof(T));
 }
 
-inline void clear_collision_candidate_counts(const CollisionCandidateBuffers& buffers,
-                                             QOpenGLFunctions_4_5_Core& gl)
+inline void clear_collision_candidate_counts(const CollisionCandidateBuffers& buffers, QOpenGLFunctions_4_5_Core& gl)
 {
     const std::uint32_t zero_uint = 0;
     gl.glClearNamedBufferData(buffers.count_buffer, GL_R32UI, GL_RED_INTEGER, GL_UNSIGNED_INT, &zero_uint);

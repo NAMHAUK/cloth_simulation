@@ -4,7 +4,8 @@
 
 layout(local_size_x = 128) in;
 
-layout(std430, binding = CLOTH_CURRENT_POSITIONS) buffer ClothCurrentPositions {
+layout(std430, binding = CLOTH_CURRENT_POSITIONS) buffer ClothCurrentPositions
+{
     vec4 cloth_current_positions[];
 };
 
@@ -13,7 +14,8 @@ layout(std430, binding = CLOTH_COLLISION_PUSHOUTS) buffer CollisionPushouts
     vec4 collision_pushouts[];
 };
 
-layout(std430, binding = NORMAL_CORRECTION_SUMS) readonly buffer NormalCorrectionSums {
+layout(std430, binding = NORMAL_CORRECTION_SUMS) readonly buffer NormalCorrectionSums
+{
     ivec4 normal_correction_sums[];
 };
 

@@ -20,9 +20,7 @@ public:
     ClothIntegrator& operator=(const ClothIntegrator&) = delete;
 
     void initialize(const std::filesystem::path& shader_dir, float dt, QOpenGLFunctions_4_5_Core& gl);
-    void integrate(const ClothGpuState& cloth_state,
-                   const SceneState& scene,
-                   QOpenGLFunctions_4_5_Core& gl) const;
+    void integrate(const ClothGpuState& cloth_state, const SceneState& scene, QOpenGLFunctions_4_5_Core& gl) const;
     void release(QOpenGLFunctions_4_5_Core& gl);
 
 private:

@@ -15,9 +15,7 @@ class MotionCard final : public QWidget
 public:
     explicit MotionCard(QWidget* parent = nullptr);
 
-    void show_motion(const std::filesystem::path& asset_path,
-                     const QString& motion_id,
-                     const QString& description);
+    void show_motion(const std::filesystem::path& asset_path, const QString& motion_id, const QString& description);
     void dismiss(const std::filesystem::path& asset_path);
 
 Q_SIGNALS:

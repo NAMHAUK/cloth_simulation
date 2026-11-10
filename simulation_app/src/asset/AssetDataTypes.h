@@ -40,10 +40,7 @@ struct TriangleVertexIndices final
     std::uint32_t b = 0;
     std::uint32_t c = 0;
 
-    bool operator==(const TriangleVertexIndices& other) const
-    {
-        return a == other.a && b == other.b && c == other.c;
-    }
+    bool operator==(const TriangleVertexIndices& other) const { return a == other.a && b == other.b && c == other.c; }
 };
 
 struct VertexTriangleAdjacency final
@@ -58,10 +55,7 @@ struct MeshEdge final
     std::uint32_t vertex_a = 0;
     std::uint32_t vertex_b = 0;
 
-    bool operator==(const MeshEdge& other) const
-    {
-        return vertex_a == other.vertex_a && vertex_b == other.vertex_b;
-    }
+    bool operator==(const MeshEdge& other) const { return vertex_a == other.vertex_a && vertex_b == other.vertex_b; }
 
     bool operator<(const MeshEdge& other) const
     {

@@ -313,9 +313,7 @@ void AssetBrowserPanel::load_motion_paths()
     }
 
     // sort subjects by ID
-    std::sort(subjects_.begin(), subjects_.end(), [](const auto& lhs, const auto& rhs) {
-        return lhs.id < rhs.id;
-    });
+    std::sort(subjects_.begin(), subjects_.end(), [](const auto& lhs, const auto& rhs) { return lhs.id < rhs.id; });
 
     // load converted motion data
     for (const auto& asset_path : asset_io::scan_asset_paths(project_paths_.motion_asset_dir, ".motion")) {
@@ -510,8 +508,7 @@ void AssetBrowserPanel::request_motion_conversion(const std::filesystem::path& s
         return;
     }
 
-    const auto motion_asset_path =
-        project_paths_.motion_asset_dir / (source_path.stem().string() + ".motion");
+    const auto motion_asset_path = project_paths_.motion_asset_dir / (source_path.stem().string() + ".motion");
     converting_motion_asset_path_ = motion_asset_path;
     refresh_motion_list();
     motion_converter_->start_motion_conversion(source_path, motion_asset_path);

@@ -123,8 +123,7 @@ void CollisionDetector::detect_cloth_vertex_body_face(const SceneGpuState& gpu_s
     gl.glDispatchCompute(compute_group_count(vertex_count, candidate_detect_local_size), 1, 1);
 }
 
-void CollisionDetector::detect_cloth_edge_body_edge(const SceneGpuState& gpu_state,
-                                                    QOpenGLFunctions_4_5_Core& gl) const
+void CollisionDetector::detect_cloth_edge_body_edge(const SceneGpuState& gpu_state, QOpenGLFunctions_4_5_Core& gl) const
 {
     const auto& shader = cloth_edge_body_edge_;
     const auto& candidates = gpu_state.collision_buffers().cloth_edge_body_edge;
@@ -154,8 +153,10 @@ void CollisionDetector::detect_cloth_cloth_vertex_face(const SceneGpuState& gpu_
         upper.vertex_count > 0u ? upper.triangle_bvh_level_offsets.front() : 0u,
     };
     const std::array<GLuint, 2> triangle_offsets{lower.triangle_start_index, upper.triangle_start_index};
-    const std::array<GLuint, 2> masks_per_vertex{(lower.triangle_count + 31u) / 32u, (upper.triangle_count + 31u) / 32u};
-    const std::array<GLuint, 2> exclusion_offsets{lower.vertex_face_exclusion_offset, upper.vertex_face_exclusion_offset};
+    const std::array<GLuint, 2> masks_per_vertex{(lower.triangle_count + 31u) / 32u,
+                                                 (upper.triangle_count + 31u) / 32u};
+    const std::array<GLuint, 2> exclusion_offsets{lower.vertex_face_exclusion_offset,
+                                                  upper.vertex_face_exclusion_offset};
 
     gl.glUseProgram(shader.program);
     gl.glProgramUniform1ui(shader.program, shader.max_candidates, candidates.max_pairs);

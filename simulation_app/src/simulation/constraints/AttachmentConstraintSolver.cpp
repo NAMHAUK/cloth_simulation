@@ -12,8 +12,7 @@ constexpr std::uint32_t local_size = 128;
 AttachmentConstraintSolver::AttachmentConstraintSolver(float stiffness) : stiffness_(stiffness)
 {}
 
-void AttachmentConstraintSolver::initialize(const std::filesystem::path& shader_dir,
-                                            QOpenGLFunctions_4_5_Core& gl)
+void AttachmentConstraintSolver::initialize(const std::filesystem::path& shader_dir, QOpenGLFunctions_4_5_Core& gl)
 {
     program_ = load_compute_program(shader_dir / "cloth" / "constraints" / "attachment.comp", gl);
     constraint_offset_loc_ = require_uniform_location(program_, "uConstraintOffset", gl);
@@ -33,9 +32,7 @@ void AttachmentConstraintSolver::solve(const ClothGpuState& cloth_state, QOpenGL
             continue;
         }
 
-        gl.glProgramUniform1ui(program_,
-                               constraint_offset_loc_,
-                               garment_state.attachment_constraint_start_index);
+        gl.glProgramUniform1ui(program_, constraint_offset_loc_, garment_state.attachment_constraint_start_index);
         gl.glProgramUniform1ui(program_, constraint_count_loc_, attachment_count);
         gl.glDispatchCompute(compute_group_count(attachment_count, local_size), 1, 1);
     }
