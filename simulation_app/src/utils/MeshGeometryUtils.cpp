@@ -107,8 +107,7 @@ VertexTriangleAdjacency build_vertex_triangle_adjacency(
     // offsets에 vertex 누적합으로 저장 -> 각 vertex의 triangle_indices 시작 위치
     for (std::uint32_t vertex_index = 0; vertex_index < vertex_count; ++vertex_index) {
         const std::size_t offset_index = static_cast<std::size_t>(vertex_index);
-        const std::size_t next_offset_index = offset_index + 1u;
-        adjacency.offsets[next_offset_index] += adjacency.offsets[offset_index];
+        adjacency.offsets[offset_index + 1u] += adjacency.offsets[offset_index];
     }
 
     // 각 vertex가 포함된 triangle index 저장 (여러 triangle에 포함된 경우 연속되게 저장됨)
@@ -135,15 +134,16 @@ std::vector<std::uint32_t> build_vertex_neighborhood_masks(
     const std::size_t masks_per_vertex = (static_cast<std::size_t>(adjacency.triangle_count) + 31u) / 32u;
     std::vector<std::uint32_t> exclusions(vertex_count * masks_per_vertex, 0u);
 
-    for (std::uint32_t vertex = 0; vertex < vertex_count; ++vertex) {
-        const std::size_t row_offset = vertex * masks_per_vertex;
-        for (std::uint32_t entry = adjacency.offsets[vertex]; entry < adjacency.offsets[vertex + 1u]; ++entry) {
-            const TriangleVertexIndices& adjacent_triangle = vertex_indices[adjacency.triangle_indices[entry]];
-            for (std::uint32_t neighbor : {adjacent_triangle.a, adjacent_triangle.b, adjacent_triangle.c}) {
-                for (std::uint32_t neighbor_entry = adjacency.offsets[neighbor]; neighbor_entry < adjacency.offsets[neighbor + 1u]; ++neighbor_entry) {
-                    const std::uint32_t triangle = adjacency.triangle_indices[neighbor_entry];
-                    exclusions[row_offset + triangle / 32u] |= 1u << (triangle % 32u);
-                }
+    for (const auto& [vertex_a, vertex_b, vertex_c] : vertex_indices) {
+        for (std::uint32_t vertex : {vertex_a, vertex_b, vertex_c}) {
+            for (auto entry = adjacency.offsets[vertex]; entry < adjacency.offsets[vertex + 1u]; ++entry) {
+                const std::uint32_t triangle_index = adjacency.triangle_indices[entry];
+                const std::size_t mask_index = triangle_index / 32u;
+                const std::uint32_t triangle_mask = 1u << (triangle_index % 32u);
+
+                exclusions[vertex_a * masks_per_vertex + mask_index] |= triangle_mask;
+                exclusions[vertex_b * masks_per_vertex + mask_index] |= triangle_mask;
+                exclusions[vertex_c * masks_per_vertex + mask_index] |= triangle_mask;
             }
         }
     }
@@ -172,8 +172,7 @@ std::vector<std::uint32_t> build_edge_exclusions(std::uint32_t vertex_count,
     const auto edge_count = static_cast<std::uint32_t>(edges.size());
     std::vector<std::vector<std::uint32_t>> vertex_edges(vertex_count);
     for (std::uint32_t edge_index = 0; edge_index < edge_count; ++edge_index) {
-        const MeshEdge& edge = edges[edge_index];
-        for (std::uint32_t vertex : {edge.vertex_a, edge.vertex_b}) {
+        for (std::uint32_t vertex : {edges[edge_index].vertex_a, edges[edge_index].vertex_b}) {
             if (vertex >= vertex_count) {
                 throw std::invalid_argument("Cannot build edge exclusions from invalid topology.");
             }
@@ -306,9 +305,7 @@ std::vector<float> compute_mesh_edge_lengths(const std::vector<MeshEdge>& edges,
     std::vector<float> lengths;
     lengths.reserve(edges.size());
     for (const MeshEdge& edge : edges) {
-        const glm::vec3 vertex_a = vertex_positions[edge.vertex_a];
-        const glm::vec3 vertex_b = vertex_positions[edge.vertex_b];
-        lengths.push_back(glm::length(vertex_b - vertex_a));
+        lengths.push_back(glm::length(vertex_positions[edge.vertex_b] - vertex_positions[edge.vertex_a]));
     }
     return lengths;
 }
