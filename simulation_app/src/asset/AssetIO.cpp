@@ -77,9 +77,9 @@ bool are_valid_orientations(const std::vector<float>& orientations)
     return true;
 }
 
-bool are_valid_triangles(const std::vector<TriangleVertexIndices>& triangles, std::uint32_t vertex_count)
+bool are_valid_triangles(const std::vector<TriangleVertexIndices>& vertex_indices, std::uint32_t vertex_count)
 {
-    for (const TriangleVertexIndices& triangle : triangles) {
+    for (const TriangleVertexIndices& triangle : vertex_indices) {
         if (triangle.a >= vertex_count ||
             triangle.b >= vertex_count ||
             triangle.c >= vertex_count ||

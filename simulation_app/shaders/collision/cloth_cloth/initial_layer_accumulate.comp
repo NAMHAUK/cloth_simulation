@@ -16,7 +16,7 @@ layout(std430, binding = CLOTH_PREVIOUS_POSITIONS) readonly buffer ClothPrevious
 
 layout(std430, binding = CLOTH_TRIANGLE_VERTEX_INDICES) readonly buffer ClothTriangleVertexIndices
 {
-    TriangleVertexIndices triangles[];
+    TriangleVertexIndices triangle_vertex_indices[];
 };
 
 layout(std430, binding = CLOTH_CLOTH_VERTEX_FACE_CANDIDATES) readonly buffer Candidates {
@@ -75,7 +75,7 @@ void main()
 
     uvec2 candidate_indices = candidates[candidate_index];
     uint vertex_index = candidate_indices.x;
-    TriangleVertexIndices face_vertex_indices = triangles[candidate_indices.y];
+    TriangleVertexIndices face_vertex_indices = triangle_vertex_indices[candidate_indices.y];
 
     uint vertex_layer = get_garment_layer(vertex_index);
     uint face_layer = get_garment_layer(face_vertex_indices.a);

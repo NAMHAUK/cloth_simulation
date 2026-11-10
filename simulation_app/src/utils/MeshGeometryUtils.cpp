@@ -82,19 +82,20 @@ void add_triangle_edge(std::map<MeshEdge, TriangleEdge>& triangle_edge_map,
 }
 }
 
-VertexTriangleAdjacency build_vertex_triangle_adjacency(std::uint32_t vertex_count,
-                                                        const std::vector<TriangleVertexIndices>& triangles)
+VertexTriangleAdjacency build_vertex_triangle_adjacency(
+    std::uint32_t vertex_count,
+    const std::vector<TriangleVertexIndices>& vertex_indices)
 {
-    if (vertex_count == 0 || triangles.empty()) {
+    if (vertex_count == 0 || vertex_indices.empty()) {
         throw std::invalid_argument("Cannot build vertex-triangle adjacency from invalid topology.");
     }
 
-    const std::uint32_t triangle_count = static_cast<std::uint32_t>(triangles.size());
+    const std::uint32_t triangle_count = static_cast<std::uint32_t>(vertex_indices.size());
     VertexTriangleAdjacency adjacency;
     adjacency.offsets.resize(static_cast<std::size_t>(vertex_count) + 1u, 0);
 
     // 각 vetex가 전체 triangle에서 몇 번 나오는지 count
-    for (const TriangleVertexIndices& triangle : triangles) {
+    for (const TriangleVertexIndices& triangle : vertex_indices) {
         for (std::uint32_t index : {triangle.a, triangle.b, triangle.c}) {
             if (index >= vertex_count) {
                 throw std::invalid_argument("Cannot build vertex-triangle adjacency from invalid topology.");
@@ -115,7 +116,7 @@ VertexTriangleAdjacency build_vertex_triangle_adjacency(std::uint32_t vertex_cou
     std::vector<std::uint32_t> write_offsets = adjacency.offsets;
 
     for (std::uint32_t triangle_index = 0; triangle_index < triangle_count; ++triangle_index) {
-        const TriangleVertexIndices& triangle = triangles[triangle_index];
+        const TriangleVertexIndices& triangle = vertex_indices[triangle_index];
         for (std::uint32_t vertex_index : {triangle.a, triangle.b, triangle.c}) {
             const std::uint32_t write_index = write_offsets[vertex_index]++;
             adjacency.triangle_indices[write_index] = triangle_index;
@@ -128,16 +129,16 @@ VertexTriangleAdjacency build_vertex_triangle_adjacency(std::uint32_t vertex_cou
 
 std::vector<std::uint32_t> build_vertex_neighborhood_masks(
     std::uint32_t vertex_count,
-    const std::vector<TriangleVertexIndices>& triangles)
+    const std::vector<TriangleVertexIndices>& vertex_indices)
 {
-    const auto adjacency = build_vertex_triangle_adjacency(vertex_count, triangles);
+    const auto adjacency = build_vertex_triangle_adjacency(vertex_count, vertex_indices);
     const std::size_t masks_per_vertex = (static_cast<std::size_t>(adjacency.triangle_count) + 31u) / 32u;
     std::vector<std::uint32_t> exclusions(vertex_count * masks_per_vertex, 0u);
 
     for (std::uint32_t vertex = 0; vertex < vertex_count; ++vertex) {
         const std::size_t row_offset = vertex * masks_per_vertex;
         for (std::uint32_t entry = adjacency.offsets[vertex]; entry < adjacency.offsets[vertex + 1u]; ++entry) {
-            const TriangleVertexIndices& adjacent_triangle = triangles[adjacency.triangle_indices[entry]];
+            const TriangleVertexIndices& adjacent_triangle = vertex_indices[adjacency.triangle_indices[entry]];
             for (std::uint32_t neighbor : {adjacent_triangle.a, adjacent_triangle.b, adjacent_triangle.c}) {
                 for (std::uint32_t neighbor_entry = adjacency.offsets[neighbor]; neighbor_entry < adjacency.offsets[neighbor + 1u]; ++neighbor_entry) {
                     const std::uint32_t triangle = adjacency.triangle_indices[neighbor_entry];
@@ -149,11 +150,11 @@ std::vector<std::uint32_t> build_vertex_neighborhood_masks(
     return exclusions;
 }
 
-std::vector<MeshEdge> build_unique_triangle_edges(const std::vector<TriangleVertexIndices>& triangles)
+std::vector<MeshEdge> build_unique_triangle_edges(const std::vector<TriangleVertexIndices>& vertex_indices)
 {
     std::vector<MeshEdge> edges;
-    edges.reserve(triangles.size() * 3u);
-    for (const auto& [vertex_a, vertex_b, vertex_c] : triangles) {
+    edges.reserve(vertex_indices.size() * 3u);
+    for (const auto& [vertex_a, vertex_b, vertex_c] : vertex_indices) {
 
         edges.push_back(make_edge(vertex_a, vertex_b));
         edges.push_back(make_edge(vertex_b, vertex_c));
@@ -195,11 +196,11 @@ std::vector<std::uint32_t> build_edge_exclusions(std::uint32_t vertex_count,
     return exclusions;
 }
 
-std::vector<MeshEdge> build_unique_bending_edges(const std::vector<TriangleVertexIndices>& triangles)
+std::vector<MeshEdge> build_unique_bending_edges(const std::vector<TriangleVertexIndices>& vertex_indices)
 {
     std::vector<std::pair<MeshEdge, std::uint32_t>> edge_opposite_vertices;
-    edge_opposite_vertices.reserve(triangles.size() * 3u);
-    for (const auto& [vertex_a, vertex_b, vertex_c] : triangles) {
+    edge_opposite_vertices.reserve(vertex_indices.size() * 3u);
+    for (const auto& [vertex_a, vertex_b, vertex_c] : vertex_indices) {
 
         edge_opposite_vertices.push_back({make_edge(vertex_a, vertex_b), vertex_c});
         edge_opposite_vertices.push_back({make_edge(vertex_b, vertex_c), vertex_a});
@@ -228,15 +229,15 @@ std::vector<MeshEdge> build_unique_bending_edges(const std::vector<TriangleVerte
 
 void orient_triangles_outward(const std::vector<glm::vec3>& vertex_positions,
                               const glm::vec3& bounds_center,
-                              std::vector<TriangleVertexIndices>& triangles)
+                              std::vector<TriangleVertexIndices>& vertex_indices)
 {
-    const auto triangle_count = static_cast<std::uint32_t>(triangles.size());
+    const auto triangle_count = static_cast<std::uint32_t>(vertex_indices.size());
 
     // Build triangle edge map and neighbors
     std::map<MeshEdge, TriangleEdge> triangle_edge_map;
     std::vector<std::vector<TriangleNeighbor>> triangle_neighbors(triangle_count);
     for (std::uint32_t triangle_index = 0u; triangle_index < triangle_count; ++triangle_index) {
-        const auto& [vertex_a, vertex_b, vertex_c] = triangles[triangle_index];
+        const auto& [vertex_a, vertex_b, vertex_c] = vertex_indices[triangle_index];
 
         add_triangle_edge(triangle_edge_map, triangle_neighbors, triangle_index, vertex_a, vertex_b);
         add_triangle_edge(triangle_edge_map, triangle_neighbors, triangle_index, vertex_b, vertex_c);
@@ -273,9 +274,9 @@ void orient_triangles_outward(const std::vector<glm::vec3>& vertex_positions,
     // Orient outward
     double orientation_score = 0.0;
     for (std::uint32_t triangle_index = 0u; triangle_index < triangle_count; ++triangle_index) {
-        const glm::vec3 position_a = vertex_positions[triangles[triangle_index].a];
-        const glm::vec3 position_b = vertex_positions[triangles[triangle_index].b];
-        const glm::vec3 position_c = vertex_positions[triangles[triangle_index].c];
+        const glm::vec3 position_a = vertex_positions[vertex_indices[triangle_index].a];
+        const glm::vec3 position_b = vertex_positions[vertex_indices[triangle_index].b];
+        const glm::vec3 position_c = vertex_positions[vertex_indices[triangle_index].c];
         const glm::vec3 area_normal = glm::cross(position_b - position_a, position_c - position_a);
         const glm::vec3 centroid = (position_a + position_b + position_c) / 3.0f;
         
@@ -295,7 +296,7 @@ void orient_triangles_outward(const std::vector<glm::vec3>& vertex_positions,
             continue;
         }
 
-        std::swap(triangles[triangle_index].b, triangles[triangle_index].c);
+        std::swap(vertex_indices[triangle_index].b, vertex_indices[triangle_index].c);
     }
 }
 

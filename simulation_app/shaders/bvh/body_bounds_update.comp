@@ -20,7 +20,7 @@ layout(std430, binding = BODY_TRIANGLE_NORMALS) readonly buffer BodyTriangleNorm
 
 layout(std430, binding = CHARACTER_TRIANGLE_VERTEX_INDICES) readonly buffer BodyTriangleVertexIndices
 {
-    TriangleVertexIndices triangles[];
+    TriangleVertexIndices triangle_vertex_indices[];
 };
 
 layout(std430, binding = CHARACTER_CURRENT_POSITIONS) readonly buffer BodyCurrentPositions {
@@ -75,7 +75,7 @@ void update_triangle_leaf_bounds(uint node_index, BvhNode node)
             continue;
         }
 
-        TrianglePositions previous = read_body_previous_triangle(triangles[triangle_index]);
+        TrianglePositions previous = read_body_previous_triangle(triangle_vertex_indices[triangle_index]);
 
         vec3 current_min_bounds = min(triangle.a, min(triangle.b, triangle.c));
         vec3 current_max_bounds = max(triangle.a, max(triangle.b, triangle.c));

@@ -25,7 +25,7 @@ void accumulate_vertex_face_collision_correction(uint cloth_vertex_index, uint t
     }
 
     TrianglePositions cur_triangle_pos = body_triangle_positions[triangle_index];
-    TrianglePositions prev_triangle_pos = read_body_previous_triangle(triangles[triangle_index]);
+    TrianglePositions prev_triangle_pos = read_body_previous_triangle(triangle_vertex_indices[triangle_index]);
     vec3 cur_vertex_pos = read_cloth_current_position(cloth_vertex_index);
     vec3 prev_vertex_pos = read_cloth_previous_position(cloth_vertex_index);
 

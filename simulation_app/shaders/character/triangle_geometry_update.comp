@@ -12,7 +12,7 @@ layout(std430, binding = CHARACTER_CURRENT_POSITIONS) readonly buffer CharacterC
 
 layout(std430, binding = CHARACTER_TRIANGLE_VERTEX_INDICES) readonly buffer CharacterIndices
 {
-    TriangleVertexIndices triangles[];
+    TriangleVertexIndices triangle_vertex_indices[];
 };
 
 layout(std430, binding = BODY_TRIANGLE_POSITIONS) writeonly buffer BodyTrianglePositions {
@@ -35,7 +35,7 @@ void main()
         return;
     }
 
-    TrianglePositions triangle = read_body_current_triangle(triangles[triangle_index]);
+    TrianglePositions triangle = read_body_current_triangle(triangle_vertex_indices[triangle_index]);
 
     body_triangle_positions[triangle_index] = triangle;
     body_triangle_normals[triangle_index] = triangle_normal(triangle.a, triangle.b, triangle.c);

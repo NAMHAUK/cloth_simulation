@@ -10,7 +10,7 @@ layout(std430, binding = CLOTH_CURRENT_POSITIONS) readonly buffer Positions {
 };
 
 layout(std430, binding = CLOTH_TRIANGLE_VERTEX_INDICES) readonly buffer Indices {
-    TriangleVertexIndices triangles[];
+    TriangleVertexIndices triangle_vertex_indices[];
 };
 
 layout(std430, binding = CLOTH_TRIANGLE_NORMALS) writeonly buffer TriangleNormals {
@@ -26,7 +26,7 @@ void main()
         return;
     }
 
-    TriangleVertexIndices vertex_indices = triangles[triangle_index];
+    TriangleVertexIndices vertex_indices = triangle_vertex_indices[triangle_index];
     vec3 p0 = positions[vertex_indices.a].xyz;
     vec3 p1 = positions[vertex_indices.b].xyz;
     vec3 p2 = positions[vertex_indices.c].xyz;

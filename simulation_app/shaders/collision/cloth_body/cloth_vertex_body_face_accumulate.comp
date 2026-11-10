@@ -27,7 +27,7 @@ layout(std430, binding = CHARACTER_PREVIOUS_POSITIONS) readonly buffer BodyPrevi
 
 layout(std430, binding = CHARACTER_TRIANGLE_VERTEX_INDICES) readonly buffer BodyTriangleVertexIndices
 {
-    TriangleVertexIndices triangles[];
+    TriangleVertexIndices triangle_vertex_indices[];
 };
 
 layout(std430, binding = CLOTH_VERTEX_BODY_FACE_CANDIDATES) readonly buffer Candidates {

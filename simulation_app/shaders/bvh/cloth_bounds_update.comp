@@ -19,7 +19,7 @@ layout(std430, binding = CLOTH_PREVIOUS_POSITIONS) readonly buffer ClothPrevious
 
 layout(std430, binding = CLOTH_TRIANGLE_VERTEX_INDICES) readonly buffer ClothTriangleVertexIndices
 {
-    TriangleVertexIndices triangles[];
+    TriangleVertexIndices triangle_vertex_indices[];
 };
 
 layout(std430, binding = CLOTH_BVH_NODES) buffer ClothBvhNodes {
@@ -58,7 +58,7 @@ void update_leaf_bounds(uint node_index, BvhNode node)
 
     for (uint triangle_offset = 0u; triangle_offset < node.element_count; ++triangle_offset) {
         uint triangle_index = node.first_element_index + triangle_offset;
-        TriangleVertexIndices vertex_indices = triangles[triangle_index];
+        TriangleVertexIndices vertex_indices = triangle_vertex_indices[triangle_index];
 
         TrianglePositions current = read_cloth_current_triangle(vertex_indices);
         TrianglePositions previous = read_cloth_previous_triangle(vertex_indices);

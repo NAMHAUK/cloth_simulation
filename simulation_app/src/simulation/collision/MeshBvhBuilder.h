@@ -51,7 +51,7 @@ private:
     std::vector<LabeledEdge> make_labeled_edges() const;
 
     // Source data
-    const std::vector<TriangleVertexIndices>& source_triangles_;
+    const std::vector<TriangleVertexIndices>& source_triangle_vertex_indices_;
     const std::vector<glm::vec3>& source_vertex_positions_;
     std::vector<std::uint32_t> collision_triangle_indices_;
     std::vector<std::uint32_t> excluded_triangle_indices_;

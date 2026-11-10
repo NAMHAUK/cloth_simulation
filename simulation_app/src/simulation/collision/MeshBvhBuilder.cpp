@@ -96,7 +96,7 @@ std::uint32_t find_longest_axis(const glm::vec3& aabb_size)
 // Initialization
 MeshBvhBuilder::MeshBvhBuilder(const CharacterMotion& motion,
                                const std::vector<std::uint8_t>& triangle_part_labels)
-    : source_triangles_(motion.triangle_vertex_indices),
+    : source_triangle_vertex_indices_(motion.triangle_vertex_indices),
       source_vertex_positions_(motion.vertex_positions),
       triangle_part_labels_(triangle_part_labels)
 {
@@ -113,11 +113,11 @@ MeshBvhBuilder::MeshBvhBuilder(const CharacterMotion& motion,
 }
 
 MeshBvhBuilder::MeshBvhBuilder(const GarmentMesh& mesh)
-    : source_triangles_(mesh.triangle_vertex_indices),
+    : source_triangle_vertex_indices_(mesh.triangle_vertex_indices),
       source_vertex_positions_(mesh.vertex_positions)
 {
     // Garment: build triangle index list
-    const std::uint32_t triangle_count = source_triangles_.size();
+    const std::uint32_t triangle_count = source_triangle_vertex_indices_.size();
     triangle_part_labels_.resize(triangle_count, 0u);
     collision_triangle_indices_.reserve(triangle_count);
     for (std::uint32_t triangle_index = 0; triangle_index < triangle_count; ++triangle_index) {
@@ -132,19 +132,19 @@ TriangleBvh MeshBvhBuilder::build_triangle_bvh()
     make_triangle_primitives();
     build_bvh();
     
-    std::vector<TriangleVertexIndices> triangles;
-    triangles.reserve(primitives_.size() + excluded_triangle_indices_.size());
+    std::vector<TriangleVertexIndices> triangle_vertex_indices;
+    triangle_vertex_indices.reserve(primitives_.size() + excluded_triangle_indices_.size());
 
     // Triangles in BVH order
     for (const BvhPrimitive& primitive : primitives_) {
-        triangles.push_back(source_triangles_[primitive.element_index]);
+        triangle_vertex_indices.push_back(source_triangle_vertex_indices_[primitive.element_index]);
     }
 
     // Rendering-only triangles: Hands
     for (std::uint32_t triangle_index : excluded_triangle_indices_) {
-        triangles.push_back(source_triangles_[triangle_index]);
+        triangle_vertex_indices.push_back(source_triangle_vertex_indices_[triangle_index]);
     }
-    return {std::move(bvh_), std::move(triangles)};
+    return {std::move(bvh_), std::move(triangle_vertex_indices)};
 }
 
 EdgeBvh MeshBvhBuilder::build_edge_bvh()
@@ -326,7 +326,7 @@ void MeshBvhBuilder::make_triangle_primitives()
     primitives_.reserve(collision_triangle_indices_.size());
 
     for (const std::uint32_t triangle_index : collision_triangle_indices_) {
-        const auto& [vertex_index_a, vertex_index_b, vertex_index_c] = source_triangles_[triangle_index];
+        const auto& [vertex_index_a, vertex_index_b, vertex_index_c] = source_triangle_vertex_indices_[triangle_index];
         const glm::vec3 position_a = source_vertex_positions_[vertex_index_a];
         const glm::vec3 position_b = source_vertex_positions_[vertex_index_b];
         const glm::vec3 position_c = source_vertex_positions_[vertex_index_c];
@@ -364,7 +364,7 @@ std::vector<MeshBvhBuilder::LabeledEdge> MeshBvhBuilder::make_labeled_edges() co
     // 1. count edge part labels for all collision triangles
     for (const std::uint32_t triangle_index : collision_triangle_indices_) {
         const std::uint8_t part_label = triangle_part_labels_[triangle_index];
-        const auto& [vertex_a, vertex_b, vertex_c] = source_triangles_[triangle_index];
+        const auto& [vertex_a, vertex_b, vertex_c] = source_triangle_vertex_indices_[triangle_index];
 
         count_edge_label(edge_part_label_counts, vertex_a, vertex_b, part_label);
         count_edge_label(edge_part_label_counts, vertex_b, vertex_c, part_label);
