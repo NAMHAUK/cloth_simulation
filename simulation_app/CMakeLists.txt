@@ -18,6 +18,8 @@ find_package(glm CONFIG REQUIRED)
 get_filename_component(REPO_ROOT "${CMAKE_CURRENT_SOURCE_DIR}/.." ABSOLUTE)
 
 add_executable(simulation_app
+    cuda/ClothIntegration.cu
+    cuda/ClothIntegration.h
     src/app/main.cpp
     src/asset/AssetConverter.cpp
     src/asset/AssetConverter.h
