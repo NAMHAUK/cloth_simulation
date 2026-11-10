@@ -1,10 +1,8 @@
 #include "simulation/constraints/StretchConstraintSolver.h"
-
 #include "gpu/cloth/ClothGpuState.h"
 #include "utils/ShaderUtils.h"
 
 #include <algorithm>
-#include <stdexcept>
 
 namespace {
 constexpr std::uint32_t local_size = 128;

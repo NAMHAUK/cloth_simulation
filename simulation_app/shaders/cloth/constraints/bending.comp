@@ -8,8 +8,9 @@ layout(std430, binding = CLOTH_CURRENT_POSITIONS) buffer CurrentPositions {
     vec4 current_positions[];
 };
 
-layout(std430, binding = BENDING_EDGE_INDICES) readonly buffer BendingEdgeIndices {
-    uvec2 edge_indices[];
+layout(std430, binding = BENDING_EDGE_VERTEX_INDICES) readonly buffer BendingEdgeVertexIndices
+{
+    uvec2 vertex_indices[];
 };
 
 layout(std430, binding = BENDING_REST_LENGTHS) readonly buffer BendingRestLengths {
@@ -28,12 +29,10 @@ void main()
     }
 
     uint constraint_index = uConstraintOffset + local_index;
-    uvec2 edge = edge_indices[constraint_index];
-    uint vertex_a = edge.x;
-    uint vertex_b = edge.y;
+    uvec2 edge = vertex_indices[constraint_index];
 
-    vec3 position_a = current_positions[vertex_a].xyz;
-    vec3 position_b = current_positions[vertex_b].xyz;
+    vec3 position_a = current_positions[edge.x].xyz;
+    vec3 position_b = current_positions[edge.y].xyz;
 
     vec3 delta = position_b - position_a;
     float length_sq = dot(delta, delta);
@@ -50,6 +49,6 @@ void main()
     position_a += correction;
     position_b -= correction;
 
-    current_positions[vertex_a] = vec4(position_a, 0.0);
-    current_positions[vertex_b] = vec4(position_b, 0.0);
+    current_positions[edge.x].xyz = position_a;
+    current_positions[edge.y].xyz = position_b;
 }

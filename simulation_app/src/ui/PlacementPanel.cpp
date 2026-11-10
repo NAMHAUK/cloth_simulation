@@ -1,9 +1,7 @@
 #include "ui/PlacementPanel.h"
 
 #include <array>
-#include <cstddef>
 #include <initializer_list>
-#include <utility>
 
 #include <QColor>
 #include <QEvent>

@@ -1,13 +1,10 @@
 #include "gpu/scene/SceneGpuState.h"
-
 #include "simulation/SceneState.h"
 #include "utils/BufferUtils.h"
 #include "utils/ShaderUtils.h"
 
 #include <cassert>
-#include <cstddef>
 #include <cstdint>
-#include <stdexcept>
 
 #include <glm/vec4.hpp>
 
@@ -84,8 +81,8 @@ void SceneGpuState::initialize_attachment_target_program(const std::filesystem::
 
 void SceneGpuState::initialize_character_resources(const SceneState& scene, QOpenGLFunctions_4_5_Core& gl)
 {
-    const Bvh& triangle_bvh = scene.default_body_triangle_bvh();
-    const Bvh& edge_bvh = scene.default_body_edge_bvh();
+    const TriangleBvh& triangle_bvh = scene.default_body_triangle_bvh();
+    const EdgeBvh& edge_bvh = scene.default_body_edge_bvh();
 
     character_gpu_state_.initialize_mesh(scene.character_motion(), triangle_bvh, edge_bvh, gl);
     bvh_bounds_updater_.set_body_level_offsets(triangle_bvh.level_offsets, edge_bvh.level_offsets);

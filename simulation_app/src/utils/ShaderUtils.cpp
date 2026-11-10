@@ -1,5 +1,4 @@
 #include "utils/ShaderUtils.h"
-
 #include "utils/FileUtils.h"
 
 #include <algorithm>

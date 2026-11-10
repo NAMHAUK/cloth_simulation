@@ -1,12 +1,9 @@
 #include "simulation/SimulationPipeline.h"
-
 #include "gpu/scene/SceneGpuState.h"
 #include "simulation/SceneState.h"
 
 #include <cassert>
 #include <stdexcept>
-
-#include <glm/vec3.hpp>
 
 SimulationPipeline::SimulationPipeline(SceneState& scene, SceneGpuState& gpu_state, SimulationParams params)
     : scene_(scene),

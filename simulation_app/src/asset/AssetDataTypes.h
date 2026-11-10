@@ -2,8 +2,6 @@
 
 #include <cstddef>
 #include <cstdint>
-#include <filesystem>
-#include <string>
 #include <vector>
 
 #include <glm/vec3.hpp>
@@ -35,6 +33,18 @@ constexpr bool is_hand_body_part_label(std::uint8_t label)
     return label == body_part_label_value(BodyPartLabel::LeftHand) ||
            label == body_part_label_value(BodyPartLabel::RightHand);
 }
+
+struct TriangleVertexIndices final
+{
+    std::uint32_t a = 0;
+    std::uint32_t b = 0;
+    std::uint32_t c = 0;
+
+    bool operator==(const TriangleVertexIndices& other) const
+    {
+        return a == other.a && b == other.b && c == other.c;
+    }
+};
 
 struct VertexTriangleAdjacency final
 {
@@ -68,30 +78,18 @@ struct ConstraintColorState final
     std::uint32_t count = 0;
 };
 
-struct ColorizedMeshEdges final
-{
-    std::vector<MeshEdge> edges;
-    std::vector<ConstraintColorState> color_states;
-};
-
 struct CharacterMotion
 {
     float fps = 0.0f;
     std::uint32_t frame_count = 0;
     std::uint32_t vertex_count = 0;
     std::uint32_t triangle_count = 0;
-    std::vector<std::uint32_t> triangle_vertex_indices;
+    std::vector<TriangleVertexIndices> triangle_vertex_indices;
     std::vector<float> pelvis_positions;
     std::vector<float> pelvis_orientations;
     std::vector<float> torso_positions;
     std::vector<float> torso_orientations;
-    std::vector<float> vertices;
-};
-
-struct MotionAsset
-{
-    std::filesystem::path motion_asset_path;
-    std::string display_name;
+    std::vector<glm::vec3> vertex_positions;
 };
 
 struct GarmentDistanceConstraints final
@@ -117,18 +115,12 @@ enum GarmentLayer : std::size_t
 struct GarmentMesh
 {
     GarmentCategory garment_category = GarmentCategory::Top;
-    std::vector<float> vertices;
-    std::vector<std::uint32_t> triangle_vertex_indices;
+    std::vector<glm::vec3> vertex_positions;
+    std::vector<TriangleVertexIndices> triangle_vertex_indices;
     GarmentDistanceConstraints stretch_constraints;
     GarmentDistanceConstraints bending_constraints;
     std::vector<std::uint32_t> attachment_vertex_indices;
     glm::vec3 color{1.0f};
     glm::vec3 bounds_center{};
     float bounds_radius = 1.0f;
-};
-
-struct GarmentAsset
-{
-    std::filesystem::path garment_asset_path;
-    std::string display_name;
 };

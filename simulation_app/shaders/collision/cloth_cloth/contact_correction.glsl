@@ -28,7 +28,8 @@ struct VertexFaceContact
 
 const VertexFaceContact no_contact = VertexFaceContact(false, vec3(0.0), vec3(0.0), vec4(0.0));
 
-VertexFaceContact accumulate_vertex_face_penetration_correction(uint vertex_index, uvec3 face_vertex_indices)
+VertexFaceContact accumulate_vertex_face_penetration_correction(uint vertex_index,
+                                                                TriangleVertexIndices face_vertex_indices)
 {
     // read
     vec3 prev_vertex_pos = read_cloth_previous_position(vertex_index);
@@ -77,7 +78,7 @@ VertexFaceContact accumulate_vertex_face_penetration_correction(uint vertex_inde
     // accumulate collision correction
     float inverse_denominator = 1.0 / (1.0 + dot(barycentric, barycentric));
     float correction_distance = penetration_depth * uCollisionStiffness;
-    uvec4 vertex_indices = uvec4(vertex_index, face_vertex_indices);
+    uvec4 vertex_indices = uvec4(vertex_index, face_vertex_indices.a, face_vertex_indices.b, face_vertex_indices.c);
     vec4 weights = vec4(1.0, -barycentric) * inverse_denominator;
 
     for (uint i = 0u; i < 4u; ++i) {
@@ -89,18 +90,18 @@ VertexFaceContact accumulate_vertex_face_penetration_correction(uint vertex_inde
 }
 
 #ifdef COLLISION_INWARD_MOTION_ACCUMULATE
-void accumulate_vertex_face_collision_correction(uint vertex_index, uvec3 face_vertex_indices)
+void accumulate_vertex_face_collision_correction(uint vertex_index, TriangleVertexIndices face_vertex_indices)
 {
     VertexFaceContact contact = accumulate_vertex_face_penetration_correction(vertex_index, face_vertex_indices);
     if (!contact.has_contact) {
         return;
     }
 
-    vec3 face_delta = compute_vertex_motion_delta(face_vertex_indices.x) * contact.barycentric.x +
-                      compute_vertex_motion_delta(face_vertex_indices.y) * contact.barycentric.y +
-                      compute_vertex_motion_delta(face_vertex_indices.z) * contact.barycentric.z;
+    vec3 face_delta = compute_vertex_motion_delta(face_vertex_indices.a) * contact.barycentric.x +
+                      compute_vertex_motion_delta(face_vertex_indices.b) * contact.barycentric.y +
+                      compute_vertex_motion_delta(face_vertex_indices.c) * contact.barycentric.z;
     vec3 relative_delta = compute_vertex_motion_delta(vertex_index) - face_delta;
-    uvec4 vertex_indices = uvec4(vertex_index, face_vertex_indices);
+    uvec4 vertex_indices = uvec4(vertex_index, face_vertex_indices.a, face_vertex_indices.b, face_vertex_indices.c);
     for (uint i = 0u; i < 4u; ++i) {
         accumulate_vertex_inward_motion_correction(vertex_indices[i],
                                                    contact.normal,
@@ -168,7 +169,7 @@ void accumulate_edge_edge_collision_correction(uvec4 vertex_indices)
 #include "../../bvh/body_surface_search.glsl"
 
 void accumulate_initial_layer_collision_correction(uint vertex_index,
-                                                   uvec3 face_vertex_indices,
+                                                   TriangleVertexIndices face_vertex_indices,
                                                    bool is_outer_vertex)
 {   
     // check triangle & vertex projection point
@@ -204,7 +205,7 @@ void accumulate_initial_layer_collision_correction(uint vertex_index,
 
     // accumulate outer garment correction
     float correction_distance = penetration_depth * uCollisionStiffness;
-    uvec4 vertex_indices = uvec4(vertex_index, face_vertex_indices);
+    uvec4 vertex_indices = uvec4(vertex_index, face_vertex_indices.a, face_vertex_indices.b, face_vertex_indices.c);
     vec4 weights = is_outer_vertex ? vec4(1.0, 0.0, 0.0, 0.0) : vec4(0.0, barycentric);
     weights *= 1.0 / dot(weights, weights);
     for (uint i = 0u; i < 4u; ++i) {

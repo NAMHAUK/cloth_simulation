@@ -1,5 +1,4 @@
 #include "ui/AssetBrowserPanel.h"
-
 #include "asset/AssetConverter.h"
 #include "asset/AssetIO.h"
 #include "ui/ElidedLabel.h"
@@ -8,8 +7,10 @@
 
 #include <algorithm>
 #include <exception>
+#include <iostream>
 #include <optional>
 #include <string>
+#include <utility>
 
 #include <QColor>
 #include <QComboBox>
@@ -35,9 +36,6 @@
 #include <QTimer>
 #include <QVBoxLayout>
 #include <QtConcurrent/QtConcurrentRun>
-
-#include <iostream>
-#include <utility>
 
 namespace {
 constexpr int close_icon_size = 12;

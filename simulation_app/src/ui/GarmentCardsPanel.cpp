@@ -1,7 +1,5 @@
 #include "ui/GarmentCardsPanel.h"
 
-#include <utility>
-
 #include <QColor>
 #include <QFrame>
 #include <QGridLayout>

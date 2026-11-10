@@ -1,5 +1,4 @@
 #include "ui/MainWindow.h"
-
 #include "app/SimulationController.h"
 #include "ui/AssetBrowserPanel.h"
 #include "ui/PlacementController.h"

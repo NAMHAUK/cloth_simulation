@@ -6,7 +6,6 @@
 #include "gpu/scene/SimulationBufferBindings.h"
 #include "simulation/SceneState.h"
 
-#include <cstdint>
 #include <filesystem>
 
 #include <QOpenGLFunctions_4_5_Core>

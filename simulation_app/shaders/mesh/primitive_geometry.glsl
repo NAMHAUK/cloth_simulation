@@ -1,6 +1,13 @@
 #ifndef PRIMITIVE_GEOMETRY_GLSL
 #define PRIMITIVE_GEOMETRY_GLSL
 
+struct TriangleVertexIndices
+{
+    uint a;
+    uint b;
+    uint c;
+};
+
 struct EdgePositions {
     vec3 a;
     vec3 b;

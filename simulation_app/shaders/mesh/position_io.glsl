@@ -3,16 +3,6 @@
 
 #include "primitive_geometry.glsl"
 
-#ifdef POSITION_IO_TRIANGLE_INDICES
-uvec3 read_triangle_indices(uint triangle_index)
-{
-    uint index_base = triangle_index * 3u;
-    return uvec3(triangle_indices[index_base],
-                 triangle_indices[index_base + 1u],
-                 triangle_indices[index_base + 2u]);
-}
-#endif
-
 #ifdef POSITION_IO_CLOTH_CURRENT
 vec3 read_cloth_current_position(uint vertex_index)
 {
@@ -25,11 +15,11 @@ EdgePositions read_cloth_current_edge(uvec2 vertex_indices)
                          read_cloth_current_position(vertex_indices.y));
 }
 
-TrianglePositions read_cloth_current_triangle(uvec3 vertex_indices)
+TrianglePositions read_cloth_current_triangle(TriangleVertexIndices vertex_indices)
 {
-    return TrianglePositions(read_cloth_current_position(vertex_indices.x),
-                             read_cloth_current_position(vertex_indices.y),
-                             read_cloth_current_position(vertex_indices.z));
+    return TrianglePositions(read_cloth_current_position(vertex_indices.a),
+                             read_cloth_current_position(vertex_indices.b),
+                             read_cloth_current_position(vertex_indices.c));
 }
 #endif
 
@@ -45,11 +35,11 @@ EdgePositions read_cloth_previous_edge(uvec2 vertex_indices)
                          read_cloth_previous_position(vertex_indices.y));
 }
 
-TrianglePositions read_cloth_previous_triangle(uvec3 vertex_indices)
+TrianglePositions read_cloth_previous_triangle(TriangleVertexIndices vertex_indices)
 {
-    return TrianglePositions(read_cloth_previous_position(vertex_indices.x),
-                             read_cloth_previous_position(vertex_indices.y),
-                             read_cloth_previous_position(vertex_indices.z));
+    return TrianglePositions(read_cloth_previous_position(vertex_indices.a),
+                             read_cloth_previous_position(vertex_indices.b),
+                             read_cloth_previous_position(vertex_indices.c));
 }
 #endif
 
@@ -65,11 +55,11 @@ EdgePositions read_body_current_edge(uvec2 vertex_indices)
                          read_body_current_position(vertex_indices.y));
 }
 
-TrianglePositions read_body_current_triangle(uvec3 vertex_indices)
+TrianglePositions read_body_current_triangle(TriangleVertexIndices vertex_indices)
 {
-    return TrianglePositions(read_body_current_position(vertex_indices.x),
-                             read_body_current_position(vertex_indices.y),
-                             read_body_current_position(vertex_indices.z));
+    return TrianglePositions(read_body_current_position(vertex_indices.a),
+                             read_body_current_position(vertex_indices.b),
+                             read_body_current_position(vertex_indices.c));
 }
 #endif
 
@@ -85,18 +75,18 @@ EdgePositions read_body_previous_edge(uvec2 vertex_indices)
                          read_body_previous_position(vertex_indices.y));
 }
 
-TrianglePositions read_body_previous_triangle(uvec3 vertex_indices)
+TrianglePositions read_body_previous_triangle(TriangleVertexIndices vertex_indices)
 {
-    return TrianglePositions(read_body_previous_position(vertex_indices.x),
-                             read_body_previous_position(vertex_indices.y),
-                             read_body_previous_position(vertex_indices.z));
+    return TrianglePositions(read_body_previous_position(vertex_indices.a),
+                             read_body_previous_position(vertex_indices.b),
+                             read_body_previous_position(vertex_indices.c));
 }
 #endif
 
 #ifdef POSITION_IO_CLOTH_WRITE
 void write_cloth_current_position(uint vertex_index, vec3 position)
 {
-    cloth_current_positions[vertex_index] = vec4(position, 0.0);
+    cloth_current_positions[vertex_index].xyz = position;
 }
 #endif
 

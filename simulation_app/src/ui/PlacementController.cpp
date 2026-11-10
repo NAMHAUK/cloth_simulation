@@ -1,5 +1,4 @@
 #include "ui/PlacementController.h"
-
 #include "asset/AssetDataTypes.h"
 #include "app/SimulationController.h"
 #include "ui/GarmentCardsPanel.h"
