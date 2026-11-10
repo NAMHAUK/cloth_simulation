@@ -94,8 +94,8 @@ void update_triangle_leaf_bounds(uint node_index, BvhNode node)
         max_bounds = max(max_bounds, swept_max_bounds);
     }
 
-    body_triangle_bvh_nodes[node_index].bounds =
-        Aabb(vec4(min_bounds - uDetectionDistance, 0.0), vec4(max_bounds + uDetectionDistance, 0.0));
+    body_triangle_bvh_nodes[node_index].bounds = Aabb(vec4(min_bounds - uDetectionDistance, 0.0),
+                                                      vec4(max_bounds + uDetectionDistance, 0.0));
 }
 
 void update_triangle_internal_bounds(uint node_index, BvhNode node)
@@ -126,8 +126,8 @@ void update_edge_leaf_bounds(uint node_index, BvhNode node)
         max_bounds = max(max_bounds, edge_max_bounds);
     }
 
-    body_edge_bvh_nodes[node_index].bounds =
-        Aabb(vec4(min_bounds - uDetectionDistance, 0.0), vec4(max_bounds + uDetectionDistance, 0.0));
+    body_edge_bvh_nodes[node_index].bounds = Aabb(vec4(min_bounds - uDetectionDistance, 0.0),
+                                                  vec4(max_bounds + uDetectionDistance, 0.0));
 }
 
 void update_edge_internal_bounds(uint node_index, BvhNode node)

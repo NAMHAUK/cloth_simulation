@@ -250,8 +250,8 @@ void orient_triangles_outward(const std::vector<glm::vec3>& vertex_positions,
         triangle_queue.pop();
 
         for (const TriangleNeighbor& neighbor : triangle_neighbors[triangle_index]) {
-            const bool neighbor_needs_flip =
-                determine_neighbor_flip(flip_decisions[triangle_index].value(), neighbor.has_winding_conflict);
+            const bool neighbor_needs_flip = determine_neighbor_flip(flip_decisions[triangle_index].value(),
+                                                                     neighbor.has_winding_conflict);
 
             if (!flip_decisions[neighbor.triangle_index].has_value()) {
                 flip_decisions[neighbor.triangle_index] = neighbor_needs_flip;

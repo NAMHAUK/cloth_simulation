@@ -232,8 +232,8 @@ CharacterMotion read_motion_asset(const std::filesystem::path& motion_asset_path
 
     const std::size_t reference_position_count = character_motion.frame_count * position_components;
     const std::size_t orientation_count = character_motion.frame_count * quat_components;
-    const std::size_t vertex_position_count =
-        static_cast<std::size_t>(character_motion.frame_count) * character_motion.vertex_count;
+    const std::size_t vertex_position_count = static_cast<std::size_t>(character_motion.frame_count) *
+                                              character_motion.vertex_count;
     read_binary_values(input, character_motion.triangle_vertex_indices, character_motion.triangle_count);
     read_binary_values(input, character_motion.pelvis_positions, reference_position_count);
     read_binary_values(input, character_motion.pelvis_orientations, orientation_count);

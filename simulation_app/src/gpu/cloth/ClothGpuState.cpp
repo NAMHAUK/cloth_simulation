@@ -159,8 +159,8 @@ void ClothGpuState::assign_garment_buffer_states(const std::vector<GarmentObject
         garment_state.bending_constraint_count = mesh.bending_constraints.colorized_edges.size();
         element_counts.bending_constraint += garment_state.bending_constraint_count;
         garment_state.attachment_constraint_count = mesh.attachment_vertex_indices.size();
-        garment_state.attachment_constraint_start_index =
-            append_elements(element_counts.attachment_constraint, garment_state.attachment_constraint_count);
+        garment_state.attachment_constraint_start_index = append_elements(element_counts.attachment_constraint,
+                                                                          garment_state.attachment_constraint_count);
     }
 }
 
@@ -245,7 +245,7 @@ void ClothGpuState::upload_topology(const std::vector<GarmentObject>& garments,
         const std::uint32_t vertex_start_index = rebuild_state.garments[garment.layer].vertex_start_index;
         const auto& bvh_triangles = garment.triangle_bvh.triangle_vertex_indices;
         const auto& indices = bvh_triangles.empty() ? garment.mesh.triangle_vertex_indices : bvh_triangles;
-        
+
         for (const TriangleVertexIndices& triangle : indices) {
             triangle_vertex_indices.push_back(
                 {vertex_start_index + triangle.a, vertex_start_index + triangle.b, vertex_start_index + triangle.c});
@@ -283,8 +283,8 @@ void ClothGpuState::create_vertex_face_exclusion_buffer(const std::vector<Garmen
         if (byte_size<std::uint32_t>(mask_count) > max_block_size) {
             throw std::runtime_error("Cloth vertex-face exclusion bitset exceeds the GPU SSBO size limit.");
         }
-        const auto garment_exclusions =
-            build_vertex_neighborhood_masks(state.vertex_count, garment.triangle_bvh.triangle_vertex_indices);
+        const auto garment_exclusions = build_vertex_neighborhood_masks(state.vertex_count,
+                                                                        garment.triangle_bvh.triangle_vertex_indices);
         exclusions.insert(exclusions.end(), garment_exclusions.begin(), garment_exclusions.end());
     }
 

@@ -56,8 +56,8 @@ void BvhBoundsUpdater::set_body_level_offsets(const std::vector<std::uint32_t>& 
     body_triangle_level_offsets_ = triangle_level_offsets;
     body_edge_level_offsets_ = edge_level_offsets;
 
-    const std::size_t max_level_offset_count =
-        std::max(body_triangle_level_offsets_.size(), body_edge_level_offsets_.size());
+    const std::size_t max_level_offset_count = std::max(body_triangle_level_offsets_.size(),
+                                                        body_edge_level_offsets_.size());
     body_bvh_level_count_ = max_level_offset_count - 1u;
 }
 

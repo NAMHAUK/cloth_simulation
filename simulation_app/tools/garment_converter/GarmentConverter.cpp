@@ -166,12 +166,12 @@ void build_garment_constraints(GarmentMesh& mesh)
 void print_garment_obj_summary(const std::filesystem::path& obj_path, const GarmentMesh& mesh)
 {
     std::cout << "Read garment OBJ: " << obj_path << '\n';
-    std::cout << "  vertices=" << mesh.vertex_positions.size() 
-              << " triangles=" << mesh.triangle_vertex_indices.size()
-              << " stretch_constraints=" << mesh.stretch_constraints.colorized_edges.size()
-              << " bending_constraints=" << mesh.bending_constraints.colorized_edges.size()
-              << " attachment_vertices=" << mesh.attachment_vertex_indices.size()
-              << " bounds_radius=" << mesh.bounds_radius << '\n';
+    std::cout << "  vertices=" << mesh.vertex_positions.size();
+    std::cout << " triangles=" << mesh.triangle_vertex_indices.size();
+    std::cout << " stretch_constraints=" << mesh.stretch_constraints.colorized_edges.size();
+    std::cout << " bending_constraints=" << mesh.bending_constraints.colorized_edges.size();
+    std::cout << " attachment_vertices=" << mesh.attachment_vertex_indices.size();
+    std::cout << " bounds_radius=" << mesh.bounds_radius << '\n';
 }
 }
 

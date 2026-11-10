@@ -331,8 +331,9 @@ std::array<glm::mat4, 2> SimulationController::make_placement_matrices() const
             continue;
         }
 
-        placement_matrices[layer] =
-            make_placement_matrix(garment->mesh.bounds_center, placement->position_offset, placement->scale);
+        placement_matrices[layer] = make_placement_matrix(garment->mesh.bounds_center,
+                                                          placement->position_offset,
+                                                          placement->scale);
     }
     return placement_matrices;
 }
@@ -352,10 +353,10 @@ bool SimulationController::is_gpu_initialized() const
 
 bool SimulationController::can_start_garment_placement() const
 {
-    const bool has_active_placement =
-        std::any_of(garment_placement_states_.begin(),
-                    garment_placement_states_.end(),
-                    [](const std::optional<GarmentPlacementState>& placement) { return placement.has_value(); });
+    const bool has_active_placement = std::any_of(
+        garment_placement_states_.begin(),
+        garment_placement_states_.end(),
+        [](const std::optional<GarmentPlacementState>& placement) { return placement.has_value(); });
     return has_active_placement || scene_.garments().size() < 2u;
 }
 

@@ -111,8 +111,9 @@ void accumulate_edge_edge_collision_correction(uvec2 candidate)
     vec3 inward_motion_correction = mix(inward_motion_corrections[cloth_vertices.x].xyz,
                                         inward_motion_corrections[cloth_vertices.y].xyz,
                                         cur_cloth_segment.t);
-    vec3 collision_pushout =
-        mix(collision_pushouts[cloth_vertices.x].xyz, collision_pushouts[cloth_vertices.y].xyz, cur_cloth_segment.t);
+    vec3 collision_pushout = mix(collision_pushouts[cloth_vertices.x].xyz,
+                                 collision_pushouts[cloth_vertices.y].xyz,
+                                 cur_cloth_segment.t);
     vec3 cloth_delta = cur_cloth_segment.point -
                        interpolate_edge_position(prev_cloth_edge_pos, cur_cloth_segment.t) -
                        collision_pushout;

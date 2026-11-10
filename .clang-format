@@ -8,6 +8,7 @@ UseTab: Never
 ColumnLimit: 120
 BreakBinaryOperations: RespectPrecedence
 BreakBeforeBinaryOperators: None
+PenaltyBreakAssignment: 1000
 PenaltyReturnTypeOnItsOwnLine: 1000
 
 BreakBeforeBraces: Custom

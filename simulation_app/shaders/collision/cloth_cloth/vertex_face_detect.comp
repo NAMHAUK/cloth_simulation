@@ -126,8 +126,8 @@ void main()
         uint local_vertex = dispatch_vertex_index - (garment_index == upper_layer ? 0u : uVertexCounts[upper_layer]);
         uint vertex_index = uVertexOffsets[garment_index] + local_vertex;
         uint exclusion_offset = uExclusionOffsets[garment_index] + local_vertex * uMasksPerVertex[garment_index];
-        Aabb bounds =
-            build_swept_aabb(read_cloth_previous_position(vertex_index), read_cloth_current_position(vertex_index));
+        Aabb bounds = build_swept_aabb(read_cloth_previous_position(vertex_index),
+                                       read_cloth_current_position(vertex_index));
         DetectionInput detection_input = {bounds,
                                           vertex_index,
                                           false,

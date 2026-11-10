@@ -33,9 +33,9 @@ constexpr int action_icon_size = 20;
 constexpr int add_button_height = 30;
 constexpr int confirm_icon_size = 28;
 
-const QString color_button_style =
-    QStringLiteral("QPushButton { background-color: %1; border: 2px solid #666666; border-radius: 13px; padding: 0; }"
-                   "QPushButton:hover { border-color: #1f6feb; }");
+const QString color_button_style = QStringLiteral(
+    "QPushButton { background-color: %1; border: 2px solid #666666; border-radius: 13px; padding: 0; }"
+    "QPushButton:hover { border-color: #1f6feb; }");
 
 QString format_float(float value)
 {

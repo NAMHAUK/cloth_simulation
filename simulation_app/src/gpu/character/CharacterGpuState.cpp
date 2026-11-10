@@ -56,8 +56,8 @@ void CharacterGpuState::initialize_mesh(const CharacterMotion& motion,
                                         const EdgeBvh& body_edge_bvh,
                                         QOpenGLFunctions_4_5_Core& gl)
 {
-    const auto adjacency =
-        build_vertex_triangle_adjacency(motion.vertex_count, body_triangle_bvh.triangle_vertex_indices);
+    const auto adjacency = build_vertex_triangle_adjacency(motion.vertex_count,
+                                                           body_triangle_bvh.triangle_vertex_indices);
 
     const auto position_bytes = byte_size<glm::vec4>(motion.vertex_count);
 
@@ -138,8 +138,8 @@ void CharacterGpuState::update_pose(std::uint32_t frame_index, float frame_alpha
 
 void CharacterGpuState::write_current_positions(float frame_alpha, QOpenGLFunctions_4_5_Core& gl) const
 {
-    const std::uint32_t next_frame_index =
-        current_frame_index_ + 1u < frame_count_ ? current_frame_index_ + 1u : current_frame_index_;
+    const std::uint32_t next_frame_index = current_frame_index_ + 1u < frame_count_ ? current_frame_index_ + 1u
+                                                                                    : current_frame_index_;
     const std::uint32_t current_frame_base = current_frame_index_ * vertex_count_;
     const std::uint32_t next_frame_base = next_frame_index * vertex_count_;
 

@@ -74,8 +74,8 @@ void main()
     }
 
     uint active_candidate_count = min(candidate_count, uMaxCandidateCount);
-    uint dispatch_size_x =
-        (active_candidate_count + candidate_accumulate_local_size - 1u) / candidate_accumulate_local_size;
+    uint dispatch_size_x = (active_candidate_count + candidate_accumulate_local_size - 1u) /
+                           candidate_accumulate_local_size;
     if (uCandidateKind == 0u) {
         cloth_vertex_body_face_dispatch_size_x = dispatch_size_x;
         cloth_vertex_body_face_dispatch_size_y = 1u;

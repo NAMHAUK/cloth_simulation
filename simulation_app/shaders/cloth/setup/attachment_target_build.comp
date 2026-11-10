@@ -82,8 +82,10 @@ void main()
     bool has_surface = find_nearest_body_surface(cloth_position, max_float, nearest_surface);
 
     attachment_indices[constraint_index] = uvec2(cloth_vertex_index, nearest_surface.triangle_index);
-    barycentric_offsets[constraint_index] =
-        has_surface
-            ? vec4(barycentric_on_triangle(nearest_surface.triangle_index, nearest_surface.point), uSurfaceOffset)
-            : vec4(1.0, 0.0, 0.0, 0.0);
+    if (has_surface) {
+        vec3 barycentric = barycentric_on_triangle(nearest_surface.triangle_index, nearest_surface.point);
+        barycentric_offsets[constraint_index] = vec4(barycentric, uSurfaceOffset);
+    } else {
+        barycentric_offsets[constraint_index] = vec4(1.0, 0.0, 0.0, 0.0);
+    }
 }

@@ -59,8 +59,8 @@ void main()
             if (friction_length <= static_limit) {
                 final_friction_correction = friction_correction;
             } else {
-                final_friction_correction =
-                    friction_correction * ((uDynamicFriction * pushout_depth) / friction_length);
+                final_friction_correction = friction_correction *
+                                            ((uDynamicFriction * pushout_depth) / friction_length);
             }
         }
 

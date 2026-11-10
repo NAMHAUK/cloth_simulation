@@ -232,8 +232,9 @@ bool find_contact_barycentric(vec3 relative_prev_vertex_pos,
         entry_time = (face_distance - prev_distance) / (cur_signed_distance - prev_distance);
     }
 
-    vec3 projected_position =
-        relative_prev_vertex_pos + relative_displacement * entry_time - cur_face_normal * face_distance;
+    vec3 projected_position = relative_prev_vertex_pos +
+                              relative_displacement * entry_time -
+                              cur_face_normal * face_distance;
 
     // 3.1. projection point is inside triangle: retrun barycentric
     if (!compute_barycentric(projected_position, cur_triangle_pos, barycentric)) {

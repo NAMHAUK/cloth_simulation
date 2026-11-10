@@ -69,8 +69,8 @@ std::string load_shader_source_recursive(const std::filesystem::path& shader_pat
     std::string line;
     while (std::getline(input, line)) {
         if (const auto include_path = parse_shader_include(line)) {
-            const auto include_source =
-                load_shader_source_recursive(normalized_path.parent_path() / *include_path, include_stack);
+            const auto include_source = load_shader_source_recursive(normalized_path.parent_path() / *include_path,
+                                                                     include_stack);
             output << include_source;
             if (include_source.empty() || include_source.back() != '\n') {
                 output << '\n';

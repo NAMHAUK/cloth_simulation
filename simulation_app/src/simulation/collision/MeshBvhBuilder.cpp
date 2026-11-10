@@ -295,10 +295,12 @@ std::size_t MeshBvhBuilder::partition_primitives_by_part_labels(const BvhNode& n
 {
     const auto primitive_begin = primitives_.begin() + node.first_element_index;
     const auto primitive_end = primitive_begin + node.element_count;
-    const auto partition_iterator =
-        std::partition(primitive_begin, primitive_end, [left_part_label_mask](const BvhPrimitive& primitive) {
-            return contains_part_label(left_part_label_mask, primitive.part_label);
-        });
+    const auto partition_iterator = std::partition(primitive_begin,
+                                                   primitive_end,
+                                                   [left_part_label_mask](const BvhPrimitive& primitive) {
+                                                       return contains_part_label(left_part_label_mask,
+                                                                                  primitive.part_label);
+                                                   });
     return static_cast<std::size_t>(partition_iterator - primitives_.begin());
 }
 
