@@ -1,11 +1,17 @@
 cmake_minimum_required(VERSION 3.21)
 
-project(simulation_app LANGUAGES CXX)
+set(CMAKE_CUDA_ARCHITECTURES 86 CACHE STRING "CUDA GPU architectures")
+
+project(simulation_app LANGUAGES CXX CUDA)
 
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
+set(CMAKE_CUDA_STANDARD 17)
+set(CMAKE_CUDA_STANDARD_REQUIRED ON)
+set(CMAKE_CUDA_RUNTIME_LIBRARY Static)
 set(CMAKE_AUTOMOC ON)
 
+find_package(CUDAToolkit REQUIRED)
 find_package(Qt6 CONFIG REQUIRED COMPONENTS Widgets OpenGLWidgets OpenGL Concurrent Svg)
 find_package(glm CONFIG REQUIRED)
 
@@ -77,6 +83,7 @@ add_executable(simulation_app
     src/simulation/SceneState.h
     src/utils/QtUtils.h
     src/utils/BufferUtils.h
+    src/utils/CudaUtils.h
     src/utils/FileUtils.h
     src/utils/NumericUtils.h
     src/utils/ShaderUtils.cpp
@@ -172,6 +179,7 @@ add_executable(garment_converter
 )
 
 target_include_directories(simulation_app PRIVATE
+    cuda
     src
 )
 
@@ -180,7 +188,10 @@ target_include_directories(garment_converter PRIVATE
 )
 
 if(MSVC)
-    target_compile_options(simulation_app PRIVATE /utf-8)
+    target_compile_options(simulation_app PRIVATE
+        $<$<COMPILE_LANGUAGE:CXX>:/utf-8>
+        $<$<COMPILE_LANGUAGE:CUDA>:-Xcompiler=/utf-8>
+    )
     target_compile_options(garment_converter PRIVATE /utf-8)
 endif()
 
@@ -189,6 +200,7 @@ target_compile_definitions(simulation_app PRIVATE
 )
 
 target_link_libraries(simulation_app PRIVATE
+    CUDA::cudart_static
     Qt6::Widgets
     Qt6::OpenGLWidgets
     Qt6::OpenGL
