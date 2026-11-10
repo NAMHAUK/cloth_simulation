@@ -1,4 +1,4 @@
-#include "simulation/constraints/StretchConstraintSolver.h"
+#include "simulation/pbd/constraints/StretchConstraintSolver.h"
 #include "gpu/cloth/PbdClothGpuState.h"
 #include "utils/ShaderUtils.h"
 

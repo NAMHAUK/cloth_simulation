@@ -2,6 +2,12 @@
 
 #include <cstdint>
 
+enum class SimulationMode
+{
+    PBD,
+    PD
+};
+
 struct SimulationStepParams final
 {
     std::uint32_t motion_fps = 60;
@@ -80,6 +86,7 @@ struct PrefitParams final
 
 struct SimulationParams final
 {
+    SimulationMode mode = SimulationMode::PBD;
     SimulationStepParams step;
     ClothIntegrationParams integration;
     ConstraintParams constraints;
@@ -99,7 +106,8 @@ constexpr bool is_valid_simulation_params(const SimulationParams& params)
     const ClothCollisionParams& cloth = params.collisions.cloth;
     const PrefitParams& prefit = params.prefit;
 
-    return step.motion_fps > 0 &&
+    return (params.mode == SimulationMode::PBD || params.mode == SimulationMode::PD) &&
+           step.motion_fps > 0 &&
            step.fps > 0 &&
            step.fps % step.motion_fps == 0 &&
            step.substep_count > 0 &&

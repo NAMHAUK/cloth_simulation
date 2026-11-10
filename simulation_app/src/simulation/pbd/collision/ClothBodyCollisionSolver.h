@@ -5,7 +5,8 @@
 #include <QOpenGLFunctions_4_5_Core>
 
 struct BodyCollisionParams;
-class SceneGpuState;
+class ClothGpuState;
+class PbdGpuState;
 
 class ClothBodyCollisionSolver final
 {
@@ -15,7 +16,7 @@ public:
     ClothBodyCollisionSolver& operator=(const ClothBodyCollisionSolver&) = delete;
 
     void initialize(const std::filesystem::path& shader_dir, QOpenGLFunctions_4_5_Core& gl);
-    void solve(const SceneGpuState& gpu_state, QOpenGLFunctions_4_5_Core& gl) const;
+    void solve(const ClothGpuState& cloth_state, const PbdGpuState& pbd_state, QOpenGLFunctions_4_5_Core& gl) const;
     void release(QOpenGLFunctions_4_5_Core& gl);
 
 private:
@@ -25,10 +26,10 @@ private:
         GLint max_candidates_loc = -1;
     };
 
-    void clear_correction_sums(const SceneGpuState& gpu_state, QOpenGLFunctions_4_5_Core& gl) const;
-    void accumulate_cloth_vertex_body_face(const SceneGpuState& gpu_state, QOpenGLFunctions_4_5_Core& gl) const;
-    void accumulate_cloth_edge_body_edge(const SceneGpuState& gpu_state, QOpenGLFunctions_4_5_Core& gl) const;
-    void apply_combined_corrections(const SceneGpuState& gpu_state, QOpenGLFunctions_4_5_Core& gl) const;
+    void clear_correction_sums(const PbdGpuState& pbd_state, QOpenGLFunctions_4_5_Core& gl) const;
+    void accumulate_cloth_vertex_body_face(const PbdGpuState& pbd_state, QOpenGLFunctions_4_5_Core& gl) const;
+    void accumulate_cloth_edge_body_edge(const PbdGpuState& pbd_state, QOpenGLFunctions_4_5_Core& gl) const;
+    void apply_combined_corrections(const ClothGpuState& cloth_state, QOpenGLFunctions_4_5_Core& gl) const;
 
     AccumulateProgram cloth_vertex_body_face_;
     AccumulateProgram cloth_edge_body_edge_;

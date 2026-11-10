@@ -1,4 +1,4 @@
-#include "simulation/collision/GarmentPrefitSolver.h"
+#include "simulation/pbd/collision/GarmentPrefitSolver.h"
 #include "gpu/cloth/ClothGpuState.h"
 #include "simulation/SimulationParams.h"
 #include "utils/ShaderUtils.h"

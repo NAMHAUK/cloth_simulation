@@ -1,17 +1,25 @@
 cmake_minimum_required(VERSION 3.21)
 
-project(simulation_app LANGUAGES CXX)
+set(CMAKE_CUDA_ARCHITECTURES 86 CACHE STRING "CUDA GPU architectures")
+
+project(simulation_app LANGUAGES CXX CUDA)
 
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
+set(CMAKE_CUDA_STANDARD 17)
+set(CMAKE_CUDA_STANDARD_REQUIRED ON)
+set(CMAKE_CUDA_RUNTIME_LIBRARY Static)
 set(CMAKE_AUTOMOC ON)
 
+find_package(CUDAToolkit REQUIRED)
 find_package(Qt6 CONFIG REQUIRED COMPONENTS Widgets OpenGLWidgets OpenGL Concurrent Svg)
 find_package(glm CONFIG REQUIRED)
 
 get_filename_component(REPO_ROOT "${CMAKE_CURRENT_SOURCE_DIR}/.." ABSOLUTE)
 
 add_executable(simulation_app
+    cuda/ClothIntegration.cu
+    cuda/ClothIntegration.h
     src/app/main.cpp
     src/asset/AssetConverter.cpp
     src/asset/AssetConverter.h
@@ -21,62 +29,73 @@ add_executable(simulation_app
     src/app/ProjectPaths.h
     src/app/SimulationController.cpp
     src/app/SimulationController.h
-    src/gpu/scene/PbdBufferBindings.cpp
-    src/gpu/scene/PbdBufferBindings.h
     src/simulation/SimulationParams.h
-    src/simulation/ClothIntegrator.cpp
-    src/simulation/ClothIntegrator.h
-    src/simulation/constraints/StretchConstraintSolver.cpp
-    src/simulation/constraints/StretchConstraintSolver.h
-    src/simulation/constraints/BendingConstraintSolver.cpp
-    src/simulation/constraints/BendingConstraintSolver.h
-    src/simulation/constraints/AttachmentConstraintSolver.cpp
-    src/simulation/constraints/AttachmentConstraintSolver.h
-    src/simulation/collision/GroundCollisionSolver.cpp
-    src/simulation/collision/GroundCollisionSolver.h
+    src/simulation/Simulation.h
+    src/simulation/pbd/PbdSimulation.cpp
+    src/simulation/pbd/PbdSimulation.h
+    src/simulation/pd/PdSimulation.cpp
+    src/simulation/pd/PdSimulation.h
+    src/simulation/pbd/ClothIntegrator.cpp
+    src/simulation/pbd/ClothIntegrator.h
+    src/simulation/pd/ProjectiveDynamicsSolver.cpp
+    src/simulation/pd/ProjectiveDynamicsSolver.h
+    src/simulation/pbd/constraints/StretchConstraintSolver.cpp
+    src/simulation/pbd/constraints/StretchConstraintSolver.h
+    src/simulation/pbd/constraints/BendingConstraintSolver.cpp
+    src/simulation/pbd/constraints/BendingConstraintSolver.h
+    src/simulation/pbd/constraints/AttachmentConstraintSolver.cpp
+    src/simulation/pbd/constraints/AttachmentConstraintSolver.h
+    src/simulation/pbd/collision/GroundCollisionSolver.cpp
+    src/simulation/pbd/collision/GroundCollisionSolver.h
     src/simulation/bvh/Bvh.h
     src/simulation/bvh/MeshBvhBuilder.cpp
     src/simulation/bvh/MeshBvhBuilder.h
-    src/simulation/collision/CollisionDetector.cpp
-    src/simulation/collision/CollisionDetector.h
-    src/simulation/collision/ClothBodyCollisionSolver.cpp
-    src/simulation/collision/ClothBodyCollisionSolver.h
-    src/simulation/collision/ClothClothCollisionSolver.cpp
-    src/simulation/collision/ClothClothCollisionSolver.h
-    src/simulation/collision/GarmentPrefitSolver.cpp
-    src/simulation/collision/GarmentPrefitSolver.h
+    src/simulation/pbd/collision/CollisionDetector.cpp
+    src/simulation/pbd/collision/CollisionDetector.h
+    src/simulation/pbd/collision/ClothBodyCollisionSolver.cpp
+    src/simulation/pbd/collision/ClothBodyCollisionSolver.h
+    src/simulation/pbd/collision/ClothClothCollisionSolver.cpp
+    src/simulation/pbd/collision/ClothClothCollisionSolver.h
+    src/simulation/pbd/collision/GarmentPrefitSolver.cpp
+    src/simulation/pbd/collision/GarmentPrefitSolver.h
     src/utils/MeshGeometryUtils.cpp
     src/utils/MeshGeometryUtils.h
     src/gpu/character/CharacterGpuState.cpp
     src/gpu/character/CharacterGpuDataTypes.h
     src/gpu/character/CharacterGpuState.h
+    src/gpu/character/PbdCharacterGpuState.cpp
+    src/gpu/character/PbdCharacterGpuState.h
+    src/gpu/character/PdCharacterGpuState.h
     src/gpu/bvh/BvhBoundsUpdater.cpp
     src/gpu/bvh/BvhBoundsUpdater.h
     src/gpu/cloth/ClothGpuState.cpp
     src/gpu/cloth/ClothGpuDataTypes.h
     src/gpu/cloth/ClothGpuState.h
+    src/gpu/cloth/PbdClothGpuState.cpp
+    src/gpu/cloth/PbdClothGpuState.h
+    src/gpu/cloth/PdClothGpuState.cpp
+    src/gpu/cloth/PdClothGpuState.h
+    src/gpu/scene/PbdBufferBindings.cpp
+    src/gpu/scene/PbdBufferBindings.h
+    src/gpu/scene/PbdGpuState.cpp
+    src/gpu/scene/PbdGpuState.h
+    src/gpu/scene/PdGpuState.cpp
+    src/gpu/scene/PdGpuState.h
     src/rendering/BackgroundGradient.cpp
     src/rendering/BackgroundGradient.h
     src/rendering/GroundGridMesh.cpp
     src/rendering/GroundGridMesh.h
-    src/gpu/character/PbdCharacterGpuState.cpp
-    src/gpu/character/PbdCharacterGpuState.h
-    src/gpu/cloth/PbdClothGpuState.cpp
-    src/gpu/cloth/PbdClothGpuState.h
-    src/gpu/scene/PbdGpuState.cpp
-    src/gpu/scene/PbdGpuState.h
     src/gpu/scene/SceneGpuState.cpp
     src/gpu/scene/SceneGpuState.h
     src/rendering/SceneRenderer.cpp
     src/rendering/SceneRenderer.h
     src/ui/Viewport.cpp
     src/ui/Viewport.h
-    src/simulation/SimulationPipeline.cpp
-    src/simulation/SimulationPipeline.h
     src/simulation/SceneState.cpp
     src/simulation/SceneState.h
     src/utils/QtUtils.h
     src/utils/BufferUtils.h
+    src/utils/CudaUtils.h
     src/utils/FileUtils.h
     src/utils/NumericUtils.h
     src/utils/ShaderUtils.cpp
@@ -172,6 +191,7 @@ add_executable(garment_converter
 )
 
 target_include_directories(simulation_app PRIVATE
+    cuda
     src
 )
 
@@ -180,7 +200,10 @@ target_include_directories(garment_converter PRIVATE
 )
 
 if(MSVC)
-    target_compile_options(simulation_app PRIVATE /utf-8)
+    target_compile_options(simulation_app PRIVATE
+        $<$<COMPILE_LANGUAGE:CXX>:/utf-8>
+        $<$<COMPILE_LANGUAGE:CUDA>:-Xcompiler=/utf-8>
+    )
     target_compile_options(garment_converter PRIVATE /utf-8)
 endif()
 
@@ -189,6 +212,7 @@ target_compile_definitions(simulation_app PRIVATE
 )
 
 target_link_libraries(simulation_app PRIVATE
+    CUDA::cudart_static
     Qt6::Widgets
     Qt6::OpenGLWidgets
     Qt6::OpenGL

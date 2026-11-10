@@ -5,7 +5,8 @@
 #include <QOpenGLFunctions_4_5_Core>
 
 struct ClothCollisionParams;
-class SceneGpuState;
+class ClothGpuState;
+struct CollisionBuffers;
 
 class ClothClothCollisionSolver final
 {
@@ -15,8 +16,12 @@ public:
     ClothClothCollisionSolver& operator=(const ClothClothCollisionSolver&) = delete;
 
     void initialize(const std::filesystem::path& shader_dir, QOpenGLFunctions_4_5_Core& gl);
-    void solve(const SceneGpuState& gpu_state, QOpenGLFunctions_4_5_Core& gl) const;
-    void solve_initial(const SceneGpuState& gpu_state, QOpenGLFunctions_4_5_Core& gl) const;
+    void solve(const ClothGpuState& cloth_state,
+               const CollisionBuffers& collision,
+               QOpenGLFunctions_4_5_Core& gl) const;
+    void solve_initial(const ClothGpuState& cloth_state,
+                       const CollisionBuffers& collision,
+                       QOpenGLFunctions_4_5_Core& gl) const;
     void release(QOpenGLFunctions_4_5_Core& gl);
 
 private:
@@ -39,7 +44,8 @@ private:
     float max_correction_length_ = 0.0f;
     float surface_search_radius_ = 0.0f;
 
-    void solve(const SceneGpuState& gpu_state,
+    void solve(const ClothGpuState& cloth_state,
+               const CollisionBuffers& collision,
                const AccumulateProgram& shader,
                bool should_solve_edges,
                QOpenGLFunctions_4_5_Core& gl) const;

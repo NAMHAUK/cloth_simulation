@@ -1,4 +1,4 @@
-#include "simulation/ClothIntegrator.h"
+#include "simulation/pbd/ClothIntegrator.h"
 #include "gpu/cloth/ClothGpuState.h"
 #include "simulation/SceneState.h"
 #include "simulation/SimulationParams.h"
