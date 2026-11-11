@@ -2,11 +2,12 @@
 
 #include "asset/AssetDataTypes.h"
 #include "gpu/character/CharacterGpuDataTypes.h"
-#include "simulation/collision/Bvh.h"
 
 #include <QOpenGLFunctions_4_5_Core>
 #include <cstdint>
 #include <filesystem>
+
+class SceneState;
 
 class CharacterGpuState final
 {
@@ -15,13 +16,15 @@ public:
     CharacterGpuState(const CharacterGpuState&) = delete;
     CharacterGpuState& operator=(const CharacterGpuState&) = delete;
 
-    void initialize(const std::filesystem::path& shader_dir, QOpenGLFunctions_4_5_Core& gl);
+    void initialize(const std::filesystem::path& shader_dir, const SceneState& scene, QOpenGLFunctions_4_5_Core& gl);
 
-    void initialize_mesh(const CharacterMotion& motion,
-                         const TriangleBvh& body_triangle_bvh,
-                         const EdgeBvh& body_edge_bvh,
-                         QOpenGLFunctions_4_5_Core& gl);
+private:
+    void initialize_rendering(const SceneState& scene, QOpenGLFunctions_4_5_Core& gl);
+    void initialize_pbd(const std::filesystem::path& shader_dir,
+                        const SceneState& scene,
+                        QOpenGLFunctions_4_5_Core& gl);
 
+public:
     void set_motion(const CharacterMotion& motion, QOpenGLFunctions_4_5_Core& gl);
     void update_pose(std::uint32_t frame_index, float frame_alpha, QOpenGLFunctions_4_5_Core& gl);
 
@@ -33,8 +36,6 @@ public:
     void release(QOpenGLFunctions_4_5_Core& gl);
 
 private:
-    void initialize_gpu_resources(QOpenGLFunctions_4_5_Core& gl);
-
     void write_current_positions(float frame_alpha, QOpenGLFunctions_4_5_Core& gl) const;
     void copy_current_to_previous(QOpenGLFunctions_4_5_Core& gl) const;
     void update_triangle_geometry(QOpenGLFunctions_4_5_Core& gl) const;

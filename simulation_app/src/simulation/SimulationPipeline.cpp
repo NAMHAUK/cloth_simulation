@@ -75,6 +75,7 @@ void SimulationPipeline::step(std::uint32_t motion_step_index, QOpenGLFunctions_
 
     for (std::uint32_t substep = 0; substep < params_.step.substep_count; ++substep) {
         update_character_motion(motion_step_index, substep + 1u, gl);
+
         cloth_integrator_.integrate(cloth_state, scene_, gl);
 
         gpu_state_.update_cloth_bvh_bounds(params_.collisions.cloth.detection_distance, gl);
@@ -121,6 +122,7 @@ void SimulationPipeline::release(QOpenGLFunctions_4_5_Core& gl)
     bending_constraint_solver_.release(gl);
     stretch_constraint_solver_.release(gl);
     cloth_integrator_.release(gl);
+
     substep_dt_ = 0.0f;
     initialized_ = false;
 }

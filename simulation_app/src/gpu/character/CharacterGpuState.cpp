@@ -1,8 +1,10 @@
 #include "gpu/character/CharacterGpuState.h"
+#include "simulation/SceneState.h"
 #include "utils/BufferUtils.h"
 #include "utils/MeshGeometryUtils.h"
 #include "utils/ShaderUtils.h"
 #include <cstddef>
+#include <vector>
 
 #include <glm/vec4.hpp>
 
@@ -14,8 +16,55 @@ constexpr std::size_t triangle_vertex_count = 3u;
 
 // Initialization
 
-void CharacterGpuState::initialize(const std::filesystem::path& shader_dir, QOpenGLFunctions_4_5_Core& gl)
+void CharacterGpuState::initialize(const std::filesystem::path& shader_dir,
+                                   const SceneState& scene,
+                                   QOpenGLFunctions_4_5_Core& gl)
 {
+    initialize_rendering(scene, gl);
+
+    initialize_pbd(shader_dir, scene, gl);
+}
+
+void CharacterGpuState::initialize_rendering(const SceneState& scene, QOpenGLFunctions_4_5_Core& gl)
+{
+    const CharacterMotion& motion = scene.character_motion();
+    const TriangleBvh& body_triangle_bvh = scene.default_body_triangle_bvh();
+
+    std::vector<glm::vec4> positions;
+    positions.reserve(motion.vertex_count);
+    for (std::uint32_t vertex = 0; vertex < motion.vertex_count; ++vertex) {
+        positions.emplace_back(motion.vertex_positions[vertex], 0.0f);
+    }
+
+    const auto position_bytes = byte_size<glm::vec4>(motion.vertex_count);
+
+    // create rendering buffers
+    gl.glCreateBuffers(1, &buffers_.current_position);
+    gl.glNamedBufferData(buffers_.current_position, position_bytes, positions.data(), GL_DYNAMIC_DRAW);
+
+    gl.glCreateBuffers(1, &buffers_.triangle_vertex_indices);
+    gl.glNamedBufferData(buffers_.triangle_vertex_indices,
+                         byte_size<TriangleVertexIndices>(body_triangle_bvh.triangle_vertex_indices.size()),
+                         body_triangle_bvh.triangle_vertex_indices.data(),
+                         GL_STATIC_DRAW);
+
+    gl.glCreateBuffers(1, &buffers_.vertex_normal);
+    gl.glNamedBufferData(buffers_.vertex_normal, byte_size<glm::vec4>(motion.vertex_count), nullptr, GL_DYNAMIC_DRAW);
+    gl.glClearNamedBufferData(buffers_.vertex_normal, GL_RGBA32F, GL_RGBA, GL_FLOAT, nullptr);
+
+    gl.glCreateVertexArrays(1, &vao_);
+    gl.glVertexArrayElementBuffer(vao_, buffers_.triangle_vertex_indices);
+
+    vertex_count_ = motion.vertex_count;
+    triangle_count_ = static_cast<std::uint32_t>(body_triangle_bvh.triangle_vertex_indices.size());
+    index_count_ = static_cast<GLsizei>(body_triangle_bvh.triangle_vertex_indices.size() * triangle_vertex_count);
+}
+
+void CharacterGpuState::initialize_pbd(const std::filesystem::path& shader_dir,
+                                       const SceneState& scene,
+                                       QOpenGLFunctions_4_5_Core& gl)
+{
+    // load shader program
     const auto position_shader_path = shader_dir / "character" / "vertex_position_update.comp";
     const auto triangle_shader_path = shader_dir / "character" / "triangle_geometry_update.comp";
     position_program_ = load_compute_program(position_shader_path, gl);
@@ -27,87 +76,70 @@ void CharacterGpuState::initialize(const std::filesystem::path& shader_dir, QOpe
     position_vertex_count_loc_ = require_uniform_location(position_program_, "uVertexCount", gl);
     triangle_count_loc_ = require_uniform_location(triangle_update_program_, "uTriangleCount", gl);
 
-    initialize_gpu_resources(gl);
-}
+    // create PBD buffers
+    const TriangleBvh& body_triangle_bvh = scene.default_body_triangle_bvh();
+    const EdgeBvh& body_edge_bvh = scene.default_body_edge_bvh();
+    const auto adjacency = build_vertex_triangle_adjacency(vertex_count_, body_triangle_bvh.triangle_vertex_indices);
 
-void CharacterGpuState::initialize_gpu_resources(QOpenGLFunctions_4_5_Core& gl)
-{
-    gl.glCreateVertexArrays(1, &vao_);
     gl.glCreateBuffers(1, &buffers_.animation_positions);
+
     gl.glCreateBuffers(1, &buffers_.previous_position);
-    gl.glCreateBuffers(1, &buffers_.current_position);
-    gl.glCreateBuffers(1, &buffers_.triangle_vertex_indices);
+    gl.glNamedBufferData(buffers_.previous_position, byte_size<glm::vec4>(vertex_count_), nullptr, GL_DYNAMIC_DRAW);
+    copy_current_to_previous(gl);
+
     gl.glCreateBuffers(1, &buffers_.body_triangle_bvh_node);
-    gl.glCreateBuffers(1, &buffers_.body_triangle_bounds);
-    gl.glCreateBuffers(1, &buffers_.body_edge_bvh_node);
-    gl.glCreateBuffers(1, &buffers_.body_edge_vertex_indices);
-    gl.glCreateBuffers(1, &buffers_.body_edge_bounds);
-    gl.glCreateBuffers(1, &buffers_.adjacent_triangle_offsets);
-    gl.glCreateBuffers(1, &buffers_.adjacent_triangle_indices);
-    gl.glCreateBuffers(1, &buffers_.triangle_position);
-    gl.glCreateBuffers(1, &buffers_.triangle_normal);
-    gl.glCreateBuffers(1, &buffers_.vertex_normal);
-
-    gl.glVertexArrayElementBuffer(vao_, buffers_.triangle_vertex_indices);
-}
-
-void CharacterGpuState::initialize_mesh(const CharacterMotion& motion,
-                                        const TriangleBvh& body_triangle_bvh,
-                                        const EdgeBvh& body_edge_bvh,
-                                        QOpenGLFunctions_4_5_Core& gl)
-{
-    const auto adjacency = build_vertex_triangle_adjacency(motion.vertex_count,
-                                                           body_triangle_bvh.triangle_vertex_indices);
-
-    const auto position_bytes = byte_size<glm::vec4>(motion.vertex_count);
-
-    gl.glNamedBufferData(buffers_.previous_position, position_bytes, nullptr, GL_DYNAMIC_DRAW);
-    gl.glNamedBufferData(buffers_.current_position, position_bytes, nullptr, GL_DYNAMIC_DRAW);
-    gl.glNamedBufferData(buffers_.triangle_vertex_indices,
-                         byte_size<TriangleVertexIndices>(body_triangle_bvh.triangle_vertex_indices.size()),
-                         body_triangle_bvh.triangle_vertex_indices.data(),
-                         GL_STATIC_DRAW);
     gl.glNamedBufferData(buffers_.body_triangle_bvh_node,
                          byte_size<BvhNode>(body_triangle_bvh.nodes.size()),
                          body_triangle_bvh.nodes.data(),
                          GL_DYNAMIC_DRAW);
+
+    gl.glCreateBuffers(1, &buffers_.body_triangle_bounds);
     gl.glNamedBufferData(buffers_.body_triangle_bounds,
                          byte_size<Aabb>(body_triangle_bvh.leaf_element_count()),
                          nullptr,
                          GL_DYNAMIC_DRAW);
+
+    gl.glCreateBuffers(1, &buffers_.body_edge_bvh_node);
     gl.glNamedBufferData(buffers_.body_edge_bvh_node,
                          byte_size<BvhNode>(body_edge_bvh.nodes.size()),
                          body_edge_bvh.nodes.data(),
                          GL_DYNAMIC_DRAW);
+
+    gl.glCreateBuffers(1, &buffers_.body_edge_vertex_indices);
     gl.glNamedBufferData(buffers_.body_edge_vertex_indices,
                          byte_size<MeshEdge>(body_edge_bvh.edge_vertex_indices.size()),
                          body_edge_bvh.edge_vertex_indices.data(),
                          GL_STATIC_DRAW);
+
+    gl.glCreateBuffers(1, &buffers_.body_edge_bounds);
     gl.glNamedBufferData(buffers_.body_edge_bounds,
                          byte_size<Aabb>(body_edge_bvh.edge_vertex_indices.size()),
                          nullptr,
                          GL_DYNAMIC_DRAW);
+
+    gl.glCreateBuffers(1, &buffers_.adjacent_triangle_offsets);
     gl.glNamedBufferData(buffers_.adjacent_triangle_offsets,
                          byte_size<std::uint32_t>(adjacency.offsets.size()),
                          adjacency.offsets.data(),
                          GL_STATIC_DRAW);
+
+    gl.glCreateBuffers(1, &buffers_.adjacent_triangle_indices);
     gl.glNamedBufferData(buffers_.adjacent_triangle_indices,
                          byte_size<std::uint32_t>(adjacency.triangle_indices.size()),
                          adjacency.triangle_indices.data(),
                          GL_STATIC_DRAW);
+
+    gl.glCreateBuffers(1, &buffers_.triangle_position);
     gl.glNamedBufferData(buffers_.triangle_position,
                          byte_size<glm::vec4>(adjacency.triangle_count * triangle_vertex_count),
                          nullptr,
                          GL_DYNAMIC_DRAW);
+
+    gl.glCreateBuffers(1, &buffers_.triangle_normal);
     gl.glNamedBufferData(buffers_.triangle_normal,
                          byte_size<glm::vec4>(adjacency.triangle_count),
                          nullptr,
                          GL_DYNAMIC_DRAW);
-    gl.glNamedBufferData(buffers_.vertex_normal, byte_size<glm::vec4>(motion.vertex_count), nullptr, GL_DYNAMIC_DRAW);
-
-    vertex_count_ = motion.vertex_count;
-    triangle_count_ = adjacency.triangle_count;
-    index_count_ = static_cast<GLsizei>(body_triangle_bvh.triangle_vertex_indices.size() * triangle_vertex_count);
 }
 
 // Motion update

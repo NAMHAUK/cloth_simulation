@@ -77,9 +77,9 @@ private:
     void copy_attachment_target_state(GarmentLayer layer,
                                       BufferState& rebuild_state,
                                       QOpenGLFunctions_4_5_Core& gl) const;
-    static void upload_topology(const std::vector<GarmentObject>& garments,
-                                BufferState& rebuild_state,
-                                QOpenGLFunctions_4_5_Core& gl);
+    void upload_topology(const std::vector<GarmentObject>& garments,
+                         BufferState& rebuild_state,
+                         QOpenGLFunctions_4_5_Core& gl) const;
     static void create_vertex_face_exclusion_buffer(const std::vector<GarmentObject>& garments,
                                                     BufferState& rebuild_state,
                                                     QOpenGLFunctions_4_5_Core& gl);

@@ -59,6 +59,8 @@ add_executable(simulation_app
     src/rendering/BackgroundGradient.h
     src/rendering/GroundGridMesh.cpp
     src/rendering/GroundGridMesh.h
+    src/gpu/scene/PbdGpuState.cpp
+    src/gpu/scene/PbdGpuState.h
     src/gpu/scene/SceneGpuState.cpp
     src/gpu/scene/SceneGpuState.h
     src/rendering/SceneRenderer.cpp

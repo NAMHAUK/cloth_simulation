@@ -34,28 +34,6 @@ void clear_dynamic_state(const ClothBufferSet& buffers,
     }
 }
 
-ClothBufferSet create_dynamic_buffer_set(const ClothBufferElementCounts& counts, QOpenGLFunctions_4_5_Core& gl)
-{
-    ClothBufferSet buffers;
-    const auto create_buffer = [&](GLuint& buffer, GLsizeiptr size) {
-        gl.glCreateBuffers(1, &buffer);
-        gl.glNamedBufferData(buffer, size, nullptr, GL_DYNAMIC_DRAW);
-    };
-    const std::uint32_t attachment_capacity = std::max(counts.attachment_constraint, 1u);
-
-    gl.glCreateVertexArrays(1, &buffers.vao);
-    create_buffer(buffers.current_position, byte_size<glm::vec4>(counts.vertex));
-    create_buffer(buffers.previous_position, byte_size<glm::vec4>(counts.vertex));
-    create_buffer(buffers.collision_pushout, byte_size<glm::vec4>(counts.vertex));
-    create_buffer(buffers.inward_motion_correction, byte_size<glm::vec4>(counts.vertex));
-    create_buffer(buffers.attachment_indices, byte_size<glm::uvec2>(attachment_capacity));
-    create_buffer(buffers.attachment_barycentric_offset, byte_size<glm::vec4>(attachment_capacity));
-    create_buffer(buffers.triangle_normal, byte_size<glm::vec4>(counts.triangle));
-    create_buffer(buffers.vertex_normal, byte_size<glm::vec4>(counts.vertex));
-
-    return buffers;
-}
-
 void upload_vertex_positions(const ClothBufferSet& buffers,
                              const std::vector<glm::vec3>& vertex_positions,
                              const GarmentBufferState& garment_state,
@@ -70,6 +48,7 @@ void upload_vertex_positions(const ClothBufferSet& buffers,
                             byte_size<glm::vec4>(garment_state.vertex_start_index),
                             byte_size<glm::vec4>(garment_state.vertex_count),
                             gpu_positions.data());
+
     gl.glNamedBufferSubData(buffers.previous_position,
                             byte_size<glm::vec4>(garment_state.vertex_start_index),
                             byte_size<glm::vec4>(garment_state.vertex_count),
@@ -107,16 +86,13 @@ void ClothGpuState::rebuild_buffers(const std::vector<GarmentObject>& garments,
     BufferState rebuild_state{};
     assign_garment_buffer_states(garments, rebuild_state);
 
-    try {
-        create_dynamic_buffers(garments, changed_layer, rebuild_state, gl);
-        gl.glCreateBuffers(1, &rebuild_state.buffers.triangle_vertex_indices);
-        gl.glCreateBuffers(1, &rebuild_state.buffers.adjacent_triangle_offsets);
-        gl.glCreateBuffers(1, &rebuild_state.buffers.adjacent_triangle_indices);
-        upload_topology(garments, rebuild_state, gl);
-    } catch (...) {
-        delete_buffer_set(rebuild_state.buffers, gl);
-        throw;
-    }
+    create_dynamic_buffers(garments, changed_layer, rebuild_state, gl);
+    gl.glCreateBuffers(1, &rebuild_state.buffers.triangle_vertex_indices);
+
+    gl.glCreateBuffers(1, &rebuild_state.buffers.adjacent_triangle_offsets);
+    gl.glCreateBuffers(1, &rebuild_state.buffers.adjacent_triangle_indices);
+
+    upload_topology(garments, rebuild_state, gl);
 
     delete_buffer_set(state_.buffers, gl);
     clear_base_positions(gl);
@@ -127,10 +103,12 @@ void ClothGpuState::rebuild_buffers(const std::vector<GarmentObject>& garments,
 void ClothGpuState::create_simulation_buffers(const std::vector<GarmentObject>& garments, QOpenGLFunctions_4_5_Core& gl)
 {
     upload_topology(garments, state_, gl);
+
     create_bvh_buffers(garments, state_, gl);
     create_distance_constraint_buffers(garments, state_, gl);
     create_vertex_face_exclusion_buffer(garments, state_, gl);
     create_edge_exclusion_buffer(garments, state_, gl);
+
     if (!has_gpu_objects()) {
         throw std::runtime_error("Cannot prepare garment simulation: a cloth GPU object is missing.");
     }
@@ -169,7 +147,25 @@ void ClothGpuState::create_dynamic_buffers(const std::vector<GarmentObject>& gar
                                            BufferState& rebuild_state,
                                            QOpenGLFunctions_4_5_Core& gl) const
 {
-    rebuild_state.buffers = create_dynamic_buffer_set(rebuild_state.element_counts, gl);
+    ClothBufferSet& buffers = rebuild_state.buffers;
+    const ClothBufferElementCounts& counts = rebuild_state.element_counts;
+    const auto create_buffer = [&](GLuint& buffer, GLsizeiptr size) {
+        gl.glCreateBuffers(1, &buffer);
+        gl.glNamedBufferData(buffer, size, nullptr, GL_DYNAMIC_DRAW);
+    };
+
+    gl.glCreateVertexArrays(1, &buffers.vao);
+    create_buffer(buffers.current_position, byte_size<glm::vec4>(counts.vertex));
+    create_buffer(buffers.vertex_normal, byte_size<glm::vec4>(counts.vertex));
+
+    const std::uint32_t attachment_capacity = std::max(counts.attachment_constraint, 1u);
+
+    create_buffer(buffers.previous_position, byte_size<glm::vec4>(counts.vertex));
+    create_buffer(buffers.collision_pushout, byte_size<glm::vec4>(counts.vertex));
+    create_buffer(buffers.inward_motion_correction, byte_size<glm::vec4>(counts.vertex));
+    create_buffer(buffers.attachment_indices, byte_size<glm::uvec2>(attachment_capacity));
+    create_buffer(buffers.attachment_barycentric_offset, byte_size<glm::vec4>(attachment_capacity));
+    create_buffer(buffers.triangle_normal, byte_size<glm::vec4>(counts.triangle));
 
     for (const GarmentObject& garment : garments) {
         const GarmentLayer layer = garment.layer;
@@ -191,8 +187,14 @@ void ClothGpuState::copy_dynamic_state_buffers(GarmentLayer layer,
 {
     const GarmentBufferState& source_state = state_.garments[layer];
     const GarmentBufferState& destination_state = rebuild_state.garments[layer];
+
+    gl.glCopyNamedBufferSubData(state_.buffers.current_position,
+                                rebuild_state.buffers.current_position,
+                                byte_size<glm::vec4>(source_state.vertex_start_index),
+                                byte_size<glm::vec4>(destination_state.vertex_start_index),
+                                byte_size<glm::vec4>(destination_state.vertex_count));
+
     const std::array buffer_pairs{
-        std::pair{state_.buffers.current_position, rebuild_state.buffers.current_position},
         std::pair{state_.buffers.previous_position, rebuild_state.buffers.previous_position},
         std::pair{state_.buffers.collision_pushout, rebuild_state.buffers.collision_pushout},
         std::pair{state_.buffers.inward_motion_correction, rebuild_state.buffers.inward_motion_correction},
@@ -233,7 +235,7 @@ void ClothGpuState::copy_attachment_target_state(GarmentLayer layer,
 
 void ClothGpuState::upload_topology(const std::vector<GarmentObject>& garments,
                                     BufferState& rebuild_state,
-                                    QOpenGLFunctions_4_5_Core& gl)
+                                    QOpenGLFunctions_4_5_Core& gl) const
 {
     ClothBufferSet& buffers = rebuild_state.buffers;
     const ClothBufferElementCounts& counts = rebuild_state.element_counts;
@@ -252,12 +254,13 @@ void ClothGpuState::upload_topology(const std::vector<GarmentObject>& garments,
         }
     }
 
-    const auto adjacency = build_vertex_triangle_adjacency(counts.vertex, triangle_vertex_indices);
-
     gl.glNamedBufferData(buffers.triangle_vertex_indices,
                          byte_size<TriangleVertexIndices>(triangle_vertex_indices.size()),
                          triangle_vertex_indices.data(),
                          GL_STATIC_DRAW);
+
+    const auto adjacency = build_vertex_triangle_adjacency(counts.vertex, triangle_vertex_indices);
+
     gl.glNamedBufferData(buffers.adjacent_triangle_offsets,
                          byte_size<std::uint32_t>(adjacency.offsets.size()),
                          adjacency.offsets.data(),
@@ -597,43 +600,49 @@ void ClothGpuState::draw_garment(GarmentLayer layer, QOpenGLFunctions_4_5_Core& 
 // State
 bool ClothGpuState::is_initialized() const
 {
+    if (state_.element_counts.stretch_constraint == 0 ||
+        state_.element_counts.bending_constraint == 0 ||
+        state_.stretch_color_states.empty() ||
+        state_.bending_color_states.empty()) {
+        return false;
+    }
+
     return has_gpu_objects() &&
            std::any_of(state_.garments.begin(),
                        state_.garments.end(),
                        [](const GarmentBufferState& garment_state) { return garment_state.vertex_count != 0u; }) &&
            state_.element_counts.vertex > 0 &&
-           state_.element_counts.triangle > 0 &&
-           state_.element_counts.stretch_constraint > 0 &&
-           state_.element_counts.bending_constraint > 0 &&
-           !state_.stretch_color_states.empty() &&
-           !state_.bending_color_states.empty();
+           state_.element_counts.triangle > 0;
 }
 
 bool ClothGpuState::has_gpu_objects() const
 {
+    if (state_.buffers.previous_position == 0 ||
+        state_.buffers.collision_pushout == 0 ||
+        state_.buffers.inward_motion_correction == 0 ||
+        state_.buffers.attachment_indices == 0 ||
+        state_.buffers.attachment_barycentric_offset == 0 ||
+        state_.buffers.triangle_normal == 0 ||
+        state_.buffers.adjacent_triangle_offsets == 0 ||
+        state_.buffers.adjacent_triangle_indices == 0 ||
+        state_.buffers.stretch_edge_vertex_indices == 0 ||
+        state_.buffers.stretch_rest_length == 0 ||
+        state_.buffers.bending_edge_vertex_indices == 0 ||
+        state_.buffers.bending_rest_length == 0 ||
+        state_.buffers.triangle_bvh_node == 0 ||
+        state_.buffers.triangle_bounds == 0 ||
+        state_.buffers.edge_vertex_indices == 0 ||
+        state_.buffers.edge_bounds == 0 ||
+        state_.buffers.edge_bvh_node == 0 ||
+        state_.buffers.vertex_face_exclusions == 0 ||
+        state_.buffers.edge_exclusions == 0) {
+        return false;
+    }
+
     return state_.buffers.vao != 0 &&
            state_.buffers.current_position != 0 &&
-           state_.buffers.previous_position != 0 &&
-           state_.buffers.collision_pushout != 0 &&
-           state_.buffers.inward_motion_correction != 0 &&
            state_.buffers.triangle_vertex_indices != 0 &&
-           state_.buffers.adjacent_triangle_offsets != 0 &&
-           state_.buffers.adjacent_triangle_indices != 0 &&
-           state_.buffers.stretch_edge_vertex_indices != 0 &&
-           state_.buffers.stretch_rest_length != 0 &&
-           state_.buffers.bending_edge_vertex_indices != 0 &&
-           state_.buffers.bending_rest_length != 0 &&
-           state_.buffers.attachment_indices != 0 &&
-           state_.buffers.attachment_barycentric_offset != 0 &&
-           state_.buffers.triangle_normal != 0 &&
-           state_.buffers.vertex_normal != 0 &&
-           state_.buffers.triangle_bvh_node != 0 &&
-           state_.buffers.triangle_bounds != 0 &&
-           state_.buffers.edge_vertex_indices != 0 &&
-           state_.buffers.edge_bounds != 0 &&
-           state_.buffers.edge_bvh_node != 0 &&
-           state_.buffers.vertex_face_exclusions != 0 &&
-           state_.buffers.edge_exclusions != 0;
+           state_.buffers.vertex_normal != 0;
 }
 
 // Accessors
