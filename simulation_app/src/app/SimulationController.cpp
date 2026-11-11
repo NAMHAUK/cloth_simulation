@@ -251,6 +251,10 @@ void SimulationController::confirm_garment_placement()
             gpu_state_.upload_garment_placement(garment, gl);
         }
 
+        auto& pbd_cloth_state = gpu_state_.pbd_gpu_state().cloth_gpu_state();
+        pbd_cloth_state.rebuild_dynamic_buffers(gpu_state_.cloth_gpu_state(), gl);
+        pbd_cloth_state.rebuild_attachment_buffers(scene_.garments(), placement_garments, gl);
+
         gpu_state_.create_simulation_buffers(scene_, gl);
         simulation_pipeline_.prefit_garments(calculate_iteration_count(), gl);
 

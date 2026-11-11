@@ -5,7 +5,8 @@
 #include <QOpenGLFunctions_4_5_Core>
 
 struct CharacterBufferSet;
-struct ClothBufferSet;
+struct ClothRenderBuffers;
+struct PbdClothBufferSet;
 
 struct CollisionCandidateBuffers final
 {
@@ -37,7 +38,9 @@ public:
     void release(QOpenGLFunctions_4_5_Core& gl);
 
     void bind_character(const CharacterBufferSet& buffers, QOpenGLFunctions_4_5_Core& gl) const;
-    void bind_cloth(const ClothBufferSet& buffers, QOpenGLFunctions_4_5_Core& gl) const;
+    void bind_cloth(const ClothRenderBuffers& buffers,
+                    const PbdClothBufferSet& pbd_buffers,
+                    QOpenGLFunctions_4_5_Core& gl) const;
     void bind_collision(const CollisionBuffers& buffers, QOpenGLFunctions_4_5_Core& gl) const;
 
     void reset_character_bindings(QOpenGLFunctions_4_5_Core& gl) const;

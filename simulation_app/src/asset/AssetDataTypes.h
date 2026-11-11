@@ -106,6 +106,8 @@ enum GarmentLayer : std::size_t
     Upper = 1u,
 };
 
+inline constexpr std::size_t garment_layer_count = 2;
+
 struct GarmentMesh
 {
     GarmentCategory garment_category = GarmentCategory::Top;

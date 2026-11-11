@@ -1,5 +1,5 @@
 #include "simulation/constraints/AttachmentConstraintSolver.h"
-#include "gpu/cloth/ClothGpuState.h"
+#include "gpu/cloth/PbdClothGpuState.h"
 #include "utils/ShaderUtils.h"
 
 #include <algorithm>
@@ -22,17 +22,17 @@ void AttachmentConstraintSolver::initialize(const std::filesystem::path& shader_
     gl.glProgramUniform1f(program_, stiffness_loc, std::clamp(stiffness_, 0.0f, 1.0f));
 }
 
-void AttachmentConstraintSolver::solve(const ClothGpuState& cloth_state, QOpenGLFunctions_4_5_Core& gl) const
+void AttachmentConstraintSolver::solve(const PbdClothGpuState& cloth_state, QOpenGLFunctions_4_5_Core& gl) const
 {
     gl.glUseProgram(program_);
 
-    for (const GarmentBufferState& garment_state : cloth_state.garment_states()) {
-        const std::uint32_t attachment_count = garment_state.active_attachment_constraint_count;
+    for (const AttachmentBufferState& attachment_state : cloth_state.attachment_states()) {
+        const std::uint32_t attachment_count = attachment_state.active_count;
         if (attachment_count == 0) {
             continue;
         }
 
-        gl.glProgramUniform1ui(program_, constraint_offset_loc_, garment_state.attachment_constraint_start_index);
+        gl.glProgramUniform1ui(program_, constraint_offset_loc_, attachment_state.start_index);
         gl.glProgramUniform1ui(program_, constraint_count_loc_, attachment_count);
         gl.glDispatchCompute(compute_group_count(attachment_count, local_size), 1, 1);
     }

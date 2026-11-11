@@ -13,6 +13,14 @@ constexpr GLsizeiptr byte_size(std::size_t count) noexcept
     return static_cast<GLsizeiptr>(count * sizeof(T));
 }
 
+inline GLuint create_buffer(GLsizeiptr size, const void* data, GLenum usage, QOpenGLFunctions_4_5_Core& gl)
+{
+    GLuint buffer = 0;
+    gl.glCreateBuffers(1, &buffer);
+    gl.glNamedBufferData(buffer, size, data, usage);
+    return buffer;
+}
+
 inline void clear_collision_candidate_counts(const CollisionCandidateBuffers& buffers, QOpenGLFunctions_4_5_Core& gl)
 {
     const std::uint32_t zero_uint = 0;

@@ -7,7 +7,7 @@
 
 class SceneGpuState;
 struct ClothCollisionParams;
-struct GarmentBufferState;
+struct GarmentCollisionBufferState;
 
 class CollisionDetector final
 {
@@ -73,8 +73,8 @@ private:
     void detect_cloth_edge_body_edge(const SceneGpuState& gpu_state, QOpenGLFunctions_4_5_Core& gl) const;
     void detect_cloth_cloth_vertex_face(const SceneGpuState& gpu_state, QOpenGLFunctions_4_5_Core& gl) const;
     void detect_cloth_cloth_edge_edge(const SceneGpuState& gpu_state, QOpenGLFunctions_4_5_Core& gl) const;
-    void detect_edges(const GarmentBufferState& source,
-                      const GarmentBufferState& target,
+    void detect_edges(const GarmentCollisionBufferState& source,
+                      const GarmentCollisionBufferState& target,
                       bool is_self_collision,
                       QOpenGLFunctions_4_5_Core& gl) const;
     void build_dispatch_size(CandidateKind candidate_kind,

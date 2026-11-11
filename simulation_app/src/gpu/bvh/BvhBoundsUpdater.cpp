@@ -1,5 +1,5 @@
 #include "gpu/bvh/BvhBoundsUpdater.h"
-#include "gpu/cloth/ClothGpuState.h"
+#include "gpu/cloth/PbdClothGpuState.h"
 #include "simulation/SceneState.h"
 #include "utils/ShaderUtils.h"
 
@@ -80,11 +80,11 @@ void BvhBoundsUpdater::update_body_bvh(QOpenGLFunctions_4_5_Core& gl) const
     }
 }
 
-void BvhBoundsUpdater::update_cloth_bvh(const ClothGpuState& cloth_state,
+void BvhBoundsUpdater::update_cloth_bvh(const PbdClothGpuState& cloth_state,
                                         float bounds_margin,
                                         QOpenGLFunctions_4_5_Core& gl) const
 {
-    const auto& states = cloth_state.garment_states();
+    const auto& states = cloth_state.collision_states();
 
     gl.glUseProgram(cloth_program_);
     gl.glProgramUniform1f(cloth_program_, cloth_bounds_margin_loc_, bounds_margin);

@@ -1,6 +1,7 @@
 #include "gpu/scene/SimulationBufferBindings.h"
 #include "gpu/character/CharacterGpuDataTypes.h"
 #include "gpu/cloth/ClothGpuDataTypes.h"
+#include "utils/BufferUtils.h"
 
 #include <algorithm>
 #include <array>
@@ -125,8 +126,7 @@ void SimulationBufferBindings::initialize(QOpenGLFunctions_4_5_Core& gl)
     }
 
     constexpr std::array<std::uint32_t, 4> dummy_data{};
-    gl.glCreateBuffers(1, &dummy_buffer_);
-    gl.glNamedBufferData(dummy_buffer_, sizeof(dummy_data), dummy_data.data(), GL_STATIC_DRAW);
+    dummy_buffer_ = create_buffer(sizeof(dummy_data), dummy_data.data(), GL_STATIC_DRAW, gl);
     bind_dummy_buffers(0, binding::count, dummy_buffer_, gl);
 }
 
@@ -153,37 +153,40 @@ void SimulationBufferBindings::bind_character(const CharacterBufferSet& buffers,
     bind_buffers(binding::character::start, binding_buffers, "character", gl);
 }
 
-void SimulationBufferBindings::bind_cloth(const ClothBufferSet& buffers, QOpenGLFunctions_4_5_Core& gl) const
+void SimulationBufferBindings::bind_cloth(const ClothRenderBuffers& buffers,
+                                          const PbdClothBufferSet& pbd_buffers,
+                                          QOpenGLFunctions_4_5_Core& gl) const
 {
     std::array<GLuint, binding::cloth::count> binding_buffers{
         buffers.current_position,
-        buffers.previous_position,
-        buffers.collision_pushout,
-        buffers.inward_motion_correction,
-        buffers.edge_exclusions,
+        pbd_buffers.previous_position,
+        pbd_buffers.collision_pushout,
+        pbd_buffers.inward_motion_correction,
+        pbd_buffers.edge_exclusions,
         buffers.triangle_vertex_indices,
-        buffers.adjacent_triangle_offsets,
-        buffers.adjacent_triangle_indices,
-        buffers.stretch_edge_vertex_indices,
-        buffers.stretch_rest_length,
-        buffers.bending_edge_vertex_indices,
-        buffers.bending_rest_length,
-        buffers.attachment_indices,
-        buffers.attachment_barycentric_offset,
-        buffers.triangle_normal,
+        pbd_buffers.adjacent_triangle_offsets,
+        pbd_buffers.adjacent_triangle_indices,
+        pbd_buffers.stretch_edge_vertex_indices,
+        pbd_buffers.stretch_rest_length,
+        pbd_buffers.bending_edge_vertex_indices,
+        pbd_buffers.bending_rest_length,
+        pbd_buffers.attachment_indices,
+        pbd_buffers.attachment_barycentric_offset,
+        pbd_buffers.triangle_normal,
         buffers.vertex_normal,
-        buffers.triangle_bvh_node,
-        buffers.triangle_bounds,
-        buffers.edge_vertex_indices,
-        buffers.edge_bounds,
-        buffers.edge_bvh_node,
+        pbd_buffers.triangle_bvh_node,
+        pbd_buffers.triangle_bounds,
+        pbd_buffers.edge_vertex_indices,
+        pbd_buffers.edge_bounds,
+        pbd_buffers.edge_bvh_node,
     };
     std::replace(binding_buffers.begin(), binding_buffers.end(), GLuint{0}, dummy_buffer_);
     bind_buffers(binding::cloth::start, binding_buffers, "cloth", gl);
-    bind_buffers(binding::vertex_face_exclusions,
-                 std::array{buffers.vertex_face_exclusions != 0 ? buffers.vertex_face_exclusions : dummy_buffer_},
-                 "cloth",
-                 gl);
+    bind_buffers(
+        binding::vertex_face_exclusions,
+        std::array{pbd_buffers.vertex_face_exclusions != 0 ? pbd_buffers.vertex_face_exclusions : dummy_buffer_},
+        "cloth",
+        gl);
 }
 
 void SimulationBufferBindings::bind_collision(const CollisionBuffers& buffers, QOpenGLFunctions_4_5_Core& gl) const

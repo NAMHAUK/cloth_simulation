@@ -7,7 +7,7 @@
 
 #include <QOpenGLFunctions_4_5_Core>
 
-class ClothGpuState;
+class PbdClothGpuState;
 class SceneState;
 
 class BvhBoundsUpdater final
@@ -23,7 +23,9 @@ public:
                     QOpenGLFunctions_4_5_Core& gl);
 
     void update_body_bvh(QOpenGLFunctions_4_5_Core& gl) const;
-    void update_cloth_bvh(const ClothGpuState& cloth_state, float bounds_margin, QOpenGLFunctions_4_5_Core& gl) const;
+    void update_cloth_bvh(const PbdClothGpuState& cloth_state,
+                          float bounds_margin,
+                          QOpenGLFunctions_4_5_Core& gl) const;
 
     void release(QOpenGLFunctions_4_5_Core& gl);
 

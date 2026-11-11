@@ -37,6 +37,8 @@ public:
     bool is_initialized() const;
     const CharacterGpuState& character_gpu_state() const;
     const ClothGpuState& cloth_gpu_state() const;
+    PbdGpuState& pbd_gpu_state();
+    const PbdGpuState& pbd_gpu_state() const;
     const CollisionBuffers& collision_buffers() const;
     void release(QOpenGLFunctions_4_5_Core& gl);
     void release_garment_resources(QOpenGLFunctions_4_5_Core& gl);

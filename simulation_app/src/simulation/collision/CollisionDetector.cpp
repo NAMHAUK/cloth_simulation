@@ -144,19 +144,22 @@ void CollisionDetector::detect_cloth_cloth_vertex_face(const SceneGpuState& gpu_
     const auto& garment_states = gpu_state.cloth_gpu_state().garment_states();
     const GarmentBufferState& upper = garment_states[GarmentLayer::Upper];
     const GarmentBufferState& lower = garment_states[GarmentLayer::Lower];
+    const auto& collision_states = gpu_state.pbd_gpu_state().cloth_gpu_state().collision_states();
+    const auto& lower_collision = collision_states[GarmentLayer::Lower];
+    const auto& upper_collision = collision_states[GarmentLayer::Upper];
     const std::uint32_t vertex_count = upper.vertex_count + lower.vertex_count;
 
     const std::array<GLuint, 2> vertex_offsets{lower.vertex_start_index, upper.vertex_start_index};
     const std::array<GLuint, 2> vertex_counts{lower.vertex_count, upper.vertex_count};
     const std::array<GLuint, 2> bvh_roots{
-        lower.vertex_count > 0u ? lower.triangle_bvh_level_offsets.front() : 0u,
-        upper.vertex_count > 0u ? upper.triangle_bvh_level_offsets.front() : 0u,
+        lower.vertex_count > 0u ? lower_collision.triangle_bvh_level_offsets.front() : 0u,
+        upper.vertex_count > 0u ? upper_collision.triangle_bvh_level_offsets.front() : 0u,
     };
     const std::array<GLuint, 2> triangle_offsets{lower.triangle_start_index, upper.triangle_start_index};
     const std::array<GLuint, 2> masks_per_vertex{(lower.triangle_count + 31u) / 32u,
                                                  (upper.triangle_count + 31u) / 32u};
-    const std::array<GLuint, 2> exclusion_offsets{lower.vertex_face_exclusion_offset,
-                                                  upper.vertex_face_exclusion_offset};
+    const std::array<GLuint, 2> exclusion_offsets{lower_collision.vertex_face_exclusion_offset,
+                                                  upper_collision.vertex_face_exclusion_offset};
 
     gl.glUseProgram(shader.program);
     gl.glProgramUniform1ui(shader.program, shader.max_candidates, candidates.max_pairs);
@@ -176,7 +179,7 @@ void CollisionDetector::detect_cloth_cloth_edge_edge(const SceneGpuState& gpu_st
 {
     const auto& shader = cloth_cloth_edge_edge_;
     const auto& candidates = gpu_state.collision_buffers().cloth_cloth_edge_edge;
-    const auto& garments = gpu_state.cloth_gpu_state().garment_states();
+    const auto& garments = gpu_state.pbd_gpu_state().cloth_gpu_state().collision_states();
     const auto& lower = garments[GarmentLayer::Lower];
     const auto& upper = garments[GarmentLayer::Upper];
 
@@ -187,8 +190,8 @@ void CollisionDetector::detect_cloth_cloth_edge_edge(const SceneGpuState& gpu_st
     detect_edges(upper, upper, true, gl);
 }
 
-void CollisionDetector::detect_edges(const GarmentBufferState& source,
-                                     const GarmentBufferState& target,
+void CollisionDetector::detect_edges(const GarmentCollisionBufferState& source,
+                                     const GarmentCollisionBufferState& target,
                                      bool is_self_collision,
                                      QOpenGLFunctions_4_5_Core& gl) const
 {
