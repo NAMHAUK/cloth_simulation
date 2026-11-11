@@ -56,6 +56,7 @@ void PdSimulation::create_simulation_buffers(QOpenGLFunctions_4_5_Core& gl)
 {
     gpu_state_.cloth_gpu_state().upload_triangle_indices(scene_.garments(), gl);
     pd_gpu_state_.rebuild_buffers(gpu_state_.cloth_gpu_state());
+    pd_gpu_state_.prepare_system(scene_.garments(), gpu_state_.cloth_gpu_state());
 }
 
 // Character

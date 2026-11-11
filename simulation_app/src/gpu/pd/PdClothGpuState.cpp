@@ -1,5 +1,7 @@
 #include "gpu/pd/PdClothGpuState.h"
+#include "ClothMass.h"
 #include "gpu/common/ClothGpuState.h"
+#include "simulation/SceneState.h"
 #include "utils/CudaUtils.h"
 
 #include <cstddef>
@@ -11,10 +13,22 @@ void PdClothGpuState::rebuild_buffers(const ClothGpuState& cloth_state)
     const std::size_t velocity_bytes = sizeof(float4) * vertex_count_;
     CUDA_CHECK(cudaMalloc(reinterpret_cast<void**>(&velocities_), velocity_bytes));
     CUDA_CHECK(cudaMemset(velocities_, 0, velocity_bytes));
+    CUDA_CHECK(cudaMalloc(reinterpret_cast<void**>(&masses_), sizeof(float) * vertex_count_));
 
     CUDA_CHECK(cudaGraphicsGLRegisterBuffer(&positions_,
                                             cloth_state.buffer_set().current_position,
                                             cudaGraphicsRegisterFlagsNone));
+}
+
+void PdClothGpuState::initialize_masses(const std::vector<GarmentObject>& garments, const ClothGpuState& cloth_state)
+{
+    for (const GarmentObject& garment : garments) {
+        const GarmentBufferState& garment_state = cloth_state.garment_states()[garment.layer];
+
+        CUDA_CHECK(set_vertex_masses(masses_ + garment_state.vertex_start_index,
+                                     garment_state.vertex_count,
+                                     garment.surface_density));
+    }
 }
 
 void PdClothGpuState::reset_velocities() const
@@ -68,6 +82,10 @@ void PdClothGpuState::release()
     if (velocities_ != nullptr) {
         CUDA_CHECK(cudaFree(velocities_));
         velocities_ = nullptr;
+    }
+    if (masses_ != nullptr) {
+        CUDA_CHECK(cudaFree(masses_));
+        masses_ = nullptr;
     }
     vertex_count_ = 0;
 }

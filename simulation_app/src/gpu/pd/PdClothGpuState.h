@@ -1,10 +1,12 @@
 #pragma once
 
 #include <cstdint>
+#include <vector>
 
 #include <vector_types.h>
 
 class ClothGpuState;
+struct GarmentObject;
 struct cudaGraphicsResource;
 
 class PdClothGpuState final
@@ -15,6 +17,7 @@ public:
     PdClothGpuState& operator=(const PdClothGpuState&) = delete;
 
     void rebuild_buffers(const ClothGpuState& cloth_state);
+    void initialize_masses(const std::vector<GarmentObject>& garments, const ClothGpuState& cloth_state);
     void reset_velocities() const;
 
     float4* map_shared_buffers() const;
@@ -27,5 +30,6 @@ public:
 private:
     cudaGraphicsResource* positions_ = nullptr;
     float4* velocities_ = nullptr;
+    float* masses_ = nullptr;
     std::uint32_t vertex_count_ = 0;
 };
