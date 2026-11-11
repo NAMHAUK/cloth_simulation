@@ -1,4 +1,5 @@
 #include "rendering/GroundGridMesh.h"
+#include "utils/BufferUtils.h"
 
 #include <cassert>
 #include <cstddef>
@@ -33,9 +34,7 @@ void GroundGridMesh::initialize(QOpenGLFunctions_4_5_Core& gl)
     const std::vector<glm::vec3> vertices = build_ground_grid_vertices();
 
     gl.glCreateVertexArrays(1, &vao_);
-    gl.glCreateBuffers(1, &vertex_buffer_);
-
-    gl.glNamedBufferData(vertex_buffer_, vertices.size() * sizeof(glm::vec3), vertices.data(), GL_STATIC_DRAW);
+    vertex_buffer_ = create_buffer(vertices.size() * sizeof(glm::vec3), vertices.data(), GL_STATIC_DRAW, gl);
 
     constexpr GLuint position_attribute_loc = 0;
     constexpr GLuint position_binding_index = 0;

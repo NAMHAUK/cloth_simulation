@@ -5,7 +5,7 @@
 
 #include <QOpenGLFunctions_4_5_Core>
 
-class ClothGpuState;
+class PbdClothGpuState;
 
 class StretchConstraintSolver final
 {
@@ -15,7 +15,7 @@ public:
     StretchConstraintSolver& operator=(const StretchConstraintSolver&) = delete;
 
     void initialize(const std::filesystem::path& shader_dir, QOpenGLFunctions_4_5_Core& gl);
-    void solve(const ClothGpuState& cloth_state, QOpenGLFunctions_4_5_Core& gl) const;
+    void solve(const PbdClothGpuState& cloth_state, QOpenGLFunctions_4_5_Core& gl) const;
     void release(QOpenGLFunctions_4_5_Core& gl);
 
 private:

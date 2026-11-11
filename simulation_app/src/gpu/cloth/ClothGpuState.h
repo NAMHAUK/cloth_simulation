@@ -15,10 +15,6 @@ struct ClothBufferElementCounts final
 {
     std::uint32_t vertex = 0;
     std::uint32_t triangle = 0;
-    std::uint32_t edge = 0;
-    std::uint32_t stretch_constraint = 0;
-    std::uint32_t bending_constraint = 0;
-    std::uint32_t attachment_constraint = 0;
 };
 
 class ClothGpuState final
@@ -30,40 +26,32 @@ public:
     ClothGpuState& operator=(const ClothGpuState&) = delete;
     ClothGpuState& operator=(ClothGpuState&& other) noexcept = delete;
 
-    void rebuild_buffers(const std::vector<GarmentObject>& garments,
-                         GarmentLayer changed_layer,
-                         QOpenGLFunctions_4_5_Core& gl);
-    void create_simulation_buffers(const std::vector<GarmentObject>& garments, QOpenGLFunctions_4_5_Core& gl);
+    std::vector<TriangleVertexIndices> rebuild_buffers(const std::vector<GarmentObject>& garments,
+                                                       GarmentLayer changed_layer,
+                                                       QOpenGLFunctions_4_5_Core& gl);
+    std::vector<TriangleVertexIndices> upload_triangle_indices(const std::vector<GarmentObject>& garments,
+                                                               QOpenGLFunctions_4_5_Core& gl);
     void upload_garment_placement(const GarmentObject& garment, QOpenGLFunctions_4_5_Core& gl);
-    void upload_attachment_indices(const GarmentObject& garment, QOpenGLFunctions_4_5_Core& gl);
-    void activate_attachment_targets(GarmentLayer layer);
     void capture_base_positions(QOpenGLFunctions_4_5_Core& gl);
     void restore_base_positions(QOpenGLFunctions_4_5_Core& gl) const;
     void clear_base_positions(QOpenGLFunctions_4_5_Core& gl);
-    void copy_current_positions_to_previous(QOpenGLFunctions_4_5_Core& gl) const;
 
     void draw_garment(GarmentLayer layer, QOpenGLFunctions_4_5_Core& gl) const;
 
     bool is_initialized() const;
 
-    const std::array<GarmentBufferState, 2>& garment_states() const;
+    const std::array<GarmentBufferState, garment_layer_count>& garment_states() const;
     const ClothBufferElementCounts& element_counts() const;
-    std::size_t max_bvh_level_count() const;
-    const std::vector<ConstraintColorState>& stretch_color_states() const;
-    const std::vector<ConstraintColorState>& bending_color_states() const;
-    const ClothBufferSet& buffer_set() const;
+    const ClothRenderBuffers& buffer_set() const;
 
     void release(QOpenGLFunctions_4_5_Core& gl);
 
 private:
     struct BufferState final
     {
-        ClothBufferSet buffers;
-        std::array<GarmentBufferState, 2> garments;
-        std::vector<ConstraintColorState> stretch_color_states;
-        std::vector<ConstraintColorState> bending_color_states;
+        ClothRenderBuffers buffers;
+        std::array<GarmentBufferState, garment_layer_count> garments;
         ClothBufferElementCounts element_counts;
-        std::size_t max_bvh_level_count = 0;
     };
 
     static void assign_garment_buffer_states(const std::vector<GarmentObject>& garments, BufferState& state);
@@ -71,32 +59,14 @@ private:
                                 GarmentLayer changed_layer,
                                 BufferState& rebuild_state,
                                 QOpenGLFunctions_4_5_Core& gl) const;
-    void copy_dynamic_state_buffers(GarmentLayer layer,
-                                    const BufferState& rebuild_state,
-                                    QOpenGLFunctions_4_5_Core& gl) const;
-    void copy_attachment_target_state(GarmentLayer layer,
-                                      BufferState& rebuild_state,
-                                      QOpenGLFunctions_4_5_Core& gl) const;
-    static void upload_topology(const std::vector<GarmentObject>& garments,
-                                BufferState& rebuild_state,
-                                QOpenGLFunctions_4_5_Core& gl);
-    static void create_vertex_face_exclusion_buffer(const std::vector<GarmentObject>& garments,
-                                                    BufferState& rebuild_state,
-                                                    QOpenGLFunctions_4_5_Core& gl);
-    static void create_edge_exclusion_buffer(const std::vector<GarmentObject>& garments,
-                                             BufferState& rebuild_state,
-                                             QOpenGLFunctions_4_5_Core& gl);
-    static void create_bvh_buffers(const std::vector<GarmentObject>& garments,
-                                   BufferState& rebuild_state,
-                                   QOpenGLFunctions_4_5_Core& gl);
-    static void create_distance_constraint_buffers(const std::vector<GarmentObject>& garments,
-                                                   BufferState& rebuild_state,
-                                                   QOpenGLFunctions_4_5_Core& gl);
+    void copy_current_positions(GarmentLayer layer,
+                                const BufferState& rebuild_state,
+                                QOpenGLFunctions_4_5_Core& gl) const;
     void configure_vao(QOpenGLFunctions_4_5_Core& gl);
 
     bool has_gpu_objects() const;
 
-    static void delete_buffer_set(ClothBufferSet& buffers, QOpenGLFunctions_4_5_Core& gl);
+    static void delete_buffer_set(ClothRenderBuffers& buffers, QOpenGLFunctions_4_5_Core& gl);
     void reset_resources() noexcept;
 
     BufferState state_;

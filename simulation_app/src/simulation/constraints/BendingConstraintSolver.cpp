@@ -1,5 +1,5 @@
 #include "simulation/constraints/BendingConstraintSolver.h"
-#include "gpu/cloth/ClothGpuState.h"
+#include "gpu/cloth/PbdClothGpuState.h"
 #include "utils/ShaderUtils.h"
 
 #include <algorithm>
@@ -22,7 +22,7 @@ void BendingConstraintSolver::initialize(const std::filesystem::path& shader_dir
     gl.glProgramUniform1f(program_, stiffness_loc, std::clamp(stiffness_, 0.0f, 1.0f));
 }
 
-void BendingConstraintSolver::solve(const ClothGpuState& cloth_state, QOpenGLFunctions_4_5_Core& gl) const
+void BendingConstraintSolver::solve(const PbdClothGpuState& cloth_state, QOpenGLFunctions_4_5_Core& gl) const
 {
     gl.glUseProgram(program_);
 

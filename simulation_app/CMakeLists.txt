@@ -21,8 +21,8 @@ add_executable(simulation_app
     src/app/ProjectPaths.h
     src/app/SimulationController.cpp
     src/app/SimulationController.h
-    src/gpu/scene/SimulationBufferBindings.cpp
-    src/gpu/scene/SimulationBufferBindings.h
+    src/gpu/scene/PbdBufferBindings.cpp
+    src/gpu/scene/PbdBufferBindings.h
     src/simulation/SimulationParams.h
     src/simulation/ClothIntegrator.cpp
     src/simulation/ClothIntegrator.h
@@ -34,9 +34,9 @@ add_executable(simulation_app
     src/simulation/constraints/AttachmentConstraintSolver.h
     src/simulation/collision/GroundCollisionSolver.cpp
     src/simulation/collision/GroundCollisionSolver.h
-    src/simulation/collision/Bvh.h
-    src/simulation/collision/MeshBvhBuilder.cpp
-    src/simulation/collision/MeshBvhBuilder.h
+    src/simulation/bvh/Bvh.h
+    src/simulation/bvh/MeshBvhBuilder.cpp
+    src/simulation/bvh/MeshBvhBuilder.h
     src/simulation/collision/CollisionDetector.cpp
     src/simulation/collision/CollisionDetector.h
     src/simulation/collision/ClothBodyCollisionSolver.cpp
@@ -59,6 +59,12 @@ add_executable(simulation_app
     src/rendering/BackgroundGradient.h
     src/rendering/GroundGridMesh.cpp
     src/rendering/GroundGridMesh.h
+    src/gpu/character/PbdCharacterGpuState.cpp
+    src/gpu/character/PbdCharacterGpuState.h
+    src/gpu/cloth/PbdClothGpuState.cpp
+    src/gpu/cloth/PbdClothGpuState.h
+    src/gpu/scene/PbdGpuState.cpp
+    src/gpu/scene/PbdGpuState.h
     src/gpu/scene/SceneGpuState.cpp
     src/gpu/scene/SceneGpuState.h
     src/rendering/SceneRenderer.cpp

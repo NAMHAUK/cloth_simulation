@@ -1,4 +1,4 @@
-#include "simulation/collision/MeshBvhBuilder.h"
+#include "simulation/bvh/MeshBvhBuilder.h"
 
 #include <algorithm>
 #include <array>

@@ -49,13 +49,14 @@ void SimulationPipeline::prefit_garments(std::uint32_t iteration_count, QOpenGLF
 
     params_.step.iteration_count = iteration_count;
     const ClothGpuState& cloth_state = gpu_state_.cloth_gpu_state();
+    const PbdClothGpuState& pbd_cloth_state = gpu_state_.pbd_gpu_state().cloth_gpu_state();
 
     // Garment pre-fit
     for (std::uint32_t step = 0; step < params_.prefit.iteration_count; ++step) {
-        cloth_state.copy_current_positions_to_previous(gl);
+        pbd_cloth_state.reset_velocity(cloth_state, 0, cloth_state.element_counts().vertex, gl);
         garment_prefit_solver_.solve(cloth_state, gl);
-        stretch_constraint_solver_.solve(cloth_state, gl);
-        bending_constraint_solver_.solve(cloth_state, gl);
+        stretch_constraint_solver_.solve(pbd_cloth_state, gl);
+        bending_constraint_solver_.solve(pbd_cloth_state, gl);
 
         for (std::uint32_t iteration = 0; iteration < iteration_count; ++iteration) {
             gpu_state_.update_cloth_bvh_bounds(params_.collisions.cloth.initial_detection_distance, gl);
@@ -64,7 +65,7 @@ void SimulationPipeline::prefit_garments(std::uint32_t iteration_count, QOpenGLF
         }
     }
 
-    cloth_state.copy_current_positions_to_previous(gl);
+    pbd_cloth_state.reset_velocity(cloth_state, 0, cloth_state.element_counts().vertex, gl);
     gpu_state_.update_cloth_normals(gl);
 }
 
@@ -72,18 +73,20 @@ void SimulationPipeline::step(std::uint32_t motion_step_index, QOpenGLFunctions_
 {
     assert(is_initialized());
     const ClothGpuState& cloth_state = gpu_state_.cloth_gpu_state();
+    const PbdClothGpuState& pbd_cloth_state = gpu_state_.pbd_gpu_state().cloth_gpu_state();
 
     for (std::uint32_t substep = 0; substep < params_.step.substep_count; ++substep) {
         update_character_motion(motion_step_index, substep + 1u, gl);
+
         cloth_integrator_.integrate(cloth_state, scene_, gl);
 
         gpu_state_.update_cloth_bvh_bounds(params_.collisions.cloth.detection_distance, gl);
         collision_detector_.detect(gpu_state_, gl);
 
         for (std::uint32_t iteration = 0; iteration < params_.step.iteration_count; ++iteration) {
-            stretch_constraint_solver_.solve(cloth_state, gl);
-            bending_constraint_solver_.solve(cloth_state, gl);
-            attachment_constraint_solver_.solve(cloth_state, gl);
+            stretch_constraint_solver_.solve(pbd_cloth_state, gl);
+            bending_constraint_solver_.solve(pbd_cloth_state, gl);
+            attachment_constraint_solver_.solve(pbd_cloth_state, gl);
             cloth_body_collision_solver_.solve(gpu_state_, gl);
             cloth_cloth_collision_solver_.solve(gpu_state_, gl);
             ground_collision_solver_.solve(cloth_state, gl);
@@ -121,6 +124,7 @@ void SimulationPipeline::release(QOpenGLFunctions_4_5_Core& gl)
     bending_constraint_solver_.release(gl);
     stretch_constraint_solver_.release(gl);
     cloth_integrator_.release(gl);
+
     substep_dt_ = 0.0f;
     initialized_ = false;
 }

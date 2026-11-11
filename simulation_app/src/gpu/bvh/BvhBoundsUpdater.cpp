@@ -1,5 +1,6 @@
 #include "gpu/bvh/BvhBoundsUpdater.h"
-#include "gpu/cloth/ClothGpuState.h"
+#include "gpu/cloth/PbdClothGpuState.h"
+#include "simulation/SceneState.h"
 #include "utils/ShaderUtils.h"
 
 #include <algorithm>
@@ -32,6 +33,7 @@ LevelRange level_range(const std::vector<std::uint32_t>& level_offsets, std::siz
 
 void BvhBoundsUpdater::initialize(const std::filesystem::path& shader_dir,
                                   float body_detection_distance,
+                                  const SceneState& scene,
                                   QOpenGLFunctions_4_5_Core& gl)
 {
     // body bvh program
@@ -48,13 +50,9 @@ void BvhBoundsUpdater::initialize(const std::filesystem::path& shader_dir,
     cloth_level_first_node_index_loc_ = require_uniform_location(cloth_program_, "uLevelFirstNodeIndex", gl);
     cloth_level_node_count_loc_ = require_uniform_location(cloth_program_, "uLevelNodeCount", gl);
     cloth_bounds_margin_loc_ = require_uniform_location(cloth_program_, "uBoundsMargin", gl);
-}
 
-void BvhBoundsUpdater::set_body_level_offsets(const std::vector<std::uint32_t>& triangle_level_offsets,
-                                              const std::vector<std::uint32_t>& edge_level_offsets)
-{
-    body_triangle_level_offsets_ = triangle_level_offsets;
-    body_edge_level_offsets_ = edge_level_offsets;
+    body_triangle_level_offsets_ = scene.default_body_triangle_bvh().level_offsets;
+    body_edge_level_offsets_ = scene.default_body_edge_bvh().level_offsets;
 
     const std::size_t max_level_offset_count = std::max(body_triangle_level_offsets_.size(),
                                                         body_edge_level_offsets_.size());
@@ -82,11 +80,11 @@ void BvhBoundsUpdater::update_body_bvh(QOpenGLFunctions_4_5_Core& gl) const
     }
 }
 
-void BvhBoundsUpdater::update_cloth_bvh(const ClothGpuState& cloth_state,
+void BvhBoundsUpdater::update_cloth_bvh(const PbdClothGpuState& cloth_state,
                                         float bounds_margin,
                                         QOpenGLFunctions_4_5_Core& gl) const
 {
-    const auto& states = cloth_state.garment_states();
+    const auto& states = cloth_state.collision_states();
 
     gl.glUseProgram(cloth_program_);
     gl.glProgramUniform1f(cloth_program_, cloth_bounds_margin_loc_, bounds_margin);
