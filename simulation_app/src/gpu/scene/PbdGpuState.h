@@ -1,6 +1,7 @@
 #pragma once
 
 #include "gpu/bvh/BvhBoundsUpdater.h"
+#include "gpu/character/PbdCharacterGpuState.h"
 #include "gpu/cloth/PbdClothGpuState.h"
 #include "gpu/scene/SimulationBufferBindings.h"
 
@@ -29,12 +30,15 @@ public:
     void build_attachment_targets(const AttachmentBufferState& attachment_state, QOpenGLFunctions_4_5_Core& gl) const;
     void update_cloth_normals(const ClothBufferElementCounts& counts, QOpenGLFunctions_4_5_Core& gl) const;
     void update_character_vertex_normals(std::uint32_t vertex_count, QOpenGLFunctions_4_5_Core& gl) const;
+    PbdCharacterGpuState& character_gpu_state();
+    const PbdCharacterGpuState& character_gpu_state() const;
     PbdClothGpuState& cloth_gpu_state();
     const PbdClothGpuState& cloth_gpu_state() const;
     const CollisionBuffers& collision_buffers() const;
     void release(QOpenGLFunctions_4_5_Core& gl);
 
 private:
+    PbdCharacterGpuState character_gpu_state_;
     PbdClothGpuState cloth_gpu_state_;
     BvhBoundsUpdater bvh_bounds_updater_;
     GLuint triangle_normal_program_ = 0;

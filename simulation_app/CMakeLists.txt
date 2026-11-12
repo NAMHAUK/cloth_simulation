@@ -59,6 +59,8 @@ add_executable(simulation_app
     src/rendering/BackgroundGradient.h
     src/rendering/GroundGridMesh.cpp
     src/rendering/GroundGridMesh.h
+    src/gpu/character/PbdCharacterGpuState.cpp
+    src/gpu/character/PbdCharacterGpuState.h
     src/gpu/cloth/PbdClothGpuState.cpp
     src/gpu/cloth/PbdClothGpuState.h
     src/gpu/scene/PbdGpuState.cpp

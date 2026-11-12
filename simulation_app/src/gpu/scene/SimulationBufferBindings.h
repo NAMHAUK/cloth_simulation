@@ -4,7 +4,8 @@
 
 #include <QOpenGLFunctions_4_5_Core>
 
-struct CharacterBufferSet;
+struct CharacterRenderBuffers;
+struct PbdCharacterBufferSet;
 struct ClothRenderBuffers;
 struct PbdClothBufferSet;
 
@@ -37,7 +38,9 @@ public:
     void initialize(QOpenGLFunctions_4_5_Core& gl);
     void release(QOpenGLFunctions_4_5_Core& gl);
 
-    void bind_character(const CharacterBufferSet& buffers, QOpenGLFunctions_4_5_Core& gl) const;
+    void bind_character(const CharacterRenderBuffers& buffers,
+                        const PbdCharacterBufferSet& pbd_buffers,
+                        QOpenGLFunctions_4_5_Core& gl) const;
     void bind_cloth(const ClothRenderBuffers& buffers,
                     const PbdClothBufferSet& pbd_buffers,
                     QOpenGLFunctions_4_5_Core& gl) const;

@@ -132,22 +132,24 @@ void SimulationBufferBindings::initialize(QOpenGLFunctions_4_5_Core& gl)
 
 // binding
 
-void SimulationBufferBindings::bind_character(const CharacterBufferSet& buffers, QOpenGLFunctions_4_5_Core& gl) const
+void SimulationBufferBindings::bind_character(const CharacterRenderBuffers& buffers,
+                                              const PbdCharacterBufferSet& pbd_buffers,
+                                              QOpenGLFunctions_4_5_Core& gl) const
 {
     const std::array<GLuint, binding::character::count> binding_buffers{
-        buffers.animation_positions,
-        buffers.previous_position,
+        pbd_buffers.animation_positions,
+        pbd_buffers.previous_position,
         buffers.current_position,
         buffers.triangle_vertex_indices,
-        buffers.body_triangle_bvh_node,
-        buffers.body_triangle_bounds,
-        buffers.body_edge_bvh_node,
-        buffers.body_edge_vertex_indices,
-        buffers.body_edge_bounds,
-        buffers.adjacent_triangle_offsets,
-        buffers.adjacent_triangle_indices,
-        buffers.triangle_position,
-        buffers.triangle_normal,
+        pbd_buffers.body_triangle_bvh_node,
+        pbd_buffers.body_triangle_bounds,
+        pbd_buffers.body_edge_bvh_node,
+        pbd_buffers.body_edge_vertex_indices,
+        pbd_buffers.body_edge_bounds,
+        pbd_buffers.adjacent_triangle_offsets,
+        pbd_buffers.adjacent_triangle_indices,
+        pbd_buffers.triangle_position,
+        pbd_buffers.triangle_normal,
         buffers.vertex_normal,
     };
     bind_buffers(binding::character::start, binding_buffers, "character", gl);

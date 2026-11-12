@@ -14,10 +14,13 @@ void SceneGpuState::initialize(const std::filesystem::path& shader_dir,
                                QOpenGLFunctions_4_5_Core& gl)
 {
     buffer_bindings_.initialize(gl);
-    character_gpu_state_.initialize(shader_dir, scene, gl);
+    character_gpu_state_.initialize(scene, gl);
 
+    pbd_gpu_state_.character_gpu_state().initialize(shader_dir, scene, character_gpu_state_, gl);
     pbd_gpu_state_.initialize(shader_dir, attachment_surface_offset, body_detection_distance, scene, gl);
-    buffer_bindings_.bind_character(character_gpu_state_.buffer_set(), gl);
+    buffer_bindings_.bind_character(character_gpu_state_.buffer_set(),
+                                    pbd_gpu_state_.character_gpu_state().buffer_set(),
+                                    gl);
 
     set_character_motion(scene, gl);
 
@@ -28,14 +31,14 @@ void SceneGpuState::initialize(const std::filesystem::path& shader_dir,
 
 void SceneGpuState::set_character_motion(const SceneState& scene, QOpenGLFunctions_4_5_Core& gl)
 {
-    character_gpu_state_.set_motion(scene.character_motion(), gl);
+    pbd_gpu_state_.character_gpu_state().set_motion(scene.character_motion(), character_gpu_state_, gl);
     pbd_gpu_state_.update_body_bvh_bounds(gl);
     update_character_vertex_normals(gl);
 }
 
 void SceneGpuState::update_character_pose(const SceneState& scene, float frame_alpha, QOpenGLFunctions_4_5_Core& gl)
 {
-    character_gpu_state_.update_pose(scene.motion_frame_index(), frame_alpha, gl);
+    pbd_gpu_state_.character_gpu_state().update_pose(scene.motion_frame_index(), frame_alpha, character_gpu_state_, gl);
     pbd_gpu_state_.update_body_bvh_bounds(gl);
     update_character_vertex_normals(gl);
 }
@@ -174,10 +177,10 @@ void SceneGpuState::release(QOpenGLFunctions_4_5_Core& gl)
 {
     release_garment_resources(gl);
     buffer_bindings_.reset_character_bindings(gl);
-    character_gpu_state_.release(gl);
 
     pbd_gpu_state_.release(gl);
 
+    character_gpu_state_.release(gl);
     buffer_bindings_.release(gl);
 
     initialized_ = false;

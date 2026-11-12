@@ -188,6 +188,16 @@ void PbdGpuState::update_character_vertex_normals(std::uint32_t vertex_count, QO
 
 // Accessors
 
+PbdCharacterGpuState& PbdGpuState::character_gpu_state()
+{
+    return character_gpu_state_;
+}
+
+const PbdCharacterGpuState& PbdGpuState::character_gpu_state() const
+{
+    return character_gpu_state_;
+}
+
 PbdClothGpuState& PbdGpuState::cloth_gpu_state()
 {
     return cloth_gpu_state_;
@@ -207,6 +217,7 @@ const CollisionBuffers& PbdGpuState::collision_buffers() const
 
 void PbdGpuState::release(QOpenGLFunctions_4_5_Core& gl)
 {
+    character_gpu_state_.release(gl);
     bvh_bounds_updater_.release(gl);
     gl.glDeleteProgram(vertex_normal_program_);
     gl.glDeleteProgram(triangle_normal_program_);
