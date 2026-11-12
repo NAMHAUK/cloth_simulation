@@ -1,9 +1,11 @@
 #include "rendering/SceneRenderer.h"
 #include "gpu/scene/SceneGpuState.h"
 #include "simulation/SceneState.h"
+#include "utils/BufferUtils.h"
 #include "utils/ShaderUtils.h"
 
 #include <cassert>
+#include <stdexcept>
 
 #include <glm/geometric.hpp>
 #include <glm/gtc/type_ptr.hpp>
@@ -24,6 +26,11 @@ bool SceneRenderer::is_initialized() const
 
 void SceneRenderer::initialize(const std::filesystem::path& shader_dir, QOpenGLFunctions_4_5_Core& gl)
 {
+    // Buffer bindings
+    require_ssbo_bindings(common_buffer_binding::character_vertex_normals + 1, gl);
+    dummy_buffer_ = create_dummy_buffer(gl);
+
+    // Rendering program
     const auto vertex_shader_path = shader_dir / "rendering" / "viewer.vert";
     const auto fragment_shader_path = shader_dir / "rendering" / "viewer.frag";
     program_ = load_render_program(vertex_shader_path, fragment_shader_path, gl);
@@ -115,6 +122,24 @@ void SceneRenderer::draw(const SceneState& scene,
     gl.glDisable(GL_BLEND);
 }
 
+void SceneRenderer::bind_render_buffers(const SceneGpuState& gpu_state, QOpenGLFunctions_4_5_Core& gl) const
+{
+    const auto& cloth_buffers = gpu_state.cloth_gpu_state().buffer_set();
+    const auto& character_buffers = gpu_state.character_gpu_state().buffer_set();
+    const GLuint cloth_normal = cloth_buffers.vertex_normal != 0 ? cloth_buffers.vertex_normal : dummy_buffer_;
+    if (cloth_normal == 0 || character_buffers.current_position == 0 || character_buffers.vertex_normal == 0) {
+        throw std::runtime_error("Cannot bind a missing buffer.");
+    }
+
+    gl.glBindBufferBase(GL_SHADER_STORAGE_BUFFER, common_buffer_binding::cloth_vertex_normals, cloth_normal);
+    gl.glBindBufferBase(GL_SHADER_STORAGE_BUFFER,
+                        common_buffer_binding::character_current_positions,
+                        character_buffers.current_position);
+    gl.glBindBufferBase(GL_SHADER_STORAGE_BUFFER,
+                        common_buffer_binding::character_vertex_normals,
+                        character_buffers.vertex_normal);
+}
+
 void SceneRenderer::release(QOpenGLFunctions_4_5_Core& gl)
 {
     ground_grid_.release(gl);
@@ -133,4 +158,11 @@ void SceneRenderer::release(QOpenGLFunctions_4_5_Core& gl)
     ambient_strength_loc_ = -1;
     diffuse_strength_loc_ = -1;
     fill_diffuse_strength_loc_ = -1;
+
+    // Buffer bindings
+    gl.glBindBufferBase(GL_SHADER_STORAGE_BUFFER, common_buffer_binding::cloth_vertex_normals, 0);
+    gl.glBindBufferBase(GL_SHADER_STORAGE_BUFFER, common_buffer_binding::character_current_positions, 0);
+    gl.glBindBufferBase(GL_SHADER_STORAGE_BUFFER, common_buffer_binding::character_vertex_normals, 0);
+    gl.glDeleteBuffers(1, &dummy_buffer_);
+    dummy_buffer_ = 0;
 }

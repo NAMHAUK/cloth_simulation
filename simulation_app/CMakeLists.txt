@@ -21,8 +21,8 @@ add_executable(simulation_app
     src/app/ProjectPaths.h
     src/app/SimulationController.cpp
     src/app/SimulationController.h
-    src/gpu/scene/SimulationBufferBindings.cpp
-    src/gpu/scene/SimulationBufferBindings.h
+    src/gpu/scene/PbdBufferBindings.cpp
+    src/gpu/scene/PbdBufferBindings.h
     src/simulation/SimulationParams.h
     src/simulation/ClothIntegrator.cpp
     src/simulation/ClothIntegrator.h

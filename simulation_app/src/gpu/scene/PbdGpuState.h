@@ -3,13 +3,31 @@
 #include "gpu/bvh/BvhBoundsUpdater.h"
 #include "gpu/character/PbdCharacterGpuState.h"
 #include "gpu/cloth/PbdClothGpuState.h"
-#include "gpu/scene/SimulationBufferBindings.h"
 
 #include <cstdint>
 #include <filesystem>
 
 class SceneState;
 struct ClothBufferElementCounts;
+
+struct CollisionCandidateBuffers final
+{
+    GLuint candidate_buffer = 0;
+    GLuint count_buffer = 0;
+    GLuint dispatch_size_buffer = 0;
+    std::uint32_t max_pairs = 0;
+};
+
+struct CollisionBuffers final
+{
+    CollisionCandidateBuffers cloth_vertex_body_face;
+    CollisionCandidateBuffers cloth_edge_body_edge;
+    CollisionCandidateBuffers cloth_cloth_vertex_face;
+    CollisionCandidateBuffers cloth_cloth_edge_edge;
+    GLuint normal_correction_sum_buffer = 0;
+    GLuint friction_correction_sum_buffer = 0;
+    GLuint inward_motion_correction_sum_buffer = 0;
+};
 
 class PbdGpuState final
 {

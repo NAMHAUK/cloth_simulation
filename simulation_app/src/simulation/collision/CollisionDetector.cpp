@@ -77,10 +77,10 @@ void CollisionDetector::detect(const SceneGpuState& gpu_state, QOpenGLFunctions_
     const CollisionBuffers& collision = gpu_state.collision_buffers();
 
     gl.glMemoryBarrier(GL_BUFFER_UPDATE_BARRIER_BIT);
-    clear_collision_candidate_counts(collision.cloth_vertex_body_face, gl);
-    clear_collision_candidate_counts(collision.cloth_edge_body_edge, gl);
-    clear_collision_candidate_counts(collision.cloth_cloth_vertex_face, gl);
-    clear_collision_candidate_counts(collision.cloth_cloth_edge_edge, gl);
+    clear_collision_candidate_counts(collision.cloth_vertex_body_face.count_buffer, gl);
+    clear_collision_candidate_counts(collision.cloth_edge_body_edge.count_buffer, gl);
+    clear_collision_candidate_counts(collision.cloth_cloth_vertex_face.count_buffer, gl);
+    clear_collision_candidate_counts(collision.cloth_cloth_edge_edge.count_buffer, gl);
 
     detect_cloth_vertex_body_face(gpu_state, gl);
     detect_cloth_edge_body_edge(gpu_state, gl);
@@ -100,7 +100,7 @@ void CollisionDetector::detect_prefit(const SceneGpuState& gpu_state, QOpenGLFun
     const CollisionCandidateBuffers& candidates = gpu_state.collision_buffers().cloth_cloth_vertex_face;
 
     gl.glMemoryBarrier(GL_SHADER_STORAGE_BARRIER_BIT | GL_BUFFER_UPDATE_BARRIER_BIT);
-    clear_collision_candidate_counts(candidates, gl);
+    clear_collision_candidate_counts(candidates.count_buffer, gl);
     detect_cloth_cloth_vertex_face(gpu_state, gl);
     gl.glMemoryBarrier(GL_SHADER_STORAGE_BARRIER_BIT);
 

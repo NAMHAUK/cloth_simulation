@@ -22,6 +22,7 @@ public:
 
     bool is_initialized() const;
     void initialize(const std::filesystem::path& shader_dir, QOpenGLFunctions_4_5_Core& gl);
+    void bind_render_buffers(const SceneGpuState& gpu_state, QOpenGLFunctions_4_5_Core& gl) const;
 
     void draw(const SceneState& scene,
               const SceneGpuState& gpu_state,
@@ -37,6 +38,7 @@ private:
     GroundGridMesh ground_grid_;
 
     GLuint program_ = 0;
+    GLuint dummy_buffer_ = 0;
     GLint mvp_loc_ = -1;
     GLint solid_mode_loc_ = -1;
     GLint solid_color_loc_ = -1;

@@ -65,6 +65,7 @@ void SimulationController::initialize_gpu(const std::filesystem::path& shader_di
                           gl);
     simulation_pipeline_.initialize(shader_dir, gl);
     scene_renderer_.initialize(shader_dir, gl);
+    scene_renderer_.bind_render_buffers(gpu_state_, gl);
 }
 
 void SimulationController::load_default_character(const std::filesystem::path& default_character_path)
@@ -169,6 +170,7 @@ void SimulationController::reset_scene()
 
         scene_.clear_garments();
         gpu_state_.release_garment_resources(gl);
+        scene_renderer_.bind_render_buffers(gpu_state_, gl);
         set_character_motion_state(default_character_motion_, gl);
         is_default_pose_ = true;
     });
@@ -213,6 +215,7 @@ void SimulationController::set_garment_mesh(GarmentLayer layer, GarmentMesh mesh
     run_with_gl_context_([this, layer, &garment](QOpenGLFunctions_4_5_Core& gl) {
         scene_.set_garment(std::move(garment));
         gpu_state_.rebuild_garment_resources(scene_, gl, layer);
+        scene_renderer_.bind_render_buffers(gpu_state_, gl);
 
         garment_placement_states_[layer].emplace();
     });
@@ -261,6 +264,7 @@ void SimulationController::confirm_garment_placement()
         for (const GarmentObject* garment : placement_garments) {
             gpu_state_.initialize_garment_attachments(*garment, gl);
         }
+        scene_renderer_.bind_render_buffers(gpu_state_, gl);
 
         reset_garment_placements();
     });
@@ -273,6 +277,7 @@ void SimulationController::discard_garment_placement(GarmentLayer layer)
     run_with_gl_context_([this, layer](QOpenGLFunctions_4_5_Core& gl) {
         if (scene_.remove_garment(layer)) {
             gpu_state_.rebuild_garment_resources(scene_, gl, layer);
+            scene_renderer_.bind_render_buffers(gpu_state_, gl);
         }
         garment_placement_states_[layer].reset();
     });
@@ -294,6 +299,7 @@ void SimulationController::cancel_placement_session()
             gpu_state_.rebuild_garment_resources(scene_, gl, GarmentLayer::Upper);
             gpu_state_.create_simulation_buffers(scene_, gl);
         }
+        scene_renderer_.bind_render_buffers(gpu_state_, gl);
     });
 }
 

@@ -2,8 +2,8 @@
 
 #include "gpu/character/CharacterGpuState.h"
 #include "gpu/cloth/ClothGpuState.h"
+#include "gpu/scene/PbdBufferBindings.h"
 #include "gpu/scene/PbdGpuState.h"
-#include "gpu/scene/SimulationBufferBindings.h"
 #include "simulation/SceneState.h"
 
 #include <filesystem>
@@ -49,7 +49,7 @@ private:
 
     void update_character_vertex_normals(QOpenGLFunctions_4_5_Core& gl);
 
-    SimulationBufferBindings buffer_bindings_;
+    PbdBufferBindings buffer_bindings_;
     CharacterGpuState character_gpu_state_;
     ClothGpuState cloth_gpu_state_;
     PbdGpuState pbd_gpu_state_;
