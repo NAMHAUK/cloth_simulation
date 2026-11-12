@@ -12,6 +12,9 @@ void PdClothGpuState::rebuild_buffers(const ClothGpuState& cloth_state)
 {
     vertex_count_ = cloth_state.element_counts().vertex;
 
+    CUDA_CHECK(cudaMalloc(reinterpret_cast<void**>(&previous_position_buffer_), sizeof(float4) * vertex_count_));
+    CUDA_CHECK(cudaMalloc(reinterpret_cast<void**>(&predicted_position_buffer_), sizeof(float4) * vertex_count_));
+
     const std::size_t velocity_bytes = sizeof(float4) * vertex_count_;
     CUDA_CHECK(cudaMalloc(reinterpret_cast<void**>(&velocity_buffer_), velocity_bytes));
     CUDA_CHECK(cudaMemset(velocity_buffer_, 0, velocity_bytes));
@@ -60,6 +63,16 @@ void PdClothGpuState::unmap_shared_buffers()
 
 // Accessors
 
+float4* PdClothGpuState::previous_position_buffer() const
+{
+    return previous_position_buffer_;
+}
+
+float4* PdClothGpuState::predicted_position_buffer() const
+{
+    return predicted_position_buffer_;
+}
+
 float4* PdClothGpuState::velocity_buffer() const
 {
     return velocity_buffer_;
@@ -84,9 +97,13 @@ void PdClothGpuState::release()
     }
 
     // CUDA 메모리 해제
+    CUDA_CHECK(cudaFree(previous_position_buffer_));
+    CUDA_CHECK(cudaFree(predicted_position_buffer_));
     CUDA_CHECK(cudaFree(velocity_buffer_));
     CUDA_CHECK(cudaFree(mass_buffer_));
 
+    previous_position_buffer_ = nullptr;
+    predicted_position_buffer_ = nullptr;
     velocity_buffer_ = nullptr;
     mass_buffer_ = nullptr;
     vertex_count_ = 0;

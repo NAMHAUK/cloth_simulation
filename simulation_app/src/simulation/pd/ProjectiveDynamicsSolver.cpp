@@ -23,6 +23,8 @@ void ProjectiveDynamicsSolver::solve()
 
     float4* positions = cloth_state.map_shared_buffers();
     CUDA_CHECK(integrate_cloth(positions,
+                               cloth_state.previous_position_buffer(),
+                               cloth_state.predicted_position_buffer(),
                                cloth_state.velocity_buffer(),
                                vertex_count,
                                gravity_,

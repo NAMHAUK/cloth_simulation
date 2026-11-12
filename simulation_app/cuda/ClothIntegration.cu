@@ -4,6 +4,8 @@
 
 namespace {
 __global__ void integrate_cloth_kernel(float4* positions,
+                                       float4* previous_positions,
+                                       float4* predicted_positions,
                                        float4* velocities,
                                        std::uint32_t vertex_count,
                                        float gravity,
@@ -18,19 +20,34 @@ __global__ void integrate_cloth_kernel(float4* positions,
     velocity.y += gravity * dt;
 
     float4 position = positions[index];
+    previous_positions[index] = position;
+
     position.x += velocity.x * dt;
     position.y += velocity.y * dt;
     position.z += velocity.z * dt;
 
     velocities[index] = velocity;
+    predicted_positions[index] = position;
     positions[index] = position;
 }
 }
 
-cudaError_t integrate_cloth(float4* positions, float4* velocities, std::uint32_t vertex_count, float gravity, float dt)
+cudaError_t integrate_cloth(float4* positions,
+                            float4* previous_positions,
+                            float4* predicted_positions,
+                            float4* velocities,
+                            std::uint32_t vertex_count,
+                            float gravity,
+                            float dt)
 {
     constexpr std::uint32_t block_size = 256;
     const std::uint32_t block_count = (vertex_count - 1) / block_size + 1;
-    integrate_cloth_kernel<<<block_count, block_size>>>(positions, velocities, vertex_count, gravity, dt);
+    integrate_cloth_kernel<<<block_count, block_size>>>(positions,
+                                                        previous_positions,
+                                                        predicted_positions,
+                                                        velocities,
+                                                        vertex_count,
+                                                        gravity,
+                                                        dt);
     return cudaGetLastError();
 }

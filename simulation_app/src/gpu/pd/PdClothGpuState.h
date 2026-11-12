@@ -22,6 +22,8 @@ public:
 
     float4* map_shared_buffers();
     void unmap_shared_buffers();
+    float4* previous_position_buffer() const;
+    float4* predicted_position_buffer() const;
     float4* velocity_buffer() const;
     const float* mass_buffer() const;
     std::uint32_t vertex_count() const;
@@ -30,6 +32,8 @@ public:
 
 private:
     cudaGraphicsResource* position_resource_ = nullptr;
+    float4* previous_position_buffer_ = nullptr;
+    float4* predicted_position_buffer_ = nullptr;
     float4* velocity_buffer_ = nullptr;
     float* mass_buffer_ = nullptr;
     std::uint32_t vertex_count_ = 0;
