@@ -8,6 +8,7 @@
 #include <filesystem>
 
 class SceneState;
+class CharacterGpuState;
 struct ClothBufferElementCounts;
 
 struct CollisionCandidateBuffers final
@@ -40,12 +41,13 @@ public:
                     float attachment_surface_offset,
                     float body_detection_distance,
                     const SceneState& scene,
+                    const CharacterGpuState& character_state,
                     QOpenGLFunctions_4_5_Core& gl);
-    void create_collision_buffers(const ClothBufferElementCounts& counts, QOpenGLFunctions_4_5_Core& gl);
+    void create_collision_buffers(std::uint32_t vertex_count, QOpenGLFunctions_4_5_Core& gl);
     void release_collision_buffers(QOpenGLFunctions_4_5_Core& gl);
     void update_body_bvh_bounds(QOpenGLFunctions_4_5_Core& gl) const;
     void update_cloth_bvh_bounds(float bounds_margin, QOpenGLFunctions_4_5_Core& gl) const;
-    void build_attachment_targets(const AttachmentBufferState& attachment_state, QOpenGLFunctions_4_5_Core& gl) const;
+    void build_attachment_targets(GarmentLayer layer, QOpenGLFunctions_4_5_Core& gl) const;
     void update_cloth_normals(const ClothBufferElementCounts& counts, QOpenGLFunctions_4_5_Core& gl) const;
     void update_character_vertex_normals(std::uint32_t vertex_count, QOpenGLFunctions_4_5_Core& gl) const;
     PbdCharacterGpuState& character_gpu_state();

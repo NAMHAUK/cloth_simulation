@@ -5,7 +5,8 @@
 
 #include <QOpenGLFunctions_4_5_Core>
 
-class SceneGpuState;
+class ClothGpuState;
+class PbdGpuState;
 struct ClothCollisionParams;
 struct GarmentCollisionBufferState;
 
@@ -18,8 +19,10 @@ public:
 
     void initialize(const std::filesystem::path& shader_dir, QOpenGLFunctions_4_5_Core& gl);
 
-    void detect(const SceneGpuState& gpu_state, QOpenGLFunctions_4_5_Core& gl) const;
-    void detect_prefit(const SceneGpuState& gpu_state, QOpenGLFunctions_4_5_Core& gl) const;
+    void detect(const ClothGpuState& cloth_state, const PbdGpuState& pbd_state, QOpenGLFunctions_4_5_Core& gl) const;
+    void detect_prefit(const ClothGpuState& cloth_state,
+                       const PbdGpuState& pbd_state,
+                       QOpenGLFunctions_4_5_Core& gl) const;
 
     void release(QOpenGLFunctions_4_5_Core& gl);
 
@@ -69,10 +72,14 @@ private:
         GLint max_candidates = -1;
     };
 
-    void detect_cloth_vertex_body_face(const SceneGpuState& gpu_state, QOpenGLFunctions_4_5_Core& gl) const;
-    void detect_cloth_edge_body_edge(const SceneGpuState& gpu_state, QOpenGLFunctions_4_5_Core& gl) const;
-    void detect_cloth_cloth_vertex_face(const SceneGpuState& gpu_state, QOpenGLFunctions_4_5_Core& gl) const;
-    void detect_cloth_cloth_edge_edge(const SceneGpuState& gpu_state, QOpenGLFunctions_4_5_Core& gl) const;
+    void detect_cloth_vertex_body_face(const ClothGpuState& cloth_state,
+                                       const PbdGpuState& pbd_state,
+                                       QOpenGLFunctions_4_5_Core& gl) const;
+    void detect_cloth_edge_body_edge(const PbdGpuState& pbd_state, QOpenGLFunctions_4_5_Core& gl) const;
+    void detect_cloth_cloth_vertex_face(const ClothGpuState& cloth_state,
+                                        const PbdGpuState& pbd_state,
+                                        QOpenGLFunctions_4_5_Core& gl) const;
+    void detect_cloth_cloth_edge_edge(const PbdGpuState& pbd_state, QOpenGLFunctions_4_5_Core& gl) const;
     void detect_edges(const GarmentCollisionBufferState& source,
                       const GarmentCollisionBufferState& target,
                       bool is_self_collision,

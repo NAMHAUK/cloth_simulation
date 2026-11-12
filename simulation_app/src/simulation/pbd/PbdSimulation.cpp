@@ -56,6 +56,18 @@ void PbdSimulation::initialize(const std::filesystem::path& shader_dir, QOpenGLF
 
     substep_dt_ = params_.step.dt() / static_cast<float>(params_.step.substep_count);
 
+    buffer_bindings_.initialize(gl);
+    pbd_gpu_state_.initialize(shader_dir,
+                              params_.constraints.attachment_surface_offset,
+                              params_.collisions.body.detection_distance,
+                              scene_,
+                              gpu_state_.character_gpu_state(),
+                              gl);
+    buffer_bindings_.bind_character(gpu_state_.character_gpu_state().buffer_set(),
+                                    pbd_gpu_state_.character_gpu_state().buffer_set(),
+                                    gl);
+    set_character_motion(gl);
+
     cloth_integrator_.initialize(shader_dir, substep_dt_, gl);
     stretch_constraint_solver_.initialize(shader_dir, gl);
     bending_constraint_solver_.initialize(shader_dir, gl);
@@ -74,34 +86,34 @@ void PbdSimulation::step(std::uint32_t motion_step_index, QOpenGLFunctions_4_5_C
 {
     assert(is_initialized());
     const ClothGpuState& cloth_state = gpu_state_.cloth_gpu_state();
-    const PbdClothGpuState& pbd_cloth_state = gpu_state_.pbd_gpu_state().cloth_gpu_state();
+    const PbdClothGpuState& pbd_cloth_state = pbd_gpu_state_.cloth_gpu_state();
 
     for (std::uint32_t substep = 0; substep < params_.step.substep_count; ++substep) {
         update_character_motion(motion_step_index, substep + 1u, gl);
 
         cloth_integrator_.integrate(cloth_state, scene_, gl);
 
-        gpu_state_.update_cloth_bvh_bounds(params_.collisions.cloth.detection_distance, gl);
-        collision_detector_.detect(gpu_state_, gl);
+        pbd_gpu_state_.update_cloth_bvh_bounds(params_.collisions.cloth.detection_distance, gl);
+        collision_detector_.detect(cloth_state, pbd_gpu_state_, gl);
 
         for (std::uint32_t iteration = 0; iteration < params_.step.iteration_count; ++iteration) {
             stretch_constraint_solver_.solve(pbd_cloth_state, gl);
             bending_constraint_solver_.solve(pbd_cloth_state, gl);
             attachment_constraint_solver_.solve(pbd_cloth_state, gl);
-            cloth_body_collision_solver_.solve(gpu_state_, gl);
-            cloth_cloth_collision_solver_.solve(gpu_state_, gl);
+            cloth_body_collision_solver_.solve(cloth_state, pbd_gpu_state_, gl);
+            cloth_cloth_collision_solver_.solve(cloth_state, pbd_gpu_state_.collision_buffers(), gl);
             ground_collision_solver_.solve(cloth_state, gl);
         }
     }
 
-    gpu_state_.update_cloth_normals(gl);
+    pbd_gpu_state_.update_cloth_normals(cloth_state.element_counts(), gl);
 }
 
 void PbdSimulation::prepare_garments(const std::vector<const GarmentObject*>& placement_garments,
                                      QOpenGLFunctions_4_5_Core& gl)
 {
     auto& cloth_state = gpu_state_.cloth_gpu_state();
-    auto& pbd_cloth_state = gpu_state_.pbd_gpu_state().cloth_gpu_state();
+    auto& pbd_cloth_state = pbd_gpu_state_.cloth_gpu_state();
 
     // Buffer preparation
     pbd_cloth_state.rebuild_dynamic_buffers(cloth_state, gl);
@@ -118,36 +130,65 @@ void PbdSimulation::prepare_garments(const std::vector<const GarmentObject*>& pl
         bending_constraint_solver_.solve(pbd_cloth_state, gl);
 
         for (std::uint32_t iteration = 0; iteration < params_.step.iteration_count; ++iteration) {
-            gpu_state_.update_cloth_bvh_bounds(params_.collisions.cloth.initial_detection_distance, gl);
-            collision_detector_.detect_prefit(gpu_state_, gl);
-            cloth_cloth_collision_solver_.solve_initial(gpu_state_, gl);
+            pbd_gpu_state_.update_cloth_bvh_bounds(params_.collisions.cloth.initial_detection_distance, gl);
+            collision_detector_.detect_prefit(cloth_state, pbd_gpu_state_, gl);
+            cloth_cloth_collision_solver_.solve_initial(cloth_state, pbd_gpu_state_.collision_buffers(), gl);
         }
     }
 
     pbd_cloth_state.reset_velocity(cloth_state, 0, cloth_state.element_counts().vertex, gl);
-    gpu_state_.update_cloth_normals(gl);
+    pbd_gpu_state_.update_cloth_normals(cloth_state.element_counts(), gl);
 
     // Attachment setup
     for (const GarmentObject* garment : placement_garments) {
-        gpu_state_.initialize_garment_attachments(*garment, gl);
+        pbd_cloth_state.upload_attachment_indices(*garment, cloth_state, gl);
+        pbd_gpu_state_.build_attachment_targets(garment->layer, gl);
+        pbd_cloth_state.activate_attachment_targets(garment->layer);
     }
 }
 
 // Garment resources
 void PbdSimulation::rebuild_garment_resources(GarmentLayer changed_layer, QOpenGLFunctions_4_5_Core& gl)
 {
-    gpu_state_.rebuild_garment_resources(scene_, gl, changed_layer);
+    auto& cloth_state = gpu_state_.cloth_gpu_state();
+    auto& pbd_cloth_state = pbd_gpu_state_.cloth_gpu_state();
+    pbd_cloth_state.release_distance_constraint_buffers(gl);
+    pbd_cloth_state.release_collision_buffers(gl);
+    release_collision_buffers(gl);
+
+    const auto triangle_vertex_indices = cloth_state.rebuild_buffers(scene_.garments(), changed_layer, gl);
+    pbd_cloth_state.rebuild_normal_buffers(triangle_vertex_indices, cloth_state.element_counts().vertex, gl);
+    buffer_bindings_.bind_cloth(cloth_state.buffer_set(), pbd_cloth_state.buffer_set(), gl);
+    pbd_gpu_state_.update_cloth_normals(cloth_state.element_counts(), gl);
 }
 
 void PbdSimulation::create_simulation_buffers(QOpenGLFunctions_4_5_Core& gl)
 {
-    gpu_state_.create_simulation_buffers(scene_, gl);
+    auto& cloth_state = gpu_state_.cloth_gpu_state();
+    auto& pbd_cloth_state = pbd_gpu_state_.cloth_gpu_state();
+    const auto triangle_vertex_indices = cloth_state.upload_triangle_indices(scene_.garments(), gl);
+    pbd_cloth_state.rebuild_normal_buffers(triangle_vertex_indices, cloth_state.element_counts().vertex, gl);
+    pbd_cloth_state.create_collision_buffers(scene_.garments(), cloth_state, gl);
+    pbd_cloth_state.create_distance_constraint_buffers(scene_.garments(), cloth_state, gl);
+
+    release_collision_buffers(gl);
+    pbd_gpu_state_.create_collision_buffers(cloth_state.element_counts().vertex, gl);
+    buffer_bindings_.bind_collision(pbd_gpu_state_.collision_buffers(), gl);
+
+    if (!pbd_cloth_state.has_gpu_objects()) {
+        throw std::runtime_error("Cannot prepare garment simulation: a cloth GPU object is missing.");
+    }
+
+    buffer_bindings_.bind_cloth(cloth_state.buffer_set(), pbd_cloth_state.buffer_set(), gl);
+    pbd_gpu_state_.update_cloth_normals(cloth_state.element_counts(), gl);
 }
 
 // Character
 void PbdSimulation::set_character_motion(QOpenGLFunctions_4_5_Core& gl)
 {
-    gpu_state_.set_character_motion(scene_, gl);
+    pbd_gpu_state_.character_gpu_state().set_motion(scene_.character_motion(), gpu_state_.character_gpu_state(), gl);
+    pbd_gpu_state_.update_body_bvh_bounds(gl);
+    pbd_gpu_state_.update_character_vertex_normals(gpu_state_.character_gpu_state().vertex_count(), gl);
 }
 
 void PbdSimulation::update_character_motion(std::uint32_t motion_step_index,
@@ -162,23 +203,37 @@ void PbdSimulation::update_character_motion(std::uint32_t motion_step_index,
 
 void PbdSimulation::update_character_pose(float frame_alpha, QOpenGLFunctions_4_5_Core& gl)
 {
-    gpu_state_.update_character_pose(scene_, frame_alpha, gl);
+    pbd_gpu_state_.character_gpu_state().update_pose(scene_.motion_frame_index(),
+                                                     frame_alpha,
+                                                     gpu_state_.character_gpu_state(),
+                                                     gl);
+    pbd_gpu_state_.update_body_bvh_bounds(gl);
+    pbd_gpu_state_.update_character_vertex_normals(gpu_state_.character_gpu_state().vertex_count(), gl);
 }
 
 // Base positions
 void PbdSimulation::capture_garment_base_positions(QOpenGLFunctions_4_5_Core& gl)
 {
-    gpu_state_.capture_garment_base_positions(gl);
+    if (!gpu_state_.cloth_gpu_state().is_initialized() || !pbd_gpu_state_.cloth_gpu_state().is_initialized()) {
+        return;
+    }
+    gpu_state_.cloth_gpu_state().capture_base_positions(gl);
 }
 
 void PbdSimulation::restore_garment_base_positions(QOpenGLFunctions_4_5_Core& gl)
 {
-    gpu_state_.restore_garment_base_positions(gl);
+    auto& cloth_state = gpu_state_.cloth_gpu_state();
+    if (!cloth_state.is_initialized() || !pbd_gpu_state_.cloth_gpu_state().is_initialized()) {
+        return;
+    }
+    cloth_state.restore_base_positions(gl);
+    pbd_gpu_state_.cloth_gpu_state().reset_velocity(cloth_state, 0, cloth_state.element_counts().vertex, gl);
+    pbd_gpu_state_.update_cloth_normals(cloth_state.element_counts(), gl);
 }
 
 void PbdSimulation::clear_garment_base_positions(QOpenGLFunctions_4_5_Core& gl)
 {
-    gpu_state_.clear_garment_base_positions(gl);
+    gpu_state_.cloth_gpu_state().clear_base_positions(gl);
 }
 
 // State
@@ -200,11 +255,26 @@ void PbdSimulation::release(QOpenGLFunctions_4_5_Core& gl)
     stretch_constraint_solver_.release(gl);
     cloth_integrator_.release(gl);
 
+    buffer_bindings_.reset_cloth_bindings(gl);
+    buffer_bindings_.reset_collision_bindings(gl);
+    buffer_bindings_.reset_character_bindings(gl);
+    pbd_gpu_state_.release(gl);
+    buffer_bindings_.release(gl);
+
     substep_dt_ = 0.0f;
     initialized_ = false;
 }
 
 void PbdSimulation::release_garment_resources(QOpenGLFunctions_4_5_Core& gl)
 {
-    gpu_state_.release_garment_resources(gl);
+    buffer_bindings_.reset_cloth_bindings(gl);
+    release_collision_buffers(gl);
+    pbd_gpu_state_.cloth_gpu_state().release(gl);
+    gpu_state_.cloth_gpu_state().release(gl);
+}
+
+void PbdSimulation::release_collision_buffers(QOpenGLFunctions_4_5_Core& gl)
+{
+    buffer_bindings_.reset_collision_bindings(gl);
+    pbd_gpu_state_.release_collision_buffers(gl);
 }

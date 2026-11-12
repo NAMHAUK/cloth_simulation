@@ -1,5 +1,6 @@
 #include "simulation/pbd/collision/CollisionDetector.h"
-#include "gpu/scene/SceneGpuState.h"
+#include "gpu/cloth/ClothGpuState.h"
+#include "gpu/scene/PbdGpuState.h"
 #include "simulation/SimulationParams.h"
 #include "utils/BufferUtils.h"
 #include "utils/ShaderUtils.h"
@@ -72,9 +73,11 @@ void CollisionDetector::initialize(const std::filesystem::path& shader_dir, QOpe
 
 // Detection
 
-void CollisionDetector::detect(const SceneGpuState& gpu_state, QOpenGLFunctions_4_5_Core& gl) const
+void CollisionDetector::detect(const ClothGpuState& cloth_state,
+                               const PbdGpuState& pbd_state,
+                               QOpenGLFunctions_4_5_Core& gl) const
 {
-    const CollisionBuffers& collision = gpu_state.collision_buffers();
+    const CollisionBuffers& collision = pbd_state.collision_buffers();
 
     gl.glMemoryBarrier(GL_BUFFER_UPDATE_BARRIER_BIT);
     clear_collision_candidate_counts(collision.cloth_vertex_body_face.count_buffer, gl);
@@ -82,10 +85,10 @@ void CollisionDetector::detect(const SceneGpuState& gpu_state, QOpenGLFunctions_
     clear_collision_candidate_counts(collision.cloth_cloth_vertex_face.count_buffer, gl);
     clear_collision_candidate_counts(collision.cloth_cloth_edge_edge.count_buffer, gl);
 
-    detect_cloth_vertex_body_face(gpu_state, gl);
-    detect_cloth_edge_body_edge(gpu_state, gl);
-    detect_cloth_cloth_vertex_face(gpu_state, gl);
-    detect_cloth_cloth_edge_edge(gpu_state, gl);
+    detect_cloth_vertex_body_face(cloth_state, pbd_state, gl);
+    detect_cloth_edge_body_edge(pbd_state, gl);
+    detect_cloth_cloth_vertex_face(cloth_state, pbd_state, gl);
+    detect_cloth_cloth_edge_edge(pbd_state, gl);
     gl.glMemoryBarrier(GL_SHADER_STORAGE_BARRIER_BIT);
 
     build_dispatch_size(CandidateKind::ClothVertexBodyFace, collision.cloth_vertex_body_face.max_pairs, gl);
@@ -95,13 +98,15 @@ void CollisionDetector::detect(const SceneGpuState& gpu_state, QOpenGLFunctions_
     gl.glMemoryBarrier(GL_COMMAND_BARRIER_BIT);
 }
 
-void CollisionDetector::detect_prefit(const SceneGpuState& gpu_state, QOpenGLFunctions_4_5_Core& gl) const
+void CollisionDetector::detect_prefit(const ClothGpuState& cloth_state,
+                                      const PbdGpuState& pbd_state,
+                                      QOpenGLFunctions_4_5_Core& gl) const
 {
-    const CollisionCandidateBuffers& candidates = gpu_state.collision_buffers().cloth_cloth_vertex_face;
+    const CollisionCandidateBuffers& candidates = pbd_state.collision_buffers().cloth_cloth_vertex_face;
 
     gl.glMemoryBarrier(GL_SHADER_STORAGE_BARRIER_BIT | GL_BUFFER_UPDATE_BARRIER_BIT);
     clear_collision_candidate_counts(candidates.count_buffer, gl);
-    detect_cloth_cloth_vertex_face(gpu_state, gl);
+    detect_cloth_cloth_vertex_face(cloth_state, pbd_state, gl);
     gl.glMemoryBarrier(GL_SHADER_STORAGE_BARRIER_BIT);
 
     build_dispatch_size(CandidateKind::ClothClothVertexFace, candidates.max_pairs, gl);
@@ -110,12 +115,13 @@ void CollisionDetector::detect_prefit(const SceneGpuState& gpu_state, QOpenGLFun
 
 // Detection
 
-void CollisionDetector::detect_cloth_vertex_body_face(const SceneGpuState& gpu_state,
+void CollisionDetector::detect_cloth_vertex_body_face(const ClothGpuState& cloth_state,
+                                                      const PbdGpuState& pbd_state,
                                                       QOpenGLFunctions_4_5_Core& gl) const
 {
     const auto& shader = cloth_vertex_body_face_;
-    const auto& candidates = gpu_state.collision_buffers().cloth_vertex_body_face;
-    const std::uint32_t vertex_count = gpu_state.cloth_gpu_state().element_counts().vertex;
+    const auto& candidates = pbd_state.collision_buffers().cloth_vertex_body_face;
+    const std::uint32_t vertex_count = cloth_state.element_counts().vertex;
 
     gl.glUseProgram(shader.program);
     gl.glProgramUniform1ui(shader.program, shader.item_count, vertex_count);
@@ -123,11 +129,11 @@ void CollisionDetector::detect_cloth_vertex_body_face(const SceneGpuState& gpu_s
     gl.glDispatchCompute(compute_group_count(vertex_count, candidate_detect_local_size), 1, 1);
 }
 
-void CollisionDetector::detect_cloth_edge_body_edge(const SceneGpuState& gpu_state, QOpenGLFunctions_4_5_Core& gl) const
+void CollisionDetector::detect_cloth_edge_body_edge(const PbdGpuState& pbd_state, QOpenGLFunctions_4_5_Core& gl) const
 {
     const auto& shader = cloth_edge_body_edge_;
-    const auto& candidates = gpu_state.collision_buffers().cloth_edge_body_edge;
-    const std::uint32_t constraint_count = gpu_state.pbd_gpu_state().cloth_gpu_state().stretch_constraint_count();
+    const auto& candidates = pbd_state.collision_buffers().cloth_edge_body_edge;
+    const std::uint32_t constraint_count = pbd_state.cloth_gpu_state().stretch_constraint_count();
 
     gl.glUseProgram(shader.program);
     gl.glProgramUniform1ui(shader.program, shader.item_count, constraint_count);
@@ -135,16 +141,17 @@ void CollisionDetector::detect_cloth_edge_body_edge(const SceneGpuState& gpu_sta
     gl.glDispatchCompute(compute_group_count(constraint_count, candidate_detect_local_size), 1, 1);
 }
 
-void CollisionDetector::detect_cloth_cloth_vertex_face(const SceneGpuState& gpu_state,
+void CollisionDetector::detect_cloth_cloth_vertex_face(const ClothGpuState& cloth_state,
+                                                       const PbdGpuState& pbd_state,
                                                        QOpenGLFunctions_4_5_Core& gl) const
 {
     const auto& shader = cloth_cloth_vertex_face_;
-    const auto& candidates = gpu_state.collision_buffers().cloth_cloth_vertex_face;
+    const auto& candidates = pbd_state.collision_buffers().cloth_cloth_vertex_face;
 
-    const auto& garment_states = gpu_state.cloth_gpu_state().garment_states();
+    const auto& garment_states = cloth_state.garment_states();
     const GarmentBufferState& upper = garment_states[GarmentLayer::Upper];
     const GarmentBufferState& lower = garment_states[GarmentLayer::Lower];
-    const auto& collision_states = gpu_state.pbd_gpu_state().cloth_gpu_state().collision_states();
+    const auto& collision_states = pbd_state.cloth_gpu_state().collision_states();
     const auto& lower_collision = collision_states[GarmentLayer::Lower];
     const auto& upper_collision = collision_states[GarmentLayer::Upper];
     const std::uint32_t vertex_count = upper.vertex_count + lower.vertex_count;
@@ -174,12 +181,11 @@ void CollisionDetector::detect_cloth_cloth_vertex_face(const SceneGpuState& gpu_
     gl.glDispatchCompute(compute_group_count(vertex_count, candidate_detect_local_size), 1, 1);
 }
 
-void CollisionDetector::detect_cloth_cloth_edge_edge(const SceneGpuState& gpu_state,
-                                                     QOpenGLFunctions_4_5_Core& gl) const
+void CollisionDetector::detect_cloth_cloth_edge_edge(const PbdGpuState& pbd_state, QOpenGLFunctions_4_5_Core& gl) const
 {
     const auto& shader = cloth_cloth_edge_edge_;
-    const auto& candidates = gpu_state.collision_buffers().cloth_cloth_edge_edge;
-    const auto& garments = gpu_state.pbd_gpu_state().cloth_gpu_state().collision_states();
+    const auto& candidates = pbd_state.collision_buffers().cloth_cloth_edge_edge;
+    const auto& garments = pbd_state.cloth_gpu_state().collision_states();
     const auto& lower = garments[GarmentLayer::Lower];
     const auto& upper = garments[GarmentLayer::Upper];
 

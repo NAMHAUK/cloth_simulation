@@ -1,5 +1,6 @@
 #include "simulation/pbd/collision/ClothClothCollisionSolver.h"
-#include "gpu/scene/SceneGpuState.h"
+#include "gpu/cloth/ClothGpuState.h"
+#include "gpu/scene/PbdGpuState.h"
 #include "simulation/SimulationParams.h"
 #include "utils/BufferUtils.h"
 #include "utils/ShaderUtils.h"
@@ -64,33 +65,37 @@ void ClothClothCollisionSolver::initialize(const std::filesystem::path& shader_d
     }
 }
 
-void ClothClothCollisionSolver::solve(const SceneGpuState& gpu_state, QOpenGLFunctions_4_5_Core& gl) const
+void ClothClothCollisionSolver::solve(const ClothGpuState& cloth_state,
+                                      const CollisionBuffers& collision,
+                                      QOpenGLFunctions_4_5_Core& gl) const
 {
-    solve(gpu_state, accumulate_, true, gl);
+    solve(cloth_state, collision, accumulate_, true, gl);
 }
 
-void ClothClothCollisionSolver::solve_initial(const SceneGpuState& gpu_state, QOpenGLFunctions_4_5_Core& gl) const
+void ClothClothCollisionSolver::solve_initial(const ClothGpuState& cloth_state,
+                                              const CollisionBuffers& collision,
+                                              QOpenGLFunctions_4_5_Core& gl) const
 {
-    solve(gpu_state, initial_accumulate_, false, gl);
+    solve(cloth_state, collision, initial_accumulate_, false, gl);
 }
 
-void ClothClothCollisionSolver::solve(const SceneGpuState& gpu_state,
+void ClothClothCollisionSolver::solve(const ClothGpuState& cloth_state,
+                                      const CollisionBuffers& collision,
                                       const AccumulateProgram& shader,
                                       bool solve_edges,
                                       QOpenGLFunctions_4_5_Core& gl) const
 {
-    const ClothGpuState& cloth_state = gpu_state.cloth_gpu_state();
     if (cloth_state.element_counts().vertex == 0u) {
         return;
     }
 
     // clear
     gl.glMemoryBarrier(GL_SHADER_STORAGE_BARRIER_BIT | GL_BUFFER_UPDATE_BARRIER_BIT);
-    clear_collision_correction_sum(gpu_state.collision_buffers().normal_correction_sum_buffer, gl);
-    clear_collision_correction_sum(gpu_state.collision_buffers().inward_motion_correction_sum_buffer, gl);
+    clear_collision_correction_sum(collision.normal_correction_sum_buffer, gl);
+    clear_collision_correction_sum(collision.inward_motion_correction_sum_buffer, gl);
 
     // accumulate
-    const auto& collision_candidates = gpu_state.collision_buffers().cloth_cloth_vertex_face;
+    const auto& collision_candidates = collision.cloth_cloth_vertex_face;
     const auto upper_vertex_offset = cloth_state.garment_states()[GarmentLayer::Upper].vertex_start_index;
 
     gl.glUseProgram(shader.program);
@@ -102,7 +107,7 @@ void ClothClothCollisionSolver::solve(const SceneGpuState& gpu_state,
     gl.glBindBuffer(GL_DISPATCH_INDIRECT_BUFFER, collision_candidates.dispatch_size_buffer);
     gl.glDispatchComputeIndirect(0);
     if (solve_edges) {
-        const auto& edge_candidates = gpu_state.collision_buffers().cloth_cloth_edge_edge;
+        const auto& edge_candidates = collision.cloth_cloth_edge_edge;
         gl.glUseProgram(edge_accumulate_.program);
         gl.glProgramUniform1ui(edge_accumulate_.program,
                                edge_accumulate_.max_candidates_loc,
@@ -114,7 +119,7 @@ void ClothClothCollisionSolver::solve(const SceneGpuState& gpu_state,
     gl.glMemoryBarrier(GL_SHADER_STORAGE_BARRIER_BIT);
 
     // apply
-    const std::uint32_t vertex_count = gpu_state.cloth_gpu_state().element_counts().vertex;
+    const std::uint32_t vertex_count = cloth_state.element_counts().vertex;
     gl.glUseProgram(apply_program_);
     gl.glProgramUniform1ui(apply_program_, cloth_vertex_count_loc_, vertex_count);
     gl.glDispatchCompute(compute_group_count(vertex_count, apply_local_size), 1, 1);

@@ -1,5 +1,7 @@
 #pragma once
 
+#include "gpu/scene/PbdBufferBindings.h"
+#include "gpu/scene/PbdGpuState.h"
 #include "simulation/Simulation.h"
 #include "simulation/SimulationParams.h"
 #include "simulation/pbd/ClothIntegrator.h"
@@ -49,10 +51,13 @@ public:
 
 private:
     void update_character_motion(std::uint32_t motion_step_index, std::uint32_t substep, QOpenGLFunctions_4_5_Core& gl);
+    void release_collision_buffers(QOpenGLFunctions_4_5_Core& gl);
 
     SceneState& scene_;
     SceneGpuState& gpu_state_;
     SimulationParams params_;
+    PbdGpuState pbd_gpu_state_;
+    PbdBufferBindings buffer_bindings_;
     ClothIntegrator cloth_integrator_;
     StretchConstraintSolver stretch_constraint_solver_;
     BendingConstraintSolver bending_constraint_solver_;

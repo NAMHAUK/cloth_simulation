@@ -30,8 +30,10 @@ void PbdGpuState::initialize(const std::filesystem::path& shader_dir,
                              float attachment_surface_offset,
                              float body_detection_distance,
                              const SceneState& scene,
+                             const CharacterGpuState& character_state,
                              QOpenGLFunctions_4_5_Core& gl)
 {
+    character_gpu_state_.initialize(shader_dir, scene, character_state, gl);
     bvh_bounds_updater_.initialize(shader_dir, body_detection_distance, scene, gl);
 
     // load normal update shaders
@@ -58,12 +60,12 @@ void PbdGpuState::initialize(const std::filesystem::path& shader_dir,
 
 // Collision buffers
 
-void PbdGpuState::create_collision_buffers(const ClothBufferElementCounts& counts, QOpenGLFunctions_4_5_Core& gl)
+void PbdGpuState::create_collision_buffers(std::uint32_t vertex_count, QOpenGLFunctions_4_5_Core& gl)
 {
     // Cloth vertex / body face
     {
         auto& buffers = collision_buffers_.cloth_vertex_body_face;
-        buffers.max_pairs = counts.vertex * candidate_capacity_multiplier;
+        buffers.max_pairs = vertex_count * candidate_capacity_multiplier;
         buffers.candidate_buffer = create_buffer(byte_size<glm::uvec2>(buffers.max_pairs),
                                                  nullptr,
                                                  GL_DYNAMIC_DRAW,
@@ -87,7 +89,7 @@ void PbdGpuState::create_collision_buffers(const ClothBufferElementCounts& count
     // Cloth vertex / cloth face
     {
         auto& buffers = collision_buffers_.cloth_cloth_vertex_face;
-        buffers.max_pairs = counts.vertex * candidate_capacity_multiplier * 4;
+        buffers.max_pairs = vertex_count * candidate_capacity_multiplier * 4;
         buffers.candidate_buffer = create_buffer(byte_size<glm::uvec2>(buffers.max_pairs),
                                                  nullptr,
                                                  GL_DYNAMIC_DRAW,
@@ -108,7 +110,7 @@ void PbdGpuState::create_collision_buffers(const ClothBufferElementCounts& count
         buffers.dispatch_size_buffer = create_buffer(dispatch_size_bytes, nullptr, GL_DYNAMIC_DRAW, gl);
     }
 
-    const GLsizeiptr correction_bytes = byte_size<glm::ivec4>(counts.vertex);
+    const GLsizeiptr correction_bytes = byte_size<glm::ivec4>(vertex_count);
     collision_buffers_.normal_correction_sum_buffer = create_buffer(correction_bytes, nullptr, GL_DYNAMIC_DRAW, gl);
     collision_buffers_.friction_correction_sum_buffer = create_buffer(correction_bytes, nullptr, GL_DYNAMIC_DRAW, gl);
     collision_buffers_.inward_motion_correction_sum_buffer = create_buffer(correction_bytes,
@@ -143,9 +145,9 @@ void PbdGpuState::update_cloth_bvh_bounds(float bounds_margin, QOpenGLFunctions_
 
 // Attachments
 
-void PbdGpuState::build_attachment_targets(const AttachmentBufferState& attachment_state,
-                                           QOpenGLFunctions_4_5_Core& gl) const
+void PbdGpuState::build_attachment_targets(GarmentLayer layer, QOpenGLFunctions_4_5_Core& gl) const
 {
+    const AttachmentBufferState& attachment_state = cloth_gpu_state_.attachment_states()[layer];
     const std::uint32_t constraint_count = attachment_state.count;
     if (constraint_count == 0u) {
         return;
@@ -217,6 +219,8 @@ const CollisionBuffers& PbdGpuState::collision_buffers() const
 
 void PbdGpuState::release(QOpenGLFunctions_4_5_Core& gl)
 {
+    release_collision_buffers(gl);
+    cloth_gpu_state_.release(gl);
     character_gpu_state_.release(gl);
     bvh_bounds_updater_.release(gl);
     gl.glDeleteProgram(vertex_normal_program_);

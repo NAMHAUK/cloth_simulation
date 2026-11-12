@@ -59,11 +59,7 @@ void SimulationController::initialize_gpu(const std::filesystem::path& shader_di
         throw std::runtime_error("Simulation GPU state is already initialized.");
     }
 
-    gpu_state_.initialize(shader_dir,
-                          params_.constraints.attachment_surface_offset,
-                          params_.collisions.body.detection_distance,
-                          scene_,
-                          gl);
+    gpu_state_.initialize(scene_, gl);
     simulation_->initialize(shader_dir, gl);
     scene_renderer_.initialize(shader_dir, gl);
     scene_renderer_.bind_render_buffers(gpu_state_, gl);
@@ -252,7 +248,7 @@ void SimulationController::confirm_garment_placement()
             garment.triangle_bvh = bvh_builder.build_triangle_bvh();
             garment.edge_bvh = bvh_builder.build_edge_bvh();
             placement_garments.push_back(&garment);
-            gpu_state_.upload_garment_placement(garment, gl);
+            gpu_state_.cloth_gpu_state().upload_garment_placement(garment, gl);
         }
 
         simulation_->prepare_garments(placement_garments, gl);
