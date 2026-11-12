@@ -3,6 +3,7 @@
 #include "simulation/SimulationParams.h"
 #include "simulation/bvh/MeshBvhBuilder.h"
 #include "simulation/pbd/PbdSimulation.h"
+#include "simulation/pd/PdSimulation.h"
 
 #include <algorithm>
 #include <cassert>
@@ -30,7 +31,11 @@ SimulationController::SimulationController(SimulationParams params)
       scene_(params.integration.reference_frame_max_linear_acceleration,
              params.integration.reference_frame_max_angular_acceleration)
 {
-    simulation_ = std::make_unique<PbdSimulation>(scene_, gpu_state_, params);
+    if (params.mode == SimulationMode::PBD) {
+        simulation_ = std::make_unique<PbdSimulation>(scene_, gpu_state_, params);
+    } else {
+        simulation_ = std::make_unique<PdSimulation>(scene_, gpu_state_, params);
+    }
 
     QObject::connect(&frame_timer_, &QTimer::timeout, this, &SimulationController::tick_frame);
 }

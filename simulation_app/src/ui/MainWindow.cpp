@@ -20,7 +20,7 @@ constexpr int minimum_window_width = 1000;
 constexpr int minimum_window_height = 700;
 }
 
-MainWindow::MainWindow(const std::filesystem::path& project_root, QWidget* parent)
+MainWindow::MainWindow(const std::filesystem::path& project_root, SimulationParams params, QWidget* parent)
     : QMainWindow(parent),
       project_paths_(make_project_paths(project_root))
 {
@@ -30,7 +30,7 @@ MainWindow::MainWindow(const std::filesystem::path& project_root, QWidget* paren
 
     viewport_ = new Viewport(project_paths_, this);
 
-    setup_simulation_controller();
+    setup_simulation_controller(params);
     setup_placement_controller();
     connect_viewport_rendering();
 
@@ -52,9 +52,9 @@ MainWindow::~MainWindow()
 }
 
 // Initialization
-void MainWindow::setup_simulation_controller()
+void MainWindow::setup_simulation_controller(SimulationParams params)
 {
-    simulation_controller_ = std::make_unique<SimulationController>();
+    simulation_controller_ = std::make_unique<SimulationController>(params);
 
     Viewport* const viewport = viewport_;
 

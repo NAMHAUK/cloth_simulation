@@ -6,6 +6,7 @@
 #include <QMainWindow>
 
 #include "app/ProjectPaths.h"
+#include "simulation/SimulationParams.h"
 
 class PlacementController;
 class SimulationController;
@@ -16,12 +17,14 @@ class QWidget;
 class MainWindow final : public QMainWindow
 {
 public:
-    explicit MainWindow(const std::filesystem::path& project_root, QWidget* parent = nullptr);
+    explicit MainWindow(const std::filesystem::path& project_root,
+                        SimulationParams params = default_simulation_params,
+                        QWidget* parent = nullptr);
     ~MainWindow() override;
 
 private:
     // Initialization
-    void setup_simulation_controller();
+    void setup_simulation_controller(SimulationParams params);
     void setup_placement_controller();
     void initialize_scene(QOpenGLFunctions_4_5_Core& gl);
     void connect_viewport_rendering();

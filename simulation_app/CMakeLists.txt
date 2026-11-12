@@ -33,8 +33,12 @@ add_executable(simulation_app
     src/simulation/Simulation.h
     src/simulation/pbd/PbdSimulation.cpp
     src/simulation/pbd/PbdSimulation.h
+    src/simulation/pd/PdSimulation.cpp
+    src/simulation/pd/PdSimulation.h
     src/simulation/pbd/ClothIntegrator.cpp
     src/simulation/pbd/ClothIntegrator.h
+    src/simulation/pd/ProjectiveDynamicsSolver.cpp
+    src/simulation/pd/ProjectiveDynamicsSolver.h
     src/simulation/pbd/constraints/StretchConstraintSolver.cpp
     src/simulation/pbd/constraints/StretchConstraintSolver.h
     src/simulation/pbd/constraints/BendingConstraintSolver.cpp
@@ -68,10 +72,14 @@ add_executable(simulation_app
     src/gpu/cloth/ClothGpuState.h
     src/gpu/cloth/PbdClothGpuState.cpp
     src/gpu/cloth/PbdClothGpuState.h
+    src/gpu/cloth/PdClothGpuState.cpp
+    src/gpu/cloth/PdClothGpuState.h
     src/gpu/scene/PbdBufferBindings.cpp
     src/gpu/scene/PbdBufferBindings.h
     src/gpu/scene/PbdGpuState.cpp
     src/gpu/scene/PbdGpuState.h
+    src/gpu/scene/PdGpuState.cpp
+    src/gpu/scene/PdGpuState.h
     src/rendering/BackgroundGradient.cpp
     src/rendering/BackgroundGradient.h
     src/rendering/GroundGridMesh.cpp
