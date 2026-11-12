@@ -6,6 +6,8 @@
 
 #include <cstddef>
 
+#include <cuda_gl_interop.h>
+
 void PdClothGpuState::rebuild_buffers(const ClothGpuState& cloth_state)
 {
     vertex_count_ = cloth_state.element_counts().vertex;

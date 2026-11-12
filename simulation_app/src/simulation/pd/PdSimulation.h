@@ -41,6 +41,7 @@ public:
     void release_garment_resources(QOpenGLFunctions_4_5_Core& gl) override;
 
 private:
+    void initialize_cuda();
     void update_character_motion(std::uint32_t motion_step_index, std::uint32_t substep, QOpenGLFunctions_4_5_Core& gl);
 
     SceneState& scene_;

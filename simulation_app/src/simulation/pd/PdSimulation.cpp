@@ -1,10 +1,11 @@
 #include "simulation/pd/PdSimulation.h"
 #include "gpu/common/SceneGpuState.h"
 #include "simulation/SceneState.h"
-#include "utils/CudaUtils.h"
 
 #include <cassert>
 #include <stdexcept>
+
+#include <cuda_gl_interop.h>
 
 // Initialization
 PdSimulation::PdSimulation(SceneState& scene, SceneGpuState& gpu_state, SimulationParams params)
@@ -24,6 +25,17 @@ void PdSimulation::initialize(const std::filesystem::path&, QOpenGLFunctions_4_5
     initialize_cuda();
     projective_dynamics_solver_.initialize(substep_dt_);
     initialized_ = true;
+}
+
+void PdSimulation::initialize_cuda()
+{
+    unsigned int cuda_device_count = 0;
+    int cuda_device = -1;
+    if (cudaGLGetDevices(&cuda_device_count, &cuda_device, 1, cudaGLDeviceListAll) != cudaSuccess ||
+        cuda_device_count == 0 ||
+        cudaSetDevice(cuda_device) != cudaSuccess) {
+        throw std::runtime_error("CUDA device initialization failed.");
+    }
 }
 
 // Simulation
