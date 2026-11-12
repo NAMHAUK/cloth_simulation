@@ -33,7 +33,7 @@ void PdGpuState::prepare_system(const std::vector<GarmentObject>& garments, cons
 
     cloth_gpu_state_.initialize_masses(garments, cloth_state);
 
-    // TODO: 각 constraint의 입력 확보·GPU 저장
+    // TODO: 각 constraint별로 값 추가
     CUDA_CHECK(initialize_stretch_constraints(constraint_matrix_buffer_,
                                               constraint_vertex_index_buffer_,
                                               constraint_A_value_buffer_));
@@ -45,8 +45,6 @@ void PdGpuState::prepare_system(const std::vector<GarmentObject>& garments, cons
                         cloth_gpu_state_.masses(),
                         cloth_gpu_state_.vertex_count(),
                         inv_dt_squared_);
-
-    // TODO: 각 constraint의 행렬 기여분 누적
 }
 
 PdClothGpuState& PdGpuState::cloth_gpu_state()

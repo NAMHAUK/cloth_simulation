@@ -7,6 +7,7 @@
 #include <limits>
 #include <stdexcept>
 
+#include <cuda/std/algorithm>
 #include <cuda/std/functional>
 #include <cuda_runtime.h>
 #include <thrust/device_ptr.h>
@@ -124,6 +125,46 @@ __global__ void initialize_csr_matrix_kernel(CsrMatrix matrix,
     }
 }
 
+// Constraint contributions 
+__device__ std::uint32_t find_csr_index(const CsrMatrix& matrix, std::uint32_t row, std::uint32_t column)
+{
+    const auto* column_index_ptr = cuda::std::lower_bound(matrix.column_indices_ptr + matrix.row_offsets_ptr[row],
+                                                          matrix.column_indices_ptr + matrix.row_offsets_ptr[row + 1],
+                                                          column);
+
+    return static_cast<std::uint32_t>(column_index_ptr - matrix.column_indices_ptr);
+}
+
+__global__ void accumulate_constraint_matrix_kernel(CsrMatrix matrix,
+                                                    const PdConstraintMatrix* constraints,
+                                                    std::uint32_t constraint_count)
+{
+    const std::uint32_t constraint_index = blockIdx.x * blockDim.x + threadIdx.x;
+    if (constraint_index >= constraint_count) {
+        return;
+    }
+
+    // 각 constraint의 {w· S^T · A^T · A · S}를 system_matrix에 누적
+    const PdConstraintMatrix& constraint = constraints[constraint_index];
+    for (std::uint32_t column_a = 0; column_a < constraint.A.columns; ++column_a) {
+        const std::uint32_t system_matrix_row = constraint.vertex_indices_ptr[column_a];
+
+        for (std::uint32_t column_b = 0; column_b < constraint.A.columns; ++column_b) {
+            float value = 0.0f;
+            
+            // (A^T·A)의 (column_a, column_b) 원소: A의 column_a와 column_b 내적
+            for (std::uint32_t row = 0; row < constraint.A.rows; ++row) {
+                const float* row_values = constraint.A.values_ptr + row * constraint.A.row_stride;
+                value += row_values[column_a] * row_values[column_b];
+            }
+            
+            // system_matrix의 (row, col)에 weight * A^T·A[column_a, column_b] 누적 계산
+            const std::uint32_t system_matrix_col = constraint.vertex_indices_ptr[column_b];
+            const auto system_matrix_index = find_csr_index(matrix, system_matrix_row, system_matrix_col);
+            atomicAdd(&matrix.values_ptr[system_matrix_index], constraint.weight * value);
+        }
+    }
+}
 }
 
 void build_system_matrix(CsrMatrix& matrix,
@@ -148,5 +189,10 @@ void build_system_matrix(CsrMatrix& matrix,
                                                                   masses,
                                                                   vertex_count,
                                                                   inv_dt_squared);
+    CUDA_CHECK(cudaGetLastError());
+
+    // system matrix에 constraint 항 반영
+    const std::uint32_t constraint_block_count = (constraint_count - 1) / block_size + 1;
+    accumulate_constraint_matrix_kernel<<<constraint_block_count, block_size>>>(matrix, constraints, constraint_count);
     CUDA_CHECK(cudaGetLastError());
 }
