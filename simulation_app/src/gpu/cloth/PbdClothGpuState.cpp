@@ -332,20 +332,20 @@ void PbdClothGpuState::create_distance_constraint_buffers(const std::vector<Garm
     release_distance_constraint_buffers(gl);
 
     const auto create_buffers = [&](GarmentDistanceConstraints GarmentMesh::* constraints_member,
-                                    std::uint32_t constraint_count,
+                                    std::uint32_t& constraint_count,
                                     std::vector<ConstraintColorState>& color_states,
                                     GLuint& vertex_indices_buffer,
                                     GLuint& rest_length_buffer) {
         std::vector<MeshEdge> edges;
         std::vector<float> rest_lengths;
-        edges.reserve(constraint_count);
-        rest_lengths.reserve(constraint_count);
-
         std::size_t color_count = 0;
         for (const GarmentObject& garment : garments) {
             const auto& constraints = garment.mesh.*constraints_member;
+            constraint_count += static_cast<std::uint32_t>(constraints.colorized_edges.size());
             color_count = std::max(color_count, constraints.color_states.size());
         }
+        edges.reserve(constraint_count);
+        rest_lengths.reserve(constraint_count);
         color_states.reserve(color_count);
 
         for (std::size_t color_index = 0; color_index < color_count; ++color_index) {
@@ -381,26 +381,26 @@ void PbdClothGpuState::create_distance_constraint_buffers(const std::vector<Garm
     };
 
     create_buffers(&GarmentMesh::stretch_constraints,
-                   cloth_state.element_counts().stretch_constraint,
+                   stretch_constraint_count_,
                    stretch_color_states_,
                    buffers_.stretch_edge_vertex_indices,
                    buffers_.stretch_rest_length);
 
     create_buffers(&GarmentMesh::bending_constraints,
-                   cloth_state.element_counts().bending_constraint,
+                   bending_constraint_count_,
                    bending_color_states_,
                    buffers_.bending_edge_vertex_indices,
                    buffers_.bending_rest_length);
-
-    if (!has_gpu_objects()) {
-        throw std::runtime_error("Cannot prepare garment simulation: a cloth GPU object is missing.");
-    }
 }
 
 // State validation
 bool PbdClothGpuState::is_initialized() const
 {
-    return has_gpu_objects() && !stretch_color_states_.empty() && !bending_color_states_.empty();
+    return stretch_constraint_count_ > 0 &&
+           bending_constraint_count_ > 0 &&
+           has_gpu_objects() &&
+           !stretch_color_states_.empty() &&
+           !bending_color_states_.empty();
 }
 
 bool PbdClothGpuState::has_gpu_objects() const
@@ -454,6 +454,16 @@ std::uint32_t PbdClothGpuState::edge_count() const
 std::size_t PbdClothGpuState::max_bvh_level_count() const
 {
     return max_bvh_level_count_;
+}
+
+std::uint32_t PbdClothGpuState::stretch_constraint_count() const
+{
+    return stretch_constraint_count_;
+}
+
+std::uint32_t PbdClothGpuState::bending_constraint_count() const
+{
+    return bending_constraint_count_;
 }
 
 const std::vector<ConstraintColorState>& PbdClothGpuState::stretch_color_states() const
@@ -549,6 +559,8 @@ void PbdClothGpuState::release_distance_constraint_buffers(QOpenGLFunctions_4_5_
     buffers_.stretch_rest_length = 0;
     buffers_.bending_edge_vertex_indices = 0;
     buffers_.bending_rest_length = 0;
+    stretch_constraint_count_ = 0;
+    bending_constraint_count_ = 0;
     stretch_color_states_.clear();
     bending_color_states_.clear();
 }

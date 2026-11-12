@@ -45,8 +45,6 @@ public:
 
 private:
     // Collision candidate buffers
-    void create_collision_buffers(QOpenGLFunctions_4_5_Core& gl);
-
     void release_collision_buffers(QOpenGLFunctions_4_5_Core& gl);
 
     void update_character_vertex_normals(QOpenGLFunctions_4_5_Core& gl);

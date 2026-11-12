@@ -39,24 +39,37 @@ std::vector<TriangleVertexIndices> ClothGpuState::rebuild_buffers(const std::vec
     create_dynamic_buffers(garments, changed_layer, rebuild_state, gl);
     gl.glCreateBuffers(1, &rebuild_state.buffers.triangle_vertex_indices);
 
-    auto triangle_vertex_indices = upload_topology(garments, rebuild_state, gl);
-
     delete_buffer_set(state_.buffers, gl);
     clear_base_positions(gl);
     state_ = std::move(rebuild_state);
+
+    auto triangle_vertex_indices = upload_triangle_indices(garments, gl);
     configure_vao(gl);
 
     return triangle_vertex_indices;
 }
 
-std::vector<TriangleVertexIndices> ClothGpuState::create_simulation_buffers(const std::vector<GarmentObject>& garments,
-                                                                            QOpenGLFunctions_4_5_Core& gl)
+std::vector<TriangleVertexIndices> ClothGpuState::upload_triangle_indices(const std::vector<GarmentObject>& garments,
+                                                                          QOpenGLFunctions_4_5_Core& gl)
 {
-    auto triangle_vertex_indices = upload_topology(garments, state_, gl);
+    std::vector<TriangleVertexIndices> triangle_vertex_indices;
+    triangle_vertex_indices.reserve(state_.element_counts.triangle);
 
-    if (!has_gpu_objects()) {
-        throw std::runtime_error("Cannot prepare garment simulation: a cloth GPU object is missing.");
+    for (const GarmentObject& garment : garments) {
+        const std::uint32_t vertex_start_index = state_.garments[garment.layer].vertex_start_index;
+        const auto& bvh_triangles = garment.triangle_bvh.triangle_vertex_indices;
+        const auto& indices = bvh_triangles.empty() ? garment.mesh.triangle_vertex_indices : bvh_triangles;
+
+        for (const TriangleVertexIndices& triangle : indices) {
+            triangle_vertex_indices.push_back(
+                {vertex_start_index + triangle.a, vertex_start_index + triangle.b, vertex_start_index + triangle.c});
+        }
     }
+
+    gl.glNamedBufferData(state_.buffers.triangle_vertex_indices,
+                         byte_size<TriangleVertexIndices>(triangle_vertex_indices.size()),
+                         triangle_vertex_indices.data(),
+                         GL_STATIC_DRAW);
 
     return triangle_vertex_indices;
 }
@@ -79,10 +92,6 @@ void ClothGpuState::assign_garment_buffer_states(const std::vector<GarmentObject
         garment_state.vertex_start_index = append_elements(element_counts.vertex, garment_state.vertex_count);
         garment_state.triangle_count = mesh.triangle_vertex_indices.size();
         garment_state.triangle_start_index = append_elements(element_counts.triangle, garment_state.triangle_count);
-        garment_state.stretch_constraint_count = mesh.stretch_constraints.colorized_edges.size();
-        element_counts.stretch_constraint += garment_state.stretch_constraint_count;
-        garment_state.bending_constraint_count = mesh.bending_constraints.colorized_edges.size();
-        element_counts.bending_constraint += garment_state.bending_constraint_count;
     }
 }
 
@@ -123,35 +132,6 @@ void ClothGpuState::copy_current_positions(GarmentLayer layer,
                                 byte_size<glm::vec4>(source_state.vertex_start_index),
                                 byte_size<glm::vec4>(destination_state.vertex_start_index),
                                 byte_size<glm::vec4>(destination_state.vertex_count));
-}
-
-std::vector<TriangleVertexIndices> ClothGpuState::upload_topology(const std::vector<GarmentObject>& garments,
-                                                                  BufferState& rebuild_state,
-                                                                  QOpenGLFunctions_4_5_Core& gl) const
-{
-    ClothRenderBuffers& buffers = rebuild_state.buffers;
-    const ClothBufferElementCounts& counts = rebuild_state.element_counts;
-
-    std::vector<TriangleVertexIndices> triangle_vertex_indices;
-    triangle_vertex_indices.reserve(counts.triangle);
-
-    for (const GarmentObject& garment : garments) {
-        const std::uint32_t vertex_start_index = rebuild_state.garments[garment.layer].vertex_start_index;
-        const auto& bvh_triangles = garment.triangle_bvh.triangle_vertex_indices;
-        const auto& indices = bvh_triangles.empty() ? garment.mesh.triangle_vertex_indices : bvh_triangles;
-
-        for (const TriangleVertexIndices& triangle : indices) {
-            triangle_vertex_indices.push_back(
-                {vertex_start_index + triangle.a, vertex_start_index + triangle.b, vertex_start_index + triangle.c});
-        }
-    }
-
-    gl.glNamedBufferData(buffers.triangle_vertex_indices,
-                         byte_size<TriangleVertexIndices>(triangle_vertex_indices.size()),
-                         triangle_vertex_indices.data(),
-                         GL_STATIC_DRAW);
-
-    return triangle_vertex_indices;
 }
 
 void ClothGpuState::configure_vao(QOpenGLFunctions_4_5_Core& gl)
@@ -233,10 +213,6 @@ void ClothGpuState::draw_garment(GarmentLayer layer, QOpenGLFunctions_4_5_Core& 
 // State
 bool ClothGpuState::is_initialized() const
 {
-    if (state_.element_counts.stretch_constraint == 0 || state_.element_counts.bending_constraint == 0) {
-        return false;
-    }
-
     return has_gpu_objects() &&
            std::any_of(state_.garments.begin(),
                        state_.garments.end(),

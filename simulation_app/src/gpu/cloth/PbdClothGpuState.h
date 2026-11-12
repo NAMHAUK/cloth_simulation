@@ -46,12 +46,15 @@ public:
                                             QOpenGLFunctions_4_5_Core& gl);
 
     bool is_initialized() const;
+    bool has_gpu_objects() const;
 
     const PbdClothBufferSet& buffer_set() const;
     const std::array<AttachmentBufferState, garment_layer_count>& attachment_states() const;
     const std::array<GarmentCollisionBufferState, garment_layer_count>& collision_states() const;
     std::uint32_t edge_count() const;
     std::size_t max_bvh_level_count() const;
+    std::uint32_t stretch_constraint_count() const;
+    std::uint32_t bending_constraint_count() const;
     const std::vector<ConstraintColorState>& stretch_color_states() const;
     const std::vector<ConstraintColorState>& bending_color_states() const;
 
@@ -67,8 +70,6 @@ private:
                                   const ClothGpuState& cloth_state,
                                   QOpenGLFunctions_4_5_Core& gl);
 
-    bool has_gpu_objects() const;
-
     void release_dynamic_buffers(QOpenGLFunctions_4_5_Core& gl);
     void release_attachment_buffers(QOpenGLFunctions_4_5_Core& gl);
     void release_normal_buffers(QOpenGLFunctions_4_5_Core& gl);
@@ -77,6 +78,8 @@ private:
     std::array<GarmentCollisionBufferState, garment_layer_count> collision_states_;
     std::size_t max_bvh_level_count_ = 0;
     std::array<AttachmentBufferState, garment_layer_count> attachment_states_;
+    std::uint32_t stretch_constraint_count_ = 0;
+    std::uint32_t bending_constraint_count_ = 0;
     std::vector<ConstraintColorState> stretch_color_states_;
     std::vector<ConstraintColorState> bending_color_states_;
 };

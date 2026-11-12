@@ -127,7 +127,7 @@ void CollisionDetector::detect_cloth_edge_body_edge(const SceneGpuState& gpu_sta
 {
     const auto& shader = cloth_edge_body_edge_;
     const auto& candidates = gpu_state.collision_buffers().cloth_edge_body_edge;
-    const std::uint32_t constraint_count = gpu_state.cloth_gpu_state().element_counts().stretch_constraint;
+    const std::uint32_t constraint_count = gpu_state.pbd_gpu_state().cloth_gpu_state().stretch_constraint_count();
 
     gl.glUseProgram(shader.program);
     gl.glProgramUniform1ui(shader.program, shader.item_count, constraint_count);

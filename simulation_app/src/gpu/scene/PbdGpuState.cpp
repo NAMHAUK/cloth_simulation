@@ -75,7 +75,7 @@ void PbdGpuState::create_collision_buffers(const ClothBufferElementCounts& count
     // Cloth edge / body edge
     {
         auto& buffers = collision_buffers_.cloth_edge_body_edge;
-        buffers.max_pairs = counts.stretch_constraint * candidate_capacity_multiplier;
+        buffers.max_pairs = cloth_gpu_state_.stretch_constraint_count() * candidate_capacity_multiplier;
         buffers.candidate_buffer = create_buffer(byte_size<glm::uvec2>(buffers.max_pairs),
                                                  nullptr,
                                                  GL_DYNAMIC_DRAW,

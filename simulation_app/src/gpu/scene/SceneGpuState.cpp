@@ -3,6 +3,7 @@
 
 #include <cassert>
 #include <cstdint>
+#include <stdexcept>
 
 // Initialization
 
@@ -16,8 +17,6 @@ void SceneGpuState::initialize(const std::filesystem::path& shader_dir,
     character_gpu_state_.initialize(shader_dir, scene, gl);
 
     pbd_gpu_state_.initialize(shader_dir, attachment_surface_offset, body_detection_distance, scene, gl);
-
-    // Character buffer bindings
     buffer_bindings_.bind_character(character_gpu_state_.buffer_set(), gl);
 
     set_character_motion(scene, gl);
@@ -49,10 +48,9 @@ void SceneGpuState::rebuild_garment_resources(const SceneState& scene,
 {
     pbd_gpu_state_.cloth_gpu_state().release_distance_constraint_buffers(gl);
     pbd_gpu_state_.cloth_gpu_state().release_collision_buffers(gl);
-
     release_collision_buffers(gl);
-    const auto triangle_vertex_indices = cloth_gpu_state_.rebuild_buffers(scene.garments(), changed_layer, gl);
 
+    const auto triangle_vertex_indices = cloth_gpu_state_.rebuild_buffers(scene.garments(), changed_layer, gl);
     pbd_gpu_state_.cloth_gpu_state().rebuild_normal_buffers(triangle_vertex_indices,
                                                             cloth_gpu_state_.element_counts().vertex,
                                                             gl);
@@ -63,7 +61,7 @@ void SceneGpuState::rebuild_garment_resources(const SceneState& scene,
 
 void SceneGpuState::create_simulation_buffers(const SceneState& scene, QOpenGLFunctions_4_5_Core& gl)
 {
-    const auto triangle_vertex_indices = cloth_gpu_state_.create_simulation_buffers(scene.garments(), gl);
+    const auto triangle_vertex_indices = cloth_gpu_state_.upload_triangle_indices(scene.garments(), gl);
 
     pbd_gpu_state_.cloth_gpu_state().rebuild_normal_buffers(triangle_vertex_indices,
                                                             cloth_gpu_state_.element_counts().vertex,
@@ -72,17 +70,16 @@ void SceneGpuState::create_simulation_buffers(const SceneState& scene, QOpenGLFu
     pbd_gpu_state_.cloth_gpu_state().create_distance_constraint_buffers(scene.garments(), cloth_gpu_state_, gl);
 
     release_collision_buffers(gl);
-    create_collision_buffers(gl);
+    pbd_gpu_state_.create_collision_buffers(cloth_gpu_state_.element_counts(), gl);
+    buffer_bindings_.bind_collision(pbd_gpu_state_.collision_buffers(), gl);
+
+    if (!pbd_gpu_state_.cloth_gpu_state().has_gpu_objects()) {
+        throw std::runtime_error("Cannot prepare garment simulation: a cloth GPU object is missing.");
+    }
 
     buffer_bindings_.bind_cloth(cloth_gpu_state_.buffer_set(), pbd_gpu_state_.cloth_gpu_state().buffer_set(), gl);
 
     update_cloth_normals(gl);
-}
-
-void SceneGpuState::create_collision_buffers(QOpenGLFunctions_4_5_Core& gl)
-{
-    pbd_gpu_state_.create_collision_buffers(cloth_gpu_state_.element_counts(), gl);
-    buffer_bindings_.bind_collision(pbd_gpu_state_.collision_buffers(), gl);
 }
 
 void SceneGpuState::upload_garment_placement(const GarmentObject& garment, QOpenGLFunctions_4_5_Core& gl)
@@ -188,9 +185,11 @@ void SceneGpuState::release(QOpenGLFunctions_4_5_Core& gl)
 
 void SceneGpuState::release_garment_resources(QOpenGLFunctions_4_5_Core& gl)
 {
-    release_collision_buffers(gl);
     buffer_bindings_.reset_cloth_bindings(gl);
+
+    release_collision_buffers(gl);
     pbd_gpu_state_.cloth_gpu_state().release(gl);
+
     cloth_gpu_state_.release(gl);
 }
 

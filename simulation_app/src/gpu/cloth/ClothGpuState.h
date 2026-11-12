@@ -15,8 +15,6 @@ struct ClothBufferElementCounts final
 {
     std::uint32_t vertex = 0;
     std::uint32_t triangle = 0;
-    std::uint32_t stretch_constraint = 0;
-    std::uint32_t bending_constraint = 0;
 };
 
 class ClothGpuState final
@@ -31,8 +29,8 @@ public:
     std::vector<TriangleVertexIndices> rebuild_buffers(const std::vector<GarmentObject>& garments,
                                                        GarmentLayer changed_layer,
                                                        QOpenGLFunctions_4_5_Core& gl);
-    std::vector<TriangleVertexIndices> create_simulation_buffers(const std::vector<GarmentObject>& garments,
-                                                                 QOpenGLFunctions_4_5_Core& gl);
+    std::vector<TriangleVertexIndices> upload_triangle_indices(const std::vector<GarmentObject>& garments,
+                                                               QOpenGLFunctions_4_5_Core& gl);
     void upload_garment_placement(const GarmentObject& garment, QOpenGLFunctions_4_5_Core& gl);
     void capture_base_positions(QOpenGLFunctions_4_5_Core& gl);
     void restore_base_positions(QOpenGLFunctions_4_5_Core& gl) const;
@@ -64,9 +62,6 @@ private:
     void copy_current_positions(GarmentLayer layer,
                                 const BufferState& rebuild_state,
                                 QOpenGLFunctions_4_5_Core& gl) const;
-    std::vector<TriangleVertexIndices> upload_topology(const std::vector<GarmentObject>& garments,
-                                                       BufferState& rebuild_state,
-                                                       QOpenGLFunctions_4_5_Core& gl) const;
     void configure_vao(QOpenGLFunctions_4_5_Core& gl);
 
     bool has_gpu_objects() const;
