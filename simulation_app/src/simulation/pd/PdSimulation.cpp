@@ -1,5 +1,5 @@
 #include "simulation/pd/PdSimulation.h"
-#include "gpu/scene/SceneGpuState.h"
+#include "gpu/common/SceneGpuState.h"
 #include "simulation/SceneState.h"
 #include "utils/CudaUtils.h"
 

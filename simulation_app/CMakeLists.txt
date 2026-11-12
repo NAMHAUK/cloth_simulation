@@ -60,33 +60,31 @@ add_executable(simulation_app
     src/simulation/pbd/collision/GarmentPrefitSolver.h
     src/utils/MeshGeometryUtils.cpp
     src/utils/MeshGeometryUtils.h
-    src/gpu/character/CharacterGpuState.cpp
-    src/gpu/character/CharacterGpuDataTypes.h
-    src/gpu/character/CharacterGpuState.h
-    src/gpu/character/PbdCharacterGpuState.cpp
-    src/gpu/character/PbdCharacterGpuState.h
-    src/gpu/character/PdCharacterGpuState.h
-    src/gpu/bvh/BvhBoundsUpdater.cpp
-    src/gpu/bvh/BvhBoundsUpdater.h
-    src/gpu/cloth/ClothGpuState.cpp
-    src/gpu/cloth/ClothGpuDataTypes.h
-    src/gpu/cloth/ClothGpuState.h
-    src/gpu/cloth/PbdClothGpuState.cpp
-    src/gpu/cloth/PbdClothGpuState.h
-    src/gpu/cloth/PdClothGpuState.cpp
-    src/gpu/cloth/PdClothGpuState.h
-    src/gpu/scene/PbdBufferBindings.cpp
-    src/gpu/scene/PbdBufferBindings.h
-    src/gpu/scene/PbdGpuState.cpp
-    src/gpu/scene/PbdGpuState.h
-    src/gpu/scene/PdGpuState.cpp
-    src/gpu/scene/PdGpuState.h
+    src/gpu/common/CharacterGpuState.cpp
+    src/gpu/common/CharacterGpuState.h
+    src/gpu/common/ClothGpuState.cpp
+    src/gpu/common/ClothGpuState.h
+    src/gpu/common/SceneGpuState.cpp
+    src/gpu/common/SceneGpuState.h
+    src/gpu/pbd/BvhBoundsUpdater.cpp
+    src/gpu/pbd/BvhBoundsUpdater.h
+    src/gpu/pbd/PbdBufferBindings.cpp
+    src/gpu/pbd/PbdBufferBindings.h
+    src/gpu/pbd/PbdCharacterGpuState.cpp
+    src/gpu/pbd/PbdCharacterGpuState.h
+    src/gpu/pbd/PbdClothGpuState.cpp
+    src/gpu/pbd/PbdClothGpuState.h
+    src/gpu/pbd/PbdGpuState.cpp
+    src/gpu/pbd/PbdGpuState.h
+    src/gpu/pd/PdCharacterGpuState.h
+    src/gpu/pd/PdClothGpuState.cpp
+    src/gpu/pd/PdClothGpuState.h
+    src/gpu/pd/PdGpuState.cpp
+    src/gpu/pd/PdGpuState.h
     src/rendering/BackgroundGradient.cpp
     src/rendering/BackgroundGradient.h
     src/rendering/GroundGridMesh.cpp
     src/rendering/GroundGridMesh.h
-    src/gpu/scene/SceneGpuState.cpp
-    src/gpu/scene/SceneGpuState.h
     src/rendering/SceneRenderer.cpp
     src/rendering/SceneRenderer.h
     src/ui/Viewport.cpp

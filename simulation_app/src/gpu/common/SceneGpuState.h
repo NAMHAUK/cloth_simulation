@@ -1,7 +1,7 @@
 #pragma once
 
-#include "gpu/character/CharacterGpuState.h"
-#include "gpu/cloth/ClothGpuState.h"
+#include "gpu/common/CharacterGpuState.h"
+#include "gpu/common/ClothGpuState.h"
 
 #include <QOpenGLFunctions_4_5_Core>
 

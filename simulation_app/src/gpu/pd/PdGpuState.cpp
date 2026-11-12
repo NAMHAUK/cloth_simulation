@@ -1,4 +1,4 @@
-#include "gpu/scene/PdGpuState.h"
+#include "gpu/pd/PdGpuState.h"
 
 void PdGpuState::rebuild_buffers(const ClothGpuState& cloth_state)
 {

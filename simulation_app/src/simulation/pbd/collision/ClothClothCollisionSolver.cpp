@@ -1,6 +1,6 @@
 #include "simulation/pbd/collision/ClothClothCollisionSolver.h"
-#include "gpu/cloth/ClothGpuState.h"
-#include "gpu/scene/PbdGpuState.h"
+#include "gpu/common/ClothGpuState.h"
+#include "gpu/pbd/PbdGpuState.h"
 #include "simulation/SimulationParams.h"
 #include "utils/BufferUtils.h"
 #include "utils/ShaderUtils.h"

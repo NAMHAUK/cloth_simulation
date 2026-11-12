@@ -1,7 +1,7 @@
 #pragma once
 
 #include "asset/AssetDataTypes.h"
-#include "gpu/scene/SceneGpuState.h"
+#include "gpu/common/SceneGpuState.h"
 #include "rendering/SceneRenderer.h"
 #include "simulation/SceneState.h"
 #include "simulation/Simulation.h"

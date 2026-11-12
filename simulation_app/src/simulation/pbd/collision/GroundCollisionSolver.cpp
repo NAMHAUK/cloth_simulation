@@ -1,5 +1,5 @@
 #include "simulation/pbd/collision/GroundCollisionSolver.h"
-#include "gpu/cloth/ClothGpuState.h"
+#include "gpu/common/ClothGpuState.h"
 #include "simulation/SimulationParams.h"
 #include "utils/ShaderUtils.h"
 

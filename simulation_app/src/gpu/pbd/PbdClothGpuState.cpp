@@ -1,5 +1,5 @@
-#include "gpu/cloth/PbdClothGpuState.h"
-#include "gpu/cloth/ClothGpuState.h"
+#include "gpu/pbd/PbdClothGpuState.h"
+#include "gpu/common/ClothGpuState.h"
 #include "simulation/SceneState.h"
 #include "simulation/bvh/Bvh.h"
 #include "utils/BufferUtils.h"

@@ -1,5 +1,5 @@
-#include "gpu/bvh/BvhBoundsUpdater.h"
-#include "gpu/cloth/PbdClothGpuState.h"
+#include "gpu/pbd/BvhBoundsUpdater.h"
+#include "gpu/pbd/PbdClothGpuState.h"
 #include "simulation/SceneState.h"
 #include "utils/ShaderUtils.h"
 

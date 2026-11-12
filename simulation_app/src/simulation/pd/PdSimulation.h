@@ -1,6 +1,6 @@
 #pragma once
 
-#include "gpu/scene/PdGpuState.h"
+#include "gpu/pd/PdGpuState.h"
 #include "simulation/Simulation.h"
 #include "simulation/SimulationParams.h"
 #include "simulation/pd/ProjectiveDynamicsSolver.h"

@@ -1,6 +1,6 @@
 #include "simulation/pd/ProjectiveDynamicsSolver.h"
 #include "ClothIntegration.h"
-#include "gpu/scene/PdGpuState.h"
+#include "gpu/pd/PdGpuState.h"
 #include "utils/CudaUtils.h"
 
 ProjectiveDynamicsSolver::ProjectiveDynamicsSolver(const PdGpuState& pd_state, float gravity)

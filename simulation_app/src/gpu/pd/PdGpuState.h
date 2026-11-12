@@ -1,7 +1,7 @@
 #pragma once
 
-#include "gpu/character/PdCharacterGpuState.h"
-#include "gpu/cloth/PdClothGpuState.h"
+#include "gpu/pd/PdCharacterGpuState.h"
+#include "gpu/pd/PdClothGpuState.h"
 
 #include <cstdint>
 

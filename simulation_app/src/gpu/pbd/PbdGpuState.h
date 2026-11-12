@@ -1,8 +1,8 @@
 #pragma once
 
-#include "gpu/bvh/BvhBoundsUpdater.h"
-#include "gpu/character/PbdCharacterGpuState.h"
-#include "gpu/cloth/PbdClothGpuState.h"
+#include "gpu/pbd/BvhBoundsUpdater.h"
+#include "gpu/pbd/PbdCharacterGpuState.h"
+#include "gpu/pbd/PbdClothGpuState.h"
 
 #include <cstdint>
 #include <filesystem>

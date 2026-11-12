@@ -1,5 +1,7 @@
-#include "gpu/scene/PbdBufferBindings.h"
-#include "gpu/scene/PbdGpuState.h"
+#include "gpu/pbd/PbdBufferBindings.h"
+#include "gpu/common/CharacterGpuState.h"
+#include "gpu/common/ClothGpuState.h"
+#include "gpu/pbd/PbdGpuState.h"
 #include "utils/BufferUtils.h"
 
 #include <algorithm>

@@ -1,5 +1,5 @@
-#include "gpu/cloth/PdClothGpuState.h"
-#include "gpu/cloth/ClothGpuState.h"
+#include "gpu/pd/PdClothGpuState.h"
+#include "gpu/common/ClothGpuState.h"
 #include "utils/CudaUtils.h"
 
 #include <cstddef>

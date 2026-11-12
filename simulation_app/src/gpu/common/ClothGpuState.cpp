@@ -1,4 +1,4 @@
-#include "gpu/cloth/ClothGpuState.h"
+#include "gpu/common/ClothGpuState.h"
 #include "simulation/SceneState.h"
 #include "utils/BufferUtils.h"
 #include <algorithm>
