@@ -24,6 +24,13 @@ struct PdConstraintMatrix
     float weight = 0.0f;
 };
 
+struct CsrMatrix
+{
+    std::uint32_t* row_offsets_ptr = nullptr;
+    std::uint32_t* column_indices_ptr = nullptr;
+    float* values_ptr = nullptr;
+};
+
 class PdGpuState final
 {
 public:
@@ -31,6 +38,7 @@ public:
     PdGpuState(const PdGpuState&) = delete;
     PdGpuState& operator=(const PdGpuState&) = delete;
 
+    void initialize(float substep_dt);
     void rebuild_buffers(const ClothGpuState& cloth_state);
     void prepare_system(const std::vector<GarmentObject>& garments, const ClothGpuState& cloth_state);
     PdClothGpuState& cloth_gpu_state();
@@ -39,8 +47,11 @@ public:
     void release();
 
 private:
+    void release_system_matrix();
+
     PdCharacterGpuState character_gpu_state_;
     PdClothGpuState cloth_gpu_state_;
+    float inv_dt_squared_ = 0.0f;
 
     // constraint_matrix_buffer_[i]
     // ┌────────────────────┐
@@ -53,4 +64,6 @@ private:
     std::uint32_t* constraint_vertex_index_buffer_ = nullptr;
     float* constraint_A_value_buffer_ = nullptr;
     std::uint32_t total_constraint_count_ = 0;
+
+    CsrMatrix system_matrix_;
 };

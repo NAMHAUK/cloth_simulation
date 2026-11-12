@@ -23,6 +23,7 @@ public:
     float4* map_shared_buffers() const;
     void unmap_shared_buffers() const;
     float4* velocities() const;
+    const float* masses() const;
     std::uint32_t vertex_count() const;
 
     void release();

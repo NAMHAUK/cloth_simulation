@@ -23,6 +23,7 @@ void PdSimulation::initialize(const std::filesystem::path&, QOpenGLFunctions_4_5
 
     substep_dt_ = params_.step.dt() / static_cast<float>(params_.step.substep_count);
     initialize_cuda();
+    pd_gpu_state_.initialize(substep_dt_);
     projective_dynamics_solver_.initialize(substep_dt_);
     initialized_ = true;
 }

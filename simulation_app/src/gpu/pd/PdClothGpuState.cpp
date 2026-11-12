@@ -67,6 +67,11 @@ float4* PdClothGpuState::velocities() const
     return velocities_;
 }
 
+const float* PdClothGpuState::masses() const
+{
+    return masses_;
+}
+
 std::uint32_t PdClothGpuState::vertex_count() const
 {
     return vertex_count_;
