@@ -29,58 +29,59 @@ add_executable(simulation_app
     src/app/ProjectPaths.h
     src/app/SimulationController.cpp
     src/app/SimulationController.h
-    src/gpu/scene/PbdBufferBindings.cpp
-    src/gpu/scene/PbdBufferBindings.h
     src/simulation/SimulationParams.h
-    src/simulation/ClothIntegrator.cpp
-    src/simulation/ClothIntegrator.h
-    src/simulation/constraints/StretchConstraintSolver.cpp
-    src/simulation/constraints/StretchConstraintSolver.h
-    src/simulation/constraints/BendingConstraintSolver.cpp
-    src/simulation/constraints/BendingConstraintSolver.h
-    src/simulation/constraints/AttachmentConstraintSolver.cpp
-    src/simulation/constraints/AttachmentConstraintSolver.h
-    src/simulation/collision/GroundCollisionSolver.cpp
-    src/simulation/collision/GroundCollisionSolver.h
+    src/simulation/Simulation.h
+    src/simulation/pbd/PbdSimulation.cpp
+    src/simulation/pbd/PbdSimulation.h
+    src/simulation/pbd/ClothIntegrator.cpp
+    src/simulation/pbd/ClothIntegrator.h
+    src/simulation/pbd/constraints/StretchConstraintSolver.cpp
+    src/simulation/pbd/constraints/StretchConstraintSolver.h
+    src/simulation/pbd/constraints/BendingConstraintSolver.cpp
+    src/simulation/pbd/constraints/BendingConstraintSolver.h
+    src/simulation/pbd/constraints/AttachmentConstraintSolver.cpp
+    src/simulation/pbd/constraints/AttachmentConstraintSolver.h
+    src/simulation/pbd/collision/GroundCollisionSolver.cpp
+    src/simulation/pbd/collision/GroundCollisionSolver.h
     src/simulation/bvh/Bvh.h
     src/simulation/bvh/MeshBvhBuilder.cpp
     src/simulation/bvh/MeshBvhBuilder.h
-    src/simulation/collision/CollisionDetector.cpp
-    src/simulation/collision/CollisionDetector.h
-    src/simulation/collision/ClothBodyCollisionSolver.cpp
-    src/simulation/collision/ClothBodyCollisionSolver.h
-    src/simulation/collision/ClothClothCollisionSolver.cpp
-    src/simulation/collision/ClothClothCollisionSolver.h
-    src/simulation/collision/GarmentPrefitSolver.cpp
-    src/simulation/collision/GarmentPrefitSolver.h
+    src/simulation/pbd/collision/CollisionDetector.cpp
+    src/simulation/pbd/collision/CollisionDetector.h
+    src/simulation/pbd/collision/ClothBodyCollisionSolver.cpp
+    src/simulation/pbd/collision/ClothBodyCollisionSolver.h
+    src/simulation/pbd/collision/ClothClothCollisionSolver.cpp
+    src/simulation/pbd/collision/ClothClothCollisionSolver.h
+    src/simulation/pbd/collision/GarmentPrefitSolver.cpp
+    src/simulation/pbd/collision/GarmentPrefitSolver.h
     src/utils/MeshGeometryUtils.cpp
     src/utils/MeshGeometryUtils.h
     src/gpu/character/CharacterGpuState.cpp
     src/gpu/character/CharacterGpuDataTypes.h
     src/gpu/character/CharacterGpuState.h
+    src/gpu/character/PbdCharacterGpuState.cpp
+    src/gpu/character/PbdCharacterGpuState.h
     src/gpu/bvh/BvhBoundsUpdater.cpp
     src/gpu/bvh/BvhBoundsUpdater.h
     src/gpu/cloth/ClothGpuState.cpp
     src/gpu/cloth/ClothGpuDataTypes.h
     src/gpu/cloth/ClothGpuState.h
+    src/gpu/cloth/PbdClothGpuState.cpp
+    src/gpu/cloth/PbdClothGpuState.h
+    src/gpu/scene/PbdBufferBindings.cpp
+    src/gpu/scene/PbdBufferBindings.h
+    src/gpu/scene/PbdGpuState.cpp
+    src/gpu/scene/PbdGpuState.h
     src/rendering/BackgroundGradient.cpp
     src/rendering/BackgroundGradient.h
     src/rendering/GroundGridMesh.cpp
     src/rendering/GroundGridMesh.h
-    src/gpu/character/PbdCharacterGpuState.cpp
-    src/gpu/character/PbdCharacterGpuState.h
-    src/gpu/cloth/PbdClothGpuState.cpp
-    src/gpu/cloth/PbdClothGpuState.h
-    src/gpu/scene/PbdGpuState.cpp
-    src/gpu/scene/PbdGpuState.h
     src/gpu/scene/SceneGpuState.cpp
     src/gpu/scene/SceneGpuState.h
     src/rendering/SceneRenderer.cpp
     src/rendering/SceneRenderer.h
     src/ui/Viewport.cpp
     src/ui/Viewport.h
-    src/simulation/SimulationPipeline.cpp
-    src/simulation/SimulationPipeline.h
     src/simulation/SceneState.cpp
     src/simulation/SceneState.h
     src/utils/QtUtils.h

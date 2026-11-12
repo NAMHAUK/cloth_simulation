@@ -1,4 +1,4 @@
-#include "simulation/collision/CollisionDetector.h"
+#include "simulation/pbd/collision/CollisionDetector.h"
 #include "gpu/scene/SceneGpuState.h"
 #include "simulation/SimulationParams.h"
 #include "utils/BufferUtils.h"

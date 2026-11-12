@@ -4,13 +4,15 @@
 #include "gpu/scene/SceneGpuState.h"
 #include "rendering/SceneRenderer.h"
 #include "simulation/SceneState.h"
-#include "simulation/SimulationPipeline.h"
+#include "simulation/Simulation.h"
+#include "simulation/SimulationParams.h"
 
 #include <array>
 #include <cstddef>
 #include <cstdint>
 #include <filesystem>
 #include <functional>
+#include <memory>
 #include <optional>
 #include <vector>
 
@@ -79,7 +81,6 @@ private:
         float scale = 1.0f;
     };
 
-    std::uint32_t calculate_iteration_count() const;
     std::array<glm::mat4, 2> make_placement_matrices() const;
     void reset_garment_placements();
     void release_gpu();
@@ -89,7 +90,7 @@ private:
     SceneState scene_;
     CharacterMotion default_character_motion_;
     SceneGpuState gpu_state_;
-    SimulationPipeline simulation_pipeline_;
+    std::unique_ptr<Simulation> simulation_;
     SceneRenderer scene_renderer_;
 
     std::uint32_t motion_step_index_ = 0;

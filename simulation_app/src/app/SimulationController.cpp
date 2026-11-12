@@ -2,11 +2,11 @@
 #include "asset/AssetIO.h"
 #include "simulation/SimulationParams.h"
 #include "simulation/bvh/MeshBvhBuilder.h"
+#include "simulation/pbd/PbdSimulation.h"
 
 #include <algorithm>
 #include <cassert>
 #include <chrono>
-#include <numeric>
 #include <stdexcept>
 #include <utility>
 
@@ -28,9 +28,10 @@ glm::mat4 make_placement_matrix(const glm::vec3& center, const glm::vec3& positi
 SimulationController::SimulationController(SimulationParams params)
     : params_(params),
       scene_(params.integration.reference_frame_max_linear_acceleration,
-             params.integration.reference_frame_max_angular_acceleration),
-      simulation_pipeline_(scene_, gpu_state_, params)
+             params.integration.reference_frame_max_angular_acceleration)
 {
+    simulation_ = std::make_unique<PbdSimulation>(scene_, gpu_state_, params);
+
     QObject::connect(&frame_timer_, &QTimer::timeout, this, &SimulationController::tick_frame);
 }
 
@@ -63,7 +64,7 @@ void SimulationController::initialize_gpu(const std::filesystem::path& shader_di
                           params_.collisions.body.detection_distance,
                           scene_,
                           gl);
-    simulation_pipeline_.initialize(shader_dir, gl);
+    simulation_->initialize(shader_dir, gl);
     scene_renderer_.initialize(shader_dir, gl);
     scene_renderer_.bind_render_buffers(gpu_state_, gl);
 }
@@ -112,9 +113,9 @@ void SimulationController::tick_frame()
             if (scene_.garments().empty()) {
                 const float frame_position = params_.step.motion_frame_position(motion_step_index_ + 1u, 0);
                 const float frame_alpha = scene_.motion_frame_alpha(frame_position);
-                gpu_state_.update_character_pose(scene_, frame_alpha, gl);
+                simulation_->update_character_pose(frame_alpha, gl);
             } else {
-                simulation_pipeline_.step(motion_step_index_, gl);
+                simulation_->step(motion_step_index_, gl);
             }
             ++motion_step_index_;
             scene_.set_motion_frame_index(motion_step_index_ / params_.step.motion_stride());
@@ -149,9 +150,9 @@ bool SimulationController::set_character_motion(CharacterMotion motion)
 
     run_with_gl_context_([this, &motion](QOpenGLFunctions_4_5_Core& gl) {
         if (is_default_pose_) {
-            gpu_state_.capture_garment_base_positions(gl);
+            simulation_->capture_garment_base_positions(gl);
         } else {
-            gpu_state_.restore_garment_base_positions(gl);
+            simulation_->restore_garment_base_positions(gl);
         }
         set_character_motion_state(std::move(motion), gl);
         is_default_pose_ = false;
@@ -169,7 +170,7 @@ void SimulationController::reset_scene()
         reset_garment_placements();
 
         scene_.clear_garments();
-        gpu_state_.release_garment_resources(gl);
+        simulation_->release_garment_resources(gl);
         scene_renderer_.bind_render_buffers(gpu_state_, gl);
         set_character_motion_state(default_character_motion_, gl);
         is_default_pose_ = true;
@@ -186,11 +187,11 @@ void SimulationController::return_to_default_pose()
     }
 
     run_with_gl_context_([this](QOpenGLFunctions_4_5_Core& gl) {
-        gpu_state_.restore_garment_base_positions(gl);
+        simulation_->restore_garment_base_positions(gl);
 
         reset_garment_placements();
         set_character_motion_state(default_character_motion_, gl);
-        gpu_state_.clear_garment_base_positions(gl);
+        simulation_->clear_garment_base_positions(gl);
         is_default_pose_ = true;
     });
 }
@@ -198,7 +199,7 @@ void SimulationController::return_to_default_pose()
 void SimulationController::set_character_motion_state(CharacterMotion motion, QOpenGLFunctions_4_5_Core& gl)
 {
     scene_.set_character_motion(std::move(motion));
-    gpu_state_.set_character_motion(scene_, gl);
+    simulation_->set_character_motion(gl);
     motion_step_index_ = 0;
     Q_EMIT camera_reset_requested(scene_.character_root_position(0));
 }
@@ -214,7 +215,7 @@ void SimulationController::set_garment_mesh(GarmentLayer layer, GarmentMesh mesh
 
     run_with_gl_context_([this, layer, &garment](QOpenGLFunctions_4_5_Core& gl) {
         scene_.set_garment(std::move(garment));
-        gpu_state_.rebuild_garment_resources(scene_, gl, layer);
+        simulation_->rebuild_garment_resources(layer, gl);
         scene_renderer_.bind_render_buffers(gpu_state_, gl);
 
         garment_placement_states_[layer].emplace();
@@ -254,16 +255,7 @@ void SimulationController::confirm_garment_placement()
             gpu_state_.upload_garment_placement(garment, gl);
         }
 
-        auto& pbd_cloth_state = gpu_state_.pbd_gpu_state().cloth_gpu_state();
-        pbd_cloth_state.rebuild_dynamic_buffers(gpu_state_.cloth_gpu_state(), gl);
-        pbd_cloth_state.rebuild_attachment_buffers(scene_.garments(), placement_garments, gl);
-
-        gpu_state_.create_simulation_buffers(scene_, gl);
-        simulation_pipeline_.prefit_garments(calculate_iteration_count(), gl);
-
-        for (const GarmentObject* garment : placement_garments) {
-            gpu_state_.initialize_garment_attachments(*garment, gl);
-        }
+        simulation_->prepare_garments(placement_garments, gl);
         scene_renderer_.bind_render_buffers(gpu_state_, gl);
 
         reset_garment_placements();
@@ -276,7 +268,7 @@ void SimulationController::discard_garment_placement(GarmentLayer layer)
 
     run_with_gl_context_([this, layer](QOpenGLFunctions_4_5_Core& gl) {
         if (scene_.remove_garment(layer)) {
-            gpu_state_.rebuild_garment_resources(scene_, gl, layer);
+            simulation_->rebuild_garment_resources(layer, gl);
             scene_renderer_.bind_render_buffers(gpu_state_, gl);
         }
         garment_placement_states_[layer].reset();
@@ -293,37 +285,14 @@ void SimulationController::cancel_placement_session()
 
         if (clear_all) {
             scene_.clear_garments();
-            gpu_state_.release_garment_resources(gl);
+            simulation_->release_garment_resources(gl);
         } else {
             scene_.remove_garment(GarmentLayer::Upper);
-            gpu_state_.rebuild_garment_resources(scene_, gl, GarmentLayer::Upper);
-            gpu_state_.create_simulation_buffers(scene_, gl);
+            simulation_->rebuild_garment_resources(GarmentLayer::Upper, gl);
+            simulation_->create_simulation_buffers(gl);
         }
         scene_renderer_.bind_render_buffers(gpu_state_, gl);
     });
-}
-
-std::uint32_t SimulationController::calculate_iteration_count() const
-{
-    std::uint32_t iteration_count = 8u;
-    for (const GarmentObject& garment : scene_.garments()) {
-        const auto& rest_lengths = garment.mesh.stretch_constraints.rest_lengths;
-        const double total_rest_length = std::accumulate(rest_lengths.begin(), rest_lengths.end(), 0.0);
-        const double average_rest_length = total_rest_length / rest_lengths.size();
-
-        std::uint32_t garment_iteration_count = 8u;
-        if (average_rest_length <= 0.005f) {
-            garment_iteration_count = 16u;
-        } else if (average_rest_length < 0.007f) {
-            garment_iteration_count = 14u;
-        } else if (average_rest_length < 0.009f) {
-            garment_iteration_count = 12u;
-        } else if (average_rest_length < 0.013f) {
-            garment_iteration_count = 10u;
-        }
-        iteration_count = std::max(iteration_count, garment_iteration_count);
-    }
-    return iteration_count;
 }
 
 std::array<glm::mat4, 2> SimulationController::make_placement_matrices() const
@@ -358,7 +327,7 @@ void SimulationController::reset_garment_placements()
 // State
 bool SimulationController::is_gpu_initialized() const
 {
-    return gpu_state_.is_initialized() && simulation_pipeline_.is_initialized() && scene_renderer_.is_initialized();
+    return gpu_state_.is_initialized() && simulation_->is_initialized() && scene_renderer_.is_initialized();
 }
 
 bool SimulationController::can_start_garment_placement() const
@@ -394,6 +363,6 @@ void SimulationController::release_gpu()
 void SimulationController::release_gpu(QOpenGLFunctions_4_5_Core& gl)
 {
     scene_renderer_.release(gl);
-    simulation_pipeline_.release(gl);
+    simulation_->release(gl);
     gpu_state_.release(gl);
 }

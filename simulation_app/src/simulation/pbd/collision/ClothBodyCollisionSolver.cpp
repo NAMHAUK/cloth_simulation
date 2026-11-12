@@ -1,4 +1,4 @@
-#include "simulation/collision/ClothBodyCollisionSolver.h"
+#include "simulation/pbd/collision/ClothBodyCollisionSolver.h"
 #include "gpu/scene/SceneGpuState.h"
 #include "simulation/SimulationParams.h"
 #include "utils/BufferUtils.h"
