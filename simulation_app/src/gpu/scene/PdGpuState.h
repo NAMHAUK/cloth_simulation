@@ -1,5 +1,6 @@
 #pragma once
 
+#include "gpu/character/PdCharacterGpuState.h"
 #include "gpu/cloth/PdClothGpuState.h"
 
 #include <cstdint>
@@ -20,5 +21,6 @@ public:
     void release();
 
 private:
+    PdCharacterGpuState character_gpu_state_;
     PdClothGpuState cloth_gpu_state_;
 };

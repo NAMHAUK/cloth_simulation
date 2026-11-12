@@ -65,6 +65,7 @@ add_executable(simulation_app
     src/gpu/character/CharacterGpuState.h
     src/gpu/character/PbdCharacterGpuState.cpp
     src/gpu/character/PbdCharacterGpuState.h
+    src/gpu/character/PdCharacterGpuState.h
     src/gpu/bvh/BvhBoundsUpdater.cpp
     src/gpu/bvh/BvhBoundsUpdater.h
     src/gpu/cloth/ClothGpuState.cpp
