@@ -34,9 +34,9 @@ add_executable(simulation_app
     src/simulation/constraints/AttachmentConstraintSolver.h
     src/simulation/collision/GroundCollisionSolver.cpp
     src/simulation/collision/GroundCollisionSolver.h
-    src/simulation/collision/Bvh.h
-    src/simulation/collision/MeshBvhBuilder.cpp
-    src/simulation/collision/MeshBvhBuilder.h
+    src/simulation/bvh/Bvh.h
+    src/simulation/bvh/MeshBvhBuilder.cpp
+    src/simulation/bvh/MeshBvhBuilder.h
     src/simulation/collision/CollisionDetector.cpp
     src/simulation/collision/CollisionDetector.h
     src/simulation/collision/ClothBodyCollisionSolver.cpp

@@ -1,7 +1,7 @@
 #include "gpu/cloth/PbdClothGpuState.h"
 #include "gpu/cloth/ClothGpuState.h"
 #include "simulation/SceneState.h"
-#include "simulation/collision/Bvh.h"
+#include "simulation/bvh/Bvh.h"
 #include "utils/BufferUtils.h"
 #include "utils/MeshGeometryUtils.h"
 

@@ -1,7 +1,7 @@
 #pragma once
 
 #include "asset/AssetDataTypes.h"
-#include "simulation/collision/Bvh.h"
+#include "simulation/bvh/Bvh.h"
 #include "utils/NumericUtils.h"
 
 #include <cstddef>

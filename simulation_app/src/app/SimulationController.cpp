@@ -1,7 +1,7 @@
 #include "app/SimulationController.h"
 #include "asset/AssetIO.h"
 #include "simulation/SimulationParams.h"
-#include "simulation/collision/MeshBvhBuilder.h"
+#include "simulation/bvh/MeshBvhBuilder.h"
 
 #include <algorithm>
 #include <cassert>
