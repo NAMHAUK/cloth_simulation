@@ -1,7 +1,7 @@
 #pragma once
 
-#include "gpu/scene/PbdBufferBindings.h"
-#include "gpu/scene/PbdGpuState.h"
+#include "gpu/pbd/PbdBufferBindings.h"
+#include "gpu/pbd/PbdGpuState.h"
 #include "simulation/Simulation.h"
 #include "simulation/SimulationParams.h"
 #include "simulation/pbd/ClothIntegrator.h"

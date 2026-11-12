@@ -1,5 +1,5 @@
 #include "simulation/pbd/constraints/BendingConstraintSolver.h"
-#include "gpu/cloth/PbdClothGpuState.h"
+#include "gpu/pbd/PbdClothGpuState.h"
 #include "utils/ShaderUtils.h"
 
 #include <algorithm>

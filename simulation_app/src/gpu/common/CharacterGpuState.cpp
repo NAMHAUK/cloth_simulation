@@ -1,4 +1,4 @@
-#include "gpu/character/CharacterGpuState.h"
+#include "gpu/common/CharacterGpuState.h"
 #include "simulation/SceneState.h"
 #include "utils/BufferUtils.h"
 

@@ -1,5 +1,5 @@
-#include "gpu/character/PbdCharacterGpuState.h"
-#include "gpu/character/CharacterGpuState.h"
+#include "gpu/pbd/PbdCharacterGpuState.h"
+#include "gpu/common/CharacterGpuState.h"
 #include "simulation/SceneState.h"
 #include "utils/BufferUtils.h"
 #include "utils/MeshGeometryUtils.h"

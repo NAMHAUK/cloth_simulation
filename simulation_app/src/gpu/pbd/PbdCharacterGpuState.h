@@ -1,13 +1,29 @@
 #pragma once
 
 #include "asset/AssetDataTypes.h"
-#include "gpu/character/CharacterGpuDataTypes.h"
 
 #include <cstdint>
 #include <filesystem>
 
+#include <QOpenGLFunctions_4_5_Core>
+
 class CharacterGpuState;
 class SceneState;
+
+struct PbdCharacterBufferSet final
+{
+    GLuint animation_positions = 0;
+    GLuint previous_position = 0;
+    GLuint body_triangle_bvh_node = 0;
+    GLuint body_triangle_bounds = 0;
+    GLuint body_edge_bvh_node = 0;
+    GLuint body_edge_vertex_indices = 0;
+    GLuint body_edge_bounds = 0;
+    GLuint adjacent_triangle_offsets = 0;
+    GLuint adjacent_triangle_indices = 0;
+    GLuint triangle_position = 0;
+    GLuint triangle_normal = 0;
+};
 
 class PbdCharacterGpuState final
 {

@@ -1,6 +1,6 @@
 #pragma once
 
-#include "gpu/cloth/ClothGpuDataTypes.h"
+#include "asset/AssetDataTypes.h"
 
 #include <array>
 #include <cstddef>
@@ -10,6 +10,22 @@
 #include <QOpenGLFunctions_4_5_Core>
 
 struct GarmentObject;
+
+struct ClothRenderBuffers final
+{
+    GLuint vao = 0;
+    GLuint current_position = 0;
+    GLuint triangle_vertex_indices = 0;
+    GLuint vertex_normal = 0;
+};
+
+struct GarmentBufferState final
+{
+    std::uint32_t vertex_start_index = 0;
+    std::uint32_t vertex_count = 0;
+    std::uint32_t triangle_start_index = 0;
+    std::uint32_t triangle_count = 0;
+};
 
 struct ClothBufferElementCounts final
 {

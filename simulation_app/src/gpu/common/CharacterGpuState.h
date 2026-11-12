@@ -1,11 +1,16 @@
 #pragma once
 
-#include "gpu/character/CharacterGpuDataTypes.h"
-
 #include <QOpenGLFunctions_4_5_Core>
 #include <cstdint>
 
 class SceneState;
+
+struct CharacterRenderBuffers final
+{
+    GLuint current_position = 0;
+    GLuint triangle_vertex_indices = 0;
+    GLuint vertex_normal = 0;
+};
 
 class CharacterGpuState final
 {
