@@ -42,7 +42,7 @@ void PdGpuState::prepare_system(const std::vector<GarmentObject>& garments, cons
     build_system_matrix(system_matrix_,
                         constraint_matrix_buffer_,
                         total_constraint_count_,
-                        cloth_gpu_state_.masses(),
+                        cloth_gpu_state_.mass_buffer(),
                         cloth_gpu_state_.vertex_count(),
                         inv_dt_squared_);
 }
