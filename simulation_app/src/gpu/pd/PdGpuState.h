@@ -33,6 +33,8 @@ public:
     const PdClothGpuState& cloth_gpu_state() const;
     DistanceConstraint* stretch_constraint_buffer() const;
     std::uint32_t stretch_constraint_count() const;
+    AttachmentConstraint* attachment_constraint_buffer() const;
+    std::uint32_t attachment_constraint_count() const;
     const CsrMatrix& system_matrix() const;
     float3* inertia_rhs_buffer() const;
     float3* rhs_buffer() const;
@@ -49,6 +51,8 @@ private:
 
     DistanceConstraint* stretch_constraint_buffer_ = nullptr;
     std::uint32_t stretch_constraint_count_ = 0;
+    AttachmentConstraint* attachment_constraint_buffer_ = nullptr;
+    std::uint32_t attachment_constraint_count_ = 0;
 
     CsrMatrix system_matrix_;
     float3* inertia_rhs_buffer_ = nullptr;

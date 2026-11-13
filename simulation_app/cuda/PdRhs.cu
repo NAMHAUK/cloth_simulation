@@ -8,14 +8,15 @@
 namespace {
 constexpr std::uint32_t block_size = 256;
 
-__global__ void compute_constraint_rhs_matrices_kernel(DistanceConstraint* constraints, std::uint32_t constraint_count)
+template <typename Constraint>
+__global__ void compute_constraint_rhs_matrices_kernel(Constraint* constraints, std::uint32_t constraint_count)
 {
     const std::uint32_t index = blockIdx.x * blockDim.x + threadIdx.x;
     if (index >= constraint_count) {
         return;
     }
 
-    DistanceConstraint& constraint = constraints[index];
+    Constraint& constraint = constraints[index];
 
     // rhs_matrix = w * A^T * B
     // rhs_matrix[row, column] = weight * sum_k A[k, row] * B[k, column]
@@ -49,7 +50,8 @@ __global__ void compute_inertia_rhs_kernel(float3* rhs,
     rhs[index] = make_float3(coefficient * position.x, coefficient * position.y, coefficient * position.z);
 }
 
-__global__ void accumulate_constraint_rhs_kernel(const DistanceConstraint* constraints,
+template <typename Constraint>
+__global__ void accumulate_constraint_rhs_kernel(const Constraint* constraints,
                                                  std::uint32_t constraint_count,
                                                  float3* rhs)
 {
@@ -58,7 +60,7 @@ __global__ void accumulate_constraint_rhs_kernel(const DistanceConstraint* const
         return;
     }
 
-    const DistanceConstraint& constraint = constraints[index];
+    const Constraint& constraint = constraints[index];
 
     // rhs_matrix = w · A^T · B
     // rhs += sum (w · S^T · A^T · B · p)
@@ -82,12 +84,20 @@ __global__ void accumulate_constraint_rhs_kernel(const DistanceConstraint* const
 }
 }
 
-void compute_constraint_rhs_matrices(DistanceConstraint* constraints, std::uint32_t constraint_count)
+template <typename Constraint>
+void compute_constraint_rhs_matrices(Constraint* constraints, std::uint32_t constraint_count)
 {
+    if (constraint_count == 0) {
+        return;
+    }
+
     compute_constraint_rhs_matrices_kernel<<<block_count(constraint_count, block_size), block_size>>>(constraints,
                                                                                                       constraint_count);
     CUDA_CHECK(cudaGetLastError());
 }
+
+template void compute_constraint_rhs_matrices<DistanceConstraint>(DistanceConstraint*, std::uint32_t);
+template void compute_constraint_rhs_matrices<AttachmentConstraint>(AttachmentConstraint*, std::uint32_t);
 
 void compute_inertia_rhs(float3* rhs, const PdClothGpuState& cloth_state, float inv_dt_squared)
 {
@@ -101,10 +111,18 @@ void compute_inertia_rhs(float3* rhs, const PdClothGpuState& cloth_state, float 
     CUDA_CHECK(cudaGetLastError());
 }
 
-void accumulate_constraint_rhs(const DistanceConstraint* constraints, std::uint32_t constraint_count, float3* rhs)
+template <typename Constraint>
+void accumulate_constraint_rhs(const Constraint* constraints, std::uint32_t constraint_count, float3* rhs)
 {
+    if (constraint_count == 0) {
+        return;
+    }
+
     accumulate_constraint_rhs_kernel<<<block_count(constraint_count, block_size), block_size>>>(constraints,
                                                                                                 constraint_count,
                                                                                                 rhs);
     CUDA_CHECK(cudaGetLastError());
 }
+
+template void accumulate_constraint_rhs<DistanceConstraint>(const DistanceConstraint*, std::uint32_t, float3*);
+template void accumulate_constraint_rhs<AttachmentConstraint>(const AttachmentConstraint*, std::uint32_t, float3*);

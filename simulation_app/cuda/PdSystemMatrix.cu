@@ -135,8 +135,9 @@ __device__ std::uint32_t find_csr_index(const CsrMatrix& matrix, std::uint32_t r
     return static_cast<std::uint32_t>(column_index_ptr - matrix.col_indices_ptr);
 }
 
+template <typename Constraint>
 __global__ void accumulate_constraint_matrix_kernel(CsrMatrix matrix,
-                                                    const DistanceConstraint* constraints,
+                                                    const Constraint* constraints,
                                                     std::uint32_t constraint_count)
 {
     const std::uint32_t constraint_index = blockIdx.x * blockDim.x + threadIdx.x;
@@ -145,7 +146,7 @@ __global__ void accumulate_constraint_matrix_kernel(CsrMatrix matrix,
     }
 
     // 각 constraint의 {w· S^T · A^T · A · S}를 system_matrix에 누적
-    const DistanceConstraint& constraint = constraints[constraint_index];
+    const Constraint& constraint = constraints[constraint_index];
     for (std::uint32_t column_a = 0; column_a < constraint.vertex_count; ++column_a) {
         const std::uint32_t system_matrix_row = constraint.vertex_indices[column_a];
 
@@ -170,6 +171,8 @@ __global__ void accumulate_constraint_matrix_kernel(CsrMatrix matrix,
 void build_system_matrix(CsrMatrix& matrix,
                          const DistanceConstraint* constraints,
                          std::uint32_t constraint_count,
+                         const AttachmentConstraint* attachment_constraints,
+                         std::uint32_t attachment_constraint_count,
                          const float* masses,
                          std::uint32_t vertex_count,
                          float inv_dt_squared)
@@ -196,4 +199,12 @@ void build_system_matrix(CsrMatrix& matrix,
                                                                                                    constraints,
                                                                                                    constraint_count);
     CUDA_CHECK(cudaGetLastError());
+
+    if (attachment_constraint_count != 0) {
+        accumulate_constraint_matrix_kernel<<<block_count(attachment_constraint_count, block_size), block_size>>>(
+            matrix,
+            attachment_constraints,
+            attachment_constraint_count);
+        CUDA_CHECK(cudaGetLastError());
+    }
 }

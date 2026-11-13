@@ -1,4 +1,5 @@
 #include "gpu/pd/PdGpuState.h"
+#include "AttachmentConstraints.h"
 #include "PdRhs.h"
 #include "PdSystemMatrix.h"
 #include "StretchConstraints.h"
@@ -22,6 +23,9 @@ void PdGpuState::rebuild_buffers(const ClothGpuState& cloth_state)
 
     stretch_constraint_count_ = 1;
     CUDA_CHECK(cudaMalloc(&stretch_constraint_buffer_, stretch_constraint_count_ * sizeof(DistanceConstraint)));
+
+    attachment_constraint_count_ = 1;
+    CUDA_CHECK(cudaMalloc(&attachment_constraint_buffer_, attachment_constraint_count_ * sizeof(AttachmentConstraint)));
 }
 
 void PdGpuState::prepare_system(const std::vector<GarmentObject>& garments, const ClothGpuState& cloth_state)
@@ -37,16 +41,20 @@ void PdGpuState::prepare_system(const std::vector<GarmentObject>& garments, cons
 
     // TODO: 각 constraint별로 값 추가
     initialize_stretch_constraints(stretch_constraint_buffer_);
+    initialize_attachment_constraints(attachment_constraint_buffer_, attachment_constraint_count_);
 
     release_system_matrix();
     build_system_matrix(system_matrix_,
                         stretch_constraint_buffer_,
                         stretch_constraint_count_,
+                        attachment_constraint_buffer_,
+                        attachment_constraint_count_,
                         cloth_gpu_state_.mass_buffer(),
                         cloth_gpu_state_.vertex_count(),
                         inv_dt_squared_);
 
     compute_constraint_rhs_matrices(stretch_constraint_buffer_, stretch_constraint_count_);
+    compute_constraint_rhs_matrices(attachment_constraint_buffer_, attachment_constraint_count_);
 }
 
 // Setter
@@ -78,6 +86,16 @@ std::uint32_t PdGpuState::stretch_constraint_count() const
     return stretch_constraint_count_;
 }
 
+AttachmentConstraint* PdGpuState::attachment_constraint_buffer() const
+{
+    return attachment_constraint_buffer_;
+}
+
+std::uint32_t PdGpuState::attachment_constraint_count() const
+{
+    return attachment_constraint_count_;
+}
+
 const CsrMatrix& PdGpuState::system_matrix() const
 {
     return system_matrix_;
@@ -107,6 +125,10 @@ void PdGpuState::release()
     CUDA_CHECK(cudaFree(stretch_constraint_buffer_));
     stretch_constraint_buffer_ = nullptr;
     stretch_constraint_count_ = 0;
+
+    CUDA_CHECK(cudaFree(attachment_constraint_buffer_));
+    attachment_constraint_buffer_ = nullptr;
+    attachment_constraint_count_ = 0;
 }
 
 void PdGpuState::release_system_matrix()

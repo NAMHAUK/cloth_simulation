@@ -1,4 +1,5 @@
 #include "simulation/pd/ProjectiveDynamicsSolver.h"
+#include "AttachmentConstraints.h"
 #include "ClothIntegration.h"
 #include "PdGlobalSolve.h"
 #include "PdRhs.h"
@@ -30,10 +31,15 @@ void ProjectiveDynamicsSolver::solve()
 
     for (std::uint32_t iteration = 0; iteration < iteration_count_; ++iteration) {
         project_stretch_constraints(pd_state_.stretch_constraint_buffer());
+        project_attachment_constraints(pd_state_.attachment_constraint_buffer(),
+                                       pd_state_.attachment_constraint_count());
 
         pd_state_.set_rhs(pd_state_.inertia_rhs_buffer());
         accumulate_constraint_rhs(pd_state_.stretch_constraint_buffer(),
                                   pd_state_.stretch_constraint_count(),
+                                  pd_state_.rhs_buffer());
+        accumulate_constraint_rhs(pd_state_.attachment_constraint_buffer(),
+                                  pd_state_.attachment_constraint_count(),
                                   pd_state_.rhs_buffer());
 
         solve_global(pd_state_.system_matrix(), pd_state_.rhs_buffer(), positions, vertex_count);
