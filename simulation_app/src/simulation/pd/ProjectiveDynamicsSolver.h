@@ -15,4 +15,5 @@ private:
     PdGpuState& pd_state_;
     const float gravity_;
     const float dt_;
+    const float inv_dt_squared_;
 };

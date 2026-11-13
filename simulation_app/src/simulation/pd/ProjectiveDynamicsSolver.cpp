@@ -1,12 +1,15 @@
 #include "simulation/pd/ProjectiveDynamicsSolver.h"
 #include "ClothIntegration.h"
+#include "PdRhs.h"
+#include "StretchConstraints.h"
 #include "gpu/pd/PdGpuState.h"
 #include "utils/CudaUtils.h"
 
 ProjectiveDynamicsSolver::ProjectiveDynamicsSolver(PdGpuState& pd_state, float gravity, float dt)
     : pd_state_(pd_state),
       gravity_(gravity),
-      dt_(dt)
+      dt_(dt),
+      inv_dt_squared_(1.0f / (dt * dt))
 {}
 
 void ProjectiveDynamicsSolver::solve()
@@ -25,6 +28,18 @@ void ProjectiveDynamicsSolver::solve()
                                vertex_count,
                                gravity_,
                                dt_));
+
+    project_stretch_constraints(pd_state_.constraint_p_buffer());
+
+    compute_inertia_rhs(pd_state_.rhs_buffer(),
+                        cloth_state.mass_buffer(),
+                        cloth_state.predicted_position_buffer(),
+                        vertex_count,
+                        inv_dt_squared_);
+
+    accumulate_constraint_rhs(pd_state_.constraint_matrix_buffer(),
+                              pd_state_.constraint_count(),
+                              pd_state_.rhs_buffer());
 
     cloth_state.unmap_shared_buffers();
 }
