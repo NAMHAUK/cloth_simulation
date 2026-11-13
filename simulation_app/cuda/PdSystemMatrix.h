@@ -3,10 +3,10 @@
 #include <cstdint>
 
 struct CsrMatrix;
-struct PdConstraintMatrix;
+struct DistanceConstraint;
 
 void build_system_matrix(CsrMatrix& matrix,
-                         const PdConstraintMatrix* constraints,
+                         const DistanceConstraint* constraints,
                          std::uint32_t constraint_count,
                          const float* masses,
                          std::uint32_t vertex_count,

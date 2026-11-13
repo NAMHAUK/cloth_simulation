@@ -11,22 +11,17 @@
 class ClothGpuState;
 struct GarmentObject;
 
-struct MatrixView
+struct DistanceConstraint
 {
-    const float* values_ptr = nullptr;
-    std::uint32_t rows = 0;
-    std::uint32_t columns = 0;
-    std::uint32_t row_stride = 0;
-};
+    static constexpr std::uint32_t vertex_count = 2;
+    static constexpr std::uint32_t matrix_row_count = 1;
+    static constexpr std::uint32_t projection_count = 1;
 
-struct PdConstraintMatrix
-{
-    MatrixView A;
-    MatrixView B;
-    MatrixView rhs_matrix;
-    const float3* p_ptr = nullptr;
-    const std::uint32_t* vertex_indices_ptr = nullptr;
-    std::uint32_t vertex_count = 0;
+    float A[matrix_row_count][vertex_count]{};
+    float B[matrix_row_count][projection_count]{};
+    float rhs_matrix[vertex_count][projection_count]{};
+    float3 p[projection_count]{};
+    std::uint32_t vertex_indices[vertex_count]{};
     float weight = 0.0f;
 };
 
@@ -49,9 +44,8 @@ public:
     void prepare_system(const std::vector<GarmentObject>& garments, const ClothGpuState& cloth_state);
     PdClothGpuState& cloth_gpu_state();
     const PdClothGpuState& cloth_gpu_state() const;
-    const PdConstraintMatrix* constraint_matrix_buffer() const;
-    std::uint32_t constraint_count() const;
-    float3* constraint_p_buffer() const;
+    DistanceConstraint* stretch_constraint_buffer() const;
+    std::uint32_t stretch_constraint_count() const;
     const CsrMatrix& system_matrix() const;
     float3* inertia_rhs_buffer() const;
     float3* rhs_buffer() const;
@@ -66,20 +60,8 @@ private:
     PdClothGpuState cloth_gpu_state_;
     float inv_dt_squared_ = 0.0f;
 
-    // constraint_matrix_buffer_[i]
-    // ┌────────────────────┐
-    // │ A.values_ptr       ├──▶ constraint_A_value_buffer_      [ ... | 각 constraint A matrix 계수 | ... ]
-    // │ vertex_indices_ptr ├──▶ constraint_vertex_index_buffer_ [ ... | 각 constraint vertex indices | ... ]  
-    // │ weight             │
-    // └────────────────────┘
-
-    PdConstraintMatrix* constraint_matrix_buffer_ = nullptr;
-    std::uint32_t* constraint_vertex_index_buffer_ = nullptr;
-    float* constraint_A_value_buffer_ = nullptr;
-    float* constraint_B_value_buffer_ = nullptr;
-    float* constraint_rhs_value_buffer_ = nullptr;
-    float3* constraint_p_buffer_ = nullptr;
-    std::uint32_t total_constraint_count_ = 0;
+    DistanceConstraint* stretch_constraint_buffer_ = nullptr;
+    std::uint32_t stretch_constraint_count_ = 0;
 
     CsrMatrix system_matrix_;
     float3* inertia_rhs_buffer_ = nullptr;

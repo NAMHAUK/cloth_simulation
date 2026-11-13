@@ -5,12 +5,10 @@
 #include <vector_types.h>
 
 class PdClothGpuState;
-struct PdConstraintMatrix;
+struct DistanceConstraint;
 
-void compute_constraint_rhs_matrices(const PdConstraintMatrix* constraints,
-                                     std::uint32_t constraint_count,
-                                     float* rhs_values_ptr);
+void compute_constraint_rhs_matrices(DistanceConstraint* constraints, std::uint32_t constraint_count);
 
 void compute_inertia_rhs(float3* rhs, const PdClothGpuState& cloth_state, float inv_dt_squared);
 
-void accumulate_constraint_rhs(const PdConstraintMatrix* constraints, std::uint32_t constraint_count, float3* rhs);
+void accumulate_constraint_rhs(const DistanceConstraint* constraints, std::uint32_t constraint_count, float3* rhs);

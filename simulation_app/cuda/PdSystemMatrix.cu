@@ -37,14 +37,14 @@ struct MatrixIndex
 
 struct ConstraintIndexCount
 {
-    __host__ __device__ std::size_t operator()(const PdConstraintMatrix& constraint) const
+    __host__ __device__ std::size_t operator()(const DistanceConstraint& constraint) const
     {
         return static_cast<std::size_t>(constraint.vertex_count) * constraint.vertex_count;
     }
 };
 
 // Initialize system matrix
-__global__ void write_matrix_indices_kernel(const PdConstraintMatrix* constraints,
+__global__ void write_matrix_indices_kernel(const DistanceConstraint* constraints,
                                             std::uint32_t constraint_count,
                                             std::uint32_t vertex_count,
                                             const std::size_t* constraint_offsets,
@@ -55,19 +55,19 @@ __global__ void write_matrix_indices_kernel(const PdConstraintMatrix* constraint
         indices[index] = {index, index};
     }
     if (index < constraint_count) {
-        const PdConstraintMatrix& constraint = constraints[index];
+        const DistanceConstraint& constraint = constraints[index];
         std::size_t offset = vertex_count + constraint_offsets[index];
 
         for (std::uint32_t row = 0; row < constraint.vertex_count; ++row) {
             for (std::uint32_t column = 0; column < constraint.vertex_count; ++column) {
-                indices[offset] = {constraint.vertex_indices_ptr[row], constraint.vertex_indices_ptr[column]};
+                indices[offset] = {constraint.vertex_indices[row], constraint.vertex_indices[column]};
                 ++offset;
             }
         }
     }
 }
 
-thrust::device_vector<MatrixIndex> build_system_matrix_indices(const PdConstraintMatrix* constraints,
+thrust::device_vector<MatrixIndex> build_system_matrix_indices(const DistanceConstraint* constraints,
                                                                std::uint32_t constraint_count,
                                                                std::uint32_t vertex_count)
 {
@@ -136,7 +136,7 @@ __device__ std::uint32_t find_csr_index(const CsrMatrix& matrix, std::uint32_t r
 }
 
 __global__ void accumulate_constraint_matrix_kernel(CsrMatrix matrix,
-                                                    const PdConstraintMatrix* constraints,
+                                                    const DistanceConstraint* constraints,
                                                     std::uint32_t constraint_count)
 {
     const std::uint32_t constraint_index = blockIdx.x * blockDim.x + threadIdx.x;
@@ -145,21 +145,21 @@ __global__ void accumulate_constraint_matrix_kernel(CsrMatrix matrix,
     }
 
     // 각 constraint의 {w· S^T · A^T · A · S}를 system_matrix에 누적
-    const PdConstraintMatrix& constraint = constraints[constraint_index];
+    const DistanceConstraint& constraint = constraints[constraint_index];
     for (std::uint32_t column_a = 0; column_a < constraint.vertex_count; ++column_a) {
-        const std::uint32_t system_matrix_row = constraint.vertex_indices_ptr[column_a];
+        const std::uint32_t system_matrix_row = constraint.vertex_indices[column_a];
 
         for (std::uint32_t column_b = 0; column_b < constraint.vertex_count; ++column_b) {
             float value = 0.0f;
             
             // (A^T·A)의 (column_a, column_b) 원소: A의 column_a와 column_b 내적
-            for (std::uint32_t row = 0; row < constraint.A.rows; ++row) {
-                const float* row_values = constraint.A.values_ptr + row * constraint.A.row_stride;
+            for (std::uint32_t row = 0; row < constraint.matrix_row_count; ++row) {
+                const float* row_values = constraint.A[row];
                 value += row_values[column_a] * row_values[column_b];
             }
-            
+
             // system_matrix의 (row, col)에 weight * A^T·A[column_a, column_b] 누적 계산
-            const std::uint32_t system_matrix_col = constraint.vertex_indices_ptr[column_b];
+            const std::uint32_t system_matrix_col = constraint.vertex_indices[column_b];
             const auto system_matrix_index = find_csr_index(matrix, system_matrix_row, system_matrix_col);
             atomicAdd(&matrix.values_ptr[system_matrix_index], constraint.weight * value);
         }
@@ -168,7 +168,7 @@ __global__ void accumulate_constraint_matrix_kernel(CsrMatrix matrix,
 }
 
 void build_system_matrix(CsrMatrix& matrix,
-                         const PdConstraintMatrix* constraints,
+                         const DistanceConstraint* constraints,
                          std::uint32_t constraint_count,
                          const float* masses,
                          std::uint32_t vertex_count,
