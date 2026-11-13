@@ -67,7 +67,7 @@ __global__ void accumulate_constraint_rhs_kernel(const PdConstraintMatrix* const
 
     // rhs_matrix = w · A^T · B
     // rhs += sum (w · S^T · A^T · B · p)
-    for (std::uint32_t row = 0; row < constraint.rhs_matrix.rows; ++row) {
+    for (std::uint32_t row = 0; row < constraint.vertex_count; ++row) {
         float3 rhs_value = make_float3(0.0f, 0.0f, 0.0f);
 
         for (std::uint32_t column = 0; column < constraint.rhs_matrix.columns; ++column) {

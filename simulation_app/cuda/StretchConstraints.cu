@@ -21,11 +21,12 @@ __global__ void initialize_stretch_constraints_kernel(PdConstraintMatrix* constr
     B_values_ptr[0] = 1.0f;
 
     PdConstraintMatrix& constraint = constraint_matrices_ptr[0];
-    constraint.A = {A_values_ptr, 1, 2, 2};
-    constraint.B = {B_values_ptr, 1, 1, 1};
-    constraint.rhs_matrix = {rhs_values_ptr, 2, 1, 1};
-    constraint.p_ptr = p_ptr;
     constraint.vertex_indices_ptr = vertex_indices_ptr;
+    constraint.vertex_count = 2;
+    constraint.A = {A_values_ptr, 1, constraint.vertex_count, constraint.vertex_count};
+    constraint.B = {B_values_ptr, 1, 1, 1};
+    constraint.rhs_matrix = {rhs_values_ptr, constraint.vertex_count, 1, 1};
+    constraint.p_ptr = p_ptr;
     constraint.weight = 1.0f;
 }
 

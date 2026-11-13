@@ -39,7 +39,7 @@ struct ConstraintIndexCount
 {
     __host__ __device__ std::size_t operator()(const PdConstraintMatrix& constraint) const
     {
-        return static_cast<std::size_t>(constraint.A.columns) * constraint.A.columns;
+        return static_cast<std::size_t>(constraint.vertex_count) * constraint.vertex_count;
     }
 };
 
@@ -58,8 +58,8 @@ __global__ void write_matrix_indices_kernel(const PdConstraintMatrix* constraint
         const PdConstraintMatrix& constraint = constraints[index];
         std::size_t offset = vertex_count + constraint_offsets[index];
 
-        for (std::uint32_t row = 0; row < constraint.A.columns; ++row) {
-            for (std::uint32_t column = 0; column < constraint.A.columns; ++column) {
+        for (std::uint32_t row = 0; row < constraint.vertex_count; ++row) {
+            for (std::uint32_t column = 0; column < constraint.vertex_count; ++column) {
                 indices[offset] = {constraint.vertex_indices_ptr[row], constraint.vertex_indices_ptr[column]};
                 ++offset;
             }
@@ -146,10 +146,10 @@ __global__ void accumulate_constraint_matrix_kernel(CsrMatrix matrix,
 
     // 각 constraint의 {w· S^T · A^T · A · S}를 system_matrix에 누적
     const PdConstraintMatrix& constraint = constraints[constraint_index];
-    for (std::uint32_t column_a = 0; column_a < constraint.A.columns; ++column_a) {
+    for (std::uint32_t column_a = 0; column_a < constraint.vertex_count; ++column_a) {
         const std::uint32_t system_matrix_row = constraint.vertex_indices_ptr[column_a];
 
-        for (std::uint32_t column_b = 0; column_b < constraint.A.columns; ++column_b) {
+        for (std::uint32_t column_b = 0; column_b < constraint.vertex_count; ++column_b) {
             float value = 0.0f;
             
             // (A^T·A)의 (column_a, column_b) 원소: A의 column_a와 column_b 내적

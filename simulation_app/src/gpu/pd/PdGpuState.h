@@ -26,6 +26,7 @@ struct PdConstraintMatrix
     MatrixView rhs_matrix;
     const float3* p_ptr = nullptr;
     const std::uint32_t* vertex_indices_ptr = nullptr;
+    std::uint32_t vertex_count = 0;
     float weight = 0.0f;
 };
 
