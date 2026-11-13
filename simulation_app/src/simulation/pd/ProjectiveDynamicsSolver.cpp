@@ -4,7 +4,6 @@
 #include "PdRhs.h"
 #include "StretchConstraints.h"
 #include "gpu/pd/PdGpuState.h"
-#include "utils/CudaUtils.h"
 
 ProjectiveDynamicsSolver::ProjectiveDynamicsSolver(PdGpuState& pd_state,
                                                    float gravity,
@@ -26,13 +25,13 @@ void ProjectiveDynamicsSolver::solve()
     }
 
     float4* positions = cloth_state.map_shared_buffers();
-    CUDA_CHECK(integrate_cloth(positions,
-                               cloth_state.previous_position_buffer(),
-                               cloth_state.predicted_position_buffer(),
-                               cloth_state.velocity_buffer(),
-                               vertex_count,
-                               gravity_,
-                               dt_));
+    integrate_cloth(positions,
+                    cloth_state.previous_position_buffer(),
+                    cloth_state.predicted_position_buffer(),
+                    cloth_state.velocity_buffer(),
+                    vertex_count,
+                    gravity_,
+                    dt_);
 
     for (std::uint32_t iteration = 0; iteration < iteration_count_; ++iteration) {
         project_stretch_constraints(pd_state_.constraint_p_buffer());
@@ -49,6 +48,12 @@ void ProjectiveDynamicsSolver::solve()
 
         solve_global(pd_state_.system_matrix(), pd_state_.rhs_buffer(), positions, vertex_count);
     }
+
+    update_cloth_velocities(positions,
+                            cloth_state.previous_position_buffer(),
+                            cloth_state.velocity_buffer(),
+                            vertex_count,
+                            dt_);
 
     cloth_state.unmap_shared_buffers();
 }

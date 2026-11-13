@@ -1,12 +1,15 @@
 #include "ClothIntegration.h"
+#include "utils/CudaUtils.h"
 
 #include <cuda_runtime.h>
 
 namespace {
+constexpr std::uint32_t block_size = 256;
+
 __global__ void integrate_cloth_kernel(float4* positions,
                                        float4* previous_positions,
                                        float4* predicted_positions,
-                                       float4* velocities,
+                                       const float4* velocities,
                                        std::uint32_t vertex_count,
                                        float gravity,
                                        float dt)
@@ -26,21 +29,42 @@ __global__ void integrate_cloth_kernel(float4* positions,
     position.y += velocity.y * dt;
     position.z += velocity.z * dt;
 
-    velocities[index] = velocity;
     predicted_positions[index] = position;
     positions[index] = position;
 }
+
+__global__ void update_cloth_velocities_kernel(const float4* positions,
+                                               const float4* previous_positions,
+                                               float4* velocities,
+                                               std::uint32_t vertex_count,
+                                               float inv_dt)
+{
+    const std::uint32_t index = blockIdx.x * blockDim.x + threadIdx.x;
+    if (index >= vertex_count) {
+        return;
+    }
+
+    const float4 position = positions[index];
+    const float4 previous_position = previous_positions[index];
+    float4 velocity = velocities[index];
+
+    // v = (final_pos - prev_pos) / dt
+    velocity.x = (position.x - previous_position.x) * inv_dt;
+    velocity.y = (position.y - previous_position.y) * inv_dt;
+    velocity.z = (position.z - previous_position.z) * inv_dt;
+
+    velocities[index] = velocity;
+}
 }
 
-cudaError_t integrate_cloth(float4* positions,
-                            float4* previous_positions,
-                            float4* predicted_positions,
-                            float4* velocities,
-                            std::uint32_t vertex_count,
-                            float gravity,
-                            float dt)
+void integrate_cloth(float4* positions,
+                     float4* previous_positions,
+                     float4* predicted_positions,
+                     const float4* velocities,
+                     std::uint32_t vertex_count,
+                     float gravity,
+                     float dt)
 {
-    constexpr std::uint32_t block_size = 256;
     const std::uint32_t block_count = (vertex_count - 1) / block_size + 1;
     integrate_cloth_kernel<<<block_count, block_size>>>(positions,
                                                         previous_positions,
@@ -49,5 +73,20 @@ cudaError_t integrate_cloth(float4* positions,
                                                         vertex_count,
                                                         gravity,
                                                         dt);
-    return cudaGetLastError();
+    CUDA_CHECK(cudaGetLastError());
+}
+
+void update_cloth_velocities(const float4* positions,
+                             const float4* previous_positions,
+                             float4* velocities,
+                             std::uint32_t vertex_count,
+                             float dt)
+{
+    const std::uint32_t block_count = (vertex_count - 1) / block_size + 1;
+    update_cloth_velocities_kernel<<<block_count, block_size>>>(positions,
+                                                                previous_positions,
+                                                                velocities,
+                                                                vertex_count,
+                                                                1.0f / dt);
+    CUDA_CHECK(cudaGetLastError());
 }
