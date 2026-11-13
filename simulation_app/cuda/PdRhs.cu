@@ -1,6 +1,6 @@
 #include "PdRhs.h"
+#include "gpu/pd/ConstraintTypes.h"
 #include "gpu/pd/PdClothGpuState.h"
-#include "gpu/pd/PdGpuState.h"
 #include "utils/CudaUtils.h"
 
 #include <cuda_runtime.h>

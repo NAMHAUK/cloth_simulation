@@ -89,6 +89,7 @@ add_executable(simulation_app
     src/gpu/pd/PdCharacterGpuState.h
     src/gpu/pd/PdClothGpuState.cpp
     src/gpu/pd/PdClothGpuState.h
+    src/gpu/pd/ConstraintTypes.h
     src/gpu/pd/PdGpuState.cpp
     src/gpu/pd/PdGpuState.h
     src/rendering/BackgroundGradient.cpp

@@ -1,5 +1,5 @@
 #include "StretchConstraints.h"
-#include "gpu/pd/PdGpuState.h"
+#include "gpu/pd/ConstraintTypes.h"
 #include "utils/CudaUtils.h"
 
 #include <cuda_runtime.h>
