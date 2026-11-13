@@ -7,9 +7,9 @@
 
 #include <cuda_runtime.h>
 
-void PdGpuState::initialize(float substep_dt)
+void PdGpuState::initialize(float dt)
 {
-    inv_dt_squared_ = 1.0f / (substep_dt * substep_dt);
+    inv_dt_squared_ = 1.0f / (dt * dt);
 }
 
 void PdGpuState::rebuild_buffers(const ClothGpuState& cloth_state)

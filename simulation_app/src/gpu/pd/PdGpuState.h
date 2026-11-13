@@ -38,7 +38,7 @@ public:
     PdGpuState(const PdGpuState&) = delete;
     PdGpuState& operator=(const PdGpuState&) = delete;
 
-    void initialize(float substep_dt);
+    void initialize(float dt);
     void rebuild_buffers(const ClothGpuState& cloth_state);
     void prepare_system(const std::vector<GarmentObject>& garments, const ClothGpuState& cloth_state);
     PdClothGpuState& cloth_gpu_state();

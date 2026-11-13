@@ -42,13 +42,13 @@ public:
 
 private:
     void initialize_cuda();
-    void update_character_motion(std::uint32_t motion_step_index, std::uint32_t substep, QOpenGLFunctions_4_5_Core& gl);
+    void update_character_motion(std::uint32_t motion_step_index, QOpenGLFunctions_4_5_Core& gl);
 
     SceneState& scene_;
     SceneGpuState& gpu_state_;
     SimulationParams params_;
+    const float dt_;
     PdGpuState pd_gpu_state_;
     ProjectiveDynamicsSolver projective_dynamics_solver_;
-    float substep_dt_ = 0.0f;
     bool initialized_ = false;
 };

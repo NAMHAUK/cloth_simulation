@@ -3,15 +3,11 @@
 #include "gpu/pd/PdGpuState.h"
 #include "utils/CudaUtils.h"
 
-ProjectiveDynamicsSolver::ProjectiveDynamicsSolver(PdGpuState& pd_state, float gravity)
+ProjectiveDynamicsSolver::ProjectiveDynamicsSolver(PdGpuState& pd_state, float gravity, float dt)
     : pd_state_(pd_state),
-      gravity_(gravity)
+      gravity_(gravity),
+      dt_(dt)
 {}
-
-void ProjectiveDynamicsSolver::initialize(float substep_dt)
-{
-    substep_dt_ = substep_dt;
-}
 
 void ProjectiveDynamicsSolver::solve()
 {
@@ -28,12 +24,7 @@ void ProjectiveDynamicsSolver::solve()
                                cloth_state.velocity_buffer(),
                                vertex_count,
                                gravity_,
-                               substep_dt_));
+                               dt_));
 
     cloth_state.unmap_shared_buffers();
-}
-
-void ProjectiveDynamicsSolver::release()
-{
-    substep_dt_ = 0.0f;
 }

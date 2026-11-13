@@ -12,19 +12,14 @@ PdSimulation::PdSimulation(SceneState& scene, SceneGpuState& gpu_state, Simulati
     : scene_(scene),
       gpu_state_(gpu_state),
       params_(params),
-      projective_dynamics_solver_(pd_gpu_state_, params.integration.gravity)
+      dt_(params.step.dt()),
+      projective_dynamics_solver_(pd_gpu_state_, params.integration.gravity, dt_)
 {}
 
 void PdSimulation::initialize(const std::filesystem::path&, QOpenGLFunctions_4_5_Core&)
 {
-    if (!is_valid_simulation_params(params_)) {
-        throw std::runtime_error("Cannot initialize simulation pipeline with invalid parameters.");
-    }
-
-    substep_dt_ = params_.step.dt() / static_cast<float>(params_.step.substep_count);
     initialize_cuda();
-    pd_gpu_state_.initialize(substep_dt_);
-    projective_dynamics_solver_.initialize(substep_dt_);
+    pd_gpu_state_.initialize(dt_);
     initialized_ = true;
 }
 
@@ -44,10 +39,8 @@ void PdSimulation::step(std::uint32_t motion_step_index, QOpenGLFunctions_4_5_Co
 {
     assert(is_initialized());
 
-    for (std::uint32_t substep = 0; substep < params_.step.substep_count; ++substep) {
-        update_character_motion(motion_step_index, substep + 1u, gl);
-        projective_dynamics_solver_.solve();
-    }
+    update_character_motion(motion_step_index, gl);
+    projective_dynamics_solver_.solve();
 }
 
 void PdSimulation::prepare_garments(const std::vector<const GarmentObject*>&, QOpenGLFunctions_4_5_Core& gl)
@@ -76,13 +69,11 @@ void PdSimulation::create_simulation_buffers(QOpenGLFunctions_4_5_Core& gl)
 void PdSimulation::set_character_motion(QOpenGLFunctions_4_5_Core&)
 {}
 
-void PdSimulation::update_character_motion(std::uint32_t motion_step_index,
-                                           std::uint32_t substep,
-                                           QOpenGLFunctions_4_5_Core& gl)
+void PdSimulation::update_character_motion(std::uint32_t motion_step_index, QOpenGLFunctions_4_5_Core& gl)
 {
-    const float motion_frame_position = params_.step.motion_frame_position(motion_step_index, substep);
+    const float motion_frame_position = (static_cast<float>(motion_step_index) + 1.0f) / params_.step.motion_stride();
     const float frame_alpha = scene_.motion_frame_alpha(motion_frame_position);
-    scene_.update_reference_frame_kinematics(frame_alpha, substep_dt_);
+    scene_.update_reference_frame_kinematics(frame_alpha, dt_);
     update_character_pose(frame_alpha, gl);
 }
 
@@ -113,9 +104,7 @@ bool PdSimulation::is_initialized() const
 // Release
 void PdSimulation::release(QOpenGLFunctions_4_5_Core&)
 {
-    projective_dynamics_solver_.release();
     pd_gpu_state_.release();
-    substep_dt_ = 0.0f;
     initialized_ = false;
 }
 
