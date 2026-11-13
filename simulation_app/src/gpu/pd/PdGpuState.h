@@ -51,6 +51,7 @@ public:
     const PdConstraintMatrix* constraint_matrix_buffer() const;
     std::uint32_t constraint_count() const;
     float3* constraint_p_buffer() const;
+    const CsrMatrix& system_matrix() const;
     float3* rhs_buffer() const;
 
     void release();

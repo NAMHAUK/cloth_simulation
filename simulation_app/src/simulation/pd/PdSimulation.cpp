@@ -13,7 +13,7 @@ PdSimulation::PdSimulation(SceneState& scene, SceneGpuState& gpu_state, Simulati
       gpu_state_(gpu_state),
       params_(params),
       dt_(params.step.dt()),
-      projective_dynamics_solver_(pd_gpu_state_, params.integration.gravity, dt_)
+      projective_dynamics_solver_(pd_gpu_state_, params.integration.gravity, dt_, params.step.iteration_count)
 {}
 
 void PdSimulation::initialize(const std::filesystem::path&, QOpenGLFunctions_4_5_Core&)

@@ -1,0 +1,9 @@
+#pragma once
+
+#include <cstdint>
+
+#include <vector_types.h>
+
+struct CsrMatrix;
+
+void solve_global(const CsrMatrix& matrix, const float3* rhs, float4* positions, std::uint32_t vertex_count);

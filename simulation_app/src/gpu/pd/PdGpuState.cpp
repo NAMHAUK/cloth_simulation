@@ -83,6 +83,11 @@ float3* PdGpuState::constraint_p_buffer() const
     return constraint_p_buffer_;
 }
 
+const CsrMatrix& PdGpuState::system_matrix() const
+{
+    return system_matrix_;
+}
+
 float3* PdGpuState::rhs_buffer() const
 {
     return rhs_buffer_;

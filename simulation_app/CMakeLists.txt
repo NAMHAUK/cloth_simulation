@@ -22,6 +22,8 @@ add_executable(simulation_app
     cuda/ClothIntegration.h
     cuda/ClothMass.cu
     cuda/ClothMass.h
+    cuda/PdGlobalSolve.cu
+    cuda/PdGlobalSolve.h
     cuda/PdRhs.cu
     cuda/PdRhs.h
     cuda/PdSystemMatrix.cu
