@@ -112,7 +112,7 @@ __global__ void initialize_csr_matrix_kernel(CsrMatrix matrix,
     const std::uint32_t index = blockIdx.x * blockDim.x + threadIdx.x;
     if (index < entry_count) {
         const MatrixIndex& entry = indices[index];
-        matrix.column_indices_ptr[index] = entry.column;
+        matrix.col_indices_ptr[index] = entry.column;
         matrix.values_ptr[index] = entry.row == entry.column ? masses[entry.row] * inv_dt_squared : 0.0f;
 
         if (index == 0 || indices[index - 1].row != entry.row) {
@@ -128,11 +128,11 @@ __global__ void initialize_csr_matrix_kernel(CsrMatrix matrix,
 // Constraint contributions 
 __device__ std::uint32_t find_csr_index(const CsrMatrix& matrix, std::uint32_t row, std::uint32_t column)
 {
-    const auto* column_index_ptr = cuda::std::lower_bound(matrix.column_indices_ptr + matrix.row_offsets_ptr[row],
-                                                          matrix.column_indices_ptr + matrix.row_offsets_ptr[row + 1],
+    const auto* column_index_ptr = cuda::std::lower_bound(matrix.col_indices_ptr + matrix.row_offsets_ptr[row],
+                                                          matrix.col_indices_ptr + matrix.row_offsets_ptr[row + 1],
                                                           column);
 
-    return static_cast<std::uint32_t>(column_index_ptr - matrix.column_indices_ptr);
+    return static_cast<std::uint32_t>(column_index_ptr - matrix.col_indices_ptr);
 }
 
 __global__ void accumulate_constraint_matrix_kernel(CsrMatrix matrix,
@@ -178,7 +178,7 @@ void build_system_matrix(CsrMatrix& matrix,
     const auto entry_count = static_cast<std::uint32_t>(indices.size());
 
     CUDA_CHECK(cudaMalloc(&matrix.row_offsets_ptr, (static_cast<std::size_t>(vertex_count) + 1) * sizeof(std::uint32_t)));
-    CUDA_CHECK(cudaMalloc(&matrix.column_indices_ptr, entry_count * sizeof(std::uint32_t)));
+    CUDA_CHECK(cudaMalloc(&matrix.col_indices_ptr, entry_count * sizeof(std::uint32_t)));
     CUDA_CHECK(cudaMalloc(&matrix.values_ptr, entry_count * sizeof(float)));
 
     // Initialize System matrix

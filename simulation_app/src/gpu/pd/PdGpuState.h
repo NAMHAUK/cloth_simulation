@@ -32,7 +32,7 @@ struct PdConstraintMatrix
 struct CsrMatrix
 {
     std::uint32_t* row_offsets_ptr = nullptr;
-    std::uint32_t* column_indices_ptr = nullptr;
+    std::uint32_t* col_indices_ptr = nullptr;
     float* values_ptr = nullptr;
 };
 

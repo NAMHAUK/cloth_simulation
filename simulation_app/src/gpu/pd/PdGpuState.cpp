@@ -120,10 +120,10 @@ void PdGpuState::release()
 void PdGpuState::release_system_matrix()
 {
     CUDA_CHECK(cudaFree(system_matrix_.row_offsets_ptr));
-    CUDA_CHECK(cudaFree(system_matrix_.column_indices_ptr));
+    CUDA_CHECK(cudaFree(system_matrix_.col_indices_ptr));
     CUDA_CHECK(cudaFree(system_matrix_.values_ptr));
 
     system_matrix_.row_offsets_ptr = nullptr;
-    system_matrix_.column_indices_ptr = nullptr;
+    system_matrix_.col_indices_ptr = nullptr;
     system_matrix_.values_ptr = nullptr;
 }
