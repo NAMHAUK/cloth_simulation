@@ -20,7 +20,7 @@ __global__ void compute_constraint_rhs_matrices_kernel(DistanceConstraint* const
     // rhs_matrix = w * A^T * B
     // rhs_matrix[row, column] = weight * sum_k A[k, row] * B[k, column]
     for (std::uint32_t row = 0; row < constraint.vertex_count; ++row) {
-        for (std::uint32_t column = 0; column < constraint.projection_count; ++column) {
+        for (std::uint32_t column = 0; column < constraint.projection_vector_count; ++column) {
             float value = 0.0f;
 
             for (std::uint32_t k = 0; k < constraint.matrix_row_count; ++k) {
@@ -65,7 +65,7 @@ __global__ void accumulate_constraint_rhs_kernel(const DistanceConstraint* const
     for (std::uint32_t row = 0; row < constraint.vertex_count; ++row) {
         float3 rhs_value = make_float3(0.0f, 0.0f, 0.0f);
 
-        for (std::uint32_t column = 0; column < constraint.projection_count; ++column) {
+        for (std::uint32_t column = 0; column < constraint.projection_vector_count; ++column) {
             const float coefficient = constraint.rhs_matrix[row][column];
             const float3 p = constraint.p[column];
 
