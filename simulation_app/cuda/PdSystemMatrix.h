@@ -1,12 +1,5 @@
 #pragma once
 
-#include <cstdint>
+class PdGpuState;
 
-struct CsrMatrix;
-class PdConstraints;
-
-void build_system_matrix(CsrMatrix& matrix,
-                         PdConstraints& constraints,
-                         const float* masses,
-                         std::uint32_t vertex_count,
-                         float inv_dt_squared);
+void prepare_pd_system(PdGpuState& state);

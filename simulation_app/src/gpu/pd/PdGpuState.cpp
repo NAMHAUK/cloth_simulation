@@ -31,11 +31,7 @@ void PdGpuState::prepare_system(const std::vector<GarmentObject>& garments, cons
     constraints_.initialize();
 
     release_system_matrix();
-    build_system_matrix(system_matrix_,
-                        constraints_,
-                        cloth_gpu_state_.mass_buffer(),
-                        cloth_gpu_state_.vertex_count(),
-                        inv_dt_squared_);
+    prepare_pd_system(*this);
 }
 
 // Setter

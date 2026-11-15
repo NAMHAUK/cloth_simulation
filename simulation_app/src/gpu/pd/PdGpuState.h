@@ -40,6 +40,8 @@ public:
     void release();
 
 private:
+    friend void prepare_pd_system(PdGpuState& state);
+
     void release_system_matrix();
 
     PdCharacterGpuState character_gpu_state_;

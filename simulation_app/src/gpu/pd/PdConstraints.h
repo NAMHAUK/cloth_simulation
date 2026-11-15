@@ -42,6 +42,8 @@ struct ConstraintSet final
         is_active = false;
     }
 
+    std::uint32_t matrix_entry_count() const { return count * Constraint::vertex_count * Constraint::vertex_count; }
+
     Constraint* buffer = nullptr;
     std::uint32_t count = 0;
     bool is_active = false;
