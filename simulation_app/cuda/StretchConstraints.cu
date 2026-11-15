@@ -1,58 +1,55 @@
 #include "StretchConstraints.h"
-#include "gpu/pd/PdGpuState.h"
+#include "gpu/pd/ConstraintTypes.h"
 #include "utils/CudaUtils.h"
 
 #include <cuda_runtime.h>
 
 namespace {
-__global__ void initialize_stretch_constraints_kernel(PdConstraintMatrix* constraint_matrices_ptr,
-                                                      std::uint32_t* vertex_indices_ptr,
-                                                      float* A_values_ptr,
-                                                      float* B_values_ptr,
-                                                      float* rhs_values_ptr,
-                                                      float3* p_ptr)
+constexpr std::uint32_t block_size = 256;
+
+__global__ void initialize_stretch_constraints_kernel(DistanceConstraint* constraints, std::uint32_t constraint_count)
 {
-    vertex_indices_ptr[0] = 0;
-    vertex_indices_ptr[1] = 1;
+    const std::uint32_t index = blockIdx.x * blockDim.x + threadIdx.x;
+    if (index >= constraint_count) {
+        return;
+    }
 
-    A_values_ptr[0] = 1.0f;
-    A_values_ptr[1] = -1.0f;
+    DistanceConstraint& constraint = constraints[index];
+    constraint.vertex_indices[0] = 0;
+    constraint.vertex_indices[1] = 1;
 
-    B_values_ptr[0] = 1.0f;
+    constraint.A[0][0] = 1.0f;
+    constraint.A[0][1] = -1.0f;
 
-    PdConstraintMatrix& constraint = constraint_matrices_ptr[0];
-    constraint.A = {A_values_ptr, 1, 2, 2};
-    constraint.B = {B_values_ptr, 1, 1, 1};
-    constraint.rhs_matrix = {rhs_values_ptr, 2, 1, 1};
-    constraint.p_ptr = p_ptr;
-    constraint.vertex_indices_ptr = vertex_indices_ptr;
+    constraint.B[0][0] = 1.0f;
+
     constraint.weight = 1.0f;
 }
 
-__global__ void project_stretch_constraints_kernel(float3* p_ptr)
+__global__ void project_stretch_constraints_kernel(DistanceConstraint* constraints,
+                                                   std::uint32_t constraint_count,
+                                                   const float4*)
 {
-    p_ptr[0] = make_float3(1.0f, 2.0f, 3.0f);
+    const std::uint32_t index = blockIdx.x * blockDim.x + threadIdx.x;
+    if (index >= constraint_count) {
+        return;
+    }
+
+    constraints[index].p[0] = make_float3(1.0f, 2.0f, 3.0f);
 }
 }
 
-void initialize_stretch_constraints(PdConstraintMatrix* constraint_matrices_ptr,
-                                    std::uint32_t* vertex_indices_ptr,
-                                    float* A_values_ptr,
-                                    float* B_values_ptr,
-                                    float* rhs_values_ptr,
-                                    float3* p_ptr)
+void initialize_constraints(DistanceConstraint* constraints, std::uint32_t constraint_count)
 {
-    initialize_stretch_constraints_kernel<<<1, 1>>>(constraint_matrices_ptr,
-                                                    vertex_indices_ptr,
-                                                    A_values_ptr,
-                                                    B_values_ptr,
-                                                    rhs_values_ptr,
-                                                    p_ptr);
+    initialize_stretch_constraints_kernel<<<block_count(constraint_count, block_size), block_size>>>(constraints,
+                                                                                                     constraint_count);
     CUDA_CHECK(cudaGetLastError());
 }
 
-void project_stretch_constraints(float3* p_ptr)
+void project_constraints(DistanceConstraint* constraints, std::uint32_t constraint_count, const float4* positions)
 {
-    project_stretch_constraints_kernel<<<1, 1>>>(p_ptr);
+    project_stretch_constraints_kernel<<<block_count(constraint_count, block_size), block_size>>>(constraints,
+                                                                                                  constraint_count,
+                                                                                                  positions);
     CUDA_CHECK(cudaGetLastError());
 }

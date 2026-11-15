@@ -2,6 +2,11 @@
 
 #include <cstdint>
 
+namespace simulation_limits {
+inline constexpr std::uint32_t max_vertex_count = 500'000;
+inline constexpr std::uint32_t max_constraint_count = 5'000'000;
+}
+
 enum class SimulationMode
 {
     PBD,
