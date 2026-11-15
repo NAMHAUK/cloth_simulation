@@ -27,10 +27,10 @@ public:
     PdGpuState& operator=(const PdGpuState&) = delete;
 
     void initialize(float dt);
-    void rebuild_buffers(const ClothGpuState& cloth_state);
     void prepare_system(const std::vector<GarmentObject>& garments, const ClothGpuState& cloth_state);
     PdClothGpuState& cloth_gpu_state();
     const PdClothGpuState& cloth_gpu_state() const;
+
     PdConstraints& constraints();
     const CsrMatrix& system_matrix() const;
     float3* inertia_rhs_buffer() const;
@@ -41,8 +41,6 @@ public:
 
 private:
     friend void prepare_pd_system(PdGpuState& state);
-
-    void release_system_matrix();
 
     PdCharacterGpuState character_gpu_state_;
     PdClothGpuState cloth_gpu_state_;

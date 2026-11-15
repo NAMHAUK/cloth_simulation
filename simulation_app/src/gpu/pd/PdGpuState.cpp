@@ -1,37 +1,34 @@
 #include "gpu/pd/PdGpuState.h"
 #include "PdSystemMatrix.h"
+#include "gpu/common/ClothGpuState.h"
 #include "utils/CudaUtils.h"
 
 #include <cuda_runtime.h>
 
+// Initialization
 void PdGpuState::initialize(float dt)
 {
     inv_dt_squared_ = 1.0f / (dt * dt);
 }
 
-void PdGpuState::rebuild_buffers(const ClothGpuState& cloth_state)
+void PdGpuState::prepare_system(const std::vector<GarmentObject>& garments, const ClothGpuState& cloth_state)
 {
-    cloth_gpu_state_.rebuild_buffers(cloth_state);
+    if (cloth_state.element_counts().vertex == 0) {
+        return;
+    }
 
-    CUDA_CHECK(cudaMalloc(&inertia_rhs_buffer_, sizeof(float3) * cloth_gpu_state_.vertex_count()));
-    CUDA_CHECK(cudaMalloc(&rhs_buffer_, sizeof(float3) * cloth_gpu_state_.vertex_count()));
+    cloth_gpu_state_.rebuild_buffers(cloth_state);
+    cloth_gpu_state_.initialize_masses(garments, cloth_state);
 
     constraints_.get<ConstraintIndex::Stretch>().count = 1;
     constraints_.get<ConstraintIndex::Attachment>().count = 1;
     constraints_.allocate_buffers();
-}
-
-void PdGpuState::prepare_system(const std::vector<GarmentObject>& garments, const ClothGpuState& cloth_state)
-{
-    if (cloth_gpu_state_.vertex_count() == 0) {
-        return;
-    }
-
-    cloth_gpu_state_.initialize_masses(garments, cloth_state);
     constraints_.initialize();
 
-    release_system_matrix();
     prepare_pd_system(*this);
+
+    CUDA_CHECK(cudaMalloc(&inertia_rhs_buffer_, sizeof(float3) * cloth_gpu_state_.vertex_count()));
+    CUDA_CHECK(cudaMalloc(&rhs_buffer_, sizeof(float3) * cloth_gpu_state_.vertex_count()));
 }
 
 // Setter
@@ -43,6 +40,7 @@ void PdGpuState::set_rhs(const float3* source)
                                cudaMemcpyDeviceToDevice));
 }
 
+// Accessor
 PdClothGpuState& PdGpuState::cloth_gpu_state()
 {
     return cloth_gpu_state_;
@@ -73,26 +71,20 @@ float3* PdGpuState::rhs_buffer() const
     return rhs_buffer_;
 }
 
+// Release
 void PdGpuState::release()
 {
-    release_system_matrix();
     cloth_gpu_state_.release();
     constraints_.release_buffers();
+
+    CUDA_CHECK(cudaFree(system_matrix_.row_offsets_ptr));
+    CUDA_CHECK(cudaFree(system_matrix_.col_indices_ptr));
+    CUDA_CHECK(cudaFree(system_matrix_.values_ptr));
+    system_matrix_ = {};
 
     CUDA_CHECK(cudaFree(inertia_rhs_buffer_));
     inertia_rhs_buffer_ = nullptr;
 
     CUDA_CHECK(cudaFree(rhs_buffer_));
     rhs_buffer_ = nullptr;
-}
-
-void PdGpuState::release_system_matrix()
-{
-    CUDA_CHECK(cudaFree(system_matrix_.row_offsets_ptr));
-    CUDA_CHECK(cudaFree(system_matrix_.col_indices_ptr));
-    CUDA_CHECK(cudaFree(system_matrix_.values_ptr));
-
-    system_matrix_.row_offsets_ptr = nullptr;
-    system_matrix_.col_indices_ptr = nullptr;
-    system_matrix_.values_ptr = nullptr;
 }
