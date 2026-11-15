@@ -20,6 +20,16 @@ get_filename_component(REPO_ROOT "${CMAKE_CURRENT_SOURCE_DIR}/.." ABSOLUTE)
 add_executable(simulation_app
     cuda/ClothIntegration.cu
     cuda/ClothIntegration.h
+    cuda/ClothMass.cu
+    cuda/ClothMass.h
+    cuda/PdGlobalSolve.cu
+    cuda/PdGlobalSolve.h
+    cuda/PdRhs.cu
+    cuda/PdRhs.h
+    cuda/PdSystemMatrix.cu
+    cuda/PdSystemMatrix.h
+    cuda/StretchConstraints.cu
+    cuda/StretchConstraints.h
     src/app/main.cpp
     src/asset/AssetConverter.cpp
     src/asset/AssetConverter.h
@@ -198,6 +208,9 @@ target_include_directories(garment_converter PRIVATE
 )
 
 if(MSVC)
+    set_source_files_properties(cuda/PdSystemMatrix.cu PROPERTIES
+        COMPILE_OPTIONS "-Xcompiler=/Zc:preprocessor;-Xcompiler=/Zc:__cplusplus;-Xcompiler=/permissive-"
+    )
     target_compile_options(simulation_app PRIVATE
         $<$<COMPILE_LANGUAGE:CXX>:/utf-8>
         $<$<COMPILE_LANGUAGE:CUDA>:-Xcompiler=/utf-8>

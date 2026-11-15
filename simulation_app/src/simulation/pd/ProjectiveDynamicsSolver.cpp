@@ -1,37 +1,45 @@
 #include "simulation/pd/ProjectiveDynamicsSolver.h"
 #include "ClothIntegration.h"
+#include "PdGlobalSolve.h"
+#include "PdRhs.h"
+#include "StretchConstraints.h"
 #include "gpu/pd/PdGpuState.h"
-#include "utils/CudaUtils.h"
 
-ProjectiveDynamicsSolver::ProjectiveDynamicsSolver(const PdGpuState& pd_state, float gravity)
+ProjectiveDynamicsSolver::ProjectiveDynamicsSolver(PdGpuState& pd_state,
+                                                   float gravity,
+                                                   float dt,
+                                                   std::uint32_t iteration_count)
     : pd_state_(pd_state),
-      gravity_(gravity)
+      gravity_(gravity),
+      dt_(dt),
+      inv_dt_squared_(1.0f / (dt * dt)),
+      iteration_count_(iteration_count)
 {}
-
-void ProjectiveDynamicsSolver::initialize(float substep_dt)
-{
-    substep_dt_ = substep_dt;
-}
 
 void ProjectiveDynamicsSolver::solve()
 {
-    const PdClothGpuState& cloth_state = pd_state_.cloth_gpu_state();
+    PdClothGpuState& cloth_state = pd_state_.cloth_gpu_state();
     const std::uint32_t vertex_count = cloth_state.vertex_count();
     if (vertex_count == 0) {
         return;
     }
 
     float4* positions = cloth_state.map_shared_buffers();
-    const cudaError_t result = integrate_cloth(positions,
-                                               cloth_state.velocities(),
-                                               vertex_count,
-                                               gravity_,
-                                               substep_dt_);
-    cloth_state.unmap_shared_buffers();
-    CUDA_CHECK(result);
-}
+    integrate_cloth(positions, cloth_state, gravity_, dt_);
+    compute_inertia_rhs(pd_state_.inertia_rhs_buffer(), cloth_state, inv_dt_squared_);
 
-void ProjectiveDynamicsSolver::release()
-{
-    substep_dt_ = 0.0f;
+    for (std::uint32_t iteration = 0; iteration < iteration_count_; ++iteration) {
+        project_stretch_constraints(pd_state_.constraint_p_buffer());
+
+        pd_state_.set_rhs(pd_state_.inertia_rhs_buffer());
+        accumulate_constraint_rhs(pd_state_.constraint_matrix_buffer(),
+                                  pd_state_.constraint_count(),
+                                  pd_state_.rhs_buffer());
+
+        solve_global(pd_state_.system_matrix(), pd_state_.rhs_buffer(), positions, vertex_count);
+    }
+
+    update_cloth_velocities(positions, cloth_state, dt_);
+
+    cloth_state.unmap_shared_buffers();
 }

@@ -1,20 +1,22 @@
 #pragma once
 
+#include <cstdint>
+
 class PdGpuState;
 
 class ProjectiveDynamicsSolver final
 {
 public:
-    ProjectiveDynamicsSolver(const PdGpuState& pd_state, float gravity);
+    ProjectiveDynamicsSolver(PdGpuState& pd_state, float gravity, float dt, std::uint32_t iteration_count);
     ProjectiveDynamicsSolver(const ProjectiveDynamicsSolver&) = delete;
     ProjectiveDynamicsSolver& operator=(const ProjectiveDynamicsSolver&) = delete;
 
-    void initialize(float substep_dt);
     void solve();
-    void release();
 
 private:
-    const PdGpuState& pd_state_;
+    PdGpuState& pd_state_;
     const float gravity_;
-    float substep_dt_ = 0.0f;
+    const float dt_;
+    const float inv_dt_squared_;
+    const std::uint32_t iteration_count_;
 };
