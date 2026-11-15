@@ -2,7 +2,7 @@
 
 #include "gpu/pd/PdCharacterGpuState.h"
 #include "gpu/pd/PdClothGpuState.h"
-#include "gpu/pd/ConstraintTypes.h"
+#include "gpu/pd/PdConstraints.h"
 
 #include <cstdint>
 #include <vector>
@@ -31,10 +31,7 @@ public:
     void prepare_system(const std::vector<GarmentObject>& garments, const ClothGpuState& cloth_state);
     PdClothGpuState& cloth_gpu_state();
     const PdClothGpuState& cloth_gpu_state() const;
-    DistanceConstraint* stretch_constraint_buffer() const;
-    std::uint32_t stretch_constraint_count() const;
-    AttachmentConstraint* attachment_constraint_buffer() const;
-    std::uint32_t attachment_constraint_count() const;
+    PdConstraints& constraints();
     const CsrMatrix& system_matrix() const;
     float3* inertia_rhs_buffer() const;
     float3* rhs_buffer() const;
@@ -49,10 +46,7 @@ private:
     PdClothGpuState cloth_gpu_state_;
     float inv_dt_squared_ = 0.0f;
 
-    DistanceConstraint* stretch_constraint_buffer_ = nullptr;
-    std::uint32_t stretch_constraint_count_ = 0;
-    AttachmentConstraint* attachment_constraint_buffer_ = nullptr;
-    std::uint32_t attachment_constraint_count_ = 0;
+    PdConstraints constraints_;
 
     CsrMatrix system_matrix_;
     float3* inertia_rhs_buffer_ = nullptr;

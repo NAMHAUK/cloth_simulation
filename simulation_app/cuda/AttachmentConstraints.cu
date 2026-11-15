@@ -36,24 +36,16 @@ __global__ void project_attachment_constraints_kernel(AttachmentConstraint* cons
 }
 }
 
-void initialize_attachment_constraints(AttachmentConstraint* constraints, std::uint32_t constraint_count)
+void initialize_constraints(AttachmentConstraint* constraints, std::uint32_t constraint_count)
 {
-    if (constraint_count == 0) {
-        return;
-    }
-
     initialize_attachment_constraints_kernel<<<block_count(constraint_count, block_size), block_size>>>(
         constraints,
         constraint_count);
     CUDA_CHECK(cudaGetLastError());
 }
 
-void project_attachment_constraints(AttachmentConstraint* constraints, std::uint32_t constraint_count)
+void project_constraints(AttachmentConstraint* constraints, std::uint32_t constraint_count, const float4*)
 {
-    if (constraint_count == 0) {
-        return;
-    }
-
     project_attachment_constraints_kernel<<<block_count(constraint_count, block_size), block_size>>>(constraints,
                                                                                                      constraint_count);
     CUDA_CHECK(cudaGetLastError());

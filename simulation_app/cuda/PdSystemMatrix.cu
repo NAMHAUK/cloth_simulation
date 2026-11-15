@@ -169,15 +169,15 @@ __global__ void accumulate_constraint_matrix_kernel(CsrMatrix matrix,
 }
 
 void build_system_matrix(CsrMatrix& matrix,
-                         const DistanceConstraint* constraints,
-                         std::uint32_t constraint_count,
-                         const AttachmentConstraint* attachment_constraints,
-                         std::uint32_t attachment_constraint_count,
+                         PdConstraints& constraints,
                          const float* masses,
                          std::uint32_t vertex_count,
                          float inv_dt_squared)
 {
-    const auto indices = build_system_matrix_indices(constraints, constraint_count, vertex_count);
+    const auto& stretch_constraints = constraints.get<ConstraintIndex::Stretch>();
+    const auto indices = build_system_matrix_indices(stretch_constraints.buffer,
+                                                     stretch_constraints.count,
+                                                     vertex_count);
     const auto entry_count = static_cast<std::uint32_t>(indices.size());
 
     CUDA_CHECK(cudaMalloc(&matrix.row_offsets_ptr, (static_cast<std::size_t>(vertex_count) + 1) * sizeof(std::uint32_t)));
@@ -195,16 +195,11 @@ void build_system_matrix(CsrMatrix& matrix,
     CUDA_CHECK(cudaGetLastError());
 
     // system matrix에 constraint 항 반영
-    accumulate_constraint_matrix_kernel<<<block_count(constraint_count, block_size), block_size>>>(matrix,
-                                                                                                   constraints,
-                                                                                                   constraint_count);
-    CUDA_CHECK(cudaGetLastError());
-
-    if (attachment_constraint_count != 0) {
-        accumulate_constraint_matrix_kernel<<<block_count(attachment_constraint_count, block_size), block_size>>>(
+    constraints.execute_each([&](const auto& constraint_set) {
+        accumulate_constraint_matrix_kernel<<<block_count(constraint_set.count, block_size), block_size>>>(
             matrix,
-            attachment_constraints,
-            attachment_constraint_count);
+            constraint_set.buffer,
+            constraint_set.count);
         CUDA_CHECK(cudaGetLastError());
-    }
+    });
 }

@@ -1,6 +1,7 @@
 #include "PdRhs.h"
 #include "gpu/pd/ConstraintTypes.h"
 #include "gpu/pd/PdClothGpuState.h"
+#include "gpu/pd/PdConstraints.h"
 #include "utils/CudaUtils.h"
 
 #include <cuda_runtime.h>
@@ -18,8 +19,8 @@ __global__ void compute_constraint_rhs_matrices_kernel(Constraint* constraints, 
 
     Constraint& constraint = constraints[index];
 
-    // rhs_matrix = w * A^T * B
-    // rhs_matrix[row, column] = weight * sum_k A[k, row] * B[k, column]
+    // rhs_matrix = w * Aᵀ * B
+    // rhs_matrix[row, column] = weight * (Aᵀ[row, :]·B[:, column])
     for (std::uint32_t row = 0; row < constraint.vertex_count; ++row) {
         for (std::uint32_t column = 0; column < constraint.projection_vector_count; ++column) {
             float value = 0.0f;
@@ -84,20 +85,15 @@ __global__ void accumulate_constraint_rhs_kernel(const Constraint* constraints,
 }
 }
 
-template <typename Constraint>
-void compute_constraint_rhs_matrices(Constraint* constraints, std::uint32_t constraint_count)
+void compute_constraint_rhs_matrices(PdConstraints& constraints)
 {
-    if (constraint_count == 0) {
-        return;
-    }
-
-    compute_constraint_rhs_matrices_kernel<<<block_count(constraint_count, block_size), block_size>>>(constraints,
-                                                                                                      constraint_count);
-    CUDA_CHECK(cudaGetLastError());
+    constraints.execute_each([](const auto& constraint_set) {
+        compute_constraint_rhs_matrices_kernel<<<block_count(constraint_set.count, block_size), block_size>>>(
+            constraint_set.buffer,
+            constraint_set.count);
+        CUDA_CHECK(cudaGetLastError());
+    });
 }
-
-template void compute_constraint_rhs_matrices<DistanceConstraint>(DistanceConstraint*, std::uint32_t);
-template void compute_constraint_rhs_matrices<AttachmentConstraint>(AttachmentConstraint*, std::uint32_t);
 
 void compute_inertia_rhs(float3* rhs, const PdClothGpuState& cloth_state, float inv_dt_squared)
 {
@@ -111,18 +107,13 @@ void compute_inertia_rhs(float3* rhs, const PdClothGpuState& cloth_state, float 
     CUDA_CHECK(cudaGetLastError());
 }
 
-template <typename Constraint>
-void accumulate_constraint_rhs(const Constraint* constraints, std::uint32_t constraint_count, float3* rhs)
+void accumulate_constraint_rhs(PdConstraints& constraints, float3* rhs)
 {
-    if (constraint_count == 0) {
-        return;
-    }
-
-    accumulate_constraint_rhs_kernel<<<block_count(constraint_count, block_size), block_size>>>(constraints,
-                                                                                                constraint_count,
-                                                                                                rhs);
-    CUDA_CHECK(cudaGetLastError());
+    constraints.execute_each([rhs](const auto& constraint_set) {
+        accumulate_constraint_rhs_kernel<<<block_count(constraint_set.count, block_size), block_size>>>(
+            constraint_set.buffer,
+            constraint_set.count,
+            rhs);
+        CUDA_CHECK(cudaGetLastError());
+    });
 }
-
-template void accumulate_constraint_rhs<DistanceConstraint>(const DistanceConstraint*, std::uint32_t, float3*);
-template void accumulate_constraint_rhs<AttachmentConstraint>(const AttachmentConstraint*, std::uint32_t, float3*);
