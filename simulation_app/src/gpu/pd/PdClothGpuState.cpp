@@ -2,14 +2,20 @@
 #include "ClothMass.h"
 #include "gpu/common/ClothGpuState.h"
 #include "simulation/SceneState.h"
+#include "simulation/SimulationParams.h"
 #include "utils/CudaUtils.h"
 
 #include <cstddef>
+#include <stdexcept>
 
 #include <cuda_gl_interop.h>
 
 void PdClothGpuState::rebuild_buffers(const ClothGpuState& cloth_state)
 {
+    if (cloth_state.element_counts().vertex > simulation_limits::max_vertex_count) {
+        throw std::length_error("Cloth vertex count exceeds the simulation limit.");
+    }
+
     vertex_count_ = cloth_state.element_counts().vertex;
 
     CUDA_CHECK(cudaMalloc(reinterpret_cast<void**>(&previous_position_buffer_), sizeof(float4) * vertex_count_));

@@ -4,9 +4,11 @@
 #include "PdRhs.h"
 #include "StretchConstraints.h"
 #include "gpu/pd/ConstraintTypes.h"
+#include "simulation/SimulationParams.h"
 #include "utils/CudaUtils.h"
 
 #include <cstdint>
+#include <stdexcept>
 #include <tuple>
 
 #include <cuda_runtime.h>
@@ -73,6 +75,8 @@ public:
 
     void allocate_buffers()
     {
+        validate_constraint_count();
+
         for_each_constraint([](auto& constraints) {
             constraints.is_active = false;
             constraints.allocate_buffer();
@@ -86,6 +90,16 @@ public:
     }
 
 private:
+    void validate_constraint_count()
+    {
+        std::uint64_t constraint_count = 0;
+        for_each_constraint([&](const auto& constraints) { constraint_count += constraints.count; });
+        
+        if (constraint_count > simulation_limits::max_constraint_count) {
+            throw std::length_error("Total constraint count exceeds the simulation limit.");
+        }
+    }
+
     template <typename Function>
     void for_each_constraint(Function&& function)
     {
