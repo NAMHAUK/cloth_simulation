@@ -31,42 +31,16 @@ struct GarmentAssetCounts final
 
 // validation
 
-bool are_valid_constraint_color_states(const std::vector<ConstraintColorState>& color_states,
-                                       std::size_t constraint_count)
-{
-    std::size_t expected_start_index = 0;
-    for (const ConstraintColorState& color_state : color_states) {
-        if (color_state.count == 0u || color_state.start_index != expected_start_index) {
-            return false;
-        }
-        expected_start_index += color_state.count;
-    }
-    return expected_start_index == constraint_count;
-}
-
-bool are_valid_edges(const std::vector<MeshEdge>& edges, std::uint32_t vertex_count)
-{
-    for (const auto& edge : edges) {
-        const bool has_valid_vertex_indices = edge.vertex_a < vertex_count && edge.vertex_b < vertex_count;
-        const bool different_vertices = edge.vertex_a != edge.vertex_b;
-        if (!has_valid_vertex_indices || !different_vertices) {
-            return false;
-        }
-    }
-    return true;
-}
-
-bool are_valid_vertex_indices(const std::vector<std::uint32_t>& indices, std::uint32_t vertex_count)
+void validate_indices(const std::vector<std::uint32_t>& indices, std::size_t count)
 {
     for (std::uint32_t index : indices) {
-        if (index >= vertex_count) {
-            return false;
+        if (index >= count) {
+            throw std::runtime_error("Asset index out of range");
         }
     }
-    return true;
 }
 
-bool are_valid_orientations(const std::vector<float>& orientations)
+void validate_orientations(const std::vector<float>& orientations)
 {
     for (std::size_t index = 0; index < orientations.size(); index += quat_components) {
         const float x = orientations[index];
@@ -75,14 +49,17 @@ bool are_valid_orientations(const std::vector<float>& orientations)
         const float w = orientations[index + 3u];
         const float length_squared = x * x + y * y + z * z + w * w;
         if (!std::isfinite(length_squared) || length_squared <= 0.0f) {
-            return false;
+            throw std::runtime_error("Motion asset contains invalid orientations");
         }
     }
-    return true;
 }
 
-bool are_valid_triangles(const std::vector<TriangleVertexIndices>& vertex_indices, std::uint32_t vertex_count)
+void validate_triangles(const std::vector<TriangleVertexIndices>& vertex_indices, std::size_t vertex_count)
 {
+    if (vertex_indices.empty()) {
+        throw std::runtime_error("Asset contains no triangles");
+    }
+
     for (const TriangleVertexIndices& triangle : vertex_indices) {
         if (triangle.a >= vertex_count ||
             triangle.b >= vertex_count ||
@@ -90,19 +67,52 @@ bool are_valid_triangles(const std::vector<TriangleVertexIndices>& vertex_indice
             triangle.a == triangle.b ||
             triangle.b == triangle.c ||
             triangle.c == triangle.a) {
-            return false;
+            throw std::runtime_error("Invalid triangle vertex indices");
         }
     }
-    return true;
 }
 
-bool are_valid_distance_constraints(const GarmentDistanceConstraints& constraints, std::uint32_t vertex_count)
+void validate_triangle_coloring(const GarmentMesh& mesh)
 {
-    return !constraints.colorized_edges.empty() &&
-           !constraints.color_states.empty() &&
-           constraints.colorized_edges.size() == constraints.rest_lengths.size() &&
-           are_valid_edges(constraints.colorized_edges, vertex_count) &&
-           are_valid_constraint_color_states(constraints.color_states, constraints.colorized_edges.size());
+    const auto colored_triangle_count = std::accumulate(mesh.triangle_color_counts.begin(),
+                                                        mesh.triangle_color_counts.end(),
+                                                        std::uint64_t{0});
+    if (colored_triangle_count != mesh.colorized_triangle_indices.size()) {
+        throw std::runtime_error("Invalid garment triangle color counts");
+    }
+
+    validate_indices(mesh.colorized_triangle_indices, mesh.triangle_vertex_indices.size());
+}
+
+void validate_distance_constraints(const GarmentDistanceConstraints& constraints, std::size_t vertex_count)
+{
+    if (constraints.colorized_edges.empty() || constraints.colorized_edges.size() != constraints.rest_lengths.size()) {
+        throw std::runtime_error("Invalid garment constraint counts");
+    }
+
+    for (const auto& edge : constraints.colorized_edges) {
+        if (edge.vertex_a >= vertex_count || edge.vertex_b >= vertex_count || edge.vertex_a == edge.vertex_b) {
+            throw std::runtime_error("Invalid edge vertex indices");
+        }
+    }
+
+    for (float rest_length : constraints.rest_lengths) {
+        if (!std::isfinite(rest_length) || rest_length <= 0.0f) {
+            throw std::runtime_error("Invalid garment distance constraint.");
+        }
+    }
+
+    // Validate color ranges.
+    std::size_t expected_start_index = 0;
+    for (const ConstraintColorState& color_state : constraints.color_states) {
+        if (color_state.count == 0u || color_state.start_index != expected_start_index) {
+            throw std::runtime_error("Invalid constraint color range");
+        }
+        expected_start_index += color_state.count;
+    }
+    if (expected_start_index != constraints.colorized_edges.size()) {
+        throw std::runtime_error("Invalid constraint color count");
+    }
 }
 
 void validate_motion_asset_file_size(const std::filesystem::path& path, const CharacterMotion& motion)
@@ -155,9 +165,7 @@ void validate_character_motion(const CharacterMotion& motion)
         throw std::runtime_error("Invalid motion asset header");
     }
 
-    if (!are_valid_triangles(motion.triangle_vertex_indices, motion.vertex_count)) {
-        throw std::runtime_error("Motion asset contains invalid triangle indices");
-    }
+    validate_triangles(motion.triangle_vertex_indices, motion.vertex_count);
 
     if (!is_finite_values(motion.pelvis_positions) ||
         !is_finite_values(motion.torso_positions) ||
@@ -165,91 +173,52 @@ void validate_character_motion(const CharacterMotion& motion)
         throw std::runtime_error("Motion asset contains non-finite values");
     }
 
-    if (!are_valid_orientations(motion.pelvis_orientations) || !are_valid_orientations(motion.torso_orientations)) {
-        throw std::runtime_error("Motion asset contains invalid orientations");
-    }
+    validate_orientations(motion.pelvis_orientations);
+    validate_orientations(motion.torso_orientations);
 }
 
-void validate_garment_geometry(const GarmentMesh& garment_mesh)
+void validate_garment_geometry(const GarmentMesh& mesh)
 {
-    for (const auto& [vertex_a, vertex_b, vertex_c] : garment_mesh.triangle_vertex_indices) {
-        const glm::dvec3 position_a = garment_mesh.vertex_positions[vertex_a];
-        const glm::dvec3 position_b = garment_mesh.vertex_positions[vertex_b];
-        const glm::dvec3 position_c = garment_mesh.vertex_positions[vertex_c];
+    for (const auto& [vertex_a, vertex_b, vertex_c] : mesh.triangle_vertex_indices) {
+        const glm::dvec3 position_a = mesh.vertex_positions[vertex_a];
+        const glm::dvec3 position_b = mesh.vertex_positions[vertex_b];
+        const glm::dvec3 position_c = mesh.vertex_positions[vertex_c];
 
         if (glm::cross(position_b - position_a, position_c - position_a) == glm::dvec3{0.0}) {
             throw std::runtime_error("Degenerate garment rest triangle.");
         }
     }
 
-    // Stretch constraints
-    for (float rest_length : garment_mesh.stretch_constraints.rest_lengths) {
-        if (!std::isfinite(rest_length) || rest_length <= 0.0f) {
-            throw std::runtime_error("Invalid garment distance constraint.");
-        }
-    }
-
     // Bending constraints
-    for (std::size_t index = 0; index < garment_mesh.bending_constraints.colorized_edges.size(); ++index) {
-        const float rest_length = garment_mesh.bending_constraints.rest_lengths[index];
-        const auto& [vertex_a, vertex_b] = garment_mesh.bending_constraints.colorized_edges[index];
-
-        if (!std::isfinite(rest_length) ||
-            rest_length <= 0.0f ||
-            garment_mesh.vertex_positions[vertex_a] == garment_mesh.vertex_positions[vertex_b]) {
+    for (const auto& [vertex_a, vertex_b] : mesh.bending_constraints.colorized_edges) {
+        if (mesh.vertex_positions[vertex_a] == mesh.vertex_positions[vertex_b]) {
             throw std::runtime_error("Invalid garment distance constraint.");
         }
     }
 }
 
-void validate_garment_mesh(const GarmentMesh& garment_mesh)
+void validate_garment_mesh(const GarmentMesh& mesh)
 {
-    const bool has_valid_garment_category = garment_mesh.garment_category == GarmentCategory::Top ||
-                                            garment_mesh.garment_category == GarmentCategory::Bottom ||
-                                            garment_mesh.garment_category == GarmentCategory::FullBody;
-    if (!has_valid_garment_category) {
+    if (mesh.garment_category != GarmentCategory::Top &&
+        mesh.garment_category != GarmentCategory::Bottom &&
+        mesh.garment_category != GarmentCategory::FullBody) {
         throw std::runtime_error("Invalid garment category");
     }
 
-    if (garment_mesh.vertex_positions.empty() ||
-        !std::all_of(garment_mesh.vertex_positions.begin(), garment_mesh.vertex_positions.end(), is_finite_vec3)) {
+    if (mesh.vertex_positions.empty() ||
+        !std::all_of(mesh.vertex_positions.begin(), mesh.vertex_positions.end(), is_finite_vec3)) {
         throw std::runtime_error("Invalid garment vertices");
     }
 
-    const auto vertex_count = static_cast<std::uint32_t>(garment_mesh.vertex_positions.size());
+    const auto vertex_count = mesh.vertex_positions.size();
+    validate_triangles(mesh.triangle_vertex_indices, vertex_count);
+    validate_triangle_coloring(mesh);
+    validate_distance_constraints(mesh.stretch_constraints, vertex_count);
+    validate_distance_constraints(mesh.bending_constraints, vertex_count);
+    validate_indices(mesh.attachment_vertex_indices, vertex_count);
+    validate_garment_geometry(mesh);
 
-    if (garment_mesh.triangle_vertex_indices.empty() ||
-        !are_valid_triangles(garment_mesh.triangle_vertex_indices, vertex_count)) {
-        throw std::runtime_error("Invalid garment triangles");
-    }
-
-    const auto colored_triangle_count = std::accumulate(garment_mesh.triangle_color_counts.begin(),
-                                                        garment_mesh.triangle_color_counts.end(),
-                                                        std::uint64_t{0});
-    if (colored_triangle_count != garment_mesh.colorized_triangle_indices.size()) {
-        throw std::runtime_error("Invalid garment triangle color counts");
-    }
-
-    for (std::uint32_t triangle_index : garment_mesh.colorized_triangle_indices) {
-        if (triangle_index >= garment_mesh.triangle_vertex_indices.size()) {
-            throw std::runtime_error("Invalid garment colored triangle index");
-        }
-    }
-
-    if (!are_valid_distance_constraints(garment_mesh.stretch_constraints, vertex_count) ||
-        !are_valid_distance_constraints(garment_mesh.bending_constraints, vertex_count)) {
-        throw std::runtime_error("Invalid garment constraints");
-    }
-
-    validate_garment_geometry(garment_mesh);
-
-    if (!are_valid_vertex_indices(garment_mesh.attachment_vertex_indices, vertex_count)) {
-        throw std::runtime_error("Invalid garment attachment vertices");
-    }
-
-    if (!is_finite_vec3(garment_mesh.bounds_center) ||
-        !std::isfinite(garment_mesh.bounds_radius) ||
-        garment_mesh.bounds_radius <= 0.0f) {
+    if (!is_finite_vec3(mesh.bounds_center) || !std::isfinite(mesh.bounds_radius) || mesh.bounds_radius <= 0.0f) {
         throw std::runtime_error("Invalid garment bounds");
     }
 }
@@ -353,25 +322,14 @@ void write_binary_values(std::ofstream& output, const std::vector<T>& values)
 
 void write_garment_asset(std::ofstream& output, const GarmentMesh& garment_mesh)
 {
-    const GarmentAssetCounts counts{
-        static_cast<std::uint32_t>(garment_mesh.vertex_positions.size()),
-        static_cast<std::uint32_t>(garment_mesh.triangle_vertex_indices.size()),
-        static_cast<std::uint32_t>(garment_mesh.triangle_color_counts.size()),
-        static_cast<std::uint32_t>(garment_mesh.stretch_constraints.colorized_edges.size()),
-        static_cast<std::uint32_t>(garment_mesh.stretch_constraints.color_states.size()),
-        static_cast<std::uint32_t>(garment_mesh.bending_constraints.colorized_edges.size()),
-        static_cast<std::uint32_t>(garment_mesh.bending_constraints.color_states.size()),
-        static_cast<std::uint32_t>(garment_mesh.attachment_vertex_indices.size()),
-    };
-
-    write_binary_value(output, counts.vertex_count);
-    write_binary_value(output, counts.triangle_count);
-    write_binary_value(output, counts.triangle_color_count);
-    write_binary_value(output, counts.stretch_edge_count);
-    write_binary_value(output, counts.stretch_color_state_count);
-    write_binary_value(output, counts.bending_edge_count);
-    write_binary_value(output, counts.bending_color_state_count);
-    write_binary_value(output, counts.attachment_vertex_count);
+    write_binary_value<std::uint32_t>(output, garment_mesh.vertex_positions.size());
+    write_binary_value<std::uint32_t>(output, garment_mesh.triangle_vertex_indices.size());
+    write_binary_value<std::uint32_t>(output, garment_mesh.triangle_color_counts.size());
+    write_binary_value<std::uint32_t>(output, garment_mesh.stretch_constraints.colorized_edges.size());
+    write_binary_value<std::uint32_t>(output, garment_mesh.stretch_constraints.color_states.size());
+    write_binary_value<std::uint32_t>(output, garment_mesh.bending_constraints.colorized_edges.size());
+    write_binary_value<std::uint32_t>(output, garment_mesh.bending_constraints.color_states.size());
+    write_binary_value<std::uint32_t>(output, garment_mesh.attachment_vertex_indices.size());
     write_binary_value(output, garment_mesh.garment_category);
     write_binary_value(output, garment_mesh.bounds_center.x);
     write_binary_value(output, garment_mesh.bounds_center.y);
