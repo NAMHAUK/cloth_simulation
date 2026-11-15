@@ -1,4 +1,5 @@
 #include "PdRhs.h"
+#include "gpu/pd/PdClothGpuState.h"
 #include "gpu/pd/PdGpuState.h"
 #include "utils/CudaUtils.h"
 
@@ -96,17 +97,15 @@ void compute_constraint_rhs_matrices(const PdConstraintMatrix* constraints,
     CUDA_CHECK(cudaGetLastError());
 }
 
-void compute_inertia_rhs(float3* rhs,
-                         const float* masses,
-                         const float4* predicted_positions,
-                         std::uint32_t vertex_count,
-                         float inv_dt_squared)
+void compute_inertia_rhs(float3* rhs, const PdClothGpuState& cloth_state, float inv_dt_squared)
 {
-    compute_inertia_rhs_kernel<<<block_count(vertex_count, block_size), block_size>>>(rhs,
-                                                                                      masses,
-                                                                                      predicted_positions,
-                                                                                      vertex_count,
-                                                                                      inv_dt_squared);
+    const std::uint32_t vertex_count = cloth_state.vertex_count();
+    compute_inertia_rhs_kernel<<<block_count(vertex_count, block_size), block_size>>>(
+        rhs,
+        cloth_state.mass_buffer(),
+        cloth_state.predicted_position_buffer(),
+        vertex_count,
+        inv_dt_squared);
     CUDA_CHECK(cudaGetLastError());
 }
 

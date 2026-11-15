@@ -1,4 +1,5 @@
 #include "ClothIntegration.h"
+#include "gpu/pd/PdClothGpuState.h"
 #include "utils/CudaUtils.h"
 
 #include <cuda_runtime.h>
@@ -57,34 +58,28 @@ __global__ void update_cloth_velocities_kernel(const float4* positions,
 }
 }
 
-void integrate_cloth(float4* positions,
-                     float4* previous_positions,
-                     float4* predicted_positions,
-                     const float4* velocities,
-                     std::uint32_t vertex_count,
-                     float gravity,
-                     float dt)
+void integrate_cloth(float4* positions, const PdClothGpuState& cloth_state, float gravity, float dt)
 {
-    integrate_cloth_kernel<<<block_count(vertex_count, block_size), block_size>>>(positions,
-                                                                                  previous_positions,
-                                                                                  predicted_positions,
-                                                                                  velocities,
-                                                                                  vertex_count,
-                                                                                  gravity,
-                                                                                  dt);
+    const std::uint32_t vertex_count = cloth_state.vertex_count();
+    integrate_cloth_kernel<<<block_count(vertex_count, block_size), block_size>>>(
+        positions,
+        cloth_state.previous_position_buffer(),
+        cloth_state.predicted_position_buffer(),
+        cloth_state.velocity_buffer(),
+        vertex_count,
+        gravity,
+        dt);
     CUDA_CHECK(cudaGetLastError());
 }
 
-void update_cloth_velocities(const float4* positions,
-                             const float4* previous_positions,
-                             float4* velocities,
-                             std::uint32_t vertex_count,
-                             float dt)
+void update_cloth_velocities(const float4* positions, const PdClothGpuState& cloth_state, float dt)
 {
-    update_cloth_velocities_kernel<<<block_count(vertex_count, block_size), block_size>>>(positions,
-                                                                                          previous_positions,
-                                                                                          velocities,
-                                                                                          vertex_count,
-                                                                                          1.0f / dt);
+    const std::uint32_t vertex_count = cloth_state.vertex_count();
+    update_cloth_velocities_kernel<<<block_count(vertex_count, block_size), block_size>>>(
+        positions,
+        cloth_state.previous_position_buffer(),
+        cloth_state.velocity_buffer(),
+        vertex_count,
+        1.0f / dt);
     CUDA_CHECK(cudaGetLastError());
 }

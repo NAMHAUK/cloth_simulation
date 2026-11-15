@@ -25,22 +25,12 @@ void ProjectiveDynamicsSolver::solve()
     }
 
     float4* positions = cloth_state.map_shared_buffers();
-    integrate_cloth(positions,
-                    cloth_state.previous_position_buffer(),
-                    cloth_state.predicted_position_buffer(),
-                    cloth_state.velocity_buffer(),
-                    vertex_count,
-                    gravity_,
-                    dt_);
+    integrate_cloth(positions, cloth_state, gravity_, dt_);
 
     for (std::uint32_t iteration = 0; iteration < iteration_count_; ++iteration) {
         project_stretch_constraints(pd_state_.constraint_p_buffer());
 
-        compute_inertia_rhs(pd_state_.rhs_buffer(),
-                            cloth_state.mass_buffer(),
-                            cloth_state.predicted_position_buffer(),
-                            vertex_count,
-                            inv_dt_squared_);
+        compute_inertia_rhs(pd_state_.rhs_buffer(), cloth_state, inv_dt_squared_);
 
         accumulate_constraint_rhs(pd_state_.constraint_matrix_buffer(),
                                   pd_state_.constraint_count(),
@@ -49,11 +39,7 @@ void ProjectiveDynamicsSolver::solve()
         solve_global(pd_state_.system_matrix(), pd_state_.rhs_buffer(), positions, vertex_count);
     }
 
-    update_cloth_velocities(positions,
-                            cloth_state.previous_position_buffer(),
-                            cloth_state.velocity_buffer(),
-                            vertex_count,
-                            dt_);
+    update_cloth_velocities(positions, cloth_state, dt_);
 
     cloth_state.unmap_shared_buffers();
 }
