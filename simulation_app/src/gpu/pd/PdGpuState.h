@@ -52,7 +52,9 @@ public:
     std::uint32_t constraint_count() const;
     float3* constraint_p_buffer() const;
     const CsrMatrix& system_matrix() const;
+    float3* inertia_rhs_buffer() const;
     float3* rhs_buffer() const;
+    void set_rhs(const float3* source);
 
     void release();
 
@@ -79,5 +81,6 @@ private:
     std::uint32_t total_constraint_count_ = 0;
 
     CsrMatrix system_matrix_;
+    float3* inertia_rhs_buffer_ = nullptr;
     float3* rhs_buffer_ = nullptr;
 };

@@ -26,12 +26,12 @@ void ProjectiveDynamicsSolver::solve()
 
     float4* positions = cloth_state.map_shared_buffers();
     integrate_cloth(positions, cloth_state, gravity_, dt_);
+    compute_inertia_rhs(pd_state_.inertia_rhs_buffer(), cloth_state, inv_dt_squared_);
 
     for (std::uint32_t iteration = 0; iteration < iteration_count_; ++iteration) {
         project_stretch_constraints(pd_state_.constraint_p_buffer());
 
-        compute_inertia_rhs(pd_state_.rhs_buffer(), cloth_state, inv_dt_squared_);
-
+        pd_state_.set_rhs(pd_state_.inertia_rhs_buffer());
         accumulate_constraint_rhs(pd_state_.constraint_matrix_buffer(),
                                   pd_state_.constraint_count(),
                                   pd_state_.rhs_buffer());
