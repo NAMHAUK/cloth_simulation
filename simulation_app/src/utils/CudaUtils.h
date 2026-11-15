@@ -1,9 +1,15 @@
 #pragma once
 
+#include <cstdint>
 #include <stdexcept>
 #include <string>
 
 #include <cuda_runtime_api.h>
+
+constexpr std::uint32_t block_count(std::uint32_t element_count, std::uint32_t block_size)
+{
+    return (element_count - 1) / block_size + 1;
+}
 
 inline void check_cuda_errors(cudaError_t result, const char* call, const char* file, int line)
 {

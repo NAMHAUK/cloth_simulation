@@ -90,8 +90,9 @@ void compute_constraint_rhs_matrices(const PdConstraintMatrix* constraints,
                                      std::uint32_t constraint_count,
                                      float* rhs_values_ptr)
 {
-    const std::uint32_t block_count = (constraint_count - 1) / block_size + 1;
-    compute_constraint_rhs_matrices_kernel<<<block_count, block_size>>>(constraints, constraint_count, rhs_values_ptr);
+    compute_constraint_rhs_matrices_kernel<<<block_count(constraint_count, block_size), block_size>>>(constraints,
+                                                                                                      constraint_count,
+                                                                                                      rhs_values_ptr);
     CUDA_CHECK(cudaGetLastError());
 }
 
@@ -101,18 +102,18 @@ void compute_inertia_rhs(float3* rhs,
                          std::uint32_t vertex_count,
                          float inv_dt_squared)
 {
-    const std::uint32_t block_count = (vertex_count - 1) / block_size + 1;
-    compute_inertia_rhs_kernel<<<block_count, block_size>>>(rhs,
-                                                            masses,
-                                                            predicted_positions,
-                                                            vertex_count,
-                                                            inv_dt_squared);
+    compute_inertia_rhs_kernel<<<block_count(vertex_count, block_size), block_size>>>(rhs,
+                                                                                      masses,
+                                                                                      predicted_positions,
+                                                                                      vertex_count,
+                                                                                      inv_dt_squared);
     CUDA_CHECK(cudaGetLastError());
 }
 
 void accumulate_constraint_rhs(const PdConstraintMatrix* constraints, std::uint32_t constraint_count, float3* rhs)
 {
-    const std::uint32_t block_count = (constraint_count - 1) / block_size + 1;
-    accumulate_constraint_rhs_kernel<<<block_count, block_size>>>(constraints, constraint_count, rhs);
+    accumulate_constraint_rhs_kernel<<<block_count(constraint_count, block_size), block_size>>>(constraints,
+                                                                                                constraint_count,
+                                                                                                rhs);
     CUDA_CHECK(cudaGetLastError());
 }

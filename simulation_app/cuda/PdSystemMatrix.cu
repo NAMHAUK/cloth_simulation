@@ -86,13 +86,13 @@ thrust::device_vector<MatrixIndex> build_system_matrix_indices(const PdConstrain
     }
 
     thrust::device_vector<MatrixIndex> indices(index_count);
-    const std::uint32_t block_count = (std::max(vertex_count, constraint_count) - 1) / block_size + 1;
 
-    write_matrix_indices_kernel<<<block_count, block_size>>>(constraints,
-                                                             constraint_count,
-                                                             vertex_count,
-                                                             thrust::raw_pointer_cast(constraint_offsets.data()),
-                                                             thrust::raw_pointer_cast(indices.data()));
+    write_matrix_indices_kernel<<<block_count(std::max(vertex_count, constraint_count), block_size), block_size>>>(
+        constraints,
+        constraint_count,
+        vertex_count,
+        thrust::raw_pointer_cast(constraint_offsets.data()),
+        thrust::raw_pointer_cast(indices.data()));
     CUDA_CHECK(cudaGetLastError());
 
     thrust::sort(indices.begin(), indices.end());
@@ -182,17 +182,18 @@ void build_system_matrix(CsrMatrix& matrix,
     CUDA_CHECK(cudaMalloc(&matrix.values_ptr, entry_count * sizeof(float)));
 
     // Initialize System matrix
-    const std::uint32_t csr_block_count = (entry_count - 1) / block_size + 1;
-    initialize_csr_matrix_kernel<<<csr_block_count, block_size>>>(matrix,
-                                                                  thrust::raw_pointer_cast(indices.data()),
-                                                                  entry_count,
-                                                                  masses,
-                                                                  vertex_count,
-                                                                  inv_dt_squared);
+    initialize_csr_matrix_kernel<<<block_count(entry_count, block_size), block_size>>>(
+        matrix,
+        thrust::raw_pointer_cast(indices.data()),
+        entry_count,
+        masses,
+        vertex_count,
+        inv_dt_squared);
     CUDA_CHECK(cudaGetLastError());
 
     // system matrix에 constraint 항 반영
-    const std::uint32_t constraint_block_count = (constraint_count - 1) / block_size + 1;
-    accumulate_constraint_matrix_kernel<<<constraint_block_count, block_size>>>(matrix, constraints, constraint_count);
+    accumulate_constraint_matrix_kernel<<<block_count(constraint_count, block_size), block_size>>>(matrix,
+                                                                                                   constraints,
+                                                                                                   constraint_count);
     CUDA_CHECK(cudaGetLastError());
 }
