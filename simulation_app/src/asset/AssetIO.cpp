@@ -8,6 +8,7 @@
 #include <filesystem>
 #include <fstream>
 #include <iostream>
+#include <numeric>
 #include <stdexcept>
 #include <vector>
 
@@ -20,6 +21,7 @@ struct GarmentAssetCounts final
 {
     std::uint32_t vertex_count = 0;
     std::uint32_t triangle_count = 0;
+    std::uint32_t triangle_color_count = 0;
     std::uint32_t stretch_edge_count = 0;
     std::uint32_t stretch_color_state_count = 0;
     std::uint32_t bending_edge_count = 0;
@@ -124,12 +126,14 @@ void validate_motion_asset_file_size(const std::filesystem::path& path, const Ch
 
 void validate_garment_asset_file_size(const std::filesystem::path& path, const GarmentAssetCounts& counts)
 {
-    const auto header_size = sizeof(std::uint32_t) * 7u + sizeof(GarmentCategory) + sizeof(float) * 4u;
+    const auto header_size = sizeof(std::uint32_t) * 8u + sizeof(GarmentCategory) + sizeof(float) * 4u;
     const auto edge_data_size = sizeof(MeshEdge) + sizeof(float);
 
     std::uintmax_t expected_file_size = header_size;
     expected_file_size += std::uintmax_t{counts.vertex_count} * sizeof(glm::vec3);
     expected_file_size += std::uintmax_t{counts.triangle_count} * sizeof(TriangleVertexIndices);
+    expected_file_size += std::uintmax_t{counts.triangle_count} * sizeof(std::uint32_t);
+    expected_file_size += std::uintmax_t{counts.triangle_color_count} * sizeof(std::uint32_t);
     expected_file_size += std::uintmax_t{counts.stretch_edge_count} * edge_data_size;
     expected_file_size += std::uintmax_t{counts.stretch_color_state_count} * sizeof(ConstraintColorState);
     expected_file_size += std::uintmax_t{counts.bending_edge_count} * edge_data_size;
@@ -219,6 +223,19 @@ void validate_garment_mesh(const GarmentMesh& garment_mesh)
         throw std::runtime_error("Invalid garment triangles");
     }
 
+    const auto colored_triangle_count = std::accumulate(garment_mesh.triangle_color_counts.begin(),
+                                                        garment_mesh.triangle_color_counts.end(),
+                                                        std::uint64_t{0});
+    if (colored_triangle_count != garment_mesh.colorized_triangle_indices.size()) {
+        throw std::runtime_error("Invalid garment triangle color counts");
+    }
+
+    for (std::uint32_t triangle_index : garment_mesh.colorized_triangle_indices) {
+        if (triangle_index >= garment_mesh.triangle_vertex_indices.size()) {
+            throw std::runtime_error("Invalid garment colored triangle index");
+        }
+    }
+
     if (!are_valid_distance_constraints(garment_mesh.stretch_constraints, vertex_count) ||
         !are_valid_distance_constraints(garment_mesh.bending_constraints, vertex_count)) {
         throw std::runtime_error("Invalid garment constraints");
@@ -286,6 +303,7 @@ GarmentMesh read_garment_asset(const std::filesystem::path& garment_asset_path, 
     GarmentMesh mesh;
     read_binary_value(input, counts.vertex_count);
     read_binary_value(input, counts.triangle_count);
+    read_binary_value(input, counts.triangle_color_count);
     read_binary_value(input, counts.stretch_edge_count);
     read_binary_value(input, counts.stretch_color_state_count);
     read_binary_value(input, counts.bending_edge_count);
@@ -301,6 +319,8 @@ GarmentMesh read_garment_asset(const std::filesystem::path& garment_asset_path, 
 
     read_binary_values(input, mesh.vertex_positions, counts.vertex_count);
     read_binary_values(input, mesh.triangle_vertex_indices, counts.triangle_count);
+    read_binary_values(input, mesh.colorized_triangle_indices, counts.triangle_count);
+    read_binary_values(input, mesh.triangle_color_counts, counts.triangle_color_count);
     read_binary_values(input, mesh.stretch_constraints.colorized_edges, counts.stretch_edge_count);
     read_binary_values(input, mesh.stretch_constraints.color_states, counts.stretch_color_state_count);
     read_binary_values(input, mesh.stretch_constraints.rest_lengths, counts.stretch_edge_count);
@@ -336,6 +356,7 @@ void write_garment_asset(std::ofstream& output, const GarmentMesh& garment_mesh)
     const GarmentAssetCounts counts{
         static_cast<std::uint32_t>(garment_mesh.vertex_positions.size()),
         static_cast<std::uint32_t>(garment_mesh.triangle_vertex_indices.size()),
+        static_cast<std::uint32_t>(garment_mesh.triangle_color_counts.size()),
         static_cast<std::uint32_t>(garment_mesh.stretch_constraints.colorized_edges.size()),
         static_cast<std::uint32_t>(garment_mesh.stretch_constraints.color_states.size()),
         static_cast<std::uint32_t>(garment_mesh.bending_constraints.colorized_edges.size()),
@@ -345,6 +366,7 @@ void write_garment_asset(std::ofstream& output, const GarmentMesh& garment_mesh)
 
     write_binary_value(output, counts.vertex_count);
     write_binary_value(output, counts.triangle_count);
+    write_binary_value(output, counts.triangle_color_count);
     write_binary_value(output, counts.stretch_edge_count);
     write_binary_value(output, counts.stretch_color_state_count);
     write_binary_value(output, counts.bending_edge_count);
@@ -358,6 +380,8 @@ void write_garment_asset(std::ofstream& output, const GarmentMesh& garment_mesh)
 
     write_binary_values(output, garment_mesh.vertex_positions);
     write_binary_values(output, garment_mesh.triangle_vertex_indices);
+    write_binary_values(output, garment_mesh.colorized_triangle_indices);
+    write_binary_values(output, garment_mesh.triangle_color_counts);
     write_binary_values(output, garment_mesh.stretch_constraints.colorized_edges);
     write_binary_values(output, garment_mesh.stretch_constraints.color_states);
     write_binary_values(output, garment_mesh.stretch_constraints.rest_lengths);

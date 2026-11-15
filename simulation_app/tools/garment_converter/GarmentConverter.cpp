@@ -163,6 +163,43 @@ void build_garment_constraints(GarmentMesh& mesh)
     }
 }
 
+void build_triangle_coloring(GarmentMesh& mesh)
+{
+    std::vector<std::vector<std::uint32_t>> vertex_colors(mesh.vertex_positions.size());
+    std::vector<std::vector<std::uint32_t>> triangle_groups;
+    for (std::uint32_t triangle_index = 0; triangle_index < mesh.triangle_vertex_indices.size(); ++triangle_index) {
+        const auto& [vertex_a, vertex_b, vertex_c] = mesh.triangle_vertex_indices[triangle_index];
+        std::vector<bool> used_colors(triangle_groups.size(), false);
+        for (std::uint32_t vertex_index : {vertex_a, vertex_b, vertex_c}) {
+            for (std::uint32_t color_index : vertex_colors[vertex_index]) {
+                used_colors[color_index] = true;
+            }
+        }
+
+        std::uint32_t color_index = 0;
+        while (color_index < used_colors.size() && used_colors[color_index]) {
+            ++color_index;
+        }
+
+        if (color_index == triangle_groups.size()) {
+            triangle_groups.emplace_back();
+        }
+        triangle_groups[color_index].push_back(triangle_index);
+        for (std::uint32_t vertex_index : {vertex_a, vertex_b, vertex_c}) {
+            vertex_colors[vertex_index].push_back(color_index);
+        }
+    }
+
+    mesh.colorized_triangle_indices.reserve(mesh.triangle_vertex_indices.size());
+    mesh.triangle_color_counts.reserve(triangle_groups.size());
+    for (const auto& triangle_group : triangle_groups) {
+        mesh.colorized_triangle_indices.insert(mesh.colorized_triangle_indices.end(),
+                                               triangle_group.begin(),
+                                               triangle_group.end());
+        mesh.triangle_color_counts.push_back(static_cast<std::uint32_t>(triangle_group.size()));
+    }
+}
+
 void print_garment_obj_summary(const std::filesystem::path& obj_path, const GarmentMesh& mesh)
 {
     std::cout << "Read garment OBJ: " << obj_path << '\n';
@@ -190,6 +227,7 @@ void convert_garment(const std::filesystem::path& obj_path,
     validate_garment_topology(mesh);
     orient_triangles_outward(mesh.vertex_positions, mesh.bounds_center, mesh.triangle_vertex_indices);
     build_garment_constraints(mesh);
+    build_triangle_coloring(mesh);
 
     print_garment_obj_summary(obj_path, mesh);
     asset_io::write_garment_mesh(garment_asset_path, mesh);
