@@ -30,9 +30,9 @@ void PdClothGpuState::initialize_masses(const std::vector<GarmentObject>& garmen
     for (const GarmentObject& garment : garments) {
         const GarmentBufferState& garment_state = cloth_state.garment_states()[garment.layer];
 
-        CUDA_CHECK(set_vertex_masses(mass_buffer_ + garment_state.vertex_start_index,
-                                     garment_state.vertex_count,
-                                     garment.surface_density));
+        set_vertex_masses(mass_buffer_ + garment_state.vertex_start_index,
+                          garment_state.vertex_count,
+                          garment.surface_density);
     }
 }
 

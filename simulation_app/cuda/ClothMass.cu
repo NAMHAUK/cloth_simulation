@@ -13,9 +13,9 @@ __global__ void set_vertex_masses_kernel(float* masses, std::uint32_t vertex_cou
 }
 }
 
-cudaError_t set_vertex_masses(float* masses, std::uint32_t vertex_count, float mass)
+void set_vertex_masses(float* masses, std::uint32_t vertex_count, float mass)
 {
     constexpr std::uint32_t block_size = 256;
     set_vertex_masses_kernel<<<block_count(vertex_count, block_size), block_size>>>(masses, vertex_count, mass);
-    return cudaGetLastError();
+    CUDA_CHECK(cudaGetLastError());
 }
