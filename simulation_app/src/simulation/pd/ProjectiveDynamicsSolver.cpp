@@ -25,7 +25,11 @@ void ProjectiveDynamicsSolver::solve()
         return;
     }
 
-    float4* positions = cloth_state.map_shared_buffers();
+    float4* positions = nullptr;
+    float4* normals = nullptr;
+    const TriangleVertexIndices* triangle_vertex_indices = nullptr;
+    cloth_state.map_shared_buffers(positions, normals, triangle_vertex_indices);
+
     integrate_cloth(positions, cloth_state, gravity_, dt_);
     compute_inertia_rhs(pd_state_.inertia_rhs_buffer(), cloth_state, inv_dt_squared_);
 
