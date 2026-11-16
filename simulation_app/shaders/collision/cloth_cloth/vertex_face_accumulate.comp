@@ -16,7 +16,7 @@ layout(std430, binding = CLOTH_PREVIOUS_POSITIONS) readonly buffer ClothPrevious
     vec4 cloth_previous_positions[];
 };
 
-layout(std430, binding = CLOTH_TRIANGLE_VERTEX_INDICES) readonly buffer ClothTriangleVertexIndices
+layout(std430, binding = CLOTH_BVH_TRIANGLE_VERTEX_INDICES) readonly buffer ClothTriangleVertexIndices
 {
     TriangleVertexIndices triangle_vertex_indices[];
 };

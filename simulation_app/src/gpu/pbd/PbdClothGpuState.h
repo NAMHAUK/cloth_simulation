@@ -17,6 +17,7 @@ struct PbdClothBufferSet final
     GLuint adjacent_triangle_offsets = 0;
     GLuint adjacent_triangle_indices = 0;
     GLuint triangle_normal = 0;
+    GLuint bvh_triangle_vertex_indices = 0;
     GLuint triangle_bvh_node = 0;
     GLuint triangle_bounds = 0;
     GLuint vertex_face_exclusions = 0;

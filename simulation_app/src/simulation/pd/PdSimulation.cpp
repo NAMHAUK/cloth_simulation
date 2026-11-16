@@ -59,10 +59,9 @@ void PdSimulation::rebuild_garment_resources(GarmentLayer changed_layer, QOpenGL
     pd_gpu_state_.cloth_gpu_state().prepare_normal_buffers(gpu_state_.cloth_gpu_state());
 }
 
-void PdSimulation::create_simulation_buffers(QOpenGLFunctions_4_5_Core& gl)
+void PdSimulation::create_simulation_buffers(QOpenGLFunctions_4_5_Core&)
 {
     pd_gpu_state_.release();
-    gpu_state_.cloth_gpu_state().upload_triangle_indices(scene_.garments(), gl);
     pd_gpu_state_.prepare_system(scene_.garments(), gpu_state_.cloth_gpu_state());
 }
 
