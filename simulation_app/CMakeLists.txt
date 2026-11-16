@@ -12,6 +12,7 @@ set(CMAKE_CUDA_RUNTIME_LIBRARY Static)
 set(CMAKE_AUTOMOC ON)
 
 find_package(CUDAToolkit REQUIRED)
+find_package(cudss 1.0 CONFIG REQUIRED HINTS "${CMAKE_CURRENT_SOURCE_DIR}/../envs/cudss")
 find_package(Qt6 CONFIG REQUIRED COMPONENTS Widgets OpenGLWidgets OpenGL Concurrent Svg)
 find_package(glm CONFIG REQUIRED)
 
@@ -112,6 +113,7 @@ add_executable(simulation_app
     src/utils/QtUtils.h
     src/utils/BufferUtils.h
     src/utils/CudaUtils.h
+    src/utils/CudssUtils.h
     src/utils/FileUtils.h
     src/utils/NumericUtils.h
     src/utils/ShaderUtils.cpp
@@ -232,6 +234,7 @@ target_compile_definitions(simulation_app PRIVATE
 
 target_link_libraries(simulation_app PRIVATE
     CUDA::cudart_static
+    cudss
     Qt6::Widgets
     Qt6::OpenGLWidgets
     Qt6::OpenGL
@@ -251,6 +254,9 @@ if(WIN32)
     find_program(WINDEPLOYQT_EXECUTABLE windeployqt HINTS "${QT_BIN_DIR}" REQUIRED)
 
     add_custom_command(TARGET simulation_app POST_BUILD
+        COMMAND "${CMAKE_COMMAND}" -E copy_if_different
+            "$<TARGET_FILE:cudss>"
+            "$<TARGET_FILE_DIR:simulation_app>"
         COMMAND "${WINDEPLOYQT_EXECUTABLE}"
             "$<IF:$<CONFIG:Debug>,--debug,--release>"
             "$<TARGET_FILE:simulation_app>"

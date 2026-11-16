@@ -4,6 +4,6 @@
 
 #include <vector_types.h>
 
-struct CsrMatrix;
+struct CudssSystem;
 
-void solve_global(const CsrMatrix& matrix, const float3* rhs, float4* positions, std::uint32_t vertex_count);
+void solve_global(const CudssSystem& matrix, const float3* rhs, float4* positions, std::uint32_t vertex_count);
