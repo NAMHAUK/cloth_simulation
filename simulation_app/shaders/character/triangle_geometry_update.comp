@@ -11,7 +11,7 @@ layout(std430, binding = CHARACTER_CURRENT_POSITIONS) readonly buffer CharacterC
     vec4 body_current_positions[];
 };
 
-layout(std430, binding = CHARACTER_TRIANGLE_VERTEX_INDICES) readonly buffer CharacterIndices
+layout(std430, binding = BODY_BVH_TRIANGLE_VERTEX_INDICES) readonly buffer CharacterIndices
 {
     TriangleVertexIndices triangle_vertex_indices[];
 };

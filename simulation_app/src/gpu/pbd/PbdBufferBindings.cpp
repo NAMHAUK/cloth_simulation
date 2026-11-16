@@ -49,7 +49,7 @@ void PbdBufferBindings::bind_character(const CharacterRenderBuffers& buffers,
     const std::array<GLuint, binding::character::count> binding_buffers{
         pbd_buffers.animation_positions,
         pbd_buffers.previous_position,
-        buffers.triangle_vertex_indices,
+        pbd_buffers.body_bvh_triangle_vertex_indices,
         pbd_buffers.body_triangle_bvh_node,
         pbd_buffers.body_triangle_bounds,
         pbd_buffers.body_edge_bvh_node,

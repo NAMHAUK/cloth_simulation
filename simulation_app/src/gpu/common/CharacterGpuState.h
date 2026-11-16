@@ -2,6 +2,7 @@
 
 #include <QOpenGLFunctions_4_5_Core>
 #include <cstdint>
+#include <vector>
 
 class SceneState;
 
@@ -24,6 +25,7 @@ public:
 
     std::uint32_t vertex_count() const;
     std::uint32_t triangle_count() const;
+    const std::vector<std::uint32_t>& triangle_color_counts() const;
     const CharacterRenderBuffers& buffer_set() const;
 
     void release(QOpenGLFunctions_4_5_Core& gl);
@@ -36,4 +38,5 @@ private:
     CharacterRenderBuffers buffers_;
     std::uint32_t vertex_count_ = 0;
     std::uint32_t triangle_count_ = 0;
+    std::vector<std::uint32_t> triangle_color_counts_;
 };

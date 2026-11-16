@@ -16,7 +16,8 @@ constexpr std::size_t triangle_vertex_count = 3u;
 void CharacterGpuState::initialize(const SceneState& scene, QOpenGLFunctions_4_5_Core& gl)
 {
     const CharacterMotion& motion = scene.character_motion();
-    const TriangleBvh& body_triangle_bvh = scene.default_body_triangle_bvh();
+    const auto& triangle_vertex_indices = motion.triangle_vertex_indices;
+    triangle_color_counts_ = scene.character_triangle_color_counts();
 
     std::vector<glm::vec4> positions;
     positions.reserve(motion.vertex_count);
@@ -28,11 +29,10 @@ void CharacterGpuState::initialize(const SceneState& scene, QOpenGLFunctions_4_5
 
     // create rendering buffers
     buffers_.current_position = create_buffer(position_bytes, positions.data(), GL_DYNAMIC_DRAW, gl);
-    buffers_.triangle_vertex_indices = create_buffer(
-        byte_size<TriangleVertexIndices>(body_triangle_bvh.triangle_vertex_indices.size()),
-        body_triangle_bvh.triangle_vertex_indices.data(),
-        GL_STATIC_DRAW,
-        gl);
+    buffers_.triangle_vertex_indices = create_buffer(byte_size<TriangleVertexIndices>(triangle_vertex_indices.size()),
+                                                     triangle_vertex_indices.data(),
+                                                     GL_STATIC_DRAW,
+                                                     gl);
     buffers_.vertex_normal = create_buffer(byte_size<glm::vec4>(motion.vertex_count), nullptr, GL_DYNAMIC_DRAW, gl);
     
     gl.glClearNamedBufferData(buffers_.vertex_normal, GL_RGBA32F, GL_RGBA, GL_FLOAT, nullptr);
@@ -41,8 +41,8 @@ void CharacterGpuState::initialize(const SceneState& scene, QOpenGLFunctions_4_5
     gl.glVertexArrayElementBuffer(vao_, buffers_.triangle_vertex_indices);
 
     vertex_count_ = motion.vertex_count;
-    triangle_count_ = static_cast<std::uint32_t>(body_triangle_bvh.triangle_vertex_indices.size());
-    index_count_ = static_cast<GLsizei>(body_triangle_bvh.triangle_vertex_indices.size() * triangle_vertex_count);
+    triangle_count_ = static_cast<std::uint32_t>(triangle_vertex_indices.size());
+    index_count_ = static_cast<GLsizei>(triangle_vertex_indices.size() * triangle_vertex_count);
 }
 
 // Rendering
@@ -63,6 +63,11 @@ std::uint32_t CharacterGpuState::vertex_count() const
 std::uint32_t CharacterGpuState::triangle_count() const
 {
     return triangle_count_;
+}
+
+const std::vector<std::uint32_t>& CharacterGpuState::triangle_color_counts() const
+{
+    return triangle_color_counts_;
 }
 
 const CharacterRenderBuffers& CharacterGpuState::buffer_set() const
@@ -89,4 +94,5 @@ void CharacterGpuState::reset_resources() noexcept
     vertex_count_ = 0;
     triangle_count_ = 0;
     index_count_ = 0;
+    triangle_color_counts_.clear();
 }

@@ -48,6 +48,11 @@ void PbdCharacterGpuState::initialize(const std::filesystem::path& shader_dir,
                                                gl);
     copy_current_to_previous(character_state, gl);
 
+    buffers_.body_bvh_triangle_vertex_indices = create_buffer(
+        byte_size<TriangleVertexIndices>(body_triangle_bvh.triangle_vertex_indices.size()),
+        body_triangle_bvh.triangle_vertex_indices.data(),
+        GL_STATIC_DRAW,
+        gl);
     buffers_.body_triangle_bvh_node = create_buffer(byte_size<BvhNode>(body_triangle_bvh.nodes.size()),
                                                     body_triangle_bvh.nodes.data(),
                                                     GL_DYNAMIC_DRAW,
@@ -173,6 +178,7 @@ void PbdCharacterGpuState::release(QOpenGLFunctions_4_5_Core& gl)
     gl.glDeleteBuffers(1, &buffers_.triangle_position);
     gl.glDeleteBuffers(1, &buffers_.adjacent_triangle_indices);
     gl.glDeleteBuffers(1, &buffers_.adjacent_triangle_offsets);
+    gl.glDeleteBuffers(1, &buffers_.body_bvh_triangle_vertex_indices);
     gl.glDeleteBuffers(1, &buffers_.body_triangle_bvh_node);
     gl.glDeleteBuffers(1, &buffers_.body_edge_bounds);
     gl.glDeleteBuffers(1, &buffers_.body_edge_vertex_indices);

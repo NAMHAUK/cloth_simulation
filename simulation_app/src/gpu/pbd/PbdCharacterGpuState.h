@@ -14,6 +14,7 @@ struct PbdCharacterBufferSet final
 {
     GLuint animation_positions = 0;
     GLuint previous_position = 0;
+    GLuint body_bvh_triangle_vertex_indices = 0;
     GLuint body_triangle_bvh_node = 0;
     GLuint body_triangle_bounds = 0;
     GLuint body_edge_bvh_node = 0;

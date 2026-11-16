@@ -68,6 +68,11 @@ void SceneState::set_character_motion(CharacterMotion motion)
                        frame_orientation(character_motion_.torso_orientations, 0u));
 }
 
+void SceneState::set_character_triangle_color_counts(std::vector<std::uint32_t> triangle_color_counts)
+{
+    character_triangle_color_counts_ = std::move(triangle_color_counts);
+}
+
 void SceneState::set_body_bvhs(TriangleBvh triangle_bvh, EdgeBvh edge_bvh)
 {
     default_body_triangle_bvh_ = std::move(triangle_bvh);
@@ -238,6 +243,11 @@ const GarmentObject* SceneState::find_garment(GarmentLayer layer) const
 const CharacterMotion& SceneState::character_motion() const
 {
     return character_motion_;
+}
+
+const std::vector<std::uint32_t>& SceneState::character_triangle_color_counts() const
+{
+    return character_triangle_color_counts_;
 }
 
 const TriangleBvh& SceneState::default_body_triangle_bvh() const

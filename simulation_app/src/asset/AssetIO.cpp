@@ -363,7 +363,8 @@ CharacterMotion read_character_motion(const std::filesystem::path& motion_asset_
 }
 
 CharacterMotion read_default_character(const std::filesystem::path& motion_asset_path,
-                                       std::vector<std::uint8_t>& triangle_part_labels)
+                                       std::vector<std::uint8_t>& triangle_part_labels,
+                                       std::vector<std::uint32_t>& triangle_color_counts)
 {
     std::ifstream input;
     input.exceptions(std::ios::failbit | std::ios::badbit);
@@ -387,6 +388,28 @@ CharacterMotion read_default_character(const std::filesystem::path& motion_asset
             return !is_hand_body_part_label(label);
         })) {
         throw std::runtime_error("Invalid default character triangle part labels");
+    }
+
+    // Read triangle color
+    std::uint32_t color_count = 0;
+    read_binary_value(input, color_count);
+    if (color_count == 0u || color_count > character_motion.triangle_count) {
+        throw std::runtime_error("Invalid character triangle coloring counts");
+    }
+
+    const std::uintmax_t expected_file_size = static_cast<std::streamoff>(input.tellg()) +
+                                              std::uintmax_t{color_count} * sizeof(std::uint32_t);
+    if (std::filesystem::file_size(motion_asset_path) != expected_file_size) {
+        throw std::runtime_error("Invalid character triangle coloring resource size");
+    }
+
+    read_binary_values(input, triangle_color_counts, color_count);
+    const auto colored_triangle_count = std::accumulate(triangle_color_counts.begin(),
+                                                        triangle_color_counts.end(),
+                                                        std::uint64_t{0});
+    if (std::find(triangle_color_counts.begin(), triangle_color_counts.end(), 0u) != triangle_color_counts.end() ||
+        colored_triangle_count != character_motion.triangle_count) {
+        throw std::runtime_error("Invalid character triangle color counts");
     }
 
     return character_motion;
