@@ -57,7 +57,7 @@ void PdClothGpuState::prepare_normal_buffers(const std::vector<GarmentObject>& g
     float4* positions = nullptr;
     float4* normals = nullptr;
     map_shared_buffers(positions, normals);
-    update_cloth_normals(positions, normals, *this);
+    update_normals(positions, normals, triangle_vertex_indices_buffer_, vertex_count_, triangle_color_counts_);
     unmap_shared_buffers();
 }
 

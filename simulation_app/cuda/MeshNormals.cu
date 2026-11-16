@@ -1,6 +1,5 @@
 #include "MeshNormals.h"
 #include "asset/AssetDataTypes.h"
-#include "gpu/pd/PdClothGpuState.h"
 #include "utils/CudaUtils.h"
 
 #include <cstdint>
@@ -27,7 +26,7 @@ __global__ void accumulate_vertex_normals_kernel(const float4* positions,
     const float3 ab = make_float3(b.x - a.x, b.y - a.y, b.z - a.z);
     const float3 ac = make_float3(c.x - a.x, c.y - a.y, c.z - a.z);
     const float3 normal = make_float3(ab.y * ac.z - ab.z * ac.y, ab.z * ac.x - ab.x * ac.z, ab.x * ac.y - ab.y * ac.x);
-    
+
     for (std::uint32_t vertex_index : {vertex_indices.a, vertex_indices.b, vertex_indices.c}) {
         normals[vertex_index].x += normal.x;
         normals[vertex_index].y += normal.y;
@@ -56,25 +55,25 @@ __global__ void normalize_vertex_normals_kernel(std::uint32_t vertex_count, floa
 }
 }
 
-void update_cloth_normals(const float4* positions,
-                          float4* normals,
-                          const PdClothGpuState& cloth_state)
+void update_normals(const float4* positions,
+                    float4* normals,
+                    const TriangleVertexIndices* triangle_vertex_indices,
+                    std::uint32_t vertex_count,
+                    const std::vector<std::uint32_t>& triangle_color_counts)
 {
-    CUDA_CHECK(cudaMemset(normals, 0, sizeof(float4) * cloth_state.vertex_count()));
+    CUDA_CHECK(cudaMemset(normals, 0, sizeof(float4) * vertex_count));
 
     std::uint32_t triangle_offset = 0;
-    for (std::uint32_t triangle_count : cloth_state.triangle_color_counts()) {
+    for (std::uint32_t triangle_count : triangle_color_counts) {
         accumulate_vertex_normals_kernel<<<block_count(triangle_count, block_size), block_size>>>(
             positions,
-            cloth_state.triangle_vertex_indices_buffer() + triangle_offset,
+            triangle_vertex_indices + triangle_offset,
             triangle_count,
             normals);
         CUDA_CHECK(cudaGetLastError());
         triangle_offset += triangle_count;
     }
 
-    normalize_vertex_normals_kernel<<<block_count(cloth_state.vertex_count(), block_size), block_size>>>(
-        cloth_state.vertex_count(),
-        normals);
+    normalize_vertex_normals_kernel<<<block_count(vertex_count, block_size), block_size>>>(vertex_count, normals);
     CUDA_CHECK(cudaGetLastError());
 }

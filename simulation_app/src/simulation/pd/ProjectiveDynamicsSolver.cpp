@@ -45,7 +45,11 @@ void ProjectiveDynamicsSolver::solve()
     }
 
     update_cloth_velocities(positions, cloth_state, dt_);
-    update_cloth_normals(positions, normals, cloth_state);
+    update_normals(positions,
+                   normals,
+                   cloth_state.triangle_vertex_indices_buffer(),
+                   vertex_count,
+                   cloth_state.triangle_color_counts());
 
     cloth_state.unmap_shared_buffers();
 }
