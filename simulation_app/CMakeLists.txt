@@ -91,6 +91,7 @@ add_executable(simulation_app
     src/gpu/pbd/PbdGpuState.cpp
     src/gpu/pbd/PbdGpuState.h
     src/gpu/pd/ConstraintTypes.h
+    src/gpu/pd/PdCharacterGpuState.cpp
     src/gpu/pd/PdCharacterGpuState.h
     src/gpu/pd/PdClothGpuState.cpp
     src/gpu/pd/PdClothGpuState.h
