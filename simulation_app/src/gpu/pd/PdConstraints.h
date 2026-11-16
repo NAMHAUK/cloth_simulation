@@ -39,14 +39,12 @@ struct ConstraintSet final
         CUDA_CHECK(cudaFree(buffer));
         buffer = nullptr;
         count = 0;
-        is_active = false;
     }
 
     std::uint32_t matrix_entry_count() const { return count * Constraint::vertex_count * Constraint::vertex_count; }
 
     Constraint* buffer = nullptr;
     std::uint32_t count = 0;
-    bool is_active = false;
 };
 
 class PdConstraints final
@@ -69,7 +67,7 @@ public:
     void execute_each(Function&& function)
     {
         for_each_constraint([&](auto& constraints) {
-            if (constraints.is_active) {
+            if (constraints.count > 0) {
                 function(constraints);
             }
         });
@@ -79,11 +77,7 @@ public:
     {
         validate_constraint_count();
 
-        for_each_constraint([](auto& constraints) {
-            constraints.is_active = false;
-            constraints.allocate_buffer();
-            constraints.is_active = constraints.count > 0;
-        });
+        for_each_constraint([](auto& constraints) { constraints.allocate_buffer(); });
     }
 
     void release_buffers()

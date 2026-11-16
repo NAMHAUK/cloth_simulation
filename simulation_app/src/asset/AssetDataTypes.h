@@ -5,6 +5,7 @@
 #include <vector>
 
 #include <glm/vec3.hpp>
+#include <glm/vec4.hpp>
 
 inline constexpr std::size_t position_components = 3u;
 
@@ -83,7 +84,7 @@ struct CharacterMotion
     std::vector<float> pelvis_orientations;
     std::vector<float> torso_positions;
     std::vector<float> torso_orientations;
-    std::vector<glm::vec3> vertex_positions;
+    std::vector<glm::vec4> vertex_positions;
 };
 
 struct GarmentDistanceConstraints final
@@ -113,6 +114,7 @@ struct GarmentMesh
     GarmentCategory garment_category = GarmentCategory::Top;
     std::vector<glm::vec3> vertex_positions;
     std::vector<TriangleVertexIndices> triangle_vertex_indices;
+    std::vector<std::uint32_t> triangle_color_counts;
     GarmentDistanceConstraints stretch_constraints;
     GarmentDistanceConstraints bending_constraints;
     std::vector<std::uint32_t> attachment_vertex_indices;

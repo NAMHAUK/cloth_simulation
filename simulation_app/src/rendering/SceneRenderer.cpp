@@ -111,13 +111,24 @@ void SceneRenderer::draw(const SceneState& scene,
     const float character_opacity = is_placement_active ? placement_character_opacity : 1.0f;
     gl.glEnable(GL_BLEND);
     gl.glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-    gl.glDepthMask(!is_placement_active);
 
     gl.glProgramUniform1i(program_, position_buffer_mode_loc_, 1);
     gl.glProgramUniform1i(program_, solid_mode_loc_, 0);
     gl.glProgramUniform1f(program_, opacity_loc_, character_opacity);
+
+    if (is_placement_active) {
+        gl.glColorMask(GL_FALSE, GL_FALSE, GL_FALSE, GL_FALSE);
+        gl.glDepthMask(GL_TRUE);
+        gpu_state.character_gpu_state().draw(gl);
+
+        gl.glColorMask(GL_TRUE, GL_TRUE, GL_TRUE, GL_TRUE);
+        gl.glDepthMask(GL_FALSE);
+        gl.glDepthFunc(GL_EQUAL);
+    }
+
     gpu_state.character_gpu_state().draw(gl);
 
+    gl.glDepthFunc(GL_LESS);
     gl.glDepthMask(GL_TRUE);
     gl.glDisable(GL_BLEND);
 }

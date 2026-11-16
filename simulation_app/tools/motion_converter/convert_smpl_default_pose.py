@@ -1,4 +1,5 @@
 import argparse
+import struct
 from enum import IntEnum
 from pathlib import Path
 
@@ -10,10 +11,12 @@ from motion_converter_common import (
     DEFAULT_A_POSE_SHOULDER_AXIS,
     SMPL_BODY_POSE_OFFSET,
     SHOULDER_AXIS_TO_OFFSET,
+    build_triangle_coloring,
     make_default_pose,
     set_smpl_compatibility,
     write_triangle_part_labels,
     write_motion_header,
+    write_vertex_positions,
 )
 
 EPSILON = 1.0e-8
@@ -77,7 +80,8 @@ def write_default_pose_motion(output_path,
                               vertices,
                               pelvis_position,
                               torso_position,
-                              triangle_part_labels):
+                              triangle_part_labels,
+                              triangle_color_counts):
     if fps <= 0.0:
         raise ValueError(f"Invalid FPS: {fps}")
     vertices = np.asarray(vertices, dtype=np.float32)
@@ -98,8 +102,10 @@ def write_default_pose_motion(output_path,
             orientation.tofile(out_file)
             torso_position.tofile(out_file)
             orientation.tofile(out_file)
-            vertices.tofile(out_file)
+            write_vertex_positions(out_file, vertices)
             write_triangle_part_labels(out_file, faces, triangle_part_labels)
+            out_file.write(struct.pack("<I", len(triangle_color_counts)))
+            triangle_color_counts.tofile(out_file)
 
         temp_output_path.replace(output_path)
     except Exception:
@@ -145,18 +151,21 @@ def main():
         torso_position,
         args.ground_clearance,
     )
+    triangle_indices, triangle_color_counts = build_triangle_coloring(model.faces, len(vertices))
+    faces = np.asarray(model.faces)[triangle_indices]
     triangle_part_labels, low_confidence_count = make_triangle_part_labels(
-        model.faces,
+        faces,
         model.lbs_weights.detach().cpu().numpy(),
     )
     write_default_pose_motion(
         args.output,
         args.fps,
-        model.faces,
+        faces,
         vertices,
         pelvis_position,
         torso_position,
         triangle_part_labels,
+        triangle_color_counts,
     )
 
     print()

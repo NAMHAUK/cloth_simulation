@@ -57,10 +57,7 @@ std::vector<TriangleVertexIndices> ClothGpuState::upload_triangle_indices(const 
 
     for (const GarmentObject& garment : garments) {
         const std::uint32_t vertex_start_index = state_.garments[garment.layer].vertex_start_index;
-        const auto& bvh_triangles = garment.triangle_bvh.triangle_vertex_indices;
-        const auto& indices = bvh_triangles.empty() ? garment.mesh.triangle_vertex_indices : bvh_triangles;
-
-        for (const TriangleVertexIndices& triangle : indices) {
+        for (const TriangleVertexIndices& triangle : garment.mesh.triangle_vertex_indices) {
             triangle_vertex_indices.push_back(
                 {vertex_start_index + triangle.a, vertex_start_index + triangle.b, vertex_start_index + triangle.c});
         }

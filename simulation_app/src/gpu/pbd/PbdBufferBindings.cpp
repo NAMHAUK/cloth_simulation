@@ -10,19 +10,19 @@
 namespace {
 namespace binding {
 
-// Cloth: 3 ~ 23
+// Cloth: 3 ~ 24
 namespace cloth {
 constexpr GLuint start = common_buffer_binding::character_vertex_normals + 1;
-constexpr std::size_t count = 21;
+constexpr std::size_t count = 22;
 }
 
-// Character: 24 ~ 35
+// Character: 25 ~ 36
 namespace character {
 constexpr GLuint start = cloth::start + cloth::count;
 constexpr std::size_t count = 12;
 }
 
-// Collision: 36 ~ 50
+// Collision: 37 ~ 51
 namespace collision {
 constexpr GLuint start = character::start + character::count;
 constexpr std::size_t count = 15;
@@ -49,7 +49,7 @@ void PbdBufferBindings::bind_character(const CharacterRenderBuffers& buffers,
     const std::array<GLuint, binding::character::count> binding_buffers{
         pbd_buffers.animation_positions,
         pbd_buffers.previous_position,
-        buffers.triangle_vertex_indices,
+        pbd_buffers.body_bvh_triangle_vertex_indices,
         pbd_buffers.body_triangle_bvh_node,
         pbd_buffers.body_triangle_bounds,
         pbd_buffers.body_edge_bvh_node,
@@ -86,6 +86,7 @@ void PbdBufferBindings::bind_cloth(const ClothRenderBuffers& buffers,
         pbd_buffers.attachment_indices,
         pbd_buffers.attachment_barycentric_offset,
         pbd_buffers.triangle_normal,
+        pbd_buffers.bvh_triangle_vertex_indices,
         pbd_buffers.triangle_bvh_node,
         pbd_buffers.triangle_bounds,
         pbd_buffers.edge_vertex_indices,
@@ -95,6 +96,7 @@ void PbdBufferBindings::bind_cloth(const ClothRenderBuffers& buffers,
     };
     std::replace(binding_buffers.begin(), binding_buffers.end(), GLuint{0}, dummy_buffer_);
     bind_buffers(binding::cloth::start, binding_buffers, gl);
+
     bind_buffers(common_buffer_binding::cloth_vertex_normals,
                  std::array{buffers.vertex_normal != 0 ? buffers.vertex_normal : dummy_buffer_},
                  gl);

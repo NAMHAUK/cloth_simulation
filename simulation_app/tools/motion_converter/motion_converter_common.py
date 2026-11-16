@@ -34,11 +34,36 @@ def make_default_pose(arm_angle_deg=DEFAULT_A_POSE_ARM_ANGLE_DEG, shoulder_axis=
     return pose
 
 
+def build_triangle_coloring(faces, vertex_count):
+    vertex_colors = [0] * vertex_count
+    triangle_groups = []
+    for triangle_index, (a, b, c) in enumerate(np.asarray(faces).tolist()):
+        used_colors = vertex_colors[a] | vertex_colors[b] | vertex_colors[c]
+        color = 0
+        while used_colors & (1 << color):
+            color += 1
+        if color == len(triangle_groups):
+            triangle_groups.append([])
+        triangle_groups[color].append(triangle_index)
+        for vertex in (a, b, c):
+            vertex_colors[vertex] |= 1 << color
+
+    triangle_indices = np.asarray([index for group in triangle_groups for index in group], dtype=np.uint32)
+    color_counts = np.asarray([len(group) for group in triangle_groups], dtype="<u4")
+    return triangle_indices, color_counts
+
+
 def write_motion_header(out_file, fps, faces, frame_count, vertex_count):
     indices = np.asarray(faces, dtype=np.uint32).reshape(-1)
     triangle_count = indices.size // 3
     out_file.write(struct.pack(MOTION_HEADER_FORMAT, float(fps), frame_count, vertex_count, triangle_count))
     indices.tofile(out_file)
+
+
+def write_vertex_positions(out_file, vertices):
+    positions = np.zeros((*vertices.shape[:-1], 4), dtype="<f4")
+    positions[..., :3] = vertices
+    positions.tofile(out_file)
 
 
 def write_triangle_part_labels(out_file, faces, triangle_part_labels):

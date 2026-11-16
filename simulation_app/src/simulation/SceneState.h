@@ -53,6 +53,7 @@ public:
     SceneState(float max_linear_acceleration, float max_angular_acceleration);
 
     void set_character_motion(CharacterMotion motion);
+    void set_character_triangle_color_counts(std::vector<std::uint32_t> triangle_color_counts);
     void set_body_bvhs(TriangleBvh triangle_bvh, EdgeBvh edge_bvh);
 
     void set_motion_frame_index(std::uint32_t motion_frame_index);
@@ -69,6 +70,7 @@ public:
     const GarmentObject* find_garment(GarmentLayer layer) const;
 
     const CharacterMotion& character_motion() const;
+    const std::vector<std::uint32_t>& character_triangle_color_counts() const;
     const TriangleBvh& default_body_triangle_bvh() const;
     const EdgeBvh& default_body_edge_bvh() const;
     const std::vector<GarmentObject>& garments() const;
@@ -77,6 +79,7 @@ public:
 
 private:
     CharacterMotion character_motion_;
+    std::vector<std::uint32_t> character_triangle_color_counts_;
     TriangleBvh default_body_triangle_bvh_;
     EdgeBvh default_body_edge_bvh_;
     std::vector<GarmentObject> garments_;

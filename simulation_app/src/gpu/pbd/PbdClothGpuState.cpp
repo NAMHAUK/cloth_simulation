@@ -195,12 +195,20 @@ void PbdClothGpuState::create_bvh_buffers(const std::vector<GarmentObject>& garm
                                           QOpenGLFunctions_4_5_Core& gl)
 {
     std::vector<BvhNode> triangle_nodes;
+    std::vector<TriangleVertexIndices> triangle_vertex_indices;
+    triangle_vertex_indices.reserve(cloth_state.element_counts().triangle);
     std::vector<BvhNode> edge_nodes;
     std::vector<MeshEdge> edges;
 
     for (const GarmentObject& garment : garments) {
         auto& collision_state = collision_states_[garment.layer];
         const auto& garment_state = cloth_state.garment_states()[garment.layer];
+        for (const TriangleVertexIndices& triangle : garment.triangle_bvh.triangle_vertex_indices) {
+            triangle_vertex_indices.push_back({garment_state.vertex_start_index + triangle.a,
+                                               garment_state.vertex_start_index + triangle.b,
+                                               garment_state.vertex_start_index + triangle.c});
+        }
+
         collision_state.edge_start_index = static_cast<std::uint32_t>(edges.size());
         collision_state.edge_count = static_cast<std::uint32_t>(garment.edge_bvh.edge_vertex_indices.size());
         for (const MeshEdge& edge : garment.edge_bvh.edge_vertex_indices) {
@@ -223,6 +231,11 @@ void PbdClothGpuState::create_bvh_buffers(const std::vector<GarmentObject>& garm
                          edge_nodes);
     }
 
+    buffers_.bvh_triangle_vertex_indices = create_buffer(
+        byte_size<TriangleVertexIndices>(triangle_vertex_indices.size()),
+        triangle_vertex_indices.data(),
+        GL_STATIC_DRAW,
+        gl);
     buffers_.edge_vertex_indices = create_buffer(byte_size<MeshEdge>(edges.size()), edges.data(), GL_STATIC_DRAW, gl);
     buffers_.triangle_bvh_node = create_buffer(byte_size<BvhNode>(triangle_nodes.size()),
                                                triangle_nodes.data(),
@@ -408,6 +421,7 @@ bool PbdClothGpuState::has_gpu_objects() const
     return buffers_.adjacent_triangle_offsets != 0 &&
            buffers_.adjacent_triangle_indices != 0 &&
            buffers_.triangle_normal != 0 &&
+           buffers_.bvh_triangle_vertex_indices != 0 &&
            buffers_.triangle_bvh_node != 0 &&
            buffers_.triangle_bounds != 0 &&
            buffers_.vertex_face_exclusions != 0 &&
@@ -524,6 +538,7 @@ void PbdClothGpuState::release_normal_buffers(QOpenGLFunctions_4_5_Core& gl)
 void PbdClothGpuState::release_collision_buffers(QOpenGLFunctions_4_5_Core& gl)
 {
     const GLuint buffer_ids[] = {
+        buffers_.bvh_triangle_vertex_indices,
         buffers_.triangle_bvh_node,
         buffers_.triangle_bounds,
         buffers_.vertex_face_exclusions,
@@ -534,6 +549,7 @@ void PbdClothGpuState::release_collision_buffers(QOpenGLFunctions_4_5_Core& gl)
     };
     gl.glDeleteBuffers(static_cast<GLsizei>(std::size(buffer_ids)), buffer_ids);
 
+    buffers_.bvh_triangle_vertex_indices = 0;
     buffers_.triangle_bvh_node = 0;
     buffers_.triangle_bounds = 0;
     buffers_.vertex_face_exclusions = 0;

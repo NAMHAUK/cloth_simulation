@@ -8,9 +8,11 @@ from scipy.signal import resample_poly
 
 from motion_converter_common import (
     SMPL_POSE_COMPONENT_COUNT,
+    build_triangle_coloring,
     make_default_pose,
     set_smpl_compatibility,
     write_motion_header,
+    write_vertex_positions,
 )
 from motion_rotation_math import (
     axis_angle_to_quaternions,
@@ -250,7 +252,8 @@ def build_shape_transition(neutral_vertices,
 
 # write motion file
 def initialize_motion_file(out_file, motion, faces, frame_count, vertex_count):
-    write_motion_header(out_file, motion.effective_fps, faces, frame_count, vertex_count)
+    triangle_indices, _ = build_triangle_coloring(faces, vertex_count)
+    write_motion_header(out_file, motion.effective_fps, np.asarray(faces)[triangle_indices], frame_count, vertex_count)
 
     pelvis_positions_file_position = out_file.tell()
     np.zeros((frame_count, 3), dtype=np.float32).tofile(out_file)
@@ -313,7 +316,7 @@ def write_motion_file(output_path,
     try:
         with temp_output_path.open("wb") as out_file:
             transform_file_positions = initialize_motion_file(out_file, motion, model.faces, frame_count, vertex_count)
-            shape_transition_vertices.tofile(out_file)
+            write_vertex_positions(out_file, shape_transition_vertices)
             
             with torch.no_grad():
                 for start in range(0, motion_frame_count, batch_size):
@@ -329,7 +332,7 @@ def write_motion_file(output_path,
 
                     converted_pelvis_positions.append(batch_pelvis_positions)
                     converted_torso_positions.append(batch_torso_positions)
-                    batch_vertices.tofile(out_file)
+                    write_vertex_positions(out_file, batch_vertices)
 
             pelvis_positions = np.concatenate(converted_pelvis_positions, axis=0)
             torso_positions = np.concatenate(converted_torso_positions, axis=0)

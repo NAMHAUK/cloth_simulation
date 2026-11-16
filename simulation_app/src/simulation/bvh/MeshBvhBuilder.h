@@ -4,6 +4,7 @@
 #include "simulation/bvh/Bvh.h"
 
 #include <cstdint>
+#include <variant>
 #include <vector>
 
 #include <glm/glm.hpp>
@@ -46,13 +47,14 @@ private:
     // Primitive construction
     void make_triangle_primitives();
     void make_edge_primitives(const std::vector<LabeledEdge>& edges);
+    glm::vec3 vertex_position(std::uint32_t vertex_index) const;
 
     // Part label assignment
     std::vector<LabeledEdge> make_labeled_edges() const;
 
     // Source data
     const std::vector<TriangleVertexIndices>& source_triangle_vertex_indices_;
-    const std::vector<glm::vec3>& source_vertex_positions_;
+    std::variant<const glm::vec3*, const glm::vec4*> source_vertex_positions_;
     std::vector<std::uint32_t> collision_triangle_indices_;
     std::vector<std::uint32_t> excluded_triangle_indices_;
     std::vector<std::uint8_t> triangle_part_labels_;

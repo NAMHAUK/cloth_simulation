@@ -24,6 +24,8 @@ add_executable(simulation_app
     cuda/ClothIntegration.h
     cuda/ClothMass.cu
     cuda/ClothMass.h
+    cuda/MeshNormals.cu
+    cuda/MeshNormals.h
     cuda/PdGlobalSolve.cu
     cuda/PdGlobalSolve.h
     cuda/PdRhs.cu
@@ -89,6 +91,8 @@ add_executable(simulation_app
     src/gpu/pbd/PbdGpuState.cpp
     src/gpu/pbd/PbdGpuState.h
     src/gpu/pd/ConstraintTypes.h
+    src/gpu/pd/CudaMeshResources.h
+    src/gpu/pd/PdCharacterGpuState.cpp
     src/gpu/pd/PdCharacterGpuState.h
     src/gpu/pd/PdClothGpuState.cpp
     src/gpu/pd/PdClothGpuState.h

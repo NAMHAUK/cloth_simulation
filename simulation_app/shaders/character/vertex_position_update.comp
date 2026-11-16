@@ -4,16 +4,9 @@
 
 layout(local_size_x = 128) in;
 
-struct VertexPosition
-{
-    float x;
-    float y;
-    float z;
-};
-
 layout(std430, binding = CHARACTER_ANIMATION_POSITIONS) readonly buffer CharacterAnimationPositions
 {
-    VertexPosition animation_positions[];
+    vec4 animation_positions[];
 };
 
 layout(std430, binding = CHARACTER_CURRENT_POSITIONS) writeonly buffer CharacterCurrentPositions
@@ -26,12 +19,6 @@ uniform uint uNextFrameBase;
 uniform float uFrameAlpha;
 uniform uint uVertexCount;
 
-vec3 load_animation_position(uint frame_base, uint vertex_index)
-{
-    VertexPosition position = animation_positions[frame_base + vertex_index];
-    return vec3(position.x, position.y, position.z);
-}
-
 void main()
 {
     uint vertex_index = gl_GlobalInvocationID.x;
@@ -39,9 +26,7 @@ void main()
         return;
     }
 
-    vec3 current_position = load_animation_position(uCurrentFrameBase, vertex_index);
-    vec3 next_position = load_animation_position(uNextFrameBase, vertex_index);
-    vec3 interpolated_position = mix(current_position, next_position, uFrameAlpha);
-
-    current_positions[vertex_index] = vec4(interpolated_position, 0.0);
+    current_positions[vertex_index] = mix(animation_positions[uCurrentFrameBase + vertex_index],
+                                          animation_positions[uNextFrameBase + vertex_index],
+                                          uFrameAlpha);
 }

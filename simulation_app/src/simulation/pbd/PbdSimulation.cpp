@@ -166,8 +166,6 @@ void PbdSimulation::create_simulation_buffers(QOpenGLFunctions_4_5_Core& gl)
 {
     auto& cloth_state = gpu_state_.cloth_gpu_state();
     auto& pbd_cloth_state = pbd_gpu_state_.cloth_gpu_state();
-    const auto triangle_vertex_indices = cloth_state.upload_triangle_indices(scene_.garments(), gl);
-    pbd_cloth_state.rebuild_normal_buffers(triangle_vertex_indices, cloth_state.element_counts().vertex, gl);
     pbd_cloth_state.create_collision_buffers(scene_.garments(), cloth_state, gl);
     pbd_cloth_state.create_distance_constraint_buffers(scene_.garments(), cloth_state, gl);
 

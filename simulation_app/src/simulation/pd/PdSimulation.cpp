@@ -1,7 +1,9 @@
 #include "simulation/pd/PdSimulation.h"
+#include "MeshNormals.h"
 #include "gpu/common/SceneGpuState.h"
 #include "simulation/SceneState.h"
 
+#include <algorithm>
 #include <cassert>
 #include <stdexcept>
 
@@ -16,10 +18,13 @@ PdSimulation::PdSimulation(SceneState& scene, SceneGpuState& gpu_state, Simulati
       projective_dynamics_solver_(pd_gpu_state_, params.integration.gravity, dt_, params.step.iteration_count)
 {}
 
-void PdSimulation::initialize(const std::filesystem::path&, QOpenGLFunctions_4_5_Core&)
+void PdSimulation::initialize(const std::filesystem::path&, QOpenGLFunctions_4_5_Core& gl)
 {
     initialize_cuda();
     pd_gpu_state_.initialize(dt_);
+    pd_gpu_state_.character_gpu_state().initialize(gpu_state_.character_gpu_state());
+    set_character_motion(gl);
+
     initialized_ = true;
 }
 
@@ -54,19 +59,32 @@ void PdSimulation::prepare_garments(const std::vector<const GarmentObject*>&, QO
 // Garment resources
 void PdSimulation::rebuild_garment_resources(GarmentLayer changed_layer, QOpenGLFunctions_4_5_Core& gl)
 {
-    pd_gpu_state_.release();
+    pd_gpu_state_.release_garment_resources();
     gpu_state_.cloth_gpu_state().rebuild_buffers(scene_.garments(), changed_layer, gl);
+    pd_gpu_state_.cloth_gpu_state().prepare_normal_buffers(scene_.garments(), gpu_state_.cloth_gpu_state());
 }
 
-void PdSimulation::create_simulation_buffers(QOpenGLFunctions_4_5_Core& gl)
+void PdSimulation::create_simulation_buffers(QOpenGLFunctions_4_5_Core&)
 {
-    gpu_state_.cloth_gpu_state().upload_triangle_indices(scene_.garments(), gl);
+    pd_gpu_state_.release_simulation_buffers();
     pd_gpu_state_.prepare_system(scene_.garments(), gpu_state_.cloth_gpu_state());
+
+    PdClothGpuState& cloth_state = pd_gpu_state_.cloth_gpu_state();
+    if (cloth_state.vertex_count() == 0) {
+        return;
+    }
+
+    const MappedMeshBuffers mesh_buffers = cloth_state.shared_buffers.map();
+    update_normals(mesh_buffers, cloth_state.vertex_count(), cloth_state.triangle_color_counts());
+    cloth_state.shared_buffers.unmap();
 }
 
 // Character
-void PdSimulation::set_character_motion(QOpenGLFunctions_4_5_Core&)
-{}
+void PdSimulation::set_character_motion(QOpenGLFunctions_4_5_Core& gl)
+{
+    pd_gpu_state_.character_gpu_state().set_motion(scene_.character_motion());
+    update_character_pose(0.0f, gl);
+}
 
 void PdSimulation::update_character_motion(std::uint32_t motion_step_index, QOpenGLFunctions_4_5_Core& gl)
 {
@@ -76,8 +94,17 @@ void PdSimulation::update_character_motion(std::uint32_t motion_step_index, QOpe
     update_character_pose(frame_alpha, gl);
 }
 
-void PdSimulation::update_character_pose(float, QOpenGLFunctions_4_5_Core&)
-{}
+void PdSimulation::update_character_pose(float frame_alpha, QOpenGLFunctions_4_5_Core&)
+{
+    PdCharacterGpuState& character_state = pd_gpu_state_.character_gpu_state();
+    const std::uint32_t frame_index = std::min(scene_.motion_frame_index() + (frame_alpha >= 1.0f ? 1u : 0u),
+                                               scene_.character_motion().frame_count - 1u);
+
+    const MappedMeshBuffers mesh_buffers = character_state.shared_buffers.map();
+    character_state.update_positions(mesh_buffers.positions, frame_index);
+    update_normals(mesh_buffers, character_state.vertex_count(), gpu_state_.character_gpu_state().triangle_color_counts());
+    character_state.shared_buffers.unmap();
+}
 
 // Base positions
 void PdSimulation::capture_garment_base_positions(QOpenGLFunctions_4_5_Core&)
@@ -109,6 +136,6 @@ void PdSimulation::release(QOpenGLFunctions_4_5_Core&)
 
 void PdSimulation::release_garment_resources(QOpenGLFunctions_4_5_Core& gl)
 {
-    pd_gpu_state_.release();
+    pd_gpu_state_.release_garment_resources();
     gpu_state_.cloth_gpu_state().release(gl);
 }

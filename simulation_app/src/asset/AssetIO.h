@@ -10,7 +10,8 @@ namespace asset_io {
 // Motion //
 CharacterMotion read_character_motion(const std::filesystem::path& motion_asset_path);
 CharacterMotion read_default_character(const std::filesystem::path& motion_asset_path,
-                                       std::vector<std::uint8_t>& triangle_part_labels);
+                                       std::vector<std::uint8_t>& triangle_part_labels,
+                                       std::vector<std::uint32_t>& triangle_color_counts);
 
 // Garment //
 GarmentMesh read_garment_mesh(const std::filesystem::path& garment_asset_path);

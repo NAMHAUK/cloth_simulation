@@ -73,7 +73,11 @@ void SimulationController::initialize_gpu(const std::filesystem::path& shader_di
 void SimulationController::load_default_character(const std::filesystem::path& default_character_path)
 {
     std::vector<std::uint8_t> triangle_part_labels;
-    CharacterMotion motion = asset_io::read_default_character(default_character_path, triangle_part_labels);
+    std::vector<std::uint32_t> triangle_color_counts;
+    CharacterMotion motion = asset_io::read_default_character(default_character_path,
+                                                              triangle_part_labels,
+                                                              triangle_color_counts);
+    scene_.set_character_triangle_color_counts(std::move(triangle_color_counts));
 
     MeshBvhBuilder body_bvh_builder(motion, triangle_part_labels);
     scene_.set_body_bvhs(body_bvh_builder.build_triangle_bvh(), body_bvh_builder.build_edge_bvh());
