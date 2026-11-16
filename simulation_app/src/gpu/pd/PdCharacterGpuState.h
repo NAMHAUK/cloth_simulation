@@ -1,6 +1,7 @@
 #pragma once
 
 #include <cstdint>
+#include <utility>
 
 #include <vector_types.h>
 
@@ -20,7 +21,7 @@ public:
     void set_motion(const CharacterMotion& motion);
     void update_positions(float4* positions, std::uint32_t frame_index) const;
 
-    void map_shared_buffers(float4*& positions, float4*& normals);
+    std::pair<float4*, float4*> map_shared_buffers();
     void unmap_shared_buffers();
 
     const TriangleVertexIndices* triangle_vertex_indices_buffer() const;

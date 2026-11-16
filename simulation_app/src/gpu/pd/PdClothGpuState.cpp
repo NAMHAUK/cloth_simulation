@@ -64,9 +64,7 @@ void PdClothGpuState::prepare_normal_buffers(const std::vector<GarmentObject>& g
                                             cloth_state.buffer_set().triangle_vertex_indices,
                                             cudaGraphicsRegisterFlagsReadOnly));
 
-    float4* positions = nullptr;
-    float4* normals = nullptr;
-    map_shared_buffers(positions, normals);
+    auto [positions, normals] = map_shared_buffers();
     update_normals(positions, normals, triangle_vertex_indices_buffer_, vertex_count_, triangle_color_counts_);
     unmap_shared_buffers();
 }
@@ -78,7 +76,7 @@ void PdClothGpuState::reset_velocities() const
 
 // Shared Buffer Mapping
 
-void PdClothGpuState::map_shared_buffers(float4*& positions, float4*& normals)
+std::pair<float4*, float4*> PdClothGpuState::map_shared_buffers()
 {
     // 공유 buffer CUDA 접근 활성화
     cudaGraphicsResource* resources[]{position_resource_, normal_resource_, triangle_resource_};
@@ -93,9 +91,9 @@ void PdClothGpuState::map_shared_buffers(float4*& positions, float4*& normals)
     CUDA_CHECK(cudaGraphicsResourceGetMappedPointer(&normal_buffer, &buffer_bytes, normal_resource_));
     CUDA_CHECK(cudaGraphicsResourceGetMappedPointer(&triangle_buffer, &buffer_bytes, triangle_resource_));
 
-    positions = static_cast<float4*>(position_buffer);
-    normals = static_cast<float4*>(normal_buffer);
     triangle_vertex_indices_buffer_ = static_cast<const TriangleVertexIndices*>(triangle_buffer);
+
+    return {static_cast<float4*>(position_buffer), static_cast<float4*>(normal_buffer)};
 }
 
 void PdClothGpuState::unmap_shared_buffers()

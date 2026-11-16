@@ -48,7 +48,7 @@ void PdCharacterGpuState::update_positions(float4* positions, std::uint32_t fram
 }
 
 // Shared Buffer Mapping
-void PdCharacterGpuState::map_shared_buffers(float4*& positions, float4*& normals)
+std::pair<float4*, float4*> PdCharacterGpuState::map_shared_buffers()
 {
     cudaGraphicsResource* resources[]{position_resource_, normal_resource_, triangle_resource_};
     CUDA_CHECK(cudaGraphicsMapResources(3, resources));
@@ -61,9 +61,9 @@ void PdCharacterGpuState::map_shared_buffers(float4*& positions, float4*& normal
     CUDA_CHECK(cudaGraphicsResourceGetMappedPointer(&normal_buffer, &buffer_bytes, normal_resource_));
     CUDA_CHECK(cudaGraphicsResourceGetMappedPointer(&triangle_buffer, &buffer_bytes, triangle_resource_));
 
-    positions = static_cast<float4*>(position_buffer);
-    normals = static_cast<float4*>(normal_buffer);
     triangle_vertex_indices_buffer_ = static_cast<const TriangleVertexIndices*>(triangle_buffer);
+
+    return {static_cast<float4*>(position_buffer), static_cast<float4*>(normal_buffer)};
 }
 
 void PdCharacterGpuState::unmap_shared_buffers()

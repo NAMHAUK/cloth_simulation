@@ -26,15 +26,13 @@ void ProjectiveDynamicsSolver::solve()
         return;
     }
 
-    float4* positions = nullptr;
-    float4* normals = nullptr;
-    cloth_state.map_shared_buffers(positions, normals);
+    auto [positions, normals] = cloth_state.map_shared_buffers();
 
     integrate_cloth(positions, cloth_state, gravity_, dt_);
     compute_inertia_rhs(pd_state_.inertia_rhs_buffer(), cloth_state, inv_dt_squared_);
 
     for (std::uint32_t iteration = 0; iteration < iteration_count_; ++iteration) {
-        pd_state_.constraints().execute_each([positions](const auto& constraints) {
+        pd_state_.constraints().execute_each([positions = positions](const auto& constraints) {
             project_constraints(constraints.buffer, constraints.count, positions);
         });
 

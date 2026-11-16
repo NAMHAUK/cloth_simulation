@@ -1,6 +1,7 @@
 #pragma once
 
 #include <cstdint>
+#include <utility>
 #include <vector>
 
 #include <vector_types.h>
@@ -21,7 +22,7 @@ public:
     void prepare_normal_buffers(const std::vector<GarmentObject>& garments, const ClothGpuState& cloth_state);
     void reset_velocities() const;
 
-    void map_shared_buffers(float4*& positions, float4*& normals);
+    std::pair<float4*, float4*> map_shared_buffers();
     void unmap_shared_buffers();
     float4* previous_position_buffer() const;
     float4* predicted_position_buffer() const;

@@ -70,9 +70,7 @@ void PdSimulation::create_simulation_buffers(QOpenGLFunctions_4_5_Core&)
         return;
     }
 
-    float4* positions = nullptr;
-    float4* normals = nullptr;
-    cloth_state.map_shared_buffers(positions, normals);
+    auto [positions, normals] = cloth_state.map_shared_buffers();
     update_normals(positions,
                    normals,
                    cloth_state.triangle_vertex_indices_buffer(),
