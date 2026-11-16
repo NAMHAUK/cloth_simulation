@@ -81,7 +81,7 @@ __global__ void build_csr_matrix_kernel(CsrMatrix matrix,
                                         std::uint32_t vertex_count)
 {
     const std::uint32_t index = blockIdx.x * blockDim.x + threadIdx.x;
-    
+
     if (index < entry_count) {
         const MatrixIndex& entry = indices[index];
 
@@ -92,7 +92,7 @@ __global__ void build_csr_matrix_kernel(CsrMatrix matrix,
             matrix.row_offsets_ptr[entry.row] = index;
         }
     }
-    
+
     if (index == 0) {
         matrix.row_offsets_ptr[vertex_count] = entry_count;
     }
@@ -103,7 +103,7 @@ __global__ void build_csr_matrix_kernel(CsrMatrix matrix,
 void prepare_pd_system(PdGpuState& state)
 {
     const std::uint32_t vertex_count = state.cloth_gpu_state().vertex_count();
-    
+
     // 1. 모든 constraint의 영향 값을 저장할 수 있는 임시 배열 생성
     std::uint32_t index_count = vertex_count;
     state.constraints().execute_each([&](const auto& constraints) { index_count += constraints.matrix_entry_count(); });

@@ -44,7 +44,7 @@ __global__ void compute_inertia_rhs_kernel(float3* rhs,
     if (index >= vertex_count) {
         return;
     }
-    
+
     // rhs_i = (m_i / h^2) * s_i
     const float coefficient = masses[index] * inv_dt_squared;
     const float4 position = predicted_positions[index];

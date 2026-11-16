@@ -28,7 +28,7 @@ void CharacterGpuState::initialize(const SceneState& scene, QOpenGLFunctions_4_5
                                                      GL_STATIC_DRAW,
                                                      gl);
     buffers_.vertex_normal = create_buffer(byte_size<glm::vec4>(motion.vertex_count), nullptr, GL_DYNAMIC_DRAW, gl);
-    
+
     gl.glClearNamedBufferData(buffers_.vertex_normal, GL_RGBA32F, GL_RGBA, GL_FLOAT, nullptr);
 
     gl.glCreateVertexArrays(1, &vao_);

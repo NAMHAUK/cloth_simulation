@@ -102,7 +102,9 @@ void PdSimulation::update_character_pose(float frame_alpha, QOpenGLFunctions_4_5
 
     const MappedMeshBuffers mesh_buffers = character_state.shared_buffers.map();
     character_state.update_positions(mesh_buffers.positions, frame_index);
-    update_normals(mesh_buffers, character_state.vertex_count(), gpu_state_.character_gpu_state().triangle_color_counts());
+    update_normals(mesh_buffers,
+                   character_state.vertex_count(),
+                   gpu_state_.character_gpu_state().triangle_color_counts());
     character_state.shared_buffers.unmap();
 }
 
