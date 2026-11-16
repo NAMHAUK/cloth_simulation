@@ -1,5 +1,6 @@
 #include "MeshNormals.h"
 #include "asset/AssetDataTypes.h"
+#include "gpu/pd/CudaMeshResources.h"
 #include "utils/CudaUtils.h"
 
 #include <cstdint>
@@ -55,25 +56,24 @@ __global__ void normalize_vertex_normals_kernel(std::uint32_t vertex_count, floa
 }
 }
 
-void update_normals(const float4* positions,
-                    float4* normals,
-                    const TriangleVertexIndices* triangle_vertex_indices,
+void update_normals(const MappedMeshBuffers& mesh_buffers,
                     std::uint32_t vertex_count,
                     const std::vector<std::uint32_t>& triangle_color_counts)
 {
-    CUDA_CHECK(cudaMemset(normals, 0, sizeof(float4) * vertex_count));
+    CUDA_CHECK(cudaMemset(mesh_buffers.normals, 0, sizeof(float4) * vertex_count));
 
     std::uint32_t triangle_offset = 0;
     for (std::uint32_t triangle_count : triangle_color_counts) {
         accumulate_vertex_normals_kernel<<<block_count(triangle_count, block_size), block_size>>>(
-            positions,
-            triangle_vertex_indices + triangle_offset,
+            mesh_buffers.positions,
+            mesh_buffers.triangle_vertex_indices + triangle_offset,
             triangle_count,
-            normals);
+            mesh_buffers.normals);
         CUDA_CHECK(cudaGetLastError());
         triangle_offset += triangle_count;
     }
 
-    normalize_vertex_normals_kernel<<<block_count(vertex_count, block_size), block_size>>>(vertex_count, normals);
+    normalize_vertex_normals_kernel<<<block_count(vertex_count, block_size), block_size>>>(vertex_count,
+                                                                                           mesh_buffers.normals);
     CUDA_CHECK(cudaGetLastError());
 }

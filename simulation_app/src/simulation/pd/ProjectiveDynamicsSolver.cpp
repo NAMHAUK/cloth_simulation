@@ -26,28 +26,24 @@ void ProjectiveDynamicsSolver::solve()
         return;
     }
 
-    auto [positions, normals] = cloth_state.map_shared_buffers();
+    const MappedMeshBuffers mesh_buffers = cloth_state.shared_buffers.map();
 
-    integrate_cloth(positions, cloth_state, gravity_, dt_);
+    integrate_cloth(mesh_buffers.positions, cloth_state, gravity_, dt_);
     compute_inertia_rhs(pd_state_.inertia_rhs_buffer(), cloth_state, inv_dt_squared_);
 
     for (std::uint32_t iteration = 0; iteration < iteration_count_; ++iteration) {
-        pd_state_.constraints().execute_each([positions = positions](const auto& constraints) {
+        pd_state_.constraints().execute_each([positions = mesh_buffers.positions](const auto& constraints) {
             project_constraints(constraints.buffer, constraints.count, positions);
         });
 
         pd_state_.set_rhs(pd_state_.inertia_rhs_buffer());
         accumulate_constraint_rhs(pd_state_.constraints(), pd_state_.rhs_buffer());
 
-        solve_global(pd_state_.system_matrix(), pd_state_.rhs_buffer(), positions, vertex_count);
+        solve_global(pd_state_.system_matrix(), pd_state_.rhs_buffer(), mesh_buffers.positions, vertex_count);
     }
 
-    update_cloth_velocities(positions, cloth_state, dt_);
-    update_normals(positions,
-                   normals,
-                   cloth_state.triangle_vertex_indices_buffer(),
-                   vertex_count,
-                   cloth_state.triangle_color_counts());
+    update_cloth_velocities(mesh_buffers.positions, cloth_state, dt_);
+    update_normals(mesh_buffers, vertex_count, cloth_state.triangle_color_counts());
 
-    cloth_state.unmap_shared_buffers();
+    cloth_state.shared_buffers.unmap();
 }

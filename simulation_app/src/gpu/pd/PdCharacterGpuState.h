@@ -1,14 +1,13 @@
 #pragma once
 
+#include "gpu/pd/CudaMeshResources.h"
+
 #include <cstdint>
-#include <utility>
 
 #include <vector_types.h>
 
 class CharacterGpuState;
 struct CharacterMotion;
-struct TriangleVertexIndices;
-struct cudaGraphicsResource;
 
 class PdCharacterGpuState final
 {
@@ -21,21 +20,15 @@ public:
     void set_motion(const CharacterMotion& motion);
     void update_positions(float4* positions, std::uint32_t frame_index) const;
 
-    std::pair<float4*, float4*> map_shared_buffers();
-    void unmap_shared_buffers();
-
-    const TriangleVertexIndices* triangle_vertex_indices_buffer() const;
     std::uint32_t vertex_count() const;
     std::uint32_t frame_count() const;
 
     void release();
 
+    CudaMeshResources shared_buffers;
+
 private:
-    cudaGraphicsResource* position_resource_ = nullptr;
-    cudaGraphicsResource* normal_resource_ = nullptr;
-    cudaGraphicsResource* triangle_resource_ = nullptr;
     float4* animation_position_buffer_ = nullptr;
-    const TriangleVertexIndices* triangle_vertex_indices_buffer_ = nullptr;
     std::uint32_t vertex_count_ = 0;
     std::uint32_t frame_count_ = 0;
 };

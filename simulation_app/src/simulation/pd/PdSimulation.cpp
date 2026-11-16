@@ -74,13 +74,9 @@ void PdSimulation::create_simulation_buffers(QOpenGLFunctions_4_5_Core&)
         return;
     }
 
-    auto [positions, normals] = cloth_state.map_shared_buffers();
-    update_normals(positions,
-                   normals,
-                   cloth_state.triangle_vertex_indices_buffer(),
-                   cloth_state.vertex_count(),
-                   cloth_state.triangle_color_counts());
-    cloth_state.unmap_shared_buffers();
+    const MappedMeshBuffers mesh_buffers = cloth_state.shared_buffers.map();
+    update_normals(mesh_buffers, cloth_state.vertex_count(), cloth_state.triangle_color_counts());
+    cloth_state.shared_buffers.unmap();
 }
 
 // Character
@@ -104,14 +100,10 @@ void PdSimulation::update_character_pose(float frame_alpha, QOpenGLFunctions_4_5
     const std::uint32_t frame_index = std::min(scene_.motion_frame_index() + (frame_alpha >= 1.0f ? 1u : 0u),
                                                character_state.frame_count() - 1u);
 
-    auto [positions, normals] = character_state.map_shared_buffers();
-    character_state.update_positions(positions, frame_index);
-    update_normals(positions,
-                   normals,
-                   character_state.triangle_vertex_indices_buffer(),
-                   character_state.vertex_count(),
-                   gpu_state_.character_gpu_state().triangle_color_counts());
-    character_state.unmap_shared_buffers();
+    const MappedMeshBuffers mesh_buffers = character_state.shared_buffers.map();
+    character_state.update_positions(mesh_buffers.positions, frame_index);
+    update_normals(mesh_buffers, character_state.vertex_count(), gpu_state_.character_gpu_state().triangle_color_counts());
+    character_state.shared_buffers.unmap();
 }
 
 // Base positions
