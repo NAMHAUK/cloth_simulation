@@ -28,9 +28,9 @@ public:
 
     PdConstraints& constraints();
     const CudssSystem& system_matrix() const;
-    float3* inertia_rhs_buffer() const;
-    float3* rhs_buffer() const;
-    void set_rhs(const float3* source);
+    float* inertia_rhs_buffer() const;
+    float* rhs_buffer() const;
+    void set_rhs(const float* source);
 
     void release_simulation_buffers();
     void release_garment_resources();
@@ -46,6 +46,6 @@ private:
     PdConstraints constraints_;
 
     CudssSystem system_matrix_;
-    float3* inertia_rhs_buffer_ = nullptr;
-    float3* rhs_buffer_ = nullptr;
+    float* inertia_rhs_buffer_ = nullptr;
+    float* rhs_buffer_ = nullptr;
 };

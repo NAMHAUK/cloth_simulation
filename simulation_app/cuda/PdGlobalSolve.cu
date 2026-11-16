@@ -1,4 +1,4 @@
 #include "PdGlobalSolve.h"
 
-void solve_global(const CudssSystem&, const float3*, float4*, std::uint32_t)
+void solve_global(const CudssSystem&, const float*, float4*, std::uint32_t)
 {}

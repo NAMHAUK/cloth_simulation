@@ -25,18 +25,18 @@ void PdGpuState::prepare_system(const std::vector<GarmentObject>& garments, cons
     constraints_.allocate_buffers();
     constraints_.initialize();
 
-    CUDA_CHECK(cudaMalloc(&inertia_rhs_buffer_, sizeof(float3) * cloth_gpu_state_.vertex_count()));
-    CUDA_CHECK(cudaMalloc(&rhs_buffer_, sizeof(float3) * cloth_gpu_state_.vertex_count()));
+    CUDA_CHECK(cudaMalloc(&inertia_rhs_buffer_, sizeof(float) * 3 * cloth_gpu_state_.vertex_count()));
+    CUDA_CHECK(cudaMalloc(&rhs_buffer_, sizeof(float) * 3 * cloth_gpu_state_.vertex_count()));
 
     prepare_pd_system(*this);
 }
 
 // Setter
-void PdGpuState::set_rhs(const float3* source)
+void PdGpuState::set_rhs(const float* source)
 {
     CUDA_CHECK(cudaMemcpyAsync(rhs_buffer_,
                                source,
-                               sizeof(float3) * cloth_gpu_state_.vertex_count(),
+                               sizeof(float) * 3 * cloth_gpu_state_.vertex_count(),
                                cudaMemcpyDeviceToDevice));
 }
 
@@ -66,12 +66,12 @@ const CudssSystem& PdGpuState::system_matrix() const
     return system_matrix_;
 }
 
-float3* PdGpuState::inertia_rhs_buffer() const
+float* PdGpuState::inertia_rhs_buffer() const
 {
     return inertia_rhs_buffer_;
 }
 
-float3* PdGpuState::rhs_buffer() const
+float* PdGpuState::rhs_buffer() const
 {
     return rhs_buffer_;
 }
