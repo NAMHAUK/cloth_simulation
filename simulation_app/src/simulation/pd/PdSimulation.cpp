@@ -1,4 +1,5 @@
 #include "simulation/pd/PdSimulation.h"
+#include "MeshNormals.h"
 #include "gpu/common/SceneGpuState.h"
 #include "simulation/SceneState.h"
 
@@ -54,15 +55,30 @@ void PdSimulation::prepare_garments(const std::vector<const GarmentObject*>&, QO
 // Garment resources
 void PdSimulation::rebuild_garment_resources(GarmentLayer changed_layer, QOpenGLFunctions_4_5_Core& gl)
 {
-    pd_gpu_state_.release();
+    pd_gpu_state_.release_garment_resources();
     gpu_state_.cloth_gpu_state().rebuild_buffers(scene_.garments(), changed_layer, gl);
     pd_gpu_state_.cloth_gpu_state().prepare_normal_buffers(scene_.garments(), gpu_state_.cloth_gpu_state());
 }
 
 void PdSimulation::create_simulation_buffers(QOpenGLFunctions_4_5_Core&)
 {
-    pd_gpu_state_.release();
+    pd_gpu_state_.release_simulation_buffers();
     pd_gpu_state_.prepare_system(scene_.garments(), gpu_state_.cloth_gpu_state());
+
+    PdClothGpuState& cloth_state = pd_gpu_state_.cloth_gpu_state();
+    if (cloth_state.vertex_count() == 0) {
+        return;
+    }
+
+    float4* positions = nullptr;
+    float4* normals = nullptr;
+    cloth_state.map_shared_buffers(positions, normals);
+    update_normals(positions,
+                   normals,
+                   cloth_state.triangle_vertex_indices_buffer(),
+                   cloth_state.vertex_count(),
+                   cloth_state.triangle_color_counts());
+    cloth_state.unmap_shared_buffers();
 }
 
 // Character
@@ -110,6 +126,6 @@ void PdSimulation::release(QOpenGLFunctions_4_5_Core&)
 
 void PdSimulation::release_garment_resources(QOpenGLFunctions_4_5_Core& gl)
 {
-    pd_gpu_state_.release();
+    pd_gpu_state_.release_garment_resources();
     gpu_state_.cloth_gpu_state().release(gl);
 }

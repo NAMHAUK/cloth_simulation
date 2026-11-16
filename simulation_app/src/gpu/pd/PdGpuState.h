@@ -37,6 +37,8 @@ public:
     float3* rhs_buffer() const;
     void set_rhs(const float3* source);
 
+    void release_simulation_buffers();
+    void release_garment_resources();
     void release();
 
 private:

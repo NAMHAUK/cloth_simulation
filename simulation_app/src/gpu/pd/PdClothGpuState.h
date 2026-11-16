@@ -17,9 +17,8 @@ public:
     PdClothGpuState(const PdClothGpuState&) = delete;
     PdClothGpuState& operator=(const PdClothGpuState&) = delete;
 
-    void rebuild_buffers(const std::vector<GarmentObject>& garments, const ClothGpuState& cloth_state);
+    void create_simulation_buffers(const std::vector<GarmentObject>& garments, const ClothGpuState& cloth_state);
     void prepare_normal_buffers(const std::vector<GarmentObject>& garments, const ClothGpuState& cloth_state);
-    void initialize_masses(const std::vector<GarmentObject>& garments, const ClothGpuState& cloth_state);
     void reset_velocities() const;
 
     void map_shared_buffers(float4*& positions, float4*& normals);
@@ -33,7 +32,8 @@ public:
     std::uint32_t vertex_count() const;
     std::uint32_t triangle_count() const;
 
-    void release();
+    void release_simulation_buffers();
+    void release_normal_buffers();
 
 private:
     cudaGraphicsResource* position_resource_ = nullptr;

@@ -12,17 +12,27 @@
 #include <cuda_gl_interop.h>
 #include <cuda_runtime.h>
 
-void PdClothGpuState::rebuild_buffers(const std::vector<GarmentObject>& garments, const ClothGpuState& cloth_state)
+void PdClothGpuState::create_simulation_buffers(const std::vector<GarmentObject>& garments,
+                                                const ClothGpuState& cloth_state)
 {
-    prepare_normal_buffers(garments, cloth_state);
-
+    // position
     CUDA_CHECK(cudaMalloc(reinterpret_cast<void**>(&previous_position_buffer_), sizeof(float4) * vertex_count_));
     CUDA_CHECK(cudaMalloc(reinterpret_cast<void**>(&predicted_position_buffer_), sizeof(float4) * vertex_count_));
 
+    // velocity
     const std::size_t velocity_bytes = sizeof(float4) * vertex_count_;
     CUDA_CHECK(cudaMalloc(reinterpret_cast<void**>(&velocity_buffer_), velocity_bytes));
     CUDA_CHECK(cudaMemset(velocity_buffer_, 0, velocity_bytes));
+
+    // mass
     CUDA_CHECK(cudaMalloc(reinterpret_cast<void**>(&mass_buffer_), sizeof(float) * vertex_count_));
+    for (const GarmentObject& garment : garments) {
+        const GarmentBufferState& garment_state = cloth_state.garment_states()[garment.layer];
+
+        set_vertex_masses(mass_buffer_ + garment_state.vertex_start_index,
+                          garment_state.vertex_count,
+                          garment.surface_density);
+    }
 }
 
 void PdClothGpuState::prepare_normal_buffers(const std::vector<GarmentObject>& garments,
@@ -59,17 +69,6 @@ void PdClothGpuState::prepare_normal_buffers(const std::vector<GarmentObject>& g
     map_shared_buffers(positions, normals);
     update_normals(positions, normals, triangle_vertex_indices_buffer_, vertex_count_, triangle_color_counts_);
     unmap_shared_buffers();
-}
-
-void PdClothGpuState::initialize_masses(const std::vector<GarmentObject>& garments, const ClothGpuState& cloth_state)
-{
-    for (const GarmentObject& garment : garments) {
-        const GarmentBufferState& garment_state = cloth_state.garment_states()[garment.layer];
-
-        set_vertex_masses(mass_buffer_ + garment_state.vertex_start_index,
-                          garment_state.vertex_count,
-                          garment.surface_density);
-    }
 }
 
 void PdClothGpuState::reset_velocities() const
@@ -148,7 +147,22 @@ std::uint32_t PdClothGpuState::triangle_count() const
     return triangle_count_;
 }
 
-void PdClothGpuState::release()
+// Release
+void PdClothGpuState::release_simulation_buffers()
+{
+    // CUDA 메모리 해제
+    CUDA_CHECK(cudaFree(previous_position_buffer_));
+    CUDA_CHECK(cudaFree(predicted_position_buffer_));
+    CUDA_CHECK(cudaFree(velocity_buffer_));
+    CUDA_CHECK(cudaFree(mass_buffer_));
+
+    previous_position_buffer_ = nullptr;
+    predicted_position_buffer_ = nullptr;
+    velocity_buffer_ = nullptr;
+    mass_buffer_ = nullptr;
+}
+
+void PdClothGpuState::release_normal_buffers()
 {
     // OpenGL과 공유하는 버퍼 사용 등록 해제
     if (position_resource_ != nullptr) {
@@ -164,16 +178,6 @@ void PdClothGpuState::release()
         triangle_resource_ = nullptr;
     }
 
-    // CUDA 메모리 해제
-    CUDA_CHECK(cudaFree(previous_position_buffer_));
-    CUDA_CHECK(cudaFree(predicted_position_buffer_));
-    CUDA_CHECK(cudaFree(velocity_buffer_));
-    CUDA_CHECK(cudaFree(mass_buffer_));
-
-    previous_position_buffer_ = nullptr;
-    predicted_position_buffer_ = nullptr;
-    velocity_buffer_ = nullptr;
-    mass_buffer_ = nullptr;
     triangle_vertex_indices_buffer_ = nullptr;
     triangle_color_counts_.clear();
     vertex_count_ = 0;

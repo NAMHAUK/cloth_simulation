@@ -17,8 +17,7 @@ void PdGpuState::prepare_system(const std::vector<GarmentObject>& garments, cons
         return;
     }
 
-    cloth_gpu_state_.rebuild_buffers(garments, cloth_state);
-    cloth_gpu_state_.initialize_masses(garments, cloth_state);
+    cloth_gpu_state_.create_simulation_buffers(garments, cloth_state);
 
     constraints_.get<ConstraintIndex::Stretch>().count = 1;
     constraints_.get<ConstraintIndex::Attachment>().count = 1;
@@ -72,9 +71,9 @@ float3* PdGpuState::rhs_buffer() const
 }
 
 // Release
-void PdGpuState::release()
+void PdGpuState::release_simulation_buffers()
 {
-    cloth_gpu_state_.release();
+    cloth_gpu_state_.release_simulation_buffers();
     constraints_.release_buffers();
 
     CUDA_CHECK(cudaFree(system_matrix_.row_offsets_ptr));
@@ -87,4 +86,16 @@ void PdGpuState::release()
 
     CUDA_CHECK(cudaFree(rhs_buffer_));
     rhs_buffer_ = nullptr;
+}
+
+void PdGpuState::release_garment_resources()
+{
+    release_simulation_buffers();
+    cloth_gpu_state_.release_normal_buffers();
+}
+
+void PdGpuState::release()
+{
+    release_garment_resources();
+    character_gpu_state_.release();
 }
