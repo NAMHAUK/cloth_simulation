@@ -16,7 +16,6 @@ void PdClothGpuState::create_simulation_buffers(const std::vector<GarmentObject>
 {
     // position
     CUDA_CHECK(cudaMalloc(reinterpret_cast<void**>(&previous_position_buffer_), sizeof(float4) * vertex_count_));
-    CUDA_CHECK(cudaMalloc(reinterpret_cast<void**>(&predicted_position_buffer_), sizeof(float4) * vertex_count_));
 
     // velocity
     const std::size_t velocity_bytes = sizeof(float4) * vertex_count_;
@@ -74,11 +73,6 @@ float4* PdClothGpuState::previous_position_buffer() const
     return previous_position_buffer_;
 }
 
-float4* PdClothGpuState::predicted_position_buffer() const
-{
-    return predicted_position_buffer_;
-}
-
 float4* PdClothGpuState::velocity_buffer() const
 {
     return velocity_buffer_;
@@ -109,12 +103,10 @@ void PdClothGpuState::release_simulation_buffers()
 {
     // CUDA 메모리 해제
     CUDA_CHECK(cudaFree(previous_position_buffer_));
-    CUDA_CHECK(cudaFree(predicted_position_buffer_));
     CUDA_CHECK(cudaFree(velocity_buffer_));
     CUDA_CHECK(cudaFree(mass_buffer_));
 
     previous_position_buffer_ = nullptr;
-    predicted_position_buffer_ = nullptr;
     velocity_buffer_ = nullptr;
     mass_buffer_ = nullptr;
 }

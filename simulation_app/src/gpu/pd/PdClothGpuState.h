@@ -22,7 +22,6 @@ public:
     void reset_velocities() const;
 
     float4* previous_position_buffer() const;
-    float4* predicted_position_buffer() const;
     float4* velocity_buffer() const;
     const float* mass_buffer() const;
     const std::vector<std::uint32_t>& triangle_color_counts() const;
@@ -36,7 +35,6 @@ public:
 
 private:
     float4* previous_position_buffer_ = nullptr;
-    float4* predicted_position_buffer_ = nullptr;
     float4* velocity_buffer_ = nullptr;
     float* mass_buffer_ = nullptr;
     std::vector<std::uint32_t> triangle_color_counts_;

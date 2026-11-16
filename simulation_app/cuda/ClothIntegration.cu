@@ -9,7 +9,6 @@ constexpr std::uint32_t block_size = 256;
 
 __global__ void integrate_cloth_kernel(float4* positions,
                                        float4* previous_positions,
-                                       float4* predicted_positions,
                                        const float4* velocities,
                                        std::uint32_t vertex_count,
                                        float gravity,
@@ -30,7 +29,6 @@ __global__ void integrate_cloth_kernel(float4* positions,
     position.y += velocity.y * dt;
     position.z += velocity.z * dt;
 
-    predicted_positions[index] = position;
     positions[index] = position;
 }
 
@@ -64,7 +62,6 @@ void integrate_cloth(float4* positions, const PdClothGpuState& cloth_state, floa
     integrate_cloth_kernel<<<block_count(vertex_count, block_size), block_size>>>(
         positions,
         cloth_state.previous_position_buffer(),
-        cloth_state.predicted_position_buffer(),
         cloth_state.velocity_buffer(),
         vertex_count,
         gravity,

@@ -29,7 +29,7 @@ void ProjectiveDynamicsSolver::solve()
     const MappedMeshBuffers mesh_buffers = cloth_state.shared_buffers.map();
 
     integrate_cloth(mesh_buffers.positions, cloth_state, gravity_, dt_);
-    compute_inertia_rhs(pd_state_.inertia_rhs_buffer(), cloth_state, inv_dt_squared_);
+    compute_inertia_rhs(pd_state_.inertia_rhs_buffer(), mesh_buffers.positions, cloth_state, inv_dt_squared_);
 
     for (std::uint32_t iteration = 0; iteration < iteration_count_; ++iteration) {
         pd_state_.constraints().execute_each([positions = mesh_buffers.positions](const auto& constraints) {
