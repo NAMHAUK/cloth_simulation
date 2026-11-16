@@ -40,6 +40,11 @@ void PdGpuState::set_rhs(const float3* source)
 }
 
 // Accessor
+PdCharacterGpuState& PdGpuState::character_gpu_state()
+{
+    return character_gpu_state_;
+}
+
 PdClothGpuState& PdGpuState::cloth_gpu_state()
 {
     return cloth_gpu_state_;

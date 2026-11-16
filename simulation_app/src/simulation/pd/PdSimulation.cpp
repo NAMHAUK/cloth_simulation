@@ -3,6 +3,7 @@
 #include "gpu/common/SceneGpuState.h"
 #include "simulation/SceneState.h"
 
+#include <algorithm>
 #include <cassert>
 #include <stdexcept>
 
@@ -17,10 +18,13 @@ PdSimulation::PdSimulation(SceneState& scene, SceneGpuState& gpu_state, Simulati
       projective_dynamics_solver_(pd_gpu_state_, params.integration.gravity, dt_, params.step.iteration_count)
 {}
 
-void PdSimulation::initialize(const std::filesystem::path&, QOpenGLFunctions_4_5_Core&)
+void PdSimulation::initialize(const std::filesystem::path&, QOpenGLFunctions_4_5_Core& gl)
 {
     initialize_cuda();
     pd_gpu_state_.initialize(dt_);
+    pd_gpu_state_.character_gpu_state().initialize(gpu_state_.character_gpu_state());
+    set_character_motion(gl);
+
     initialized_ = true;
 }
 
@@ -80,8 +84,11 @@ void PdSimulation::create_simulation_buffers(QOpenGLFunctions_4_5_Core&)
 }
 
 // Character
-void PdSimulation::set_character_motion(QOpenGLFunctions_4_5_Core&)
-{}
+void PdSimulation::set_character_motion(QOpenGLFunctions_4_5_Core& gl)
+{
+    pd_gpu_state_.character_gpu_state().set_motion(scene_.character_motion());
+    update_character_pose(0.0f, gl);
+}
 
 void PdSimulation::update_character_motion(std::uint32_t motion_step_index, QOpenGLFunctions_4_5_Core& gl)
 {
@@ -91,8 +98,21 @@ void PdSimulation::update_character_motion(std::uint32_t motion_step_index, QOpe
     update_character_pose(frame_alpha, gl);
 }
 
-void PdSimulation::update_character_pose(float, QOpenGLFunctions_4_5_Core&)
-{}
+void PdSimulation::update_character_pose(float frame_alpha, QOpenGLFunctions_4_5_Core&)
+{
+    PdCharacterGpuState& character_state = pd_gpu_state_.character_gpu_state();
+    const std::uint32_t frame_index = std::min(scene_.motion_frame_index() + (frame_alpha >= 1.0f ? 1u : 0u),
+                                               character_state.frame_count() - 1u);
+
+    auto [positions, normals] = character_state.map_shared_buffers();
+    character_state.update_positions(positions, frame_index);
+    update_normals(positions,
+                   normals,
+                   character_state.triangle_vertex_indices_buffer(),
+                   character_state.vertex_count(),
+                   gpu_state_.character_gpu_state().triangle_color_counts());
+    character_state.unmap_shared_buffers();
+}
 
 // Base positions
 void PdSimulation::capture_garment_base_positions(QOpenGLFunctions_4_5_Core&)
