@@ -113,7 +113,6 @@ struct GarmentMesh
     GarmentCategory garment_category = GarmentCategory::Top;
     std::vector<glm::vec3> vertex_positions;
     std::vector<TriangleVertexIndices> triangle_vertex_indices;
-    std::vector<std::uint32_t> colorized_triangle_indices;
     std::vector<std::uint32_t> triangle_color_counts;
     GarmentDistanceConstraints stretch_constraints;
     GarmentDistanceConstraints bending_constraints;

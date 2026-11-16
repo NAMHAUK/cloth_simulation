@@ -166,9 +166,9 @@ void build_garment_constraints(GarmentMesh& mesh)
 void build_triangle_coloring(GarmentMesh& mesh)
 {
     std::vector<std::vector<std::uint32_t>> vertex_colors(mesh.vertex_positions.size());
-    std::vector<std::vector<std::uint32_t>> triangle_groups;
-    for (std::uint32_t triangle_index = 0; triangle_index < mesh.triangle_vertex_indices.size(); ++triangle_index) {
-        const auto& [vertex_a, vertex_b, vertex_c] = mesh.triangle_vertex_indices[triangle_index];
+    std::vector<std::vector<TriangleVertexIndices>> triangle_groups;
+    for (const auto& triangle : mesh.triangle_vertex_indices) {
+        const auto& [vertex_a, vertex_b, vertex_c] = triangle;
         std::vector<bool> used_colors(triangle_groups.size(), false);
         for (std::uint32_t vertex_index : {vertex_a, vertex_b, vertex_c}) {
             for (std::uint32_t color_index : vertex_colors[vertex_index]) {
@@ -184,18 +184,18 @@ void build_triangle_coloring(GarmentMesh& mesh)
         if (color_index == triangle_groups.size()) {
             triangle_groups.emplace_back();
         }
-        triangle_groups[color_index].push_back(triangle_index);
+        triangle_groups[color_index].push_back(triangle);
         for (std::uint32_t vertex_index : {vertex_a, vertex_b, vertex_c}) {
             vertex_colors[vertex_index].push_back(color_index);
         }
     }
 
-    mesh.colorized_triangle_indices.reserve(mesh.triangle_vertex_indices.size());
+    mesh.triangle_vertex_indices.clear();
     mesh.triangle_color_counts.reserve(triangle_groups.size());
     for (const auto& triangle_group : triangle_groups) {
-        mesh.colorized_triangle_indices.insert(mesh.colorized_triangle_indices.end(),
-                                               triangle_group.begin(),
-                                               triangle_group.end());
+        mesh.triangle_vertex_indices.insert(mesh.triangle_vertex_indices.end(),
+                                            triangle_group.begin(),
+                                            triangle_group.end());
         mesh.triangle_color_counts.push_back(static_cast<std::uint32_t>(triangle_group.size()));
     }
 }
