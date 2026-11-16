@@ -19,16 +19,10 @@ void CharacterGpuState::initialize(const SceneState& scene, QOpenGLFunctions_4_5
     const auto& triangle_vertex_indices = motion.triangle_vertex_indices;
     triangle_color_counts_ = scene.character_triangle_color_counts();
 
-    std::vector<glm::vec4> positions;
-    positions.reserve(motion.vertex_count);
-    for (std::uint32_t vertex = 0; vertex < motion.vertex_count; ++vertex) {
-        positions.emplace_back(motion.vertex_positions[vertex], 0.0f);
-    }
-
     const auto position_bytes = byte_size<glm::vec4>(motion.vertex_count);
 
     // create rendering buffers
-    buffers_.current_position = create_buffer(position_bytes, positions.data(), GL_DYNAMIC_DRAW, gl);
+    buffers_.current_position = create_buffer(position_bytes, motion.vertex_positions.data(), GL_DYNAMIC_DRAW, gl);
     buffers_.triangle_vertex_indices = create_buffer(byte_size<TriangleVertexIndices>(triangle_vertex_indices.size()),
                                                      triangle_vertex_indices.data(),
                                                      GL_STATIC_DRAW,

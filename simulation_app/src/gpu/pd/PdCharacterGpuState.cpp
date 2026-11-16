@@ -30,13 +30,21 @@ void PdCharacterGpuState::set_motion(const CharacterMotion& motion)
     CUDA_CHECK(cudaFree(animation_position_buffer_));
     animation_position_buffer_ = nullptr;
 
-    const std::size_t position_bytes = sizeof(float3) * motion.vertex_positions.size();
+    const std::size_t position_bytes = sizeof(float4) * motion.vertex_positions.size();
     CUDA_CHECK(cudaMalloc(&animation_position_buffer_, position_bytes));
     CUDA_CHECK(cudaMemcpy(animation_position_buffer_,
                           motion.vertex_positions.data(),
                           position_bytes,
                           cudaMemcpyHostToDevice));
     frame_count_ = motion.frame_count;
+}
+
+void PdCharacterGpuState::update_positions(float4* positions, std::uint32_t frame_index) const
+{
+    CUDA_CHECK(cudaMemcpyAsync(positions,
+                               animation_position_buffer_ + std::size_t{frame_index} * vertex_count_,
+                               sizeof(float4) * vertex_count_,
+                               cudaMemcpyDeviceToDevice));
 }
 
 // Shared Buffer Mapping
@@ -66,11 +74,6 @@ void PdCharacterGpuState::unmap_shared_buffers()
 }
 
 // Accessors
-const float3* PdCharacterGpuState::animation_position_buffer() const
-{
-    return animation_position_buffer_;
-}
-
 const TriangleVertexIndices* PdCharacterGpuState::triangle_vertex_indices_buffer() const
 {
     return triangle_vertex_indices_buffer_;

@@ -16,6 +16,7 @@ from motion_converter_common import (
     set_smpl_compatibility,
     write_triangle_part_labels,
     write_motion_header,
+    write_vertex_positions,
 )
 
 EPSILON = 1.0e-8
@@ -101,7 +102,7 @@ def write_default_pose_motion(output_path,
             orientation.tofile(out_file)
             torso_position.tofile(out_file)
             orientation.tofile(out_file)
-            vertices.tofile(out_file)
+            write_vertex_positions(out_file, vertices)
             write_triangle_part_labels(out_file, faces, triangle_part_labels)
             out_file.write(struct.pack("<I", len(triangle_color_counts)))
             triangle_color_counts.tofile(out_file)

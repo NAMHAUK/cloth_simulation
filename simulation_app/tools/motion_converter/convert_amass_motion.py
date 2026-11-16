@@ -12,6 +12,7 @@ from motion_converter_common import (
     make_default_pose,
     set_smpl_compatibility,
     write_motion_header,
+    write_vertex_positions,
 )
 from motion_rotation_math import (
     axis_angle_to_quaternions,
@@ -315,7 +316,7 @@ def write_motion_file(output_path,
     try:
         with temp_output_path.open("wb") as out_file:
             transform_file_positions = initialize_motion_file(out_file, motion, model.faces, frame_count, vertex_count)
-            shape_transition_vertices.tofile(out_file)
+            write_vertex_positions(out_file, shape_transition_vertices)
             
             with torch.no_grad():
                 for start in range(0, motion_frame_count, batch_size):
@@ -331,7 +332,7 @@ def write_motion_file(output_path,
 
                     converted_pelvis_positions.append(batch_pelvis_positions)
                     converted_torso_positions.append(batch_torso_positions)
-                    batch_vertices.tofile(out_file)
+                    write_vertex_positions(out_file, batch_vertices)
 
             pelvis_positions = np.concatenate(converted_pelvis_positions, axis=0)
             torso_positions = np.concatenate(converted_torso_positions, axis=0)

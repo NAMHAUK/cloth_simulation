@@ -96,7 +96,7 @@ std::uint32_t find_longest_axis(const glm::vec3& aabb_size)
 // Initialization
 MeshBvhBuilder::MeshBvhBuilder(const CharacterMotion& motion, const std::vector<std::uint8_t>& triangle_part_labels)
     : source_triangle_vertex_indices_(motion.triangle_vertex_indices),
-      source_vertex_positions_(motion.vertex_positions),
+      source_vertex_positions_(motion.vertex_positions.data()),
       triangle_part_labels_(triangle_part_labels)
 {
     // Body: build triangle index list (separate collision and excluded groups)
@@ -113,7 +113,7 @@ MeshBvhBuilder::MeshBvhBuilder(const CharacterMotion& motion, const std::vector<
 
 MeshBvhBuilder::MeshBvhBuilder(const GarmentMesh& mesh)
     : source_triangle_vertex_indices_(mesh.triangle_vertex_indices),
-      source_vertex_positions_(mesh.vertex_positions)
+      source_vertex_positions_(mesh.vertex_positions.data())
 {
     // Garment: build triangle index list
     const std::uint32_t triangle_count = source_triangle_vertex_indices_.size();
@@ -325,9 +325,9 @@ void MeshBvhBuilder::make_triangle_primitives()
 
     for (const std::uint32_t triangle_index : collision_triangle_indices_) {
         const auto& [vertex_index_a, vertex_index_b, vertex_index_c] = source_triangle_vertex_indices_[triangle_index];
-        const glm::vec3 position_a = source_vertex_positions_[vertex_index_a];
-        const glm::vec3 position_b = source_vertex_positions_[vertex_index_b];
-        const glm::vec3 position_c = source_vertex_positions_[vertex_index_c];
+        const glm::vec3 position_a = vertex_position(vertex_index_a);
+        const glm::vec3 position_b = vertex_position(vertex_index_b);
+        const glm::vec3 position_c = vertex_position(vertex_index_c);
 
         const glm::vec3 center = (position_a + position_b + position_c) / 3.0f;
         const glm::vec3 min_bounds = glm::min(glm::min(position_a, position_b), position_c);
@@ -342,14 +342,20 @@ void MeshBvhBuilder::make_edge_primitives(const std::vector<LabeledEdge>& edges)
     primitives_.reserve(edges.size());
     for (std::uint32_t edge_index = 0; edge_index < edges.size(); ++edge_index) {
         const LabeledEdge& edge = edges[edge_index];
-        const glm::vec3 position_a = source_vertex_positions_[edge.edge.vertex_a];
-        const glm::vec3 position_b = source_vertex_positions_[edge.edge.vertex_b];
+        const glm::vec3 position_a = vertex_position(edge.edge.vertex_a);
+        const glm::vec3 position_b = vertex_position(edge.edge.vertex_b);
 
         const glm::vec3 min_bounds = glm::min(position_a, position_b);
         const glm::vec3 max_bounds = glm::max(position_a, position_b);
 
         primitives_.push_back({edge_index, (position_a + position_b) * 0.5f, min_bounds, max_bounds, edge.part_label});
     }
+}
+
+glm::vec3 MeshBvhBuilder::vertex_position(std::uint32_t vertex_index) const
+{
+    return std::visit([vertex_index](const auto* positions) { return glm::vec3(positions[vertex_index]); },
+                      source_vertex_positions_);
 }
 
 // Part label assignment

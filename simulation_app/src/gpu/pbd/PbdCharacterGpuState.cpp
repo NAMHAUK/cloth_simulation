@@ -98,7 +98,7 @@ void PbdCharacterGpuState::set_motion(const CharacterMotion& motion,
                                       QOpenGLFunctions_4_5_Core& gl)
 {
     gl.glNamedBufferData(buffers_.animation_positions,
-                         byte_size<glm::vec3>(motion.vertex_positions.size()),
+                         byte_size<glm::vec4>(motion.vertex_positions.size()),
                          motion.vertex_positions.data(),
                          GL_STATIC_DRAW);
 

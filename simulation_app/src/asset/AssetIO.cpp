@@ -123,7 +123,7 @@ void validate_motion_asset_file_size(const std::filesystem::path& path, const Ch
     const auto index_size = triangle_count * sizeof(TriangleVertexIndices);
     const auto transform_size = frame_count * (position_components + quat_components) * 2u * sizeof(float);
     const auto non_vertex_size = header_size + index_size + transform_size;
-    const auto vertex_stride = sizeof(glm::vec3);
+    const auto vertex_stride = sizeof(glm::vec4);
     const auto asset_file_size = std::filesystem::file_size(path);
 
     if (non_vertex_size > asset_file_size ||
@@ -166,8 +166,10 @@ void validate_character_motion(const CharacterMotion& motion)
 
     if (!is_finite_values(motion.pelvis_positions) ||
         !is_finite_values(motion.torso_positions) ||
-        !std::all_of(motion.vertex_positions.begin(), motion.vertex_positions.end(), is_finite_vec3)) {
-        throw std::runtime_error("Motion asset contains non-finite values");
+        !std::all_of(motion.vertex_positions.begin(), motion.vertex_positions.end(), [](const glm::vec4& position) {
+            return is_finite_vec3(glm::vec3(position)) && position.w == 0.0f;
+        })) {
+        throw std::runtime_error("Motion asset contains invalid positions");
     }
 
     validate_orientations(motion.pelvis_orientations);
