@@ -21,7 +21,6 @@ public:
     void update_positions(float4* positions, std::uint32_t frame_index) const;
 
     std::uint32_t vertex_count() const;
-    std::uint32_t frame_count() const;
 
     void release();
 
@@ -30,5 +29,4 @@ public:
 private:
     float4* animation_position_buffer_ = nullptr;
     std::uint32_t vertex_count_ = 0;
-    std::uint32_t frame_count_ = 0;
 };

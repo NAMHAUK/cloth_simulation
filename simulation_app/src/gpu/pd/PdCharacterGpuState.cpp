@@ -29,7 +29,6 @@ void PdCharacterGpuState::set_motion(const CharacterMotion& motion)
                           motion.vertex_positions.data(),
                           position_bytes,
                           cudaMemcpyHostToDevice));
-    frame_count_ = motion.frame_count;
 }
 
 void PdCharacterGpuState::update_positions(float4* positions, std::uint32_t frame_index) const
@@ -46,11 +45,6 @@ std::uint32_t PdCharacterGpuState::vertex_count() const
     return vertex_count_;
 }
 
-std::uint32_t PdCharacterGpuState::frame_count() const
-{
-    return frame_count_;
-}
-
 // Release
 void PdCharacterGpuState::release()
 {
@@ -59,5 +53,4 @@ void PdCharacterGpuState::release()
     CUDA_CHECK(cudaFree(animation_position_buffer_));
     animation_position_buffer_ = nullptr;
     vertex_count_ = 0;
-    frame_count_ = 0;
 }

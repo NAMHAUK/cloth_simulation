@@ -44,7 +44,6 @@ void PdClothGpuState::prepare_normal_buffers(const std::vector<GarmentObject>& g
     }
 
     vertex_count_ = cloth_state.element_counts().vertex;
-    triangle_count_ = cloth_state.element_counts().triangle;
 
     for (const GarmentObject& garment : garments) {
         triangle_color_counts_.insert(triangle_color_counts_.end(),
@@ -93,11 +92,6 @@ std::uint32_t PdClothGpuState::vertex_count() const
     return vertex_count_;
 }
 
-std::uint32_t PdClothGpuState::triangle_count() const
-{
-    return triangle_count_;
-}
-
 // Release
 void PdClothGpuState::release_simulation_buffers()
 {
@@ -117,5 +111,4 @@ void PdClothGpuState::release_normal_buffers()
 
     triangle_color_counts_.clear();
     vertex_count_ = 0;
-    triangle_count_ = 0;
 }

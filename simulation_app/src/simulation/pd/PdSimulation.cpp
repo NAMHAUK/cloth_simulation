@@ -98,7 +98,7 @@ void PdSimulation::update_character_pose(float frame_alpha, QOpenGLFunctions_4_5
 {
     PdCharacterGpuState& character_state = pd_gpu_state_.character_gpu_state();
     const std::uint32_t frame_index = std::min(scene_.motion_frame_index() + (frame_alpha >= 1.0f ? 1u : 0u),
-                                               character_state.frame_count() - 1u);
+                                               scene_.character_motion().frame_count - 1u);
 
     const MappedMeshBuffers mesh_buffers = character_state.shared_buffers.map();
     character_state.update_positions(mesh_buffers.positions, frame_index);

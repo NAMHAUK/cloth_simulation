@@ -26,7 +26,6 @@ public:
     const float* mass_buffer() const;
     const std::vector<std::uint32_t>& triangle_color_counts() const;
     std::uint32_t vertex_count() const;
-    std::uint32_t triangle_count() const;
 
     void release_simulation_buffers();
     void release_normal_buffers();
@@ -39,5 +38,4 @@ private:
     float* mass_buffer_ = nullptr;
     std::vector<std::uint32_t> triangle_color_counts_;
     std::uint32_t vertex_count_ = 0;
-    std::uint32_t triangle_count_ = 0;
 };
