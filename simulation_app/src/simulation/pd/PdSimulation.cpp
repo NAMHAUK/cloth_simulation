@@ -56,7 +56,7 @@ void PdSimulation::rebuild_garment_resources(GarmentLayer changed_layer, QOpenGL
 {
     pd_gpu_state_.release();
     gpu_state_.cloth_gpu_state().rebuild_buffers(scene_.garments(), changed_layer, gl);
-    pd_gpu_state_.cloth_gpu_state().prepare_normal_buffers(gpu_state_.cloth_gpu_state());
+    pd_gpu_state_.cloth_gpu_state().prepare_normal_buffers(scene_.garments(), gpu_state_.cloth_gpu_state());
 }
 
 void PdSimulation::create_simulation_buffers(QOpenGLFunctions_4_5_Core&)

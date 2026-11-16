@@ -20,7 +20,7 @@ __global__ void accumulate_vertex_normals_kernel(const float4* positions,
         return;
     }
 
-    const TriangleVertexIndices vertex_indices = triangle_vertex_indices[triangle_index];
+    const auto vertex_indices = triangle_vertex_indices[triangle_index];
     const float4 a = positions[vertex_indices.a];
     const float4 b = positions[vertex_indices.b];
     const float4 c = positions[vertex_indices.c];
@@ -29,9 +29,9 @@ __global__ void accumulate_vertex_normals_kernel(const float4* positions,
     const float3 normal = make_float3(ab.y * ac.z - ab.z * ac.y, ab.z * ac.x - ab.x * ac.z, ab.x * ac.y - ab.y * ac.x);
     
     for (std::uint32_t vertex_index : {vertex_indices.a, vertex_indices.b, vertex_indices.c}) {
-        atomicAdd(&normals[vertex_index].x, normal.x);
-        atomicAdd(&normals[vertex_index].y, normal.y);
-        atomicAdd(&normals[vertex_index].z, normal.z);
+        normals[vertex_index].x += normal.x;
+        normals[vertex_index].y += normal.y;
+        normals[vertex_index].z += normal.z;
     }
 }
 
@@ -58,17 +58,20 @@ __global__ void normalize_vertex_normals_kernel(std::uint32_t vertex_count, floa
 
 void update_cloth_normals(const float4* positions,
                           float4* normals,
-                          const TriangleVertexIndices* triangle_vertex_indices,
                           const PdClothGpuState& cloth_state)
 {
     CUDA_CHECK(cudaMemset(normals, 0, sizeof(float4) * cloth_state.vertex_count()));
 
-    accumulate_vertex_normals_kernel<<<block_count(cloth_state.triangle_count(), block_size), block_size>>>(
-        positions,
-        triangle_vertex_indices,
-        cloth_state.triangle_count(),
-        normals);
-    CUDA_CHECK(cudaGetLastError());
+    std::uint32_t triangle_offset = 0;
+    for (std::uint32_t triangle_count : cloth_state.triangle_color_counts()) {
+        accumulate_vertex_normals_kernel<<<block_count(triangle_count, block_size), block_size>>>(
+            positions,
+            cloth_state.triangle_vertex_indices_buffer() + triangle_offset,
+            triangle_count,
+            normals);
+        CUDA_CHECK(cudaGetLastError());
+        triangle_offset += triangle_count;
+    }
 
     normalize_vertex_normals_kernel<<<block_count(cloth_state.vertex_count(), block_size), block_size>>>(
         cloth_state.vertex_count(),

@@ -17,7 +17,7 @@ void PdGpuState::prepare_system(const std::vector<GarmentObject>& garments, cons
         return;
     }
 
-    cloth_gpu_state_.rebuild_buffers(cloth_state);
+    cloth_gpu_state_.rebuild_buffers(garments, cloth_state);
     cloth_gpu_state_.initialize_masses(garments, cloth_state);
 
     constraints_.get<ConstraintIndex::Stretch>().count = 1;

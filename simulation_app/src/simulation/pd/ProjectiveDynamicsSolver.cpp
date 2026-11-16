@@ -1,6 +1,7 @@
 #include "simulation/pd/ProjectiveDynamicsSolver.h"
 #include "AttachmentConstraints.h"
 #include "ClothIntegration.h"
+#include "MeshNormals.h"
 #include "PdGlobalSolve.h"
 #include "PdRhs.h"
 #include "StretchConstraints.h"
@@ -27,8 +28,7 @@ void ProjectiveDynamicsSolver::solve()
 
     float4* positions = nullptr;
     float4* normals = nullptr;
-    const TriangleVertexIndices* triangle_vertex_indices = nullptr;
-    cloth_state.map_shared_buffers(positions, normals, triangle_vertex_indices);
+    cloth_state.map_shared_buffers(positions, normals);
 
     integrate_cloth(positions, cloth_state, gravity_, dt_);
     compute_inertia_rhs(pd_state_.inertia_rhs_buffer(), cloth_state, inv_dt_squared_);
@@ -45,6 +45,7 @@ void ProjectiveDynamicsSolver::solve()
     }
 
     update_cloth_velocities(positions, cloth_state, dt_);
+    update_cloth_normals(positions, normals, cloth_state);
 
     cloth_state.unmap_shared_buffers();
 }

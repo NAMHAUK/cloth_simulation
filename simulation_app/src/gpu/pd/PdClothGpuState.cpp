@@ -12,9 +12,9 @@
 #include <cuda_gl_interop.h>
 #include <cuda_runtime.h>
 
-void PdClothGpuState::rebuild_buffers(const ClothGpuState& cloth_state)
+void PdClothGpuState::rebuild_buffers(const std::vector<GarmentObject>& garments, const ClothGpuState& cloth_state)
 {
-    prepare_normal_buffers(cloth_state);
+    prepare_normal_buffers(garments, cloth_state);
 
     CUDA_CHECK(cudaMalloc(reinterpret_cast<void**>(&previous_position_buffer_), sizeof(float4) * vertex_count_));
     CUDA_CHECK(cudaMalloc(reinterpret_cast<void**>(&predicted_position_buffer_), sizeof(float4) * vertex_count_));
@@ -25,7 +25,8 @@ void PdClothGpuState::rebuild_buffers(const ClothGpuState& cloth_state)
     CUDA_CHECK(cudaMalloc(reinterpret_cast<void**>(&mass_buffer_), sizeof(float) * vertex_count_));
 }
 
-void PdClothGpuState::prepare_normal_buffers(const ClothGpuState& cloth_state)
+void PdClothGpuState::prepare_normal_buffers(const std::vector<GarmentObject>& garments,
+                                             const ClothGpuState& cloth_state)
 {
     if (cloth_state.element_counts().vertex == 0) {
         return;
@@ -37,21 +38,26 @@ void PdClothGpuState::prepare_normal_buffers(const ClothGpuState& cloth_state)
     vertex_count_ = cloth_state.element_counts().vertex;
     triangle_count_ = cloth_state.element_counts().triangle;
 
+    for (const GarmentObject& garment : garments) {
+        triangle_color_counts_.insert(triangle_color_counts_.end(),
+                                      garment.mesh.triangle_color_counts.begin(),
+                                      garment.mesh.triangle_color_counts.end());
+    }
+
     CUDA_CHECK(cudaGraphicsGLRegisterBuffer(&position_resource_,
                                             cloth_state.buffer_set().current_position,
                                             cudaGraphicsRegisterFlagsNone));
     CUDA_CHECK(cudaGraphicsGLRegisterBuffer(&normal_resource_,
                                             cloth_state.buffer_set().vertex_normal,
                                             cudaGraphicsRegisterFlagsNone));
-    CUDA_CHECK(cudaGraphicsGLRegisterBuffer(&triangle_vertex_indices_resource_,
+    CUDA_CHECK(cudaGraphicsGLRegisterBuffer(&triangle_resource_,
                                             cloth_state.buffer_set().triangle_vertex_indices,
                                             cudaGraphicsRegisterFlagsReadOnly));
 
     float4* positions = nullptr;
     float4* normals = nullptr;
-    const TriangleVertexIndices* triangle_vertex_indices = nullptr;
-    map_shared_buffers(positions, normals, triangle_vertex_indices);
-    update_cloth_normals(positions, normals, triangle_vertex_indices, *this);
+    map_shared_buffers(positions, normals);
+    update_cloth_normals(positions, normals, *this);
     unmap_shared_buffers();
 }
 
@@ -73,34 +79,31 @@ void PdClothGpuState::reset_velocities() const
 
 // Shared Buffer Mapping
 
-void PdClothGpuState::map_shared_buffers(float4*& positions,
-                                         float4*& normals,
-                                         const TriangleVertexIndices*& triangle_vertex_indices)
+void PdClothGpuState::map_shared_buffers(float4*& positions, float4*& normals)
 {
     // 공유 buffer CUDA 접근 활성화
-    cudaGraphicsResource* resources[]{position_resource_, normal_resource_, triangle_vertex_indices_resource_};
+    cudaGraphicsResource* resources[]{position_resource_, normal_resource_, triangle_resource_};
     CUDA_CHECK(cudaGraphicsMapResources(3, resources));
 
     // 공유 buffer pointer 가져오기
     void* position_buffer = nullptr;
     void* normal_buffer = nullptr;
-    void* triangle_vertex_indices_buffer = nullptr;
+    void* triangle_buffer = nullptr;
     std::size_t buffer_bytes = 0;
     CUDA_CHECK(cudaGraphicsResourceGetMappedPointer(&position_buffer, &buffer_bytes, position_resource_));
     CUDA_CHECK(cudaGraphicsResourceGetMappedPointer(&normal_buffer, &buffer_bytes, normal_resource_));
-    CUDA_CHECK(cudaGraphicsResourceGetMappedPointer(&triangle_vertex_indices_buffer,
-                                                    &buffer_bytes,
-                                                    triangle_vertex_indices_resource_));
+    CUDA_CHECK(cudaGraphicsResourceGetMappedPointer(&triangle_buffer, &buffer_bytes, triangle_resource_));
 
     positions = static_cast<float4*>(position_buffer);
     normals = static_cast<float4*>(normal_buffer);
-    triangle_vertex_indices = static_cast<const TriangleVertexIndices*>(triangle_vertex_indices_buffer);
+    triangle_vertex_indices_buffer_ = static_cast<const TriangleVertexIndices*>(triangle_buffer);
 }
 
 void PdClothGpuState::unmap_shared_buffers()
 {
-    cudaGraphicsResource* resources[]{position_resource_, normal_resource_, triangle_vertex_indices_resource_};
+    cudaGraphicsResource* resources[]{position_resource_, normal_resource_, triangle_resource_};
     CUDA_CHECK(cudaGraphicsUnmapResources(3, resources));
+    triangle_vertex_indices_buffer_ = nullptr;
 }
 
 // Accessors
@@ -125,6 +128,16 @@ const float* PdClothGpuState::mass_buffer() const
     return mass_buffer_;
 }
 
+const TriangleVertexIndices* PdClothGpuState::triangle_vertex_indices_buffer() const
+{
+    return triangle_vertex_indices_buffer_;
+}
+
+const std::vector<std::uint32_t>& PdClothGpuState::triangle_color_counts() const
+{
+    return triangle_color_counts_;
+}
+
 std::uint32_t PdClothGpuState::vertex_count() const
 {
     return vertex_count_;
@@ -146,9 +159,9 @@ void PdClothGpuState::release()
         CUDA_CHECK(cudaGraphicsUnregisterResource(normal_resource_));
         normal_resource_ = nullptr;
     }
-    if (triangle_vertex_indices_resource_ != nullptr) {
-        CUDA_CHECK(cudaGraphicsUnregisterResource(triangle_vertex_indices_resource_));
-        triangle_vertex_indices_resource_ = nullptr;
+    if (triangle_resource_ != nullptr) {
+        CUDA_CHECK(cudaGraphicsUnregisterResource(triangle_resource_));
+        triangle_resource_ = nullptr;
     }
 
     // CUDA 메모리 해제
@@ -161,6 +174,8 @@ void PdClothGpuState::release()
     predicted_position_buffer_ = nullptr;
     velocity_buffer_ = nullptr;
     mass_buffer_ = nullptr;
+    triangle_vertex_indices_buffer_ = nullptr;
+    triangle_color_counts_.clear();
     vertex_count_ = 0;
     triangle_count_ = 0;
 }
