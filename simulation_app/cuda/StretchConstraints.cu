@@ -39,10 +39,9 @@ __global__ void project_stretch_constraints_kernel(DistanceConstraint* constrain
 }
 }
 
-void initialize_constraints(DistanceConstraint* constraints, std::uint32_t constraint_count)
+void initialize_constraints(DistanceConstraint* constraints, const std::vector<GarmentObject>&, const ClothGpuState&)
 {
-    initialize_stretch_constraints_kernel<<<block_count(constraint_count, block_size), block_size>>>(constraints,
-                                                                                                     constraint_count);
+    initialize_stretch_constraints_kernel<<<1, block_size>>>(constraints, 1);
     CUDA_CHECK(cudaGetLastError());
 }
 

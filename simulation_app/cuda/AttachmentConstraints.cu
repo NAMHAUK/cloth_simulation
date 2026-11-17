@@ -36,11 +36,9 @@ __global__ void project_attachment_constraints_kernel(AttachmentConstraint* cons
 }
 }
 
-void initialize_constraints(AttachmentConstraint* constraints, std::uint32_t constraint_count)
+void initialize_constraints(AttachmentConstraint* constraints, const std::vector<GarmentObject>&, const ClothGpuState&)
 {
-    initialize_attachment_constraints_kernel<<<block_count(constraint_count, block_size), block_size>>>(
-        constraints,
-        constraint_count);
+    initialize_attachment_constraints_kernel<<<1, block_size>>>(constraints, 1);
     CUDA_CHECK(cudaGetLastError());
 }
 

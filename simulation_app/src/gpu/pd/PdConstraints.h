@@ -10,6 +10,7 @@
 #include <cstdint>
 #include <stdexcept>
 #include <tuple>
+#include <vector>
 
 #include <cuda_runtime.h>
 
@@ -50,17 +51,19 @@ struct ConstraintSet final
 class PdConstraints final
 {
 public:
-    void initialize()
-    {
-        execute_each([](const auto& constraints) { initialize_constraints(constraints.buffer, constraints.count); });
-
-        compute_constraint_rhs_matrices(*this);
-    }
-
     template <ConstraintIndex index>
     auto& get()
     {
         return std::get<index>(constraints_);
+    }
+
+    void initialize(const std::vector<GarmentObject>& garments, const ClothGpuState& cloth_state)
+    {
+        execute_each([&garments, &cloth_state](const auto& constraints) {
+            initialize_constraints(constraints.buffer, garments, cloth_state);
+        });
+
+        compute_constraint_rhs_matrices(*this);
     }
 
     template <typename Function>

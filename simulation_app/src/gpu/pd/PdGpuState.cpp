@@ -23,7 +23,8 @@ void PdGpuState::prepare_system(const std::vector<GarmentObject>& garments, cons
     constraints_.get<ConstraintIndex::Stretch>().count = 1;
     constraints_.get<ConstraintIndex::Attachment>().count = 1;
     constraints_.allocate_buffers();
-    constraints_.initialize();
+
+    constraints_.initialize(garments, cloth_state);
 
     CUDA_CHECK(cudaMalloc(&inertia_rhs_buffer_, sizeof(float) * 3 * cloth_gpu_state_.vertex_count()));
     CUDA_CHECK(cudaMalloc(&rhs_buffer_, sizeof(float) * 3 * cloth_gpu_state_.vertex_count()));
