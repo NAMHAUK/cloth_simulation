@@ -2,6 +2,7 @@
 
 #include "AttachmentConstraints.h"
 #include "PdRhs.h"
+#include "StrainConstraints.h"
 #include "StretchConstraints.h"
 #include "gpu/pd/ConstraintTypes.h"
 #include "simulation/SimulationParams.h"
@@ -17,7 +18,8 @@
 enum ConstraintIndex
 {
     Stretch = 0,
-    Attachment = 1
+    Attachment = 1,
+    Strain = 2
 };
 
 template <typename Constraint>
@@ -105,5 +107,6 @@ private:
         std::apply([&](auto&... constraints) { (function(constraints), ...); }, constraints_);
     }
 
-    std::tuple<ConstraintSet<DistanceConstraint>, ConstraintSet<AttachmentConstraint>> constraints_;
+    std::tuple<ConstraintSet<DistanceConstraint>, ConstraintSet<AttachmentConstraint>, ConstraintSet<StrainConstraint>>
+        constraints_;
 };

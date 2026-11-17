@@ -33,6 +33,8 @@ add_executable(simulation_app
     cuda/PdRhs.h
     cuda/PdSystemMatrix.cu
     cuda/PdSystemMatrix.h
+    cuda/StrainConstraints.cu
+    cuda/StrainConstraints.h
     cuda/StretchConstraints.cu
     cuda/StretchConstraints.h
     src/app/main.cpp
@@ -218,7 +220,7 @@ target_include_directories(garment_converter PRIVATE
 )
 
 if(MSVC)
-    set_source_files_properties(cuda/PdSystemMatrix.cu PROPERTIES
+    set_source_files_properties(cuda/PdSystemMatrix.cu cuda/StrainConstraints.cu PROPERTIES
         COMPILE_OPTIONS "-Xcompiler=/Zc:preprocessor;-Xcompiler=/Zc:__cplusplus;-Xcompiler=/permissive-"
     )
     target_compile_options(simulation_app PRIVATE

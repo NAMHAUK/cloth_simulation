@@ -18,6 +18,20 @@ struct DistanceConstraint
     float weight = 0.0f;
 };
 
+struct StrainConstraint
+{
+    static constexpr std::uint32_t vertex_count = 3;
+    static constexpr std::uint32_t matrix_row_count = 2;
+    static constexpr std::uint32_t projection_vector_count = 2;
+
+    float A[matrix_row_count][vertex_count]{};
+    float B[matrix_row_count][projection_vector_count]{};
+    float rhs_matrix[vertex_count][projection_vector_count]{};
+    float3 p[projection_vector_count]{};
+    std::uint32_t vertex_indices[vertex_count]{};
+    float weight = 0.0f;
+};
+
 struct AttachmentConstraint
 {
     static constexpr std::uint32_t vertex_count = 1;

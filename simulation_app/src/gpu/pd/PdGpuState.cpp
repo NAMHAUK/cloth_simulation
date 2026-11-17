@@ -22,6 +22,7 @@ void PdGpuState::prepare_system(const std::vector<GarmentObject>& garments, cons
 
     constraints_.get<ConstraintIndex::Stretch>().count = 1;
     constraints_.get<ConstraintIndex::Attachment>().count = 1;
+    constraints_.get<ConstraintIndex::Strain>().count = cloth_state.element_counts().triangle;
     constraints_.allocate_buffers();
 
     constraints_.initialize(garments, cloth_state);
