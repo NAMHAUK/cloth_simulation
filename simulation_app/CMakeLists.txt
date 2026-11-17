@@ -228,6 +228,10 @@ if(MSVC)
     target_compile_options(garment_converter PRIVATE /utf-8)
 endif()
 
+target_compile_options(simulation_app PRIVATE
+    $<$<COMPILE_LANGUAGE:CUDA>:--expt-relaxed-constexpr>
+)
+
 target_compile_definitions(simulation_app PRIVATE
     PROJECT_ROOT_DIR="${REPO_ROOT}"
 )
