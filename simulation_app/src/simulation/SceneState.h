@@ -41,9 +41,9 @@ struct GarmentObject
     GarmentMesh mesh;
     TriangleBvh triangle_bvh;
     EdgeBvh edge_bvh;
-    float stretch_weight = 1.0f;
+    float stretch_weight = 1e5f;
     float bending_weight = 1.0f;
-    float attachment_weight = 1.0f;
+    float attachment_weight = 1e6f;
     float surface_density = 1.0f;
 };
 
