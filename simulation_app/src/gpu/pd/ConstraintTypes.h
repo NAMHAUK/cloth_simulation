@@ -30,4 +30,7 @@ struct AttachmentConstraint
     float3 p[projection_vector_count]{};
     std::uint32_t vertex_indices[vertex_count]{};
     float weight = 0.0f;
+    
+    std::uint32_t body_triangle_index = UINT32_MAX;
+    float3 barycentric{};
 };

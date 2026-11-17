@@ -5,6 +5,7 @@
 #include "StrainConstraints.h"
 #include "gpu/common/ClothGpuState.h"
 #include "gpu/pd/ConstraintTypes.h"
+#include "simulation/SceneState.h"
 #include "simulation/SimulationParams.h"
 #include "utils/CudaUtils.h"
 
@@ -60,7 +61,7 @@ public:
 
     void initialize(const std::vector<GarmentObject>& garments, const ClothGpuState& cloth_state)
     {
-        initialize_constraint_counts(cloth_state);
+        initialize_constraint_counts(garments, cloth_state);
         allocate_buffers();
 
         execute_each([&garments, &cloth_state](const auto& constraints) {
@@ -91,14 +92,17 @@ public:
     }
 
 private:
-    void initialize_constraint_counts(const ClothGpuState& cloth_state)
+    void initialize_constraint_counts(const std::vector<GarmentObject>& garments, const ClothGpuState& cloth_state)
     {
         get<ConstraintIndex::Strain>().count = cloth_state.element_counts().triangle;
-        get<ConstraintIndex::Attachment>().count = 1;
+        
+        for (const GarmentObject& garment : garments) {
+            get<ConstraintIndex::Attachment>().count += garment.mesh.attachment_vertex_indices.size();
+        }
 
         // check total count
-        std::uint64_t total_count  = 0;
-        for_each_constraint([&total_count ](const auto& constraints) { total_count += constraints.count; });
+        std::uint64_t total_count = 0;
+        for_each_constraint([&total_count](const auto& constraints) { total_count += constraints.count; });
 
         if (total_count > simulation_limits::max_constraint_count) {
             throw std::length_error("Total constraint count exceeds the simulation limit.");

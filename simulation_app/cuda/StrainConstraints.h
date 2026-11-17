@@ -8,9 +8,11 @@
 struct StrainConstraint;
 struct GarmentObject;
 class ClothGpuState;
+template <typename Constraint>
+struct ConstraintSet;
 
 void initialize_constraints(StrainConstraint* constraints,
                             const std::vector<GarmentObject>& garments,
                             const ClothGpuState& cloth_state);
 
-void project_constraints(StrainConstraint* constraints, std::uint32_t constraint_count, const float4* positions);
+void project_constraints(const ConstraintSet<StrainConstraint>& constraints, const float4* positions);

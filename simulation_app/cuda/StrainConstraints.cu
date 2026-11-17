@@ -2,6 +2,7 @@
 #include "asset/AssetDataTypes.h"
 #include "gpu/common/ClothGpuState.h"
 #include "gpu/pd/ConstraintTypes.h"
+#include "gpu/pd/PdConstraints.h"
 #include "simulation/SceneState.h"
 #include "utils/CudaUtils.h"
 
@@ -135,10 +136,10 @@ void initialize_constraints(StrainConstraint* constraints,
     }
 }
 
-void project_constraints(StrainConstraint* constraints, std::uint32_t constraint_count, const float4* positions)
+void project_constraints(const ConstraintSet<StrainConstraint>& constraints, const float4* positions)
 {
-    project_strain_constraints_kernel<<<block_count(constraint_count, block_size), block_size>>>(constraints,
-                                                                                                 constraint_count,
-                                                                                                 positions);
+    project_strain_constraints_kernel<<<block_count(constraints.count, block_size), block_size>>>(constraints.buffer,
+                                                                                                  constraints.count,
+                                                                                                  positions);
     CUDA_CHECK(cudaGetLastError());
 }
