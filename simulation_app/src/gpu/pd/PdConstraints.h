@@ -4,6 +4,7 @@
 #include "PdRhs.h"
 #include "StrainConstraints.h"
 #include "StretchConstraints.h"
+#include "gpu/common/ClothGpuState.h"
 #include "gpu/pd/ConstraintTypes.h"
 #include "simulation/SimulationParams.h"
 #include "utils/CudaUtils.h"
@@ -61,6 +62,9 @@ public:
 
     void initialize(const std::vector<GarmentObject>& garments, const ClothGpuState& cloth_state)
     {
+        initialize_constraint_counts(cloth_state);
+        allocate_buffers();
+
         execute_each([&garments, &cloth_state](const auto& constraints) {
             initialize_constraints(constraints.buffer, garments, cloth_state);
         });
@@ -80,8 +84,6 @@ public:
 
     void allocate_buffers()
     {
-        validate_constraint_count();
-
         for_each_constraint([](auto& constraints) { constraints.allocate_buffer(); });
     }
 
@@ -91,12 +93,17 @@ public:
     }
 
 private:
-    void validate_constraint_count()
+    void initialize_constraint_counts(const ClothGpuState& cloth_state)
     {
-        std::uint64_t constraint_count = 0;
-        for_each_constraint([&](const auto& constraints) { constraint_count += constraints.count; });
+        get<ConstraintIndex::Stretch>().count = 1;
+        get<ConstraintIndex::Attachment>().count = 1;
+        get<ConstraintIndex::Strain>().count = cloth_state.element_counts().triangle;
 
-        if (constraint_count > simulation_limits::max_constraint_count) {
+        // check total count
+        std::uint64_t total_count  = 0;
+        for_each_constraint([&total_count ](const auto& constraints) { total_count += constraints.count; });
+
+        if (total_count > simulation_limits::max_constraint_count) {
             throw std::length_error("Total constraint count exceeds the simulation limit.");
         }
     }
