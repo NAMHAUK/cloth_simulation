@@ -88,9 +88,6 @@ struct CudssSystem
         if (decomposition_status != 0) {
             throw std::runtime_error("Cholesky factorization failed: " + std::to_string(decomposition_status));
         }
-
-        // release
-        CUDSS_CHECK(cudssMatrixSetCsrPointers(matrix_descriptor, nullptr, nullptr, nullptr, nullptr));
     }
 
     void release()
