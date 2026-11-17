@@ -5,7 +5,6 @@
 #include "PdGlobalSolve.h"
 #include "PdRhs.h"
 #include "StrainConstraints.h"
-#include "StretchConstraints.h"
 #include "gpu/pd/PdGpuState.h"
 
 ProjectiveDynamicsSolver::ProjectiveDynamicsSolver(PdGpuState& pd_state,

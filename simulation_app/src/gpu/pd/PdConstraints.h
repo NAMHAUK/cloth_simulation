@@ -3,7 +3,6 @@
 #include "AttachmentConstraints.h"
 #include "PdRhs.h"
 #include "StrainConstraints.h"
-#include "StretchConstraints.h"
 #include "gpu/common/ClothGpuState.h"
 #include "gpu/pd/ConstraintTypes.h"
 #include "simulation/SimulationParams.h"
@@ -18,9 +17,8 @@
 
 enum ConstraintIndex
 {
-    Stretch = 0,
-    Attachment = 1,
-    Strain = 2
+    Strain = 0,
+    Attachment = 1
 };
 
 template <typename Constraint>
@@ -95,9 +93,8 @@ public:
 private:
     void initialize_constraint_counts(const ClothGpuState& cloth_state)
     {
-        get<ConstraintIndex::Stretch>().count = 1;
-        get<ConstraintIndex::Attachment>().count = 1;
         get<ConstraintIndex::Strain>().count = cloth_state.element_counts().triangle;
+        get<ConstraintIndex::Attachment>().count = 1;
 
         // check total count
         std::uint64_t total_count  = 0;
@@ -114,6 +111,5 @@ private:
         std::apply([&](auto&... constraints) { (function(constraints), ...); }, constraints_);
     }
 
-    std::tuple<ConstraintSet<DistanceConstraint>, ConstraintSet<AttachmentConstraint>, ConstraintSet<StrainConstraint>>
-        constraints_;
+    std::tuple<ConstraintSet<StrainConstraint>, ConstraintSet<AttachmentConstraint>> constraints_;
 };

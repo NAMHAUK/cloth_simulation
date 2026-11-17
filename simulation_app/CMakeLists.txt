@@ -35,8 +35,6 @@ add_executable(simulation_app
     cuda/PdSystemMatrix.h
     cuda/StrainConstraints.cu
     cuda/StrainConstraints.h
-    cuda/StretchConstraints.cu
-    cuda/StretchConstraints.h
     src/app/main.cpp
     src/asset/AssetConverter.cpp
     src/asset/AssetConverter.h
