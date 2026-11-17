@@ -23,6 +23,8 @@ struct CudssSystem
     cudssHandle_t handle = nullptr;
     cudssConfig_t config = nullptr;
     cudssData_t decomposed_matrix = nullptr;
+    cudssMatrix_t matrix_descriptor = nullptr;
+    cudssMatrix_t vector_descriptor = nullptr;
 
     void initialize()
     {
@@ -41,11 +43,7 @@ struct CudssSystem
                             float* values,
                             void* rhs)
     {
-        cudssMatrix_t input_matrix = nullptr;
-        cudssMatrix_t vectors = nullptr;
-
-        // CSR matrix / RHS vector를 CuDSS용으로 변환
-        CUDSS_CHECK(cudssMatrixCreateCsr(&input_matrix,
+        CUDSS_CHECK(cudssMatrixCreateCsr(&matrix_descriptor,
                                          row_count,
                                          row_count,
                                          entry_count,
@@ -59,13 +57,23 @@ struct CudssSystem
                                          CUDSS_MTYPE_SPD,
                                          CUDSS_MVIEW_FULL,
                                          CUDSS_BASE_ZERO));
-        CUDSS_CHECK(cudssMatrixCreateDn(&vectors, row_count, 3, row_count, rhs, CUDA_R_32F, CUDSS_LAYOUT_COL_MAJOR));
-        
+        CUDSS_CHECK(cudssMatrixCreateDn(&vector_descriptor, row_count, 3, row_count, rhs, CUDA_R_32F, CUDSS_LAYOUT_COL_MAJOR));
+
         // Cholesky decomposition 수행
-        CUDSS_CHECK(
-            cudssExecute(handle, CUDSS_PHASE_ANALYSIS, config, decomposed_matrix, input_matrix, vectors, vectors));
-        CUDSS_CHECK(
-            cudssExecute(handle, CUDSS_PHASE_FACTORIZATION, config, decomposed_matrix, input_matrix, vectors, vectors));
+        CUDSS_CHECK(cudssExecute(handle,
+                                 CUDSS_PHASE_ANALYSIS,
+                                 config,
+                                 decomposed_matrix,
+                                 matrix_descriptor,
+                                 vector_descriptor,
+                                 vector_descriptor));
+        CUDSS_CHECK(cudssExecute(handle,
+                                 CUDSS_PHASE_FACTORIZATION,
+                                 config,
+                                 decomposed_matrix,
+                                 matrix_descriptor,
+                                 vector_descriptor,
+                                 vector_descriptor));
         CUDA_CHECK(cudaStreamSynchronize(nullptr));
 
         // 분해 validation
@@ -82,8 +90,7 @@ struct CudssSystem
         }
 
         // release
-        CUDSS_CHECK(cudssMatrixDestroy(vectors));
-        CUDSS_CHECK(cudssMatrixDestroy(input_matrix));
+        CUDSS_CHECK(cudssMatrixSetCsrPointers(matrix_descriptor, nullptr, nullptr, nullptr, nullptr));
     }
 
     void release()
@@ -93,6 +100,8 @@ struct CudssSystem
         }
 
         CUDSS_CHECK(cudssDataDestroy(handle, decomposed_matrix));
+        CUDSS_CHECK(cudssMatrixDestroy(vector_descriptor));
+        CUDSS_CHECK(cudssMatrixDestroy(matrix_descriptor));
         CUDSS_CHECK(cudssConfigDestroy(config));
         CUDSS_CHECK(cudssDestroy(handle));
 
