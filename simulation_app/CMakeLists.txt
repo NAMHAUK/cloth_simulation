@@ -218,7 +218,7 @@ target_include_directories(garment_converter PRIVATE
 )
 
 if(MSVC)
-    set_source_files_properties(cuda/PdRhs.cu cuda/PdSystemMatrix.cu cuda/StrainConstraints.cu cuda/AttachmentConstraints.cu PROPERTIES
+    set_source_files_properties(cuda/ClothMass.cu cuda/PdRhs.cu cuda/PdSystemMatrix.cu cuda/StrainConstraints.cu cuda/AttachmentConstraints.cu PROPERTIES
         COMPILE_OPTIONS "-Xcompiler=/Zc:preprocessor;-Xcompiler=/Zc:__cplusplus;-Xcompiler=/permissive-"
     )
     target_compile_options(simulation_app PRIVATE

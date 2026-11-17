@@ -1,5 +1,5 @@
 #pragma once
 
-#include <cstdint>
+struct GarmentMesh;
 
-void set_vertex_masses(float* masses, std::uint32_t vertex_count, float mass);
+void compute_vertex_masses(float* masses, const GarmentMesh& mesh, float surface_density);
