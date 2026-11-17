@@ -122,19 +122,34 @@ void PdSimulation::update_character_pose(float frame_alpha, QOpenGLFunctions_4_5
 }
 
 // Base positions
-void PdSimulation::capture_garment_base_positions(QOpenGLFunctions_4_5_Core&)
-{}
-
-void PdSimulation::restore_garment_base_positions(QOpenGLFunctions_4_5_Core&)
+void PdSimulation::capture_garment_base_positions(QOpenGLFunctions_4_5_Core& gl)
 {
-    if (!gpu_state_.cloth_gpu_state().is_initialized()) {
+    if (!gpu_state_.cloth_gpu_state().is_initialized()){
         return;
     }
-    pd_gpu_state_.cloth_gpu_state().reset_velocities();
+    gpu_state_.cloth_gpu_state().capture_base_positions(gl);
 }
 
-void PdSimulation::clear_garment_base_positions(QOpenGLFunctions_4_5_Core&)
-{}
+void PdSimulation::restore_garment_base_positions(QOpenGLFunctions_4_5_Core& gl)
+{
+    auto& cloth_state = gpu_state_.cloth_gpu_state();
+    auto& pd_cloth_state = pd_gpu_state_.cloth_gpu_state();
+    if (!cloth_state.is_initialized()) {
+        return;
+    }
+
+    cloth_state.restore_base_positions(gl);
+    pd_cloth_state.reset_velocities();
+
+    const MappedMeshBuffers cloth_buffers = pd_cloth_state.shared_buffers.map();
+    update_normals(cloth_buffers, pd_cloth_state.vertex_count(), pd_cloth_state.triangle_color_counts());
+    pd_cloth_state.shared_buffers.unmap();
+}
+
+void PdSimulation::clear_garment_base_positions(QOpenGLFunctions_4_5_Core& gl)
+{
+    gpu_state_.cloth_gpu_state().clear_base_positions(gl);
+}
 
 // State
 bool PdSimulation::is_initialized() const
