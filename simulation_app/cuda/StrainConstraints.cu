@@ -7,6 +7,7 @@
 
 #include <cuda_runtime.h>
 #include <glm/geometric.hpp>
+#include <glm/gtc/type_ptr.hpp>
 #include <thrust/device_vector.h>
 
 namespace {
@@ -55,15 +56,56 @@ __global__ void initialize_strain_constraints_kernel(StrainConstraint* constrain
     }
 }
 
-__global__ void project_strain_constraints_kernel(StrainConstraint* constraints, std::uint32_t constraint_count)
+__global__ void project_strain_constraints_kernel(StrainConstraint* constraints,
+                                                  std::uint32_t constraint_count,
+                                                  const float4* positions)
 {
     const std::uint32_t index = blockIdx.x * blockDim.x + threadIdx.x;
     if (index >= constraint_count) {
         return;
     }
+    StrainConstraint& constraint = constraints[index];
 
-    constraints[index].p[0] = make_float3(1.0f, 0.0f, 0.0f);
-    constraints[index].p[1] = make_float3(0.0f, 1.0f, 0.0f);
+    // deformation_gradient: rest 기준 현재 삼각형의 변형 정도 저장
+    // F = [a, b, c] Aᵀ
+    const glm::vec3 a = glm::make_vec3(&positions[constraint.vertex_indices[0]].x);
+    const glm::vec3 b = glm::make_vec3(&positions[constraint.vertex_indices[1]].x);
+    const glm::vec3 c = glm::make_vec3(&positions[constraint.vertex_indices[2]].x);
+
+    glm::vec3 deformation_gradient[2] = {
+        constraint.A[0][0] * a + constraint.A[0][1] * b + constraint.A[0][2] * c,
+        constraint.A[1][0] * a + constraint.A[1][1] * b + constraint.A[1][2] * c,
+    };
+
+    // SVD를 통해 F의 회전과 형태 변형을 분리, 형태 변형을 제거하고 회전만 남김
+    // 형태 변형이 없는 목표 상태의 위치 p 계산
+    // F = UΣVᵀ → P = UVᵀ
+
+    const glm::vec3& f0 = deformation_gradient[0];
+    const glm::vec3& f1 = deformation_gradient[1];
+    const float angle = 0.5f * atan2f(2.0f * glm::dot(f0, f1), glm::dot(f0, f0) - glm::dot(f1, f1));
+    const float cosine = cosf(angle);
+    const float sine = sinf(angle);
+    glm::vec3 u0 = cosine * f0 + sine * f1;
+    glm::vec3 u1 = -sine * f0 + cosine * f1;
+
+    const float sigma0 = glm::length(u0);
+    u0 = sigma0 > 0.0f ? u0 / sigma0 : glm::vec3(1.0f, 0.0f, 0.0f);
+    u1 -= glm::dot(u0, u1) * u0;
+    const float sigma1 = glm::length(u1);
+    
+    if (sigma1 > 1.0e-6f * sigma0) {
+        u1 /= sigma1;
+    } else {
+        const glm::vec3 axis = fabsf(u0.x) < 0.9f ? glm::vec3(1.0f, 0.0f, 0.0f) : glm::vec3(0.0f, 1.0f, 0.0f);
+        u1 = glm::normalize(glm::cross(u0, axis));
+    }
+
+    // projection 결과 저장
+    const glm::vec3 p0 = cosine * u0 - sine * u1;
+    const glm::vec3 p1 = sine * u0 + cosine * u1;
+    constraint.p[0] = make_float3(p0.x, p0.y, p0.z);
+    constraint.p[1] = make_float3(p1.x, p1.y, p1.z);
 }
 }
 
@@ -93,9 +135,10 @@ void initialize_constraints(StrainConstraint* constraints,
     }
 }
 
-void project_constraints(StrainConstraint* constraints, std::uint32_t constraint_count, const float4*)
+void project_constraints(StrainConstraint* constraints, std::uint32_t constraint_count, const float4* positions)
 {
     project_strain_constraints_kernel<<<block_count(constraint_count, block_size), block_size>>>(constraints,
-                                                                                                 constraint_count);
+                                                                                                 constraint_count,
+                                                                                                 positions);
     CUDA_CHECK(cudaGetLastError());
 }
