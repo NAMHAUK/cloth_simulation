@@ -41,10 +41,10 @@ struct GarmentObject
     GarmentMesh mesh;
     TriangleBvh triangle_bvh;
     EdgeBvh edge_bvh;
-    float stretch_weight = 1e5f;
+    float strain_weight = 200.0f;
     float bending_weight = 1.0f;
     float attachment_weight = 1e6f;
-    float surface_density = 1.0f;
+    float surface_density = 0.2f;
 };
 
 class SceneState final

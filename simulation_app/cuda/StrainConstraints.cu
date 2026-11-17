@@ -131,7 +131,7 @@ void initialize_constraints(StrainConstraint* constraints,
             triangle_vertex_indices.data().get(),
             constraint_count,
             garment_state.vertex_start_index,
-            garment.stretch_weight);
+            garment.strain_weight);
         CUDA_CHECK(cudaGetLastError());
     }
 }
