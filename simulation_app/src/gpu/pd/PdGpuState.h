@@ -30,6 +30,8 @@ public:
 
     void initialize(float dt);
     void prepare_system(const std::vector<GarmentObject>& garments, const ClothGpuState& cloth_state);
+    void resize_body_collision_candidates(std::uint32_t capacity);
+    
     PdCharacterGpuState& character_gpu_state();
     PdClothGpuState& cloth_gpu_state();
     const PdClothGpuState& cloth_gpu_state() const;

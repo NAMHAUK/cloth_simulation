@@ -76,13 +76,26 @@ void detect_body_collision_candidates(const float4* positions, PdGpuState& state
     const std::uint32_t vertex_count = cloth_state.vertex_count();
     const TriangleBvhBuffers& bvh = state.character_gpu_state().triangle_bvh();
 
-    CUDA_CHECK(cudaMemsetAsync(state.body_collision_candidates().count, 0, sizeof(std::uint32_t)));
-    detect_body_collision_candidates_kernel<<<block_count(vertex_count, block_size), block_size>>>(
-        positions,
-        cloth_state.previous_position_buffer(),
-        vertex_count,
-        bvh.nodes,
-        bvh.triangle_bounds,
-        state.body_collision_candidates());
-    CUDA_CHECK(cudaGetLastError());
+    while (true) {
+        CUDA_CHECK(cudaMemsetAsync(state.body_collision_candidates().count, 0, sizeof(std::uint32_t)));
+        detect_body_collision_candidates_kernel<<<block_count(vertex_count, block_size), block_size>>>(
+            positions,
+            cloth_state.previous_position_buffer(),
+            vertex_count,
+            bvh.nodes,
+            bvh.triangle_bounds,
+            state.body_collision_candidates());
+        CUDA_CHECK(cudaGetLastError());
+
+        std::uint32_t candidate_count = 0;
+        CUDA_CHECK(cudaMemcpy(&candidate_count,
+                              state.body_collision_candidates().count,
+                              sizeof(candidate_count),
+                              cudaMemcpyDeviceToHost));
+        if (candidate_count <= state.body_collision_candidates().capacity) {
+            return;
+        }
+
+        state.resize_body_collision_candidates(candidate_count);
+    }
 }

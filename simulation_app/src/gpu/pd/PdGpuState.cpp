@@ -25,8 +25,7 @@ void PdGpuState::prepare_system(const std::vector<GarmentObject>& garments, cons
     CUDA_CHECK(cudaMalloc(&inertia_rhs_buffer_, sizeof(float) * 3 * cloth_gpu_state_.vertex_count()));
     CUDA_CHECK(cudaMalloc(&rhs_buffer_, sizeof(float) * 3 * cloth_gpu_state_.vertex_count()));
 
-    body_collision_candidates_.capacity = cloth_gpu_state_.vertex_count() * 8;
-    CUDA_CHECK(cudaMalloc(&body_collision_candidates_.pairs, sizeof(uint2) * body_collision_candidates_.capacity));
+    resize_body_collision_candidates(cloth_gpu_state_.vertex_count() * 8);
     CUDA_CHECK(cudaMalloc(&body_collision_candidates_.count, sizeof(std::uint32_t)));
     CUDA_CHECK(cudaMemsetAsync(body_collision_candidates_.count, 0, sizeof(std::uint32_t)));
 
@@ -40,6 +39,16 @@ void PdGpuState::set_rhs(const float* source)
                                source,
                                sizeof(float) * 3 * cloth_gpu_state_.vertex_count(),
                                cudaMemcpyDeviceToDevice));
+}
+
+void PdGpuState::resize_body_collision_candidates(std::uint32_t capacity)
+{
+    uint2* pairs = nullptr;
+    CUDA_CHECK(cudaMalloc(&pairs, sizeof(uint2) * capacity));
+    CUDA_CHECK(cudaFree(body_collision_candidates_.pairs));
+
+    body_collision_candidates_.pairs = pairs;
+    body_collision_candidates_.capacity = capacity;
 }
 
 // Accessor
