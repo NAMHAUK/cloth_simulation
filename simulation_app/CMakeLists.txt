@@ -33,6 +33,8 @@ add_executable(simulation_app
     cuda/CollisionDetection.h
     cuda/GroundConstraints.cu
     cuda/GroundConstraints.h
+    cuda/GarmentPrefit.cu
+    cuda/GarmentPrefit.h
     cuda/MeshNormals.cu
     cuda/MeshNormals.h
     cuda/MeshValidation.cu
@@ -228,7 +230,7 @@ target_include_directories(garment_converter PRIVATE
 )
 
 if(MSVC)
-    set_source_files_properties(cuda/ClothMass.cu cuda/CollisionDetection.cu cuda/PdRhs.cu cuda/PdSystemMatrix.cu cuda/StretchConstraints.cu cuda/BendingConstraints.cu cuda/AttachmentConstraints.cu cuda/GroundConstraints.cu PROPERTIES
+    set_source_files_properties(cuda/ClothMass.cu cuda/CollisionDetection.cu cuda/PdRhs.cu cuda/PdSystemMatrix.cu cuda/StretchConstraints.cu cuda/BendingConstraints.cu cuda/AttachmentConstraints.cu cuda/GroundConstraints.cu cuda/GarmentPrefit.cu PROPERTIES
         COMPILE_OPTIONS "-Xcompiler=/Zc:preprocessor;-Xcompiler=/Zc:__cplusplus;-Xcompiler=/permissive-"
     )
     target_compile_options(simulation_app PRIVATE
