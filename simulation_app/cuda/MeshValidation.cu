@@ -23,9 +23,15 @@ __global__ void validate_triangles_kernel(const float4* positions,
     const glm::vec3 a = glm::make_vec3(&positions[indices.a].x);
     const glm::vec3 b = glm::make_vec3(&positions[indices.b].x);
     const glm::vec3 c = glm::make_vec3(&positions[indices.c].x);
-    const glm::vec3 normal = glm::cross(b - a, c - a);
+    const glm::vec3 ab = b - a;
+    const glm::vec3 ac = c - a;
+    const glm::vec3 normal = glm::cross(ab, ac);
     const float normal_squared = glm::dot(normal, normal);
-    if (!isfinite(normal_squared) || normal_squared <= 1.0e-20f) {
+    const float d00 = glm::dot(ab, ab);
+    const float d01 = glm::dot(ab, ac);
+    const float d11 = glm::dot(ac, ac);
+    const float denominator = d00 * d11 - d01 * d01;
+    if (!isfinite(normal_squared) || normal_squared <= 1.0e-20f || !isfinite(denominator) || denominator <= 1.0e-20f) {
         atomicExch(&failure_flag, 1u);
     }
 }

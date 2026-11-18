@@ -97,10 +97,9 @@ __global__ void build_csr_matrix_kernel(CsrMatrix matrix,
         matrix.row_offsets_ptr[vertex_count] = entry_count;
     }
 }
-
 }
 
-void prepare_pd_system(PdGpuState& state)
+void update_pd_system(PdGpuState& state)
 {
     const std::uint32_t vertex_count = state.cloth_gpu_state().vertex_count();
 
@@ -150,9 +149,12 @@ void prepare_pd_system(PdGpuState& state)
 
     // 5. 구한 System matrix 내부의 index와 value 값을 CSR matrix로 변환
     CsrMatrix& matrix = state.system_matrix_csr_;
-    CUDA_CHECK(cudaMalloc(&matrix.row_offsets_ptr, sizeof(std::int32_t) * (vertex_count + 1)));
-    CUDA_CHECK(cudaMalloc(&matrix.col_indices_ptr, sizeof(std::int32_t) * index_count));
-    CUDA_CHECK(cudaMalloc(&matrix.values_ptr, sizeof(float) * index_count));
+    if (matrix.values_ptr == nullptr) {
+        CUDA_CHECK(cudaMalloc(&matrix.row_offsets_ptr, sizeof(std::int32_t) * (vertex_count + 1)));
+        CUDA_CHECK(cudaMalloc(&matrix.col_indices_ptr, sizeof(std::int32_t) * index_count));
+        CUDA_CHECK(cudaMalloc(&matrix.values_ptr, sizeof(float) * index_count));
+    }
+
     CUDA_CHECK(cudaMemcpyAsync(matrix.values_ptr,
                                summed_values.data().get(),
                                sizeof(float) * index_count,
@@ -165,11 +167,14 @@ void prepare_pd_system(PdGpuState& state)
     CUDA_CHECK(cudaGetLastError());
 
     // 6. CuDSS를 이용해 Cholesky 분해
-    state.system_matrix_.initialize();
-    state.system_matrix_.cholesky_decompose(vertex_count,
-                                            index_count,
-                                            matrix.row_offsets_ptr,
-                                            matrix.col_indices_ptr,
-                                            matrix.values_ptr,
-                                            state.rhs_buffer_);
+    if (state.system_matrix_.handle == nullptr) {
+        state.system_matrix_.initialize(vertex_count,
+                                        index_count,
+                                        matrix.row_offsets_ptr,
+                                        matrix.col_indices_ptr,
+                                        matrix.values_ptr,
+                                        state.rhs_buffer_);
+    }
+
+    state.system_matrix_.factorize();
 }

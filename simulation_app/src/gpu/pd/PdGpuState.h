@@ -43,13 +43,14 @@ public:
     void set_rhs(const float* source);
 
     const CollisionCandidateBuffers& body_collision_candidates() const;
+    std::uint32_t* body_collision_count_buffer() const;
 
     void release_simulation_buffers();
     void release_garment_resources();
     void release();
 
 private:
-    friend void prepare_pd_system(PdGpuState& state);
+    friend void update_pd_system(PdGpuState& state);
 
     PdCharacterGpuState character_gpu_state_;
     PdClothGpuState cloth_gpu_state_;
@@ -63,4 +64,5 @@ private:
     float* rhs_buffer_ = nullptr;
 
     CollisionCandidateBuffers body_collision_candidates_;
+    std::uint32_t* body_collision_count_buffer_ = nullptr;
 };

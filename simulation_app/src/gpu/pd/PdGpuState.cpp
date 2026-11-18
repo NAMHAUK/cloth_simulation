@@ -29,7 +29,9 @@ void PdGpuState::prepare_system(const std::vector<GarmentObject>& garments, cons
     CUDA_CHECK(cudaMalloc(&body_collision_candidates_.count, sizeof(std::uint32_t)));
     CUDA_CHECK(cudaMemsetAsync(body_collision_candidates_.count, 0, sizeof(std::uint32_t)));
 
-    prepare_pd_system(*this);
+    CUDA_CHECK(cudaMalloc(&body_collision_count_buffer_, sizeof(std::uint32_t)));
+
+    update_pd_system(*this);
 }
 
 // Setter
@@ -92,6 +94,11 @@ const PdGpuState::CollisionCandidateBuffers& PdGpuState::body_collision_candidat
     return body_collision_candidates_;
 }
 
+std::uint32_t* PdGpuState::body_collision_count_buffer() const
+{
+    return body_collision_count_buffer_;
+}
+
 // Release
 void PdGpuState::release_simulation_buffers()
 {
@@ -114,6 +121,9 @@ void PdGpuState::release_simulation_buffers()
     CUDA_CHECK(cudaFree(body_collision_candidates_.pairs));
     CUDA_CHECK(cudaFree(body_collision_candidates_.count));
     body_collision_candidates_ = {};
+
+    CUDA_CHECK(cudaFree(body_collision_count_buffer_));
+    body_collision_count_buffer_ = nullptr;
 }
 
 void PdGpuState::release_garment_resources()
