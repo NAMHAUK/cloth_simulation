@@ -25,6 +25,11 @@ void PdGpuState::prepare_system(const std::vector<GarmentObject>& garments, cons
     CUDA_CHECK(cudaMalloc(&inertia_rhs_buffer_, sizeof(float) * 3 * cloth_gpu_state_.vertex_count()));
     CUDA_CHECK(cudaMalloc(&rhs_buffer_, sizeof(float) * 3 * cloth_gpu_state_.vertex_count()));
 
+    body_collision_candidates_.capacity = cloth_gpu_state_.vertex_count() * 8;
+    CUDA_CHECK(cudaMalloc(&body_collision_candidates_.pairs, sizeof(uint2) * body_collision_candidates_.capacity));
+    CUDA_CHECK(cudaMalloc(&body_collision_candidates_.count, sizeof(std::uint32_t)));
+    CUDA_CHECK(cudaMemsetAsync(body_collision_candidates_.count, 0, sizeof(std::uint32_t)));
+
     prepare_pd_system(*this);
 }
 
@@ -73,6 +78,11 @@ float* PdGpuState::rhs_buffer() const
     return rhs_buffer_;
 }
 
+const PdGpuState::CollisionCandidateBuffers& PdGpuState::body_collision_candidates() const
+{
+    return body_collision_candidates_;
+}
+
 // Release
 void PdGpuState::release_simulation_buffers()
 {
@@ -91,6 +101,10 @@ void PdGpuState::release_simulation_buffers()
 
     CUDA_CHECK(cudaFree(rhs_buffer_));
     rhs_buffer_ = nullptr;
+
+    CUDA_CHECK(cudaFree(body_collision_candidates_.pairs));
+    CUDA_CHECK(cudaFree(body_collision_candidates_.count));
+    body_collision_candidates_ = {};
 }
 
 void PdGpuState::release_garment_resources()

@@ -2,6 +2,7 @@
 #include "AttachmentConstraints.h"
 #include "BendingConstraints.h"
 #include "ClothIntegration.h"
+#include "CollisionDetection.h"
 #include "GroundConstraints.h"
 #include "MeshNormals.h"
 #include "PdGlobalSolve.h"
@@ -36,6 +37,7 @@ void ProjectiveDynamicsSolver::solve()
     const MappedMeshBuffers character_buffers = pd_state_.character_gpu_state().shared_buffers.map();
 
     integrate_cloth(cloth_buffers.positions, cloth_state, gravity_, dt_);
+    detect_body_collision_candidates(cloth_buffers.positions, pd_state_);
     compute_inertia_rhs(pd_state_.inertia_rhs_buffer(), cloth_buffers.positions, cloth_state, inv_dt_squared_);
 
     for (std::uint32_t iteration = 0; iteration < 30; ++iteration) {

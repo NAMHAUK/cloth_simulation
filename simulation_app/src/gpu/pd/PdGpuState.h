@@ -17,6 +17,13 @@ struct GarmentObject;
 class PdGpuState final
 {
 public:
+    struct CollisionCandidateBuffers final
+    {
+        uint2* pairs = nullptr;
+        std::uint32_t* count = nullptr;
+        std::uint32_t capacity = 0;
+    };
+
     PdGpuState() = default;
     PdGpuState(const PdGpuState&) = delete;
     PdGpuState& operator=(const PdGpuState&) = delete;
@@ -32,6 +39,8 @@ public:
     float* inertia_rhs_buffer() const;
     float* rhs_buffer() const;
     void set_rhs(const float* source);
+
+    const CollisionCandidateBuffers& body_collision_candidates() const;
 
     void release_simulation_buffers();
     void release_garment_resources();
@@ -50,4 +59,6 @@ private:
     CsrMatrix system_matrix_csr_;
     float* inertia_rhs_buffer_ = nullptr;
     float* rhs_buffer_ = nullptr;
+
+    CollisionCandidateBuffers body_collision_candidates_;
 };
