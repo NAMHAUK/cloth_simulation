@@ -84,6 +84,11 @@ void PdGpuState::release_simulation_buffers()
 
     system_matrix_.release();
 
+    CUDA_CHECK(cudaFree(system_matrix_csr_.row_offsets_ptr));
+    CUDA_CHECK(cudaFree(system_matrix_csr_.col_indices_ptr));
+    CUDA_CHECK(cudaFree(system_matrix_csr_.values_ptr));
+    system_matrix_csr_ = {};
+
     CUDA_CHECK(cudaFree(inertia_rhs_buffer_));
     inertia_rhs_buffer_ = nullptr;
 

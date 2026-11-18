@@ -1,5 +1,6 @@
 #pragma once
 
+#include "PdSystemMatrix.h"
 #include "gpu/pd/PdCharacterGpuState.h"
 #include "gpu/pd/PdClothGpuState.h"
 #include "gpu/pd/PdConstraints.h"
@@ -46,6 +47,7 @@ private:
     PdConstraints constraints_;
 
     CudssSystem system_matrix_;
+    CsrMatrix system_matrix_csr_;
     float* inertia_rhs_buffer_ = nullptr;
     float* rhs_buffer_ = nullptr;
 };

@@ -29,13 +29,6 @@ struct MatrixIndex
 namespace {
 constexpr std::uint32_t block_size = 256;
 
-struct CsrMatrix
-{
-    std::int32_t* row_offsets_ptr;
-    std::int32_t* col_indices_ptr;
-    float* values_ptr;
-};
-
 __global__ void write_vertex_diagonal_entries_kernel(MatrixIndex* indices,
                                                      float* values,
                                                      std::uint32_t vertex_count,
@@ -155,9 +148,14 @@ void prepare_pd_system(PdGpuState& state)
     index_count = static_cast<std::uint32_t>(result_end.first - unique_indices.begin());
 
     // 5. 구한 System matrix 내부의 index와 value 값을 CSR matrix로 변환
-    thrust::device_vector<std::int32_t> row_offsets(vertex_count + 1, thrust::no_init);
-    thrust::device_vector<std::int32_t> col_indices(index_count, thrust::no_init);
-    const CsrMatrix matrix = {row_offsets.data().get(), col_indices.data().get(), summed_values.data().get()};
+    CsrMatrix& matrix = state.system_matrix_csr_;
+    CUDA_CHECK(cudaMalloc(&matrix.row_offsets_ptr, sizeof(std::int32_t) * (vertex_count + 1)));
+    CUDA_CHECK(cudaMalloc(&matrix.col_indices_ptr, sizeof(std::int32_t) * index_count));
+    CUDA_CHECK(cudaMalloc(&matrix.values_ptr, sizeof(float) * index_count));
+    CUDA_CHECK(cudaMemcpyAsync(matrix.values_ptr,
+                               summed_values.data().get(),
+                               sizeof(float) * index_count,
+                               cudaMemcpyDeviceToDevice));
 
     build_csr_matrix_kernel<<<block_count(index_count, block_size), block_size>>>(matrix,
                                                                                   unique_indices.data().get(),
