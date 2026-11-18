@@ -13,6 +13,8 @@
 
 namespace {
 constexpr std::uint32_t block_size = 256;
+constexpr float strain_limit_weight = 5000.0f;
+constexpr float max_stretch_ratio = 1.03f;
 
 __global__ void initialize_strain_constraints_kernel(StrainConstraint* constraints,
                                                      const glm::vec3* rest_positions,
@@ -46,7 +48,10 @@ __global__ void initialize_strain_constraints_kernel(StrainConstraint* constrain
     constraint.vertex_indices[0] = vertex_indices.a + vertex_offset;
     constraint.vertex_indices[1] = vertex_indices.b + vertex_offset;
     constraint.vertex_indices[2] = vertex_indices.c + vertex_offset;
-    constraint.weight = weight * rest_area;
+
+    const float combined_weight = weight + strain_limit_weight;
+    constraint.weight = combined_weight * rest_area;
+    constraint.strain_limit_fraction = strain_limit_weight / combined_weight;
 
     for (std::uint32_t row = 0; row < StrainConstraint::matrix_row_count; ++row) {
         constraint.A[row][0] = -inverse_rest_matrix[0][row] - inverse_rest_matrix[1][row];
@@ -103,6 +108,9 @@ __global__ void project_strain_constraints_kernel(StrainConstraint* constraints,
     }
 
     // projection 결과 저장
+    u0 *= 1.0f + constraint.strain_limit_fraction * (fminf(sigma0, max_stretch_ratio) - 1.0f);
+    u1 *= 1.0f + constraint.strain_limit_fraction * (fminf(sigma1, max_stretch_ratio) - 1.0f);
+
     const glm::vec3 p0 = cosine * u0 - sine * u1;
     const glm::vec3 p1 = sine * u0 + cosine * u1;
     constraint.p[0] = make_float3(p0.x, p0.y, p0.z);

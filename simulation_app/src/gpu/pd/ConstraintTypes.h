@@ -16,6 +16,7 @@ struct StrainConstraint
     float3 p[projection_vector_count]{};
     std::uint32_t vertex_indices[vertex_count]{};
     float weight = 0.0f;
+    float strain_limit_fraction = 0.0f;
 };
 
 struct BendingConstraint
