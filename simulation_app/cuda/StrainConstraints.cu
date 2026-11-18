@@ -13,7 +13,7 @@
 
 namespace {
 constexpr std::uint32_t block_size = 256;
-constexpr float strain_limit_weight = 5000.0f;
+constexpr float strain_limit_weight = 10000.0f;
 constexpr float max_stretch_ratio = 1.03f;
 
 __global__ void initialize_strain_constraints_kernel(StrainConstraint* constraints,

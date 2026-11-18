@@ -42,7 +42,7 @@ struct GarmentObject
     TriangleBvh triangle_bvh;
     EdgeBvh edge_bvh;
     float strain_weight = 100.0f;
-    float bending_weight = 1.0f;
+    float bending_weight = 1000.0f;
     float attachment_weight = 1e6f;
     float surface_density = 0.2f;
 };
