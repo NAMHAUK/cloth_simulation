@@ -257,7 +257,9 @@ if(WIN32)
         COMMAND "${CMAKE_COMMAND}" -E copy_if_different
             "$<TARGET_FILE:cudss>"
             "$<TARGET_FILE_DIR:simulation_app>"
-        COMMAND "${WINDEPLOYQT_EXECUTABLE}"
+        COMMAND "${CMAKE_COMMAND}" -E env
+            "VCINSTALLDIR=${CMAKE_GENERATOR_INSTANCE}/VC/"
+            "${WINDEPLOYQT_EXECUTABLE}"
             "$<IF:$<CONFIG:Debug>,--debug,--release>"
             "$<TARGET_FILE:simulation_app>"
         COMMENT "Deploying Qt runtime dependencies"
