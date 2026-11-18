@@ -23,6 +23,8 @@ add_executable(simulation_app
     cuda/AttachmentConstraints.h
     cuda/BendingConstraints.cu
     cuda/BendingConstraints.h
+    cuda/BvhBounds.cu
+    cuda/BvhBounds.h
     cuda/ClothIntegration.cu
     cuda/ClothIntegration.h
     cuda/ClothMass.cu

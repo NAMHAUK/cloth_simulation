@@ -1,4 +1,5 @@
 #include "simulation/pd/PdSimulation.h"
+#include "BvhBounds.h"
 #include "MeshNormals.h"
 #include "gpu/common/SceneGpuState.h"
 #include "simulation/SceneState.h"
@@ -117,6 +118,10 @@ void PdSimulation::update_character_pose(float frame_alpha, QOpenGLFunctions_4_5
     character_state.update_positions(character_buffers.positions,
                                      frame_index,
                                      gpu_state_.character_gpu_state().triangle_count());
+
+    update_triangle_bvh_bounds(character_state.triangle_bvh(),
+                               character_buffers.positions,
+                               params_.collisions.body.detection_distance);
 
     update_normals(character_buffers,
                    character_state.vertex_count(),
