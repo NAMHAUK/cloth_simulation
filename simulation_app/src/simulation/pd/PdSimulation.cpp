@@ -27,7 +27,7 @@ void PdSimulation::initialize(const std::filesystem::path&, QOpenGLFunctions_4_5
 {
     initialize_cuda();
     pd_gpu_state_.initialize(dt_);
-    pd_gpu_state_.character_gpu_state().initialize(gpu_state_.character_gpu_state());
+    pd_gpu_state_.character_gpu_state().initialize(scene_, gpu_state_.character_gpu_state());
     set_character_motion(gl);
 
     initialized_ = true;
