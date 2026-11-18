@@ -1,5 +1,6 @@
 #include "simulation/pd/ProjectiveDynamicsSolver.h"
 #include "AttachmentConstraints.h"
+#include "BendingConstraints.h"
 #include "ClothIntegration.h"
 #include "GroundConstraints.h"
 #include "MeshNormals.h"
@@ -37,8 +38,9 @@ void ProjectiveDynamicsSolver::solve()
     integrate_cloth(cloth_buffers.positions, cloth_state, gravity_, dt_);
     compute_inertia_rhs(pd_state_.inertia_rhs_buffer(), cloth_buffers.positions, cloth_state, inv_dt_squared_);
 
-    for (std::uint32_t iteration = 0; iteration < iteration_count_; ++iteration) {
+    for (std::uint32_t iteration = 0; iteration < 20; ++iteration) {
         project_constraints(pd_state_.constraints().get<ConstraintIndex::Strain>(), cloth_buffers.positions);
+        project_constraints(pd_state_.constraints().get<ConstraintIndex::Bending>(), cloth_buffers.positions);
         project_constraints(pd_state_.constraints().get<ConstraintIndex::Attachment>(),
                             character_buffers.positions,
                             character_buffers.triangle_vertex_indices,

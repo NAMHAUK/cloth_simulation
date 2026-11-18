@@ -21,6 +21,8 @@ get_filename_component(REPO_ROOT "${CMAKE_CURRENT_SOURCE_DIR}/.." ABSOLUTE)
 add_executable(simulation_app
     cuda/AttachmentConstraints.cu
     cuda/AttachmentConstraints.h
+    cuda/BendingConstraints.cu
+    cuda/BendingConstraints.h
     cuda/ClothIntegration.cu
     cuda/ClothIntegration.h
     cuda/ClothMass.cu
@@ -220,7 +222,7 @@ target_include_directories(garment_converter PRIVATE
 )
 
 if(MSVC)
-    set_source_files_properties(cuda/ClothMass.cu cuda/PdRhs.cu cuda/PdSystemMatrix.cu cuda/StrainConstraints.cu cuda/AttachmentConstraints.cu cuda/GroundConstraints.cu PROPERTIES
+    set_source_files_properties(cuda/ClothMass.cu cuda/PdRhs.cu cuda/PdSystemMatrix.cu cuda/StrainConstraints.cu cuda/BendingConstraints.cu cuda/AttachmentConstraints.cu cuda/GroundConstraints.cu PROPERTIES
         COMPILE_OPTIONS "-Xcompiler=/Zc:preprocessor;-Xcompiler=/Zc:__cplusplus;-Xcompiler=/permissive-"
     )
     target_compile_options(simulation_app PRIVATE

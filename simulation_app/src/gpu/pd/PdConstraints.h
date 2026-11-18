@@ -1,6 +1,7 @@
 #pragma once
 
 #include "AttachmentConstraints.h"
+#include "BendingConstraints.h"
 #include "GroundConstraints.h"
 #include "PdRhs.h"
 #include "StrainConstraints.h"
@@ -20,8 +21,9 @@
 enum ConstraintIndex
 {
     Strain = 0,
-    Attachment = 1,
-    Ground = 2
+    Bending = 1,
+    Attachment = 2,
+    Ground = 3
 };
 
 template <typename Constraint>
@@ -97,9 +99,11 @@ private:
     void initialize_constraint_counts(const std::vector<GarmentObject>& garments, const ClothGpuState& cloth_state)
     {
         get<ConstraintIndex::Strain>().count = cloth_state.element_counts().triangle;
+        get<ConstraintIndex::Bending>().count = 0;
         get<ConstraintIndex::Ground>().count = cloth_state.element_counts().vertex;
 
         for (const GarmentObject& garment : garments) {
+            get<ConstraintIndex::Bending>().count += garment.mesh.bending_constraints.colorized_edges.size();
             get<ConstraintIndex::Attachment>().count += garment.mesh.attachment_vertex_indices.size();
         }
 
@@ -118,6 +122,9 @@ private:
         std::apply([&](auto&... constraints) { (function(constraints), ...); }, constraints_);
     }
 
-    std::tuple<ConstraintSet<StrainConstraint>, ConstraintSet<AttachmentConstraint>, ConstraintSet<GroundConstraint>>
+    std::tuple<ConstraintSet<StrainConstraint>,
+               ConstraintSet<BendingConstraint>,
+               ConstraintSet<AttachmentConstraint>,
+               ConstraintSet<GroundConstraint>>
         constraints_;
 };
