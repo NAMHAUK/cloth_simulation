@@ -19,7 +19,8 @@ PdSimulation::PdSimulation(SceneState& scene, SceneGpuState& gpu_state, Simulati
                                   params.integration.gravity,
                                   dt_,
                                   params.step.iteration_count,
-                                  params.constraints.attachment_surface_offset)
+                                  params.constraints.attachment_surface_offset,
+                                  params.collisions.ground.height)
 {}
 
 void PdSimulation::initialize(const std::filesystem::path&, QOpenGLFunctions_4_5_Core& gl)

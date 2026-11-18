@@ -1,6 +1,7 @@
 #include "simulation/pd/ProjectiveDynamicsSolver.h"
 #include "AttachmentConstraints.h"
 #include "ClothIntegration.h"
+#include "GroundConstraints.h"
 #include "MeshNormals.h"
 #include "PdGlobalSolve.h"
 #include "PdRhs.h"
@@ -11,13 +12,15 @@ ProjectiveDynamicsSolver::ProjectiveDynamicsSolver(PdGpuState& pd_state,
                                                    float gravity,
                                                    float dt,
                                                    std::uint32_t iteration_count,
-                                                   float attachment_surface_offset)
+                                                   float attachment_surface_offset,
+                                                   float ground_height)
     : pd_state_(pd_state),
       gravity_(gravity),
       dt_(dt),
       inv_dt_squared_(1.0f / (dt * dt)),
       iteration_count_(iteration_count),
-      attachment_surface_offset_(attachment_surface_offset)
+      attachment_surface_offset_(attachment_surface_offset),
+      ground_height_(ground_height)
 {}
 
 void ProjectiveDynamicsSolver::solve()
@@ -40,6 +43,9 @@ void ProjectiveDynamicsSolver::solve()
                             character_buffers.positions,
                             character_buffers.triangle_vertex_indices,
                             attachment_surface_offset_);
+        project_constraints(pd_state_.constraints().get<ConstraintIndex::Ground>(),
+                            cloth_buffers.positions,
+                            ground_height_);
 
         pd_state_.set_rhs(pd_state_.inertia_rhs_buffer());
         accumulate_constraint_rhs(pd_state_.constraints(), pd_state_.rhs_buffer(), vertex_count);

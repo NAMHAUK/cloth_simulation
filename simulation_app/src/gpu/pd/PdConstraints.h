@@ -1,6 +1,7 @@
 #pragma once
 
 #include "AttachmentConstraints.h"
+#include "GroundConstraints.h"
 #include "PdRhs.h"
 #include "StrainConstraints.h"
 #include "gpu/common/ClothGpuState.h"
@@ -19,7 +20,8 @@
 enum ConstraintIndex
 {
     Strain = 0,
-    Attachment = 1
+    Attachment = 1,
+    Ground = 2
 };
 
 template <typename Constraint>
@@ -95,7 +97,8 @@ private:
     void initialize_constraint_counts(const std::vector<GarmentObject>& garments, const ClothGpuState& cloth_state)
     {
         get<ConstraintIndex::Strain>().count = cloth_state.element_counts().triangle;
-        
+        get<ConstraintIndex::Ground>().count = cloth_state.element_counts().vertex;
+
         for (const GarmentObject& garment : garments) {
             get<ConstraintIndex::Attachment>().count += garment.mesh.attachment_vertex_indices.size();
         }
@@ -115,5 +118,6 @@ private:
         std::apply([&](auto&... constraints) { (function(constraints), ...); }, constraints_);
     }
 
-    std::tuple<ConstraintSet<StrainConstraint>, ConstraintSet<AttachmentConstraint>> constraints_;
+    std::tuple<ConstraintSet<StrainConstraint>, ConstraintSet<AttachmentConstraint>, ConstraintSet<GroundConstraint>>
+        constraints_;
 };

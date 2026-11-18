@@ -11,7 +11,8 @@ public:
                              float gravity,
                              float dt,
                              std::uint32_t iteration_count,
-                             float attachment_surface_offset);
+                             float attachment_surface_offset,
+                             float ground_height);
     ProjectiveDynamicsSolver(const ProjectiveDynamicsSolver&) = delete;
     ProjectiveDynamicsSolver& operator=(const ProjectiveDynamicsSolver&) = delete;
 
@@ -24,4 +25,5 @@ private:
     const float inv_dt_squared_;
     const std::uint32_t iteration_count_;
     const float attachment_surface_offset_;
+    const float ground_height_;
 };
