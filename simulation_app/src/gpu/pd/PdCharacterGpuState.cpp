@@ -1,10 +1,12 @@
 #include "gpu/pd/PdCharacterGpuState.h"
+#include "MeshValidation.h"
 #include "asset/AssetDataTypes.h"
 #include "gpu/common/CharacterGpuState.h"
 #include "simulation/SceneState.h"
 #include "utils/CudaUtils.h"
 
 #include <cstddef>
+#include <stdexcept>
 
 #include <cuda_runtime.h>
 
@@ -46,12 +48,18 @@ void PdCharacterGpuState::set_motion(const CharacterMotion& motion)
         cudaMemcpy(animation_position_buffer_, motion.vertex_positions.data(), position_bytes, cudaMemcpyHostToDevice));
 }
 
-void PdCharacterGpuState::update_positions(float4* positions, std::uint32_t frame_index) const
+void PdCharacterGpuState::update_positions(float4* positions,
+                                           std::uint32_t frame_index,
+                                           std::uint32_t triangle_count) const
 {
     CUDA_CHECK(cudaMemcpyAsync(positions,
                                animation_position_buffer_ + std::size_t{frame_index} * vertex_count_,
                                sizeof(float4) * vertex_count_,
                                cudaMemcpyDeviceToDevice));
+
+    if (!validate_triangles(positions, triangle_bvh_.triangle_vertex_indices, triangle_count)) {
+        throw std::runtime_error("Invalid character triangle geometry.");
+    }
 }
 
 // Accessors
