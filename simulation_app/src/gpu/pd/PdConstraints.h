@@ -4,7 +4,7 @@
 #include "BendingConstraints.h"
 #include "GroundConstraints.h"
 #include "PdRhs.h"
-#include "StrainConstraints.h"
+#include "StretchConstraints.h"
 #include "gpu/common/ClothGpuState.h"
 #include "gpu/pd/ConstraintTypes.h"
 #include "simulation/SceneState.h"
@@ -20,7 +20,7 @@
 
 enum ConstraintIndex
 {
-    Strain = 0,
+    Stretch = 0,
     Bending = 1,
     Attachment = 2,
     Ground = 3
@@ -98,11 +98,12 @@ public:
 private:
     void initialize_constraint_counts(const std::vector<GarmentObject>& garments, const ClothGpuState& cloth_state)
     {
-        get<ConstraintIndex::Strain>().count = cloth_state.element_counts().triangle;
+        get<ConstraintIndex::Stretch>().count = 0;
         get<ConstraintIndex::Bending>().count = 0;
         get<ConstraintIndex::Ground>().count = cloth_state.element_counts().vertex;
 
         for (const GarmentObject& garment : garments) {
+            get<ConstraintIndex::Stretch>().count += garment.mesh.stretch_constraints.colorized_edges.size();
             get<ConstraintIndex::Bending>().count += garment.mesh.bending_constraints.colorized_edges.size();
             get<ConstraintIndex::Attachment>().count += garment.mesh.attachment_vertex_indices.size();
         }
@@ -122,7 +123,7 @@ private:
         std::apply([&](auto&... constraints) { (function(constraints), ...); }, constraints_);
     }
 
-    std::tuple<ConstraintSet<StrainConstraint>,
+    std::tuple<ConstraintSet<StretchConstraint>,
                ConstraintSet<BendingConstraint>,
                ConstraintSet<AttachmentConstraint>,
                ConstraintSet<GroundConstraint>>

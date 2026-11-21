@@ -6,7 +6,7 @@
 #include "MeshNormals.h"
 #include "PdGlobalSolve.h"
 #include "PdRhs.h"
-#include "StrainConstraints.h"
+#include "StretchConstraints.h"
 #include "gpu/pd/PdGpuState.h"
 
 ProjectiveDynamicsSolver::ProjectiveDynamicsSolver(PdGpuState& pd_state,
@@ -39,7 +39,7 @@ void ProjectiveDynamicsSolver::solve()
     compute_inertia_rhs(pd_state_.inertia_rhs_buffer(), cloth_buffers.positions, cloth_state, inv_dt_squared_);
 
     for (std::uint32_t iteration = 0; iteration < 30; ++iteration) {
-        project_constraints(pd_state_.constraints().get<ConstraintIndex::Strain>(), cloth_buffers.positions);
+        project_constraints(pd_state_.constraints().get<ConstraintIndex::Stretch>(), cloth_buffers.positions);
         project_constraints(pd_state_.constraints().get<ConstraintIndex::Bending>(), cloth_buffers.positions);
         project_constraints(pd_state_.constraints().get<ConstraintIndex::Attachment>(),
                             character_buffers.positions,

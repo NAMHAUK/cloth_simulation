@@ -160,7 +160,7 @@ void SceneState::set_garment(GarmentObject garment)
     if (!std::isfinite(garment.surface_density) || garment.surface_density <= 0.0f) {
         throw std::runtime_error("Garment surface density must be finite and positive.");
     }
-    for (float weight : {garment.strain_weight, garment.bending_weight, garment.attachment_weight}) {
+    for (float weight : {garment.stretch_weight, garment.bending_weight, garment.attachment_weight}) {
         if (!std::isfinite(weight) || weight < 0.0f) {
             throw std::runtime_error("Garment energy weights must be finite and non-negative.");
         }
