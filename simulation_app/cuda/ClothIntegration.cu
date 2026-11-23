@@ -6,6 +6,7 @@
 
 namespace {
 constexpr std::uint32_t block_size = 256;
+constexpr float damping = 0.9835f;
 
 __global__ void integrate_cloth_kernel(float4* positions,
                                        float4* previous_positions,
@@ -20,6 +21,10 @@ __global__ void integrate_cloth_kernel(float4* positions,
     }
 
     float4 velocity = velocities[index];
+    velocity.x *= damping;
+    velocity.y *= damping;
+    velocity.z *= damping;
+
     velocity.y += gravity * dt;
 
     float4 position = positions[index];

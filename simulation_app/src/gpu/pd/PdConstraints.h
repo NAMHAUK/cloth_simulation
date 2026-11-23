@@ -1,22 +1,29 @@
 #pragma once
 
 #include "AttachmentConstraints.h"
+#include "BendingConstraints.h"
+#include "GroundConstraints.h"
 #include "PdRhs.h"
 #include "StretchConstraints.h"
+#include "gpu/common/ClothGpuState.h"
 #include "gpu/pd/ConstraintTypes.h"
+#include "simulation/SceneState.h"
 #include "simulation/SimulationParams.h"
 #include "utils/CudaUtils.h"
 
 #include <cstdint>
 #include <stdexcept>
 #include <tuple>
+#include <vector>
 
 #include <cuda_runtime.h>
 
 enum ConstraintIndex
 {
     Stretch = 0,
-    Attachment = 1
+    Bending = 1,
+    Attachment = 2,
+    Ground = 3
 };
 
 template <typename Constraint>
@@ -50,17 +57,22 @@ struct ConstraintSet final
 class PdConstraints final
 {
 public:
-    void initialize()
-    {
-        execute_each([](const auto& constraints) { initialize_constraints(constraints.buffer, constraints.count); });
-
-        compute_constraint_rhs_matrices(*this);
-    }
-
     template <ConstraintIndex index>
     auto& get()
     {
         return std::get<index>(constraints_);
+    }
+
+    void initialize(const std::vector<GarmentObject>& garments, const ClothGpuState& cloth_state)
+    {
+        initialize_constraint_counts(garments, cloth_state);
+        allocate_buffers();
+
+        execute_each([&garments, &cloth_state](const auto& constraints) {
+            initialize_constraints(constraints.buffer, garments, cloth_state);
+        });
+
+        compute_constraint_rhs_matrices(*this);
     }
 
     template <typename Function>
@@ -75,8 +87,6 @@ public:
 
     void allocate_buffers()
     {
-        validate_constraint_count();
-
         for_each_constraint([](auto& constraints) { constraints.allocate_buffer(); });
     }
 
@@ -86,12 +96,23 @@ public:
     }
 
 private:
-    void validate_constraint_count()
+    void initialize_constraint_counts(const std::vector<GarmentObject>& garments, const ClothGpuState& cloth_state)
     {
-        std::uint64_t constraint_count = 0;
-        for_each_constraint([&](const auto& constraints) { constraint_count += constraints.count; });
+        get<ConstraintIndex::Stretch>().count = 0;
+        get<ConstraintIndex::Bending>().count = 0;
+        get<ConstraintIndex::Ground>().count = cloth_state.element_counts().vertex;
 
-        if (constraint_count > simulation_limits::max_constraint_count) {
+        for (const GarmentObject& garment : garments) {
+            get<ConstraintIndex::Stretch>().count += garment.mesh.stretch_constraints.colorized_edges.size();
+            get<ConstraintIndex::Bending>().count += garment.mesh.bending_constraints.colorized_edges.size();
+            get<ConstraintIndex::Attachment>().count += garment.mesh.attachment_vertex_indices.size();
+        }
+
+        // check total count
+        std::uint64_t total_count = 0;
+        for_each_constraint([&total_count](const auto& constraints) { total_count += constraints.count; });
+
+        if (total_count > simulation_limits::max_constraint_count) {
             throw std::length_error("Total constraint count exceeds the simulation limit.");
         }
     }
@@ -102,5 +123,9 @@ private:
         std::apply([&](auto&... constraints) { (function(constraints), ...); }, constraints_);
     }
 
-    std::tuple<ConstraintSet<DistanceConstraint>, ConstraintSet<AttachmentConstraint>> constraints_;
+    std::tuple<ConstraintSet<StretchConstraint>,
+               ConstraintSet<BendingConstraint>,
+               ConstraintSet<AttachmentConstraint>,
+               ConstraintSet<GroundConstraint>>
+        constraints_;
 };

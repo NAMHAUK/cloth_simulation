@@ -1,11 +1,17 @@
 #pragma once
 
-#include <cstdint>
+#include <vector>
 
 #include <vector_types.h>
 
-struct DistanceConstraint;
+struct StretchConstraint;
+struct GarmentObject;
+class ClothGpuState;
+template <typename Constraint>
+struct ConstraintSet;
 
-void initialize_constraints(DistanceConstraint* constraints, std::uint32_t constraint_count);
+void initialize_constraints(StretchConstraint* constraints,
+                            const std::vector<GarmentObject>& garments,
+                            const ClothGpuState& cloth_state);
 
-void project_constraints(DistanceConstraint* constraints, std::uint32_t constraint_count, const float4* positions);
+void project_constraints(const ConstraintSet<StretchConstraint>& constraints, const float4* positions);

@@ -66,10 +66,10 @@ struct BodyCollisionParams final
 
 struct ClothCollisionParams final
 {
-    float detection_distance = 0.009f;
-    float thickness = 0.007f;
+    float detection_distance = 0.004f;
+    float thickness = 0.003f;
     float stiffness = 1.0f;
-    float max_correction_length = 0.005f;
+    float max_correction_length = 0.003f;
     float initial_detection_distance = 0.012f;
     float body_search_radius = 0.15f;
 };

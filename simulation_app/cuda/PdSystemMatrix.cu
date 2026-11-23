@@ -1,4 +1,5 @@
 #include "PdSystemMatrix.h"
+#include "gpu/pd/ConstraintTypes.h"
 #include "gpu/pd/PdGpuState.h"
 #include "utils/CudaUtils.h"
 #include "utils/CudssUtils.h"

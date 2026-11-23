@@ -21,10 +21,14 @@ get_filename_component(REPO_ROOT "${CMAKE_CURRENT_SOURCE_DIR}/.." ABSOLUTE)
 add_executable(simulation_app
     cuda/AttachmentConstraints.cu
     cuda/AttachmentConstraints.h
+    cuda/BendingConstraints.cu
+    cuda/BendingConstraints.h
     cuda/ClothIntegration.cu
     cuda/ClothIntegration.h
     cuda/ClothMass.cu
     cuda/ClothMass.h
+    cuda/GroundConstraints.cu
+    cuda/GroundConstraints.h
     cuda/MeshNormals.cu
     cuda/MeshNormals.h
     cuda/PdGlobalSolve.cu
@@ -218,7 +222,7 @@ target_include_directories(garment_converter PRIVATE
 )
 
 if(MSVC)
-    set_source_files_properties(cuda/PdSystemMatrix.cu PROPERTIES
+    set_source_files_properties(cuda/ClothMass.cu cuda/PdRhs.cu cuda/PdSystemMatrix.cu cuda/StretchConstraints.cu cuda/BendingConstraints.cu cuda/AttachmentConstraints.cu cuda/GroundConstraints.cu PROPERTIES
         COMPILE_OPTIONS "-Xcompiler=/Zc:preprocessor;-Xcompiler=/Zc:__cplusplus;-Xcompiler=/permissive-"
     )
     target_compile_options(simulation_app PRIVATE
@@ -227,6 +231,10 @@ if(MSVC)
     )
     target_compile_options(garment_converter PRIVATE /utf-8)
 endif()
+
+target_compile_options(simulation_app PRIVATE
+    $<$<COMPILE_LANGUAGE:CUDA>:--expt-relaxed-constexpr>
+)
 
 target_compile_definitions(simulation_app PRIVATE
     PROJECT_ROOT_DIR="${REPO_ROOT}"

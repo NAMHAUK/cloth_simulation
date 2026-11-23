@@ -23,13 +23,14 @@ void PdClothGpuState::create_simulation_buffers(const std::vector<GarmentObject>
     CUDA_CHECK(cudaMemset(velocity_buffer_, 0, velocity_bytes));
 
     // mass
-    CUDA_CHECK(cudaMalloc(reinterpret_cast<void**>(&mass_buffer_), sizeof(float) * vertex_count_));
+    const std::size_t mass_bytes = sizeof(float) * vertex_count_;
+    CUDA_CHECK(cudaMalloc(reinterpret_cast<void**>(&mass_buffer_), mass_bytes));
+    CUDA_CHECK(cudaMemset(mass_buffer_, 0, mass_bytes));
+
     for (const GarmentObject& garment : garments) {
         const GarmentBufferState& garment_state = cloth_state.garment_states()[garment.layer];
 
-        set_vertex_masses(mass_buffer_ + garment_state.vertex_start_index,
-                          garment_state.vertex_count,
-                          garment.surface_density);
+        compute_vertex_masses(mass_buffer_ + garment_state.vertex_start_index, garment.mesh, garment.surface_density);
     }
 }
 
