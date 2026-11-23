@@ -39,8 +39,6 @@ add_executable(simulation_app
     cuda/GarmentPrefit.h
     cuda/MeshNormals.cu
     cuda/MeshNormals.h
-    cuda/MeshValidation.cu
-    cuda/MeshValidation.h
     cuda/PdGlobalSolve.cu
     cuda/PdGlobalSolve.h
     cuda/PdRhs.cu

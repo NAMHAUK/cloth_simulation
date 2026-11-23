@@ -131,9 +131,7 @@ void PdSimulation::update_character_pose(float frame_alpha, QOpenGLFunctions_4_5
                                                scene_.character_motion().frame_count - 1u);
 
     const MappedMeshBuffers character_buffers = character_state.shared_buffers.map();
-    character_state.update_positions(character_buffers.positions,
-                                     frame_index,
-                                     gpu_state_.character_gpu_state().triangle_count());
+    character_state.update_positions(character_buffers.positions, frame_index);
 
     update_triangle_bvh_bounds(character_state.triangle_bvh(),
                                character_buffers.positions,
