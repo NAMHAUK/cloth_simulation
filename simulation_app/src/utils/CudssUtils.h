@@ -26,7 +26,12 @@ struct CudssSystem
     cudssMatrix_t matrix_descriptor = nullptr;
     cudssMatrix_t vector_descriptor = nullptr;
 
-    void initialize()
+    void initialize(std::uint32_t row_count,
+                    std::uint32_t entry_count,
+                    std::int32_t* row_offsets,
+                    std::int32_t* col_indices,
+                    float* values,
+                    void* rhs)
     {
         CUDSS_CHECK(cudssCreate(&handle));
         CUDSS_CHECK(cudssConfigCreate(&config));
@@ -34,15 +39,7 @@ struct CudssSystem
 
         const int refinement_steps = 0;
         CUDSS_CHECK(cudssConfigSet(config, CUDSS_CONFIG_IR_N_STEPS, &refinement_steps, sizeof(refinement_steps)));
-    }
 
-    void cholesky_decompose(std::uint32_t row_count,
-                            std::uint32_t entry_count,
-                            std::int32_t* row_offsets,
-                            std::int32_t* col_indices,
-                            float* values,
-                            void* rhs)
-    {
         CUDSS_CHECK(cudssMatrixCreateCsr(&matrix_descriptor,
                                          row_count,
                                          row_count,
@@ -67,6 +64,10 @@ struct CudssSystem
                                  matrix_descriptor,
                                  vector_descriptor,
                                  vector_descriptor));
+    }
+
+    void factorize()
+    {
         CUDSS_CHECK(cudssExecute(handle,
                                  CUDSS_PHASE_FACTORIZATION,
                                  config,

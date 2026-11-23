@@ -1,4 +1,6 @@
 #include "simulation/pd/PdSimulation.h"
+#include "BvhBounds.h"
+#include "GarmentPrefit.h"
 #include "MeshNormals.h"
 #include "gpu/common/SceneGpuState.h"
 #include "simulation/SceneState.h"
@@ -27,7 +29,7 @@ void PdSimulation::initialize(const std::filesystem::path&, QOpenGLFunctions_4_5
 {
     initialize_cuda();
     pd_gpu_state_.initialize(dt_);
-    pd_gpu_state_.character_gpu_state().initialize(gpu_state_.character_gpu_state());
+    pd_gpu_state_.character_gpu_state().initialize(scene_, gpu_state_.character_gpu_state());
     set_character_motion(gl);
 
     initialized_ = true;
@@ -55,10 +57,25 @@ void PdSimulation::step(std::uint32_t motion_step_index, QOpenGLFunctions_4_5_Co
 
 void PdSimulation::prepare_garments(const std::vector<const GarmentObject*>&, QOpenGLFunctions_4_5_Core& gl)
 {
-    create_simulation_buffers(gl);
-
     // Garment pre-fit
     assert(is_initialized());
+    auto& cloth_state = pd_gpu_state_.cloth_gpu_state();
+    auto& character_state = pd_gpu_state_.character_gpu_state();
+    if (cloth_state.vertex_count() > 0) {
+        const MappedMeshBuffers cloth_buffers = cloth_state.shared_buffers.map();
+        const MappedMeshBuffers character_buffers = character_state.shared_buffers.map();
+
+        prefit_garments(cloth_buffers.positions,
+                        cloth_state.vertex_count(),
+                        character_buffers.positions,
+                        character_state.triangle_bvh(),
+                        params_.prefit);
+
+        character_state.shared_buffers.unmap();
+        cloth_state.shared_buffers.unmap();
+    }
+
+    create_simulation_buffers(gl);
 }
 
 // Garment resources
@@ -115,6 +132,10 @@ void PdSimulation::update_character_pose(float frame_alpha, QOpenGLFunctions_4_5
 
     const MappedMeshBuffers character_buffers = character_state.shared_buffers.map();
     character_state.update_positions(character_buffers.positions, frame_index);
+
+    update_triangle_bvh_bounds(character_state.triangle_bvh(),
+                               character_buffers.positions,
+                               params_.collisions.body.detection_distance);
 
     update_normals(character_buffers,
                    character_state.vertex_count(),

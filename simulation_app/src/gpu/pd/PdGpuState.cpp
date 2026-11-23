@@ -25,7 +25,13 @@ void PdGpuState::prepare_system(const std::vector<GarmentObject>& garments, cons
     CUDA_CHECK(cudaMalloc(&inertia_rhs_buffer_, sizeof(float) * 3 * cloth_gpu_state_.vertex_count()));
     CUDA_CHECK(cudaMalloc(&rhs_buffer_, sizeof(float) * 3 * cloth_gpu_state_.vertex_count()));
 
-    prepare_pd_system(*this);
+    resize_body_collision_candidates(cloth_gpu_state_.vertex_count() * 8);
+    CUDA_CHECK(cudaMalloc(&body_collision_candidates_.count, sizeof(std::uint32_t)));
+    CUDA_CHECK(cudaMemsetAsync(body_collision_candidates_.count, 0, sizeof(std::uint32_t)));
+
+    CUDA_CHECK(cudaMalloc(&body_collision_count_buffer_, sizeof(std::uint32_t)));
+
+    update_pd_system(*this);
 }
 
 // Setter
@@ -35,6 +41,16 @@ void PdGpuState::set_rhs(const float* source)
                                source,
                                sizeof(float) * 3 * cloth_gpu_state_.vertex_count(),
                                cudaMemcpyDeviceToDevice));
+}
+
+void PdGpuState::resize_body_collision_candidates(std::uint32_t capacity)
+{
+    uint2* pairs = nullptr;
+    CUDA_CHECK(cudaMalloc(&pairs, sizeof(uint2) * capacity));
+    CUDA_CHECK(cudaFree(body_collision_candidates_.pairs));
+
+    body_collision_candidates_.pairs = pairs;
+    body_collision_candidates_.capacity = capacity;
 }
 
 // Accessor
@@ -73,6 +89,16 @@ float* PdGpuState::rhs_buffer() const
     return rhs_buffer_;
 }
 
+const PdGpuState::CollisionCandidateBuffers& PdGpuState::body_collision_candidates() const
+{
+    return body_collision_candidates_;
+}
+
+std::uint32_t* PdGpuState::body_collision_count_buffer() const
+{
+    return body_collision_count_buffer_;
+}
+
 // Release
 void PdGpuState::release_simulation_buffers()
 {
@@ -91,6 +117,13 @@ void PdGpuState::release_simulation_buffers()
 
     CUDA_CHECK(cudaFree(rhs_buffer_));
     rhs_buffer_ = nullptr;
+
+    CUDA_CHECK(cudaFree(body_collision_candidates_.pairs));
+    CUDA_CHECK(cudaFree(body_collision_candidates_.count));
+    body_collision_candidates_ = {};
+
+    CUDA_CHECK(cudaFree(body_collision_count_buffer_));
+    body_collision_count_buffer_ = nullptr;
 }
 
 void PdGpuState::release_garment_resources()

@@ -11,4 +11,4 @@ struct CsrMatrix
     float* values_ptr = nullptr;
 };
 
-void prepare_pd_system(PdGpuState& state);
+void update_pd_system(PdGpuState& state);
