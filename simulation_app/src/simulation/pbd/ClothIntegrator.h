@@ -15,7 +15,7 @@ class SceneState;
 class ClothIntegrator final
 {
 public:
-    explicit ClothIntegrator(const ClothIntegrationParams& params);
+    ClothIntegrator(float gravity, const ClothIntegrationParams& params);
     ClothIntegrator(const ClothIntegrator&) = delete;
     ClothIntegrator& operator=(const ClothIntegrator&) = delete;
 

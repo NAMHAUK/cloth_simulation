@@ -10,20 +10,17 @@
 #include "PdRhs.h"
 #include "StretchConstraints.h"
 #include "gpu/pd/PdGpuState.h"
+#include "simulation/SimulationParams.h"
 
-ProjectiveDynamicsSolver::ProjectiveDynamicsSolver(PdGpuState& pd_state,
-                                                   float gravity,
-                                                   float dt,
-                                                   std::uint32_t iteration_count,
-                                                   float attachment_surface_offset,
-                                                   float ground_height)
+#include <cmath>
+
+ProjectiveDynamicsSolver::ProjectiveDynamicsSolver(PdGpuState& pd_state, const SimulationParams& params, float dt)
     : pd_state_(pd_state),
-      gravity_(gravity),
+      gravity_(params.gravity),
       dt_(dt),
+      velocity_damping_(std::pow(params.pd.velocity_damping, 1.0f / static_cast<float>(params.pd.substep_count))),
       inv_dt_squared_(1.0f / (dt * dt)),
-      iteration_count_(iteration_count),
-      attachment_surface_offset_(attachment_surface_offset),
-      ground_height_(ground_height)
+      iteration_count_(params.pd.iteration_count)
 {}
 
 void ProjectiveDynamicsSolver::solve()
@@ -37,10 +34,10 @@ void ProjectiveDynamicsSolver::solve()
     const MappedMeshBuffers cloth_buffers = cloth_state.shared_buffers.map();
     const MappedMeshBuffers character_buffers = pd_state_.character_gpu_state().shared_buffers.map();
 
-    integrate_cloth(cloth_buffers.positions, cloth_state, gravity_, dt_);
+    integrate_cloth(cloth_buffers.positions, cloth_state, gravity_, dt_, velocity_damping_);
     compute_inertia_rhs(pd_state_.inertia_rhs_buffer(), cloth_buffers.positions, cloth_state, inv_dt_squared_);
 
-    for (std::uint32_t iteration = 0; iteration < 30; ++iteration) {
+    for (std::uint32_t iteration = 0; iteration < iteration_count_; ++iteration) {
         detect_body_collisions(cloth_buffers.positions, character_buffers.positions, pd_state_);
         update_pd_system(pd_state_);
 
@@ -48,11 +45,8 @@ void ProjectiveDynamicsSolver::solve()
         project_constraints(pd_state_.constraints().get<ConstraintIndex::Bending>(), cloth_buffers.positions);
         project_constraints(pd_state_.constraints().get<ConstraintIndex::Attachment>(),
                             character_buffers.positions,
-                            character_buffers.triangle_vertex_indices,
-                            attachment_surface_offset_);
-        project_constraints(pd_state_.constraints().get<ConstraintIndex::Ground>(),
-                            cloth_buffers.positions,
-                            ground_height_);
+                            character_buffers.triangle_vertex_indices);
+        project_constraints(pd_state_.constraints().get<ConstraintIndex::Ground>(), cloth_buffers.positions);
         project_constraints(pd_state_.constraints().get<ConstraintIndex::BodyCollision>(), cloth_buffers.positions);
 
         pd_state_.set_rhs(pd_state_.inertia_rhs_buffer());

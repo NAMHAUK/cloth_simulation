@@ -10,7 +10,7 @@ class ClothGpuState;
 class GroundCollisionSolver final
 {
 public:
-    explicit GroundCollisionSolver(const GroundCollisionParams& params);
+    GroundCollisionSolver(float ground_height, const GroundCollisionParams& params);
     GroundCollisionSolver(const GroundCollisionSolver&) = delete;
     GroundCollisionSolver& operator=(const GroundCollisionSolver&) = delete;
 

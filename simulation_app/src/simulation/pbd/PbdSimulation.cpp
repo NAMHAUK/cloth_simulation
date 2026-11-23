@@ -37,29 +37,25 @@ PbdSimulation::PbdSimulation(SceneState& scene, SceneGpuState& gpu_state, Simula
     : scene_(scene),
       gpu_state_(gpu_state),
       params_(params),
-      cloth_integrator_(params.integration),
-      stretch_constraint_solver_(params.constraints.stretch_stiffness),
-      bending_constraint_solver_(params.constraints.bending_stiffness),
-      attachment_constraint_solver_(params.constraints.attachment_stiffness),
-      ground_collision_solver_(params.collisions.ground),
-      collision_detector_(params.collisions.cloth),
-      cloth_body_collision_solver_(params.collisions.body),
-      cloth_cloth_collision_solver_(params.collisions.cloth),
+      cloth_integrator_(params.gravity, params.pbd.integration),
+      stretch_constraint_solver_(params.pbd.constraints.stretch_stiffness),
+      bending_constraint_solver_(params.pbd.constraints.bending_stiffness),
+      attachment_constraint_solver_(params.pbd.constraints.attachment_stiffness),
+      ground_collision_solver_(params.ground_height, params.pbd.collisions.ground),
+      collision_detector_(params.pbd.collisions.cloth),
+      cloth_body_collision_solver_(params.pbd.collisions.body),
+      cloth_cloth_collision_solver_(params.pbd.collisions.cloth),
       garment_prefit_solver_(params.prefit)
 {}
 
 void PbdSimulation::initialize(const std::filesystem::path& shader_dir, QOpenGLFunctions_4_5_Core& gl)
 {
-    if (!is_valid_simulation_params(params_)) {
-        throw std::runtime_error("Cannot initialize simulation pipeline with invalid parameters.");
-    }
-
-    substep_dt_ = params_.step.dt() / static_cast<float>(params_.step.substep_count);
+    substep_dt_ = params_.step.dt() / static_cast<float>(params_.pbd.substep_count);
 
     buffer_bindings_.initialize(gl);
     pbd_gpu_state_.initialize(shader_dir,
-                              params_.constraints.attachment_surface_offset,
-                              params_.collisions.body.detection_distance,
+                              params_.attachment_surface_offset,
+                              params_.pbd.collisions.body.detection_distance,
                               scene_,
                               gpu_state_.character_gpu_state(),
                               gl);
@@ -88,15 +84,15 @@ void PbdSimulation::step(std::uint32_t motion_step_index, QOpenGLFunctions_4_5_C
     const ClothGpuState& cloth_state = gpu_state_.cloth_gpu_state();
     const PbdClothGpuState& pbd_cloth_state = pbd_gpu_state_.cloth_gpu_state();
 
-    for (std::uint32_t substep = 0; substep < params_.step.substep_count; ++substep) {
+    for (std::uint32_t substep = 0; substep < params_.pbd.substep_count; ++substep) {
         update_character_motion(motion_step_index, substep + 1u, gl);
 
         cloth_integrator_.integrate(cloth_state, scene_, gl);
 
-        pbd_gpu_state_.update_cloth_bvh_bounds(params_.collisions.cloth.detection_distance, gl);
+        pbd_gpu_state_.update_cloth_bvh_bounds(params_.pbd.collisions.cloth.detection_distance, gl);
         collision_detector_.detect(cloth_state, pbd_gpu_state_, gl);
 
-        for (std::uint32_t iteration = 0; iteration < params_.step.iteration_count; ++iteration) {
+        for (std::uint32_t iteration = 0; iteration < params_.pbd.iteration_count; ++iteration) {
             stretch_constraint_solver_.solve(pbd_cloth_state, gl);
             bending_constraint_solver_.solve(pbd_cloth_state, gl);
             attachment_constraint_solver_.solve(pbd_cloth_state, gl);
@@ -121,7 +117,7 @@ void PbdSimulation::prepare_garments(const std::vector<const GarmentObject*>& pl
     create_simulation_buffers(gl);
 
     // Garment pre-fit
-    params_.step.iteration_count = calculate_iteration_count(scene_.garments());
+    params_.pbd.iteration_count = calculate_iteration_count(scene_.garments());
 
     for (std::uint32_t step = 0; step < params_.prefit.iteration_count; ++step) {
         pbd_cloth_state.reset_velocity(cloth_state, 0, cloth_state.element_counts().vertex, gl);
@@ -129,8 +125,8 @@ void PbdSimulation::prepare_garments(const std::vector<const GarmentObject*>& pl
         stretch_constraint_solver_.solve(pbd_cloth_state, gl);
         bending_constraint_solver_.solve(pbd_cloth_state, gl);
 
-        for (std::uint32_t iteration = 0; iteration < params_.step.iteration_count; ++iteration) {
-            pbd_gpu_state_.update_cloth_bvh_bounds(params_.collisions.cloth.initial_detection_distance, gl);
+        for (std::uint32_t iteration = 0; iteration < params_.pbd.iteration_count; ++iteration) {
+            pbd_gpu_state_.update_cloth_bvh_bounds(params_.pbd.collisions.cloth.initial_detection_distance, gl);
             collision_detector_.detect_prefit(cloth_state, pbd_gpu_state_, gl);
             cloth_cloth_collision_solver_.solve_initial(cloth_state, pbd_gpu_state_.collision_buffers(), gl);
         }
@@ -193,7 +189,8 @@ void PbdSimulation::update_character_motion(std::uint32_t motion_step_index,
                                             std::uint32_t substep,
                                             QOpenGLFunctions_4_5_Core& gl)
 {
-    const float motion_frame_position = params_.step.motion_frame_position(motion_step_index, substep);
+    const float substep_fraction = static_cast<float>(substep) / params_.pbd.substep_count;
+    const float motion_frame_position = params_.step.motion_frame_position(motion_step_index, substep_fraction);
     const float frame_alpha = scene_.motion_frame_alpha(motion_frame_position);
     scene_.update_reference_frame_kinematics(frame_alpha, substep_dt_);
     update_character_pose(frame_alpha, gl);

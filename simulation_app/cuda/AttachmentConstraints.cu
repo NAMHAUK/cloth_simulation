@@ -5,6 +5,7 @@
 #include "gpu/pd/CudaMeshResources.h"
 #include "gpu/pd/PdConstraints.h"
 #include "simulation/SceneState.h"
+#include "simulation/SimulationParams.h"
 #include "utils/CudaUtils.h"
 
 #include <cfloat>
@@ -17,6 +18,7 @@
 
 namespace {
 constexpr std::uint32_t block_size = 256;
+constexpr float attachment_surface_offset = SimulationParams::attachment_surface_offset;
 
 __global__ void initialize_attachment_constraints_kernel(AttachmentConstraint* constraints,
                                                          const std::uint32_t* vertex_indices,
@@ -117,8 +119,7 @@ __global__ void find_attachment_targets_kernel(AttachmentConstraint* constraints
 __global__ void project_attachment_constraints_kernel(AttachmentConstraint* constraints,
                                                       std::uint32_t constraint_count,
                                                       const float4* body_positions,
-                                                      const TriangleVertexIndices* body_triangles,
-                                                      float surface_offset)
+                                                      const TriangleVertexIndices* body_triangles)
 {
     const std::uint32_t index = blockIdx.x * blockDim.x + threadIdx.x;
     if (index >= constraint_count) {
@@ -134,7 +135,7 @@ __global__ void project_attachment_constraints_kernel(AttachmentConstraint* cons
     const glm::vec3 normal = glm::cross(b - a, c - a);
     const float normal_length = glm::length(normal);
     if (normal_length > 1.0e-10f) {
-        target += surface_offset * (normal / normal_length);
+        target += attachment_surface_offset * (normal / normal_length);
     }
     constraint.p[0] = make_float3(target.x, target.y, target.z);
 }
@@ -182,8 +183,7 @@ void find_attachment_targets(const ConstraintSet<AttachmentConstraint>& constrai
 
 void project_constraints(const ConstraintSet<AttachmentConstraint>& constraints,
                          const float4* body_positions,
-                         const TriangleVertexIndices* body_triangles,
-                         float surface_offset)
+                         const TriangleVertexIndices* body_triangles)
 {
     if (constraints.count == 0) {
         return;
@@ -192,7 +192,6 @@ void project_constraints(const ConstraintSet<AttachmentConstraint>& constraints,
         constraints.buffer,
         constraints.count,
         body_positions,
-        body_triangles,
-        surface_offset);
+        body_triangles);
     CUDA_CHECK(cudaGetLastError());
 }

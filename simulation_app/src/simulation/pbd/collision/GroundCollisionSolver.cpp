@@ -1,14 +1,14 @@
 #include "simulation/pbd/collision/GroundCollisionSolver.h"
 #include "gpu/common/ClothGpuState.h"
-#include "simulation/SimulationParams.h"
+#include "simulation/pbd/PbdSimulationParams.h"
 #include "utils/ShaderUtils.h"
 
 namespace {
 constexpr std::uint32_t local_size = 128;
 }
 
-GroundCollisionSolver::GroundCollisionSolver(const GroundCollisionParams& params)
-    : floor_height_(params.height),
+GroundCollisionSolver::GroundCollisionSolver(float ground_height, const GroundCollisionParams& params)
+    : floor_height_(ground_height),
       static_friction_(params.static_friction),
       dynamic_friction_(params.dynamic_friction)
 {}

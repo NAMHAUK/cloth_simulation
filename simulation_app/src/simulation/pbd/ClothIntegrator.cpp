@@ -1,7 +1,7 @@
 #include "simulation/pbd/ClothIntegrator.h"
 #include "gpu/common/ClothGpuState.h"
 #include "simulation/SceneState.h"
-#include "simulation/SimulationParams.h"
+#include "simulation/pbd/PbdSimulationParams.h"
 #include "utils/ShaderUtils.h"
 
 #define GLM_ENABLE_EXPERIMENTAL
@@ -23,8 +23,8 @@ struct IntegrationCoefficients
     glm::vec3 position_offset;
 };
 
-ClothIntegrator::ClothIntegrator(const ClothIntegrationParams& params)
-    : gravity_(0.0f, params.gravity, 0.0f),
+ClothIntegrator::ClothIntegrator(float gravity, const ClothIntegrationParams& params)
+    : gravity_(0.0f, gravity, 0.0f),
       damping_(params.velocity_damping),
       frame_inertia_scale_(params.reference_frame_inertia_scale)
 {}

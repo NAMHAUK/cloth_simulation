@@ -31,8 +31,8 @@ public:
 
     void initialize(const SceneState& scene, const CharacterGpuState& character_state);
     void set_motion(const CharacterMotion& motion);
-    void update_positions(float4* positions, std::uint32_t frame_index) const;
 
+    const float4* animation_position_buffer() const;
     const TriangleBvhBuffers& triangle_bvh() const;
     std::uint32_t vertex_count() const;
 

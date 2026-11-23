@@ -1,10 +1,12 @@
 #pragma once
 
+#include "simulation/pd/PdSimulationParams.h"
+
 #include <vector>
 
 #include <vector_types.h>
 
-inline constexpr float body_collision_thickness = 0.005f;
+inline constexpr float body_collision_thickness = PdSimulationParams::body_collision_thickness;
 
 struct BodyCollisionConstraint;
 struct GarmentObject;

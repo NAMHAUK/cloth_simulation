@@ -4,6 +4,10 @@
 
 class PdClothGpuState;
 
-void integrate_cloth(float4* positions, const PdClothGpuState& cloth_state, float gravity, float dt);
+void integrate_cloth(float4* positions,
+                     const PdClothGpuState& cloth_state,
+                     float gravity,
+                     float dt,
+                     float velocity_damping);
 
 void update_cloth_velocities(const float4* positions, const PdClothGpuState& cloth_state, float dt);

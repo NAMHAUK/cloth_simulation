@@ -4,4 +4,4 @@
 
 struct TriangleBvhBuffers;
 
-void update_triangle_bvh_bounds(const TriangleBvhBuffers& bvh, const float4* positions, float detection_distance);
+void update_triangle_bvh_bounds(const TriangleBvhBuffers& bvh, const float4* positions);
