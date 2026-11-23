@@ -14,6 +14,4 @@ void initialize_constraints(GroundConstraint* constraints,
                             const std::vector<GarmentObject>& garments,
                             const ClothGpuState& cloth_state);
 
-void project_constraints(const ConstraintSet<GroundConstraint>& constraints,
-                         const float4* positions,
-                         float ground_height);
+void project_constraints(const ConstraintSet<GroundConstraint>& constraints, const float4* positions);

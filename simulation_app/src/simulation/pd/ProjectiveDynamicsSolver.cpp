@@ -20,9 +20,7 @@ ProjectiveDynamicsSolver::ProjectiveDynamicsSolver(PdGpuState& pd_state, const S
       dt_(dt),
       velocity_damping_(std::pow(params.pd.velocity_damping, 1.0f / static_cast<float>(params.pd.substep_count))),
       inv_dt_squared_(1.0f / (dt * dt)),
-      iteration_count_(params.pd.iteration_count),
-      attachment_surface_offset_(params.attachment_surface_offset),
-      ground_height_(params.ground_height)
+      iteration_count_(params.pd.iteration_count)
 {}
 
 void ProjectiveDynamicsSolver::solve()
@@ -47,11 +45,8 @@ void ProjectiveDynamicsSolver::solve()
         project_constraints(pd_state_.constraints().get<ConstraintIndex::Bending>(), cloth_buffers.positions);
         project_constraints(pd_state_.constraints().get<ConstraintIndex::Attachment>(),
                             character_buffers.positions,
-                            character_buffers.triangle_vertex_indices,
-                            attachment_surface_offset_);
-        project_constraints(pd_state_.constraints().get<ConstraintIndex::Ground>(),
-                            cloth_buffers.positions,
-                            ground_height_);
+                            character_buffers.triangle_vertex_indices);
+        project_constraints(pd_state_.constraints().get<ConstraintIndex::Ground>(), cloth_buffers.positions);
         project_constraints(pd_state_.constraints().get<ConstraintIndex::BodyCollision>(), cloth_buffers.positions);
 
         pd_state_.set_rhs(pd_state_.inertia_rhs_buffer());

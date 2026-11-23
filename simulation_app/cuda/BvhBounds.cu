@@ -1,6 +1,7 @@
 #include "BvhBounds.h"
 #include "gpu/pd/PdCharacterGpuState.h"
 #include "simulation/bvh/Bvh.h"
+#include "simulation/pd/PdSimulationParams.h"
 #include "utils/CudaUtils.h"
 
 #include <cfloat>
@@ -14,14 +15,14 @@
 
 namespace {
 constexpr std::uint32_t block_size = 128;
+constexpr float body_detection_distance = PdSimulationParams::body_detection_distance;
 
 __global__ void update_triangle_bvh_bounds_kernel(BvhNode* nodes,
                                                   const TriangleVertexIndices* triangle_vertex_indices,
                                                   Aabb* triangle_bounds,
                                                   const float4* positions,
                                                   std::uint32_t first_node_index,
-                                                  std::uint32_t node_count,
-                                                  float detection_distance)
+                                                  std::uint32_t node_count)
 {
     const std::uint32_t index = blockIdx.x * blockDim.x + threadIdx.x;
     if (index >= node_count) {
@@ -41,8 +42,8 @@ __global__ void update_triangle_bvh_bounds_kernel(BvhNode* nodes,
             const glm::vec3 c = glm::make_vec3(&positions[indices.c].x);
 
             Aabb& bounds = triangle_bounds[triangle_index];
-            bounds.min_bounds = glm::vec4(glm::min(a, glm::min(b, c)) - detection_distance, 0.0f);
-            bounds.max_bounds = glm::vec4(glm::max(a, glm::max(b, c)) + detection_distance, 0.0f);
+            bounds.min_bounds = glm::vec4(glm::min(a, glm::min(b, c)) - body_detection_distance, 0.0f);
+            bounds.max_bounds = glm::vec4(glm::max(a, glm::max(b, c)) + body_detection_distance, 0.0f);
             node.bounds.min_bounds = glm::min(node.bounds.min_bounds, bounds.min_bounds);
             node.bounds.max_bounds = glm::max(node.bounds.max_bounds, bounds.max_bounds);
         }
@@ -55,7 +56,7 @@ __global__ void update_triangle_bvh_bounds_kernel(BvhNode* nodes,
 }
 }
 
-void update_triangle_bvh_bounds(const TriangleBvhBuffers& bvh, const float4* positions, float detection_distance)
+void update_triangle_bvh_bounds(const TriangleBvhBuffers& bvh, const float4* positions)
 {
     const int level_count = static_cast<int>(bvh.level_offsets.size()) - 1;
     for (int level = level_count - 1; level >= 0; --level) {
@@ -68,8 +69,7 @@ void update_triangle_bvh_bounds(const TriangleBvhBuffers& bvh, const float4* pos
             bvh.triangle_bounds,
             positions,
             first_node_index,
-            node_count,
-            detection_distance);
+            node_count);
         CUDA_CHECK(cudaGetLastError());
     }
 }

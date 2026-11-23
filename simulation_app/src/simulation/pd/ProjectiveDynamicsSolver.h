@@ -21,6 +21,4 @@ private:
     const float inv_dt_squared_;
     const float velocity_damping_;
     const std::uint32_t iteration_count_;
-    const float attachment_surface_offset_;
-    const float ground_height_;
 };

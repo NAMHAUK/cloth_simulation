@@ -138,9 +138,7 @@ void PdSimulation::update_character_pose(float frame_alpha, QOpenGLFunctions_4_5
                                     next_frame_index,
                                     frame_alpha);
 
-    update_triangle_bvh_bounds(character_state.triangle_bvh(),
-                               character_buffers.positions,
-                               params_.pd.body_detection_distance);
+    update_triangle_bvh_bounds(character_state.triangle_bvh(), character_buffers.positions);
 
     update_normals(character_buffers,
                    character_state.vertex_count(),

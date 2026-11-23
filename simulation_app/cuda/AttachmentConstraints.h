@@ -23,5 +23,4 @@ void find_attachment_targets(const ConstraintSet<AttachmentConstraint>& constrai
                              std::uint32_t body_triangle_count);
 void project_constraints(const ConstraintSet<AttachmentConstraint>& constraints,
                          const float4* body_positions,
-                         const TriangleVertexIndices* body_triangles,
-                         float surface_offset);
+                         const TriangleVertexIndices* body_triangles);

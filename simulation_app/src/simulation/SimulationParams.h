@@ -51,8 +51,8 @@ struct SimulationParams final
     float max_ref_frame_linear_acceleration = 30.0f;
     float max_ref_frame_angular_acceleration = 60.0f;
 
-    float ground_height = 0.001f;
-    float attachment_surface_offset = 0.005f;
+    static constexpr float ground_height = 0.001f;
+    static constexpr float attachment_surface_offset = 0.005f;
 };
 
 inline constexpr SimulationParams default_simulation_params{};
@@ -68,7 +68,7 @@ constexpr bool is_valid_simulation_params(const SimulationParams& params)
            step.fps % step.motion_fps == 0 &&
            params.max_ref_frame_linear_acceleration > 0.0f &&
            params.max_ref_frame_angular_acceleration > 0.0f &&
-           params.attachment_surface_offset > 0.0f &&
+           SimulationParams::attachment_surface_offset > 0.0f &&
            prefit.pushout_margin > 0.0f &&
            prefit.surface_search_radius >= prefit.pushout_margin &&
            prefit.max_correction_length > 0.0f &&
