@@ -34,7 +34,7 @@ __global__ void compute_constraint_rhs_matrices_kernel(Constraint* constraints, 
     }
 }
 
-__global__ void compute_inertia_rhs_kernel(float3* rhs,
+__global__ void compute_inertia_rhs_kernel(float* rhs,
                                            const float* masses,
                                            const float4* predicted_positions,
                                            std::uint32_t vertex_count,
@@ -44,17 +44,25 @@ __global__ void compute_inertia_rhs_kernel(float3* rhs,
     if (index >= vertex_count) {
         return;
     }
-    
+
     // rhs_i = (m_i / h^2) * s_i
     const float coefficient = masses[index] * inv_dt_squared;
     const float4 position = predicted_positions[index];
-    rhs[index] = make_float3(coefficient * position.x, coefficient * position.y, coefficient * position.z);
+
+    float* rhs_x = rhs;
+    float* rhs_y = rhs + vertex_count;
+    float* rhs_z = rhs + 2 * vertex_count;
+
+    rhs_x[index] = coefficient * position.x;
+    rhs_y[index] = coefficient * position.y;
+    rhs_z[index] = coefficient * position.z;
 }
 
 template <typename Constraint>
 __global__ void accumulate_constraint_rhs_kernel(const Constraint* constraints,
                                                  std::uint32_t constraint_count,
-                                                 float3* rhs)
+                                                 float* rhs,
+                                                 std::uint32_t vertex_count)
 {
     const std::uint32_t index = blockIdx.x * blockDim.x + threadIdx.x;
     if (index >= constraint_count) {
@@ -62,6 +70,10 @@ __global__ void accumulate_constraint_rhs_kernel(const Constraint* constraints,
     }
 
     const Constraint& constraint = constraints[index];
+
+    float* rhs_x = rhs;
+    float* rhs_y = rhs + vertex_count;
+    float* rhs_z = rhs + 2 * vertex_count;
 
     // rhs_matrix = w · A^T · B
     // rhs += sum (w · S^T · A^T · B · p)
@@ -77,10 +89,10 @@ __global__ void accumulate_constraint_rhs_kernel(const Constraint* constraints,
             rhs_value.z += coefficient * p.z;
         }
 
-        float3& vertex_rhs = rhs[constraint.vertex_indices[row]];
-        atomicAdd(&vertex_rhs.x, rhs_value.x);
-        atomicAdd(&vertex_rhs.y, rhs_value.y);
-        atomicAdd(&vertex_rhs.z, rhs_value.z);
+        const std::uint32_t vertex_index = constraint.vertex_indices[row];
+        atomicAdd(&rhs_x[vertex_index], rhs_value.x);
+        atomicAdd(&rhs_y[vertex_index], rhs_value.y);
+        atomicAdd(&rhs_z[vertex_index], rhs_value.z);
     }
 }
 }
@@ -95,7 +107,7 @@ void compute_constraint_rhs_matrices(PdConstraints& constraints)
     });
 }
 
-void compute_inertia_rhs(float3* rhs,
+void compute_inertia_rhs(float* rhs,
                          const float4* predicted_positions,
                          const PdClothGpuState& cloth_state,
                          float inv_dt_squared)
@@ -109,13 +121,14 @@ void compute_inertia_rhs(float3* rhs,
     CUDA_CHECK(cudaGetLastError());
 }
 
-void accumulate_constraint_rhs(PdConstraints& constraints, float3* rhs)
+void accumulate_constraint_rhs(PdConstraints& constraints, float* rhs, std::uint32_t vertex_count)
 {
-    constraints.execute_each([rhs](const auto& constraint_set) {
+    constraints.execute_each([rhs, vertex_count](const auto& constraint_set) {
         accumulate_constraint_rhs_kernel<<<block_count(constraint_set.count, block_size), block_size>>>(
             constraint_set.buffer,
             constraint_set.count,
-            rhs);
+            rhs,
+            vertex_count);
         CUDA_CHECK(cudaGetLastError());
     });
 }

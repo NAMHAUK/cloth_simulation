@@ -37,7 +37,7 @@ void ProjectiveDynamicsSolver::solve()
         });
 
         pd_state_.set_rhs(pd_state_.inertia_rhs_buffer());
-        accumulate_constraint_rhs(pd_state_.constraints(), pd_state_.rhs_buffer());
+        accumulate_constraint_rhs(pd_state_.constraints(), pd_state_.rhs_buffer(), vertex_count);
 
         solve_global(pd_state_.system_matrix(), pd_state_.rhs_buffer(), mesh_buffers.positions, vertex_count);
     }

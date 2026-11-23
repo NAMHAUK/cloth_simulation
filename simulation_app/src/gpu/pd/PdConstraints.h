@@ -90,7 +90,7 @@ private:
     {
         std::uint64_t constraint_count = 0;
         for_each_constraint([&](const auto& constraints) { constraint_count += constraints.count; });
-        
+
         if (constraint_count > simulation_limits::max_constraint_count) {
             throw std::length_error("Total constraint count exceeds the simulation limit.");
         }

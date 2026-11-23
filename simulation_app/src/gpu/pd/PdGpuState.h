@@ -1,8 +1,10 @@
 #pragma once
 
+#include "PdSystemMatrix.h"
 #include "gpu/pd/PdCharacterGpuState.h"
 #include "gpu/pd/PdClothGpuState.h"
 #include "gpu/pd/PdConstraints.h"
+#include "utils/CudssUtils.h"
 
 #include <cstdint>
 #include <vector>
@@ -11,13 +13,6 @@
 
 class ClothGpuState;
 struct GarmentObject;
-
-struct CsrMatrix
-{
-    std::uint32_t* row_offsets_ptr = nullptr;
-    std::uint32_t* col_indices_ptr = nullptr;
-    float* values_ptr = nullptr;
-};
 
 class PdGpuState final
 {
@@ -33,10 +28,10 @@ public:
     const PdClothGpuState& cloth_gpu_state() const;
 
     PdConstraints& constraints();
-    const CsrMatrix& system_matrix() const;
-    float3* inertia_rhs_buffer() const;
-    float3* rhs_buffer() const;
-    void set_rhs(const float3* source);
+    const CudssSystem& system_matrix() const;
+    float* inertia_rhs_buffer() const;
+    float* rhs_buffer() const;
+    void set_rhs(const float* source);
 
     void release_simulation_buffers();
     void release_garment_resources();
@@ -51,7 +46,8 @@ private:
 
     PdConstraints constraints_;
 
-    CsrMatrix system_matrix_;
-    float3* inertia_rhs_buffer_ = nullptr;
-    float3* rhs_buffer_ = nullptr;
+    CudssSystem system_matrix_;
+    CsrMatrix system_matrix_csr_;
+    float* inertia_rhs_buffer_ = nullptr;
+    float* rhs_buffer_ = nullptr;
 };

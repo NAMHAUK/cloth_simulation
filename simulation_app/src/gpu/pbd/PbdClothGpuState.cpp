@@ -77,7 +77,7 @@ void PbdClothGpuState::reset_velocity(const ClothGpuState& cloth_state,
 void PbdClothGpuState::rebuild_attachment_buffers(const std::vector<GarmentObject>& garments,
                                                   const std::vector<const GarmentObject*>& placement_garments,
                                                   QOpenGLFunctions_4_5_Core& gl)
-{   
+{
     // Calculate ranges
     std::array<AttachmentBufferState, garment_layer_count> attachment_states{};
     std::uint32_t attachment_count = 0;
@@ -97,7 +97,7 @@ void PbdClothGpuState::rebuild_attachment_buffers(const std::vector<GarmentObjec
                                                   nullptr,
                                                   GL_DYNAMIC_DRAW,
                                                   gl);
-    
+
     // Copy retained attachments
     for (const GarmentObject& garment : garments) {
         const AttachmentBufferState& source_state = attachment_states_[garment.layer];

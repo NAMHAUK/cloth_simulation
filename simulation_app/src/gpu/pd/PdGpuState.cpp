@@ -2,6 +2,7 @@
 #include "PdSystemMatrix.h"
 #include "gpu/common/ClothGpuState.h"
 #include "utils/CudaUtils.h"
+#include "utils/CudssUtils.h"
 
 #include <cuda_runtime.h>
 
@@ -24,18 +25,18 @@ void PdGpuState::prepare_system(const std::vector<GarmentObject>& garments, cons
     constraints_.allocate_buffers();
     constraints_.initialize();
 
-    prepare_pd_system(*this);
+    CUDA_CHECK(cudaMalloc(&inertia_rhs_buffer_, sizeof(float) * 3 * cloth_gpu_state_.vertex_count()));
+    CUDA_CHECK(cudaMalloc(&rhs_buffer_, sizeof(float) * 3 * cloth_gpu_state_.vertex_count()));
 
-    CUDA_CHECK(cudaMalloc(&inertia_rhs_buffer_, sizeof(float3) * cloth_gpu_state_.vertex_count()));
-    CUDA_CHECK(cudaMalloc(&rhs_buffer_, sizeof(float3) * cloth_gpu_state_.vertex_count()));
+    prepare_pd_system(*this);
 }
 
 // Setter
-void PdGpuState::set_rhs(const float3* source)
+void PdGpuState::set_rhs(const float* source)
 {
     CUDA_CHECK(cudaMemcpyAsync(rhs_buffer_,
                                source,
-                               sizeof(float3) * cloth_gpu_state_.vertex_count(),
+                               sizeof(float) * 3 * cloth_gpu_state_.vertex_count(),
                                cudaMemcpyDeviceToDevice));
 }
 
@@ -60,17 +61,17 @@ PdConstraints& PdGpuState::constraints()
     return constraints_;
 }
 
-const CsrMatrix& PdGpuState::system_matrix() const
+const CudssSystem& PdGpuState::system_matrix() const
 {
     return system_matrix_;
 }
 
-float3* PdGpuState::inertia_rhs_buffer() const
+float* PdGpuState::inertia_rhs_buffer() const
 {
     return inertia_rhs_buffer_;
 }
 
-float3* PdGpuState::rhs_buffer() const
+float* PdGpuState::rhs_buffer() const
 {
     return rhs_buffer_;
 }
@@ -81,10 +82,12 @@ void PdGpuState::release_simulation_buffers()
     cloth_gpu_state_.release_simulation_buffers();
     constraints_.release_buffers();
 
-    CUDA_CHECK(cudaFree(system_matrix_.row_offsets_ptr));
-    CUDA_CHECK(cudaFree(system_matrix_.col_indices_ptr));
-    CUDA_CHECK(cudaFree(system_matrix_.values_ptr));
-    system_matrix_ = {};
+    system_matrix_.release();
+
+    CUDA_CHECK(cudaFree(system_matrix_csr_.row_offsets_ptr));
+    CUDA_CHECK(cudaFree(system_matrix_csr_.col_indices_ptr));
+    CUDA_CHECK(cudaFree(system_matrix_csr_.values_ptr));
+    system_matrix_csr_ = {};
 
     CUDA_CHECK(cudaFree(inertia_rhs_buffer_));
     inertia_rhs_buffer_ = nullptr;

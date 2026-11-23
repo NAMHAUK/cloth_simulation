@@ -1,6 +1,7 @@
 #include "PdSystemMatrix.h"
 #include "gpu/pd/PdGpuState.h"
 #include "utils/CudaUtils.h"
+#include "utils/CudssUtils.h"
 
 #include <cstdint>
 
@@ -76,23 +77,21 @@ __global__ void write_constraint_entries_kernel(MatrixIndex* indices,
 
 __global__ void build_csr_matrix_kernel(CsrMatrix matrix,
                                         const MatrixIndex* indices,
-                                        const float* values,
                                         std::uint32_t entry_count,
                                         std::uint32_t vertex_count)
 {
     const std::uint32_t index = blockIdx.x * blockDim.x + threadIdx.x;
-    
+
     if (index < entry_count) {
         const MatrixIndex& entry = indices[index];
 
         matrix.col_indices_ptr[index] = entry.column;
-        matrix.values_ptr[index] = values[index];
 
         if (index == 0 || indices[index - 1].row != entry.row) {
             matrix.row_offsets_ptr[entry.row] = index;
         }
     }
-    
+
     if (index == 0) {
         matrix.row_offsets_ptr[vertex_count] = entry_count;
     }
@@ -103,7 +102,7 @@ __global__ void build_csr_matrix_kernel(CsrMatrix matrix,
 void prepare_pd_system(PdGpuState& state)
 {
     const std::uint32_t vertex_count = state.cloth_gpu_state().vertex_count();
-    
+
     // 1. 모든 constraint의 영향 값을 저장할 수 있는 임시 배열 생성
     std::uint32_t index_count = vertex_count;
     state.constraints().execute_each([&](const auto& constraints) { index_count += constraints.matrix_entry_count(); });
@@ -148,15 +147,28 @@ void prepare_pd_system(PdGpuState& state)
                                                   summed_values.begin());
     index_count = static_cast<std::uint32_t>(result_end.first - unique_indices.begin());
 
-    // 5. 구한 System matrix 내부의 index와 value 값으로 CSR matrix로 변환
-    CUDA_CHECK(cudaMalloc(&state.system_matrix_.row_offsets_ptr, (vertex_count + 1) * sizeof(std::uint32_t)));
-    CUDA_CHECK(cudaMalloc(&state.system_matrix_.col_indices_ptr, index_count * sizeof(std::uint32_t)));
-    CUDA_CHECK(cudaMalloc(&state.system_matrix_.values_ptr, index_count * sizeof(float)));
+    // 5. 구한 System matrix 내부의 index와 value 값을 CSR matrix로 변환
+    CsrMatrix& matrix = state.system_matrix_csr_;
+    CUDA_CHECK(cudaMalloc(&matrix.row_offsets_ptr, sizeof(std::int32_t) * (vertex_count + 1)));
+    CUDA_CHECK(cudaMalloc(&matrix.col_indices_ptr, sizeof(std::int32_t) * index_count));
+    CUDA_CHECK(cudaMalloc(&matrix.values_ptr, sizeof(float) * index_count));
+    CUDA_CHECK(cudaMemcpyAsync(matrix.values_ptr,
+                               summed_values.data().get(),
+                               sizeof(float) * index_count,
+                               cudaMemcpyDeviceToDevice));
 
-    build_csr_matrix_kernel<<<block_count(index_count, block_size), block_size>>>(state.system_matrix_,
+    build_csr_matrix_kernel<<<block_count(index_count, block_size), block_size>>>(matrix,
                                                                                   unique_indices.data().get(),
-                                                                                  summed_values.data().get(),
                                                                                   index_count,
                                                                                   vertex_count);
     CUDA_CHECK(cudaGetLastError());
+
+    // 6. CuDSS를 이용해 Cholesky 분해
+    state.system_matrix_.initialize();
+    state.system_matrix_.cholesky_decompose(vertex_count,
+                                            index_count,
+                                            matrix.row_offsets_ptr,
+                                            matrix.col_indices_ptr,
+                                            matrix.values_ptr,
+                                            state.rhs_buffer_);
 }
