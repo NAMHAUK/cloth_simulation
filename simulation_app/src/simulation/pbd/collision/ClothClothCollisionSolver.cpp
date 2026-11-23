@@ -1,7 +1,7 @@
 #include "simulation/pbd/collision/ClothClothCollisionSolver.h"
 #include "gpu/common/ClothGpuState.h"
 #include "gpu/pbd/PbdGpuState.h"
-#include "simulation/SimulationParams.h"
+#include "simulation/pbd/PbdSimulationParams.h"
 #include "utils/BufferUtils.h"
 #include "utils/ShaderUtils.h"
 

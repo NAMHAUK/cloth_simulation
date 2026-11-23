@@ -8,7 +8,6 @@
 
 #include <algorithm>
 #include <cassert>
-#include <cmath>
 #include <stdexcept>
 
 #include <cuda_gl_interop.h>
@@ -18,14 +17,8 @@ PdSimulation::PdSimulation(SceneState& scene, SceneGpuState& gpu_state, Simulati
     : scene_(scene),
       gpu_state_(gpu_state),
       params_(params),
-      dt_(params.step.dt() / static_cast<float>(params.step.substep_count)),
-      projective_dynamics_solver_(pd_gpu_state_,
-                                  params.integration.gravity,
-                                  dt_,
-                                  std::pow(0.9835f, 1.0f / static_cast<float>(params.step.substep_count)),
-                                  params.step.iteration_count,
-                                  params.constraints.attachment_surface_offset,
-                                  params.collisions.ground.height)
+      dt_(params.step.dt() / static_cast<float>(params.pd.substep_count)),
+      projective_dynamics_solver_(pd_gpu_state_, params, dt_)
 {}
 
 void PdSimulation::initialize(const std::filesystem::path&, QOpenGLFunctions_4_5_Core& gl)
@@ -54,7 +47,7 @@ void PdSimulation::step(std::uint32_t motion_step_index, QOpenGLFunctions_4_5_Co
 {
     assert(is_initialized());
 
-    for (std::uint32_t substep = 0; substep < params_.step.substep_count; ++substep) {
+    for (std::uint32_t substep = 0; substep < params_.pd.substep_count; ++substep) {
         update_character_motion(motion_step_index, substep + 1u, gl);
         projective_dynamics_solver_.solve();
     }
@@ -125,7 +118,8 @@ void PdSimulation::update_character_motion(std::uint32_t motion_step_index,
                                            std::uint32_t substep,
                                            QOpenGLFunctions_4_5_Core& gl)
 {
-    const float motion_frame_position = params_.step.motion_frame_position(motion_step_index, substep);
+    const float substep_fraction = static_cast<float>(substep) / params_.pd.substep_count;
+    const float motion_frame_position = params_.step.motion_frame_position(motion_step_index, substep_fraction);
     const float frame_alpha = scene_.motion_frame_alpha(motion_frame_position);
     scene_.update_reference_frame_kinematics(frame_alpha, dt_);
     update_character_pose(frame_alpha, gl);
@@ -146,7 +140,7 @@ void PdSimulation::update_character_pose(float frame_alpha, QOpenGLFunctions_4_5
 
     update_triangle_bvh_bounds(character_state.triangle_bvh(),
                                character_buffers.positions,
-                               params_.collisions.body.detection_distance);
+                               params_.pd.body_detection_distance);
 
     update_normals(character_buffers,
                    character_state.vertex_count(),

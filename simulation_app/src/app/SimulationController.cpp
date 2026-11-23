@@ -28,8 +28,7 @@ glm::mat4 make_placement_matrix(const glm::vec3& center, const glm::vec3& positi
 
 SimulationController::SimulationController(SimulationParams params)
     : params_(params),
-      scene_(params.integration.reference_frame_max_linear_acceleration,
-             params.integration.reference_frame_max_angular_acceleration)
+      scene_(params.max_ref_frame_linear_acceleration, params.max_ref_frame_angular_acceleration)
 {
     if (params.mode == SimulationMode::PBD) {
         simulation_ = std::make_unique<PbdSimulation>(scene_, gpu_state_, params);
@@ -116,7 +115,7 @@ void SimulationController::tick_frame()
     if (simulation_running_) {
         run_with_gl_context_([this](QOpenGLFunctions_4_5_Core& gl) {
             if (scene_.garments().empty()) {
-                const float frame_position = params_.step.motion_frame_position(motion_step_index_ + 1u, 0);
+                const float frame_position = params_.step.motion_frame_position(motion_step_index_ + 1u, 0.0f);
                 const float frame_alpha = scene_.motion_frame_alpha(frame_position);
                 simulation_->update_character_pose(frame_alpha, gl);
             } else {

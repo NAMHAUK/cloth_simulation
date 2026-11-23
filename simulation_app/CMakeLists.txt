@@ -62,8 +62,10 @@ add_executable(simulation_app
     src/simulation/Simulation.h
     src/simulation/pbd/PbdSimulation.cpp
     src/simulation/pbd/PbdSimulation.h
+    src/simulation/pbd/PbdSimulationParams.h
     src/simulation/pd/PdSimulation.cpp
     src/simulation/pd/PdSimulation.h
+    src/simulation/pd/PdSimulationParams.h
     src/simulation/pbd/ClothIntegrator.cpp
     src/simulation/pbd/ClothIntegrator.h
     src/simulation/pd/ProjectiveDynamicsSolver.cpp
