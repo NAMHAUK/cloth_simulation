@@ -1,5 +1,6 @@
 #include "simulation/pd/PdSimulation.h"
 #include "BvhBounds.h"
+#include "CharacterMotion.h"
 #include "GarmentPrefit.h"
 #include "MeshNormals.h"
 #include "gpu/common/SceneGpuState.h"
@@ -7,6 +8,7 @@
 
 #include <algorithm>
 #include <cassert>
+#include <cmath>
 #include <stdexcept>
 
 #include <cuda_gl_interop.h>
@@ -16,10 +18,11 @@ PdSimulation::PdSimulation(SceneState& scene, SceneGpuState& gpu_state, Simulati
     : scene_(scene),
       gpu_state_(gpu_state),
       params_(params),
-      dt_(params.step.dt()),
+      dt_(params.step.dt() / static_cast<float>(params.step.substep_count)),
       projective_dynamics_solver_(pd_gpu_state_,
                                   params.integration.gravity,
                                   dt_,
+                                  std::pow(0.9835f, 1.0f / static_cast<float>(params.step.substep_count)),
                                   params.step.iteration_count,
                                   params.constraints.attachment_surface_offset,
                                   params.collisions.ground.height)
@@ -51,8 +54,10 @@ void PdSimulation::step(std::uint32_t motion_step_index, QOpenGLFunctions_4_5_Co
 {
     assert(is_initialized());
 
-    update_character_motion(motion_step_index, gl);
-    projective_dynamics_solver_.solve();
+    for (std::uint32_t substep = 0; substep < params_.step.substep_count; ++substep) {
+        update_character_motion(motion_step_index, substep + 1u, gl);
+        projective_dynamics_solver_.solve();
+    }
 }
 
 void PdSimulation::prepare_garments(const std::vector<const GarmentObject*>&, QOpenGLFunctions_4_5_Core& gl)
@@ -116,9 +121,11 @@ void PdSimulation::set_character_motion(QOpenGLFunctions_4_5_Core& gl)
     update_character_pose(0.0f, gl);
 }
 
-void PdSimulation::update_character_motion(std::uint32_t motion_step_index, QOpenGLFunctions_4_5_Core& gl)
+void PdSimulation::update_character_motion(std::uint32_t motion_step_index,
+                                           std::uint32_t substep,
+                                           QOpenGLFunctions_4_5_Core& gl)
 {
-    const float motion_frame_position = (static_cast<float>(motion_step_index) + 1.0f) / params_.step.motion_stride();
+    const float motion_frame_position = params_.step.motion_frame_position(motion_step_index, substep);
     const float frame_alpha = scene_.motion_frame_alpha(motion_frame_position);
     scene_.update_reference_frame_kinematics(frame_alpha, dt_);
     update_character_pose(frame_alpha, gl);
@@ -127,11 +134,15 @@ void PdSimulation::update_character_motion(std::uint32_t motion_step_index, QOpe
 void PdSimulation::update_character_pose(float frame_alpha, QOpenGLFunctions_4_5_Core&)
 {
     PdCharacterGpuState& character_state = pd_gpu_state_.character_gpu_state();
-    const std::uint32_t frame_index = std::min(scene_.motion_frame_index() + (frame_alpha >= 1.0f ? 1u : 0u),
-                                               scene_.character_motion().frame_count - 1u);
+    const std::uint32_t frame_index = scene_.motion_frame_index();
+    const std::uint32_t next_frame_index = std::min(frame_index + 1u, scene_.character_motion().frame_count - 1u);
 
     const MappedMeshBuffers character_buffers = character_state.shared_buffers.map();
-    character_state.update_positions(character_buffers.positions, frame_index);
+    interpolate_character_positions(character_buffers.positions,
+                                    character_state,
+                                    frame_index,
+                                    next_frame_index,
+                                    frame_alpha);
 
     update_triangle_bvh_bounds(character_state.triangle_bvh(),
                                character_buffers.positions,

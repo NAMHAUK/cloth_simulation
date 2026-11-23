@@ -27,6 +27,8 @@ add_executable(simulation_app
     cuda/BodyCollisionConstraints.h
     cuda/BvhBounds.cu
     cuda/BvhBounds.h
+    cuda/CharacterMotion.cu
+    cuda/CharacterMotion.h
     cuda/ClothIntegration.cu
     cuda/ClothIntegration.h
     cuda/ClothMass.cu

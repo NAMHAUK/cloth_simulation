@@ -14,12 +14,14 @@
 ProjectiveDynamicsSolver::ProjectiveDynamicsSolver(PdGpuState& pd_state,
                                                    float gravity,
                                                    float dt,
+                                                   float velocity_damping,
                                                    std::uint32_t iteration_count,
                                                    float attachment_surface_offset,
                                                    float ground_height)
     : pd_state_(pd_state),
       gravity_(gravity),
       dt_(dt),
+      velocity_damping_(velocity_damping),
       inv_dt_squared_(1.0f / (dt * dt)),
       iteration_count_(iteration_count),
       attachment_surface_offset_(attachment_surface_offset),
@@ -37,10 +39,10 @@ void ProjectiveDynamicsSolver::solve()
     const MappedMeshBuffers cloth_buffers = cloth_state.shared_buffers.map();
     const MappedMeshBuffers character_buffers = pd_state_.character_gpu_state().shared_buffers.map();
 
-    integrate_cloth(cloth_buffers.positions, cloth_state, gravity_, dt_);
+    integrate_cloth(cloth_buffers.positions, cloth_state, gravity_, dt_, velocity_damping_);
     compute_inertia_rhs(pd_state_.inertia_rhs_buffer(), cloth_buffers.positions, cloth_state, inv_dt_squared_);
 
-    for (std::uint32_t iteration = 0; iteration < 30; ++iteration) {
+    for (std::uint32_t iteration = 0; iteration < 2; ++iteration) {
         detect_body_collisions(cloth_buffers.positions, character_buffers.positions, pd_state_);
         update_pd_system(pd_state_);
 

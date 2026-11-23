@@ -6,14 +6,14 @@
 
 namespace {
 constexpr std::uint32_t block_size = 256;
-constexpr float damping = 0.9835f;
 
 __global__ void integrate_cloth_kernel(float4* positions,
                                        float4* previous_positions,
                                        const float4* velocities,
                                        std::uint32_t vertex_count,
                                        float gravity,
-                                       float dt)
+                                       float dt,
+                                       float velocity_damping)
 {
     const std::uint32_t index = blockIdx.x * blockDim.x + threadIdx.x;
     if (index >= vertex_count) {
@@ -21,9 +21,9 @@ __global__ void integrate_cloth_kernel(float4* positions,
     }
 
     float4 velocity = velocities[index];
-    velocity.x *= damping;
-    velocity.y *= damping;
-    velocity.z *= damping;
+    velocity.x *= velocity_damping;
+    velocity.y *= velocity_damping;
+    velocity.z *= velocity_damping;
 
     velocity.y += gravity * dt;
 
@@ -61,7 +61,11 @@ __global__ void update_cloth_velocities_kernel(const float4* positions,
 }
 }
 
-void integrate_cloth(float4* positions, const PdClothGpuState& cloth_state, float gravity, float dt)
+void integrate_cloth(float4* positions,
+                     const PdClothGpuState& cloth_state,
+                     float gravity,
+                     float dt,
+                     float velocity_damping)
 {
     const std::uint32_t vertex_count = cloth_state.vertex_count();
     integrate_cloth_kernel<<<block_count(vertex_count, block_size), block_size>>>(
@@ -70,7 +74,8 @@ void integrate_cloth(float4* positions, const PdClothGpuState& cloth_state, floa
         cloth_state.velocity_buffer(),
         vertex_count,
         gravity,
-        dt);
+        dt,
+        velocity_damping);
     CUDA_CHECK(cudaGetLastError());
 }
 

@@ -46,15 +46,12 @@ void PdCharacterGpuState::set_motion(const CharacterMotion& motion)
         cudaMemcpy(animation_position_buffer_, motion.vertex_positions.data(), position_bytes, cudaMemcpyHostToDevice));
 }
 
-void PdCharacterGpuState::update_positions(float4* positions, std::uint32_t frame_index) const
+// Accessors
+const float4* PdCharacterGpuState::animation_position_buffer() const
 {
-    CUDA_CHECK(cudaMemcpyAsync(positions,
-                               animation_position_buffer_ + std::size_t{frame_index} * vertex_count_,
-                               sizeof(float4) * vertex_count_,
-                               cudaMemcpyDeviceToDevice));
+    return animation_position_buffer_;
 }
 
-// Accessors
 const TriangleBvhBuffers& PdCharacterGpuState::triangle_bvh() const
 {
     return triangle_bvh_;
